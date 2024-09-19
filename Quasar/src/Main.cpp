@@ -20,7 +20,8 @@
 #endif
 #endif
 
-constexpr unsigned short QUASAR_MAX_VERTICES = 2048;
+constexpr unsigned short QUASAR_MAX_VERTICES = 1024;
+constexpr unsigned short QUASAR_MAX_INDEXES = 2048;
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -48,7 +49,7 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	GLFWwindow* window = glfwCreateWindow(2048, 1024, "Quasor", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(1440, 1080, "Quasor", nullptr, nullptr);
 	if (!window)
 	{
 		glfwTerminate();
@@ -62,14 +63,46 @@ int main()
 	}
 	glfwSwapInterval(1);
 	QUASAR_GL(glClearColor(0.5f, 0.5f, 0.5f, 0.5f));
+	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 
-	unsigned char* vertex_pool = new unsigned char[QUASAR_MAX_VERTICES];
+	GLfloat* vertex_pool = new GLfloat[QUASAR_MAX_VERTICES];
+	GLuint* index_pool = new GLuint[QUASAR_MAX_INDEXES];
+	GLuint vao, vb, ib;
+
+	QUASAR_GL(glGenVertexArrays(1, &vao));
+	QUASAR_GL(glBindVertexArray(vao));
 	
+	QUASAR_GL(glGenBuffers(1, &vb));
+	QUASAR_GL(glBindBuffer(GL_ARRAY_BUFFER, vb));
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, QUASAR_MAX_VERTICES * sizeof(GLfloat), vertex_pool, GL_DYNAMIC_DRAW));
+	QUASAR_GL(glGenBuffers(1, &ib));
+	QUASAR_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib));
+	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, QUASAR_MAX_INDEXES * sizeof(GLuint), index_pool, GL_DYNAMIC_DRAW));
+
+	QUASAR_GL(glEnableVertexAttribArray(0));
+	QUASAR_GL(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GL_FLOAT), (const GLvoid*)0));
+
+	GLfloat varr[8] = {
+		0.5f, 0.5f,
+		-0.5f, 0.5f,
+		-0.5f, -0.5f,
+		0.5f, -0.5f
+	};
+	GLuint iarr[6] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	memcpy(vertex_pool, varr, 8 * sizeof(GLfloat));
+	memcpy(index_pool, iarr, 6 * sizeof(GLuint));
+
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 8 * sizeof(GLfloat), vertex_pool));
+	QUASAR_GL(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, 6 * sizeof(GLuint), index_pool));
 
 	for (glfwPollEvents(); !glfwWindowShouldClose(window); glfwPollEvents())
 	{
 
-		//QUASAR_GL(glDrawArrays(GL_TRIANGLE_FAN, 0, 4));
+		QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
 
 
 
