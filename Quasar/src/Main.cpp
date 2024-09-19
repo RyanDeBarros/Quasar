@@ -4,26 +4,28 @@
 
 #include <iostream>
 
-#if QUASOR_DEBUG == 1
-#ifndef QUASOR_ASSERT
-#define QUASOR_ASSERT(x) if (!(x)) __debugbreak();
+#if QUASAR_DEBUG == 1
+#ifndef QUASAR_ASSERT
+#define QUASAR_ASSERT(x) if (!(x)) __debugbreak();
 #endif
-#ifndef QUASOR_GL
-#define QUASOR_GL(x) QUASOR_ASSERT(no_gl_error(#x, __FILE__, __LINE__)) x; QUASOR_ASSERT(no_gl_error(#x, __FILE__, __LINE__))
+#ifndef QUASAR_GL
+#define QUASAR_GL(x) QUASAR_ASSERT(no_gl_error(#x, __FILE__, __LINE__)) x; QUASAR_ASSERT(no_gl_error(#x, __FILE__, __LINE__))
 #endif
 #else
-#ifndef QUASOR_ASSERT
-#define QUASOR_ASSERT(x)
+#ifndef QUASAR_ASSERT
+#define QUASAR_ASSERT(x)
 #endif
-#ifndef QUASOR_GL
-#define QUASOR_GL(x) x;
+#ifndef QUASAR_GL
+#define QUASAR_GL(x) x;
 #endif
 #endif
+
+constexpr unsigned short QUASAR_MAX_VERTICES = 2048;
 
 static void glfw_error_callback(int error, const char* description)
 {
 	std::cerr << "[GLFW ERROR " << error << "]: " << description << std::endl;
-	QUASOR_ASSERT(false);
+	QUASAR_ASSERT(false);
 }
 
 static bool no_gl_error(const char* function, const char* file, int line)
@@ -59,12 +61,25 @@ int main()
 		return -1;
 	}
 	glfwSwapInterval(1);
-	glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
+	QUASAR_GL(glClearColor(0.5f, 0.5f, 0.5f, 0.5f));
+
+	unsigned char* vertex_pool = new unsigned char[QUASAR_MAX_VERTICES];
+	
+
 	for (glfwPollEvents(); !glfwWindowShouldClose(window); glfwPollEvents())
 	{
+
+		//QUASAR_GL(glDrawArrays(GL_TRIANGLE_FAN, 0, 4));
+
+
+
+
 		glfwSwapBuffers(window);
-		glClear(GL_COLOR_BUFFER_BIT);
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 	}
+
+
+	delete[] vertex_pool;
 
 	return 0;
 }
