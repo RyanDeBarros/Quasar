@@ -1,6 +1,10 @@
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
 
 #include <iostream>
 
@@ -73,7 +77,9 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	GLFWwindow* window = glfwCreateWindow(1440, 1080, "Quasor", nullptr, nullptr);
+	int window_width = 1440;
+	int window_height = 1080;
+	GLFWwindow* window = glfwCreateWindow(window_width, window_height, "Quasor", nullptr, nullptr);
 	if (!window)
 	{
 		glfwTerminate();
@@ -85,9 +91,6 @@ int main()
 		glfwTerminate();
 		return -1;
 	}
-	int width, height;
-	glfwGetFramebufferSize(window, &width, &height);
-	glViewport(0, 0, width, height);
 	glfwSwapInterval(1);
 	QUASAR_GL(glClearColor(0.5f, 0.5f, 0.5f, 0.5f));
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
@@ -143,12 +146,50 @@ int main()
 
 	QUASAR_GL(glUseProgram(shader));
 
+	stbi_set_flip_vertically_on_load(true);
+	int width, height, bpp;
+	unsigned char* buffer = stbi_load("ex/tux.png", &width, &height, &bpp, 0);
+
+	GLuint tux;
+	QUASAR_GL(glGenTextures(1, &tux));
+
+	GLint internal_format;
+	GLenum format;
+	if (bpp == 4)
+	{
+		internal_format = GL_RGBA8;
+		format = GL_RGBA;
+	}
+	else if (bpp == 3)
+	{
+		internal_format = GL_RGB8;
+		format = GL_RGB;
+	}
+	else if (bpp == 2)
+	{
+		internal_format = GL_RG8;
+		format = GL_RG;
+	}
+	else if (bpp == 1)
+	{
+		internal_format = GL_R8;
+		format = GL_RED;
+	}
+	QUASAR_GL(glActiveTexture(GL_TEXTURE0 + 0));
+	QUASAR_GL(glBindTexture(GL_TEXTURE_2D, tux));
+	QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, format, GL_UNSIGNED_BYTE, buffer));
+
+	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+
 	constexpr int vstride = 14;
 	GLfloat varr[4 * vstride] = {
-		0.0f, -200.0f, -100.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-		1.0f,  200.0f, -100.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-		2.0f,  200.0f,  100.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-		3.0f, -200.0f,  100.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f
+		0.0f, -0.5f * width, -0.5f * height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 0.0f, 1.0f, 1.0f,
+		1.0f,  0.5f * width, -0.5f * height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 1.0f, 0.0f, 1.0f,
+		2.0f,  0.5f * width,  0.5f * height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 0.0f, 1.0f, 1.0f, 1.0f,
+		3.0f, -0.5f * width,  0.5f * height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 0.0f, 0.0f, 1.0f
 	};
 	GLuint iarr[6] = {
 		0, 1, 2,
@@ -195,6 +236,11 @@ int main()
 	QUASAR_GL(glEnable(GL_BLEND));
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
+	glm::mat3 proj = glm::ortho<float>(0.0f, static_cast<float>(window_width), 0.0f, static_cast<float>(window_height));
+	glm::mat3 vp = proj;
+	QUASAR_GL(GLint vp_loc = glGetUniformLocation(shader, "u_VP"));
+	QUASAR_GL(glUniformMatrix3fv(vp_loc, 1, GL_FALSE, &vp[0][0]));
+
 	for (glfwPollEvents(); !glfwWindowShouldClose(window); glfwPollEvents())
 	{
 
@@ -206,6 +252,8 @@ int main()
 		glfwSwapBuffers(window);
 		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 	}
+
+	stbi_image_free(buffer);
 
 	QUASAR_GL(glDeleteProgram(shader));
 	QUASAR_GL(glDeleteBuffers(1, &vao));
