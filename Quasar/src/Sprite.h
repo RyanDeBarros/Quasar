@@ -101,22 +101,25 @@ struct Image
 
 struct ImageReferencer
 {
-	unsigned short ref = 0;
-	Image image;
+	bool own = false;
+	unsigned short ref = 1;
+	Image* image;
 };
 
 struct BufferReferencer
 {
-	unsigned short ref = 0;
-	GLfloat* varr = nullptr;
-	GLuint* iarr = nullptr;
+	bool own = false;
+	unsigned char ilen_bytes = 0;
 	unsigned short stride;
 	unsigned short vlen_bytes = 0;
-	unsigned short ilen_bytes = 0;
+	unsigned short ref = 1;
+	GLfloat* varr = nullptr;
+	GLuint* iarr = nullptr;
 };
 
 struct TextureReferencer
 {
+	bool own = false;
 	unsigned short ref = 0;
 	GLuint texture = 0;
 };
@@ -133,9 +136,10 @@ struct Sprite
 	Sprite& operator=(const Sprite&);
 	Sprite& operator=(Sprite&&) noexcept;
 	~Sprite();
+
+	void set_img_ref(ImageReferencer* img);
+	void set_buf_ref(BufferReferencer* buf);
+	void set_tex_ref(TextureReferencer* tex);
 };
 
-inline Sprite rect_sprite()
-{
-	return Sprite{};
-}
+inline Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_params = {}, TextureReferencer* heap_texture = nullptr);

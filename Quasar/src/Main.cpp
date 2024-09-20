@@ -1,3 +1,5 @@
+#include <array>
+
 #include <stb/stb_image.h>
 
 #include "Macros.h"
@@ -33,6 +35,19 @@ static GLuint compile_shader(GLenum type, const char* shader, const char* filepa
 		return 0;
 	}
 	return id;
+}
+
+template<size_t n>
+static void attrib_pointers(std::array<int, n> lens, int stride)
+{
+	int offset = 0;
+	int str = stride * sizeof(GL_FLOAT);
+	for (size_t i = 0; i < n; ++i)
+	{
+		QUASAR_GL(glEnableVertexAttribArray(i));
+		QUASAR_GL(glVertexAttribPointer(i, lens[i], GL_FLOAT, GL_FALSE, str, (const GLvoid*)offset));
+		offset += lens[i] * sizeof(GLfloat);
+	}
 }
 
 int main()
@@ -113,92 +128,18 @@ int main()
 
 	QUASAR_GL(glUseProgram(shader));
 
+
 	stbi_set_flip_vertically_on_load(true);
 	Image img;
 	img.pixels = stbi_load("ex/tux.png", &img.width, &img.height, &img.bpp, 0);
 	img.deletion_policy = ImageDeletionPolicy::FROM_STBI;
-	GLint internal_format;
-	GLenum format;
-	if (img.bpp == 4)
-	{
-		internal_format = GL_RGBA8;
-		format = GL_RGBA;
-	}
-	else if (img.bpp == 3)
-	{
-		internal_format = GL_RGB8;
-		format = GL_RGB;
-	}
-	else if (img.bpp == 2)
-	{
-		internal_format = GL_RG8;
-		format = GL_RG;
-	}
-	else if (img.bpp == 1)
-	{
-		internal_format = GL_R8;
-		format = GL_RED;
-	}
 	
-	Sprite sprite;
-	sprite.img = new ImageReferencer{1};
-	sprite.img->image = std::move(img);
-	sprite.buf = new BufferReferencer{1};
-	sprite.tex = new TextureReferencer{1};
-	QUASAR_GL(glGenTextures(1, &sprite.tex->texture));
+	Sprite sprite = rect_sprite(&img, false);
 
 	QUASAR_GL(glActiveTexture(GL_TEXTURE0 + 0));
 	QUASAR_GL(glBindTexture(GL_TEXTURE_2D, sprite.tex->texture));
-	QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, sprite.img->image.width, sprite.img->image.height,
-		0, format, GL_UNSIGNED_BYTE, sprite.img->image.pixels));
-	TextureParams params;
-	bind_texture_params(params);
 
-	sprite.buf->stride = 14;
-	sprite.buf->vlen_bytes = 4 * sprite.buf->stride * sizeof(GLfloat);
-	sprite.buf->varr = new GLfloat[4 * sprite.buf->stride]{
-		0.0f, -0.5f * img.width, -0.5f * img.height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 0.0f, 1.0f, 1.0f,
-		1.0f,  0.5f * img.width, -0.5f * img.height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 1.0f, 0.0f, 1.0f,
-		2.0f,  0.5f * img.width,  0.5f * img.height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 0.0f, 1.0f, 1.0f, 1.0f,
-		3.0f, -0.5f * img.width,  0.5f * img.height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 0.0f, 0.0f, 1.0f
-	};
-	sprite.buf->ilen_bytes = 6 * sizeof(GLuint);
-	sprite.buf->iarr = new GLuint[6]{
-		0, 1, 2,
-		2, 3, 0
-	};
-
-
-	int offset = 0;
-	int i = 0;
-	int len = 1;
-	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
-	offset += len * sizeof(GLfloat);
-	len = 2;
-	++i;
-	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
-	offset += len * sizeof(GLfloat);
-	len = 1;
-	++i;
-	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
-	offset += len * sizeof(GLfloat);
-	len = 2;
-	++i;
-	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
-	offset += len * sizeof(GLfloat);
-	len = 4;
-	++i;
-	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
-	offset += len * sizeof(GLfloat);
-	len = 4;
-	++i;
-	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
+	attrib_pointers(std::array<int, 6>{ 1, 2, 1, 2, 4, 4 }, sprite.buf->stride);
 
 	memcpy(vertex_pool, sprite.buf->varr, sprite.buf->vlen_bytes);
 	memcpy(index_pool, sprite.buf->iarr, sprite.buf->ilen_bytes);
