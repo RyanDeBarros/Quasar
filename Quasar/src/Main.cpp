@@ -1,30 +1,8 @@
-#define GLEW_STATIC
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
-#include <iostream>
-
+#include "Macros.h"
 #include "IO.h"
-
-#if QUASAR_DEBUG == 1
-#ifndef QUASAR_ASSERT
-#define QUASAR_ASSERT(x) if (!(x)) __debugbreak();
-#endif
-#ifndef QUASAR_GL
-#define QUASAR_GL(x) QUASAR_ASSERT(no_gl_error(#x, __FILE__, __LINE__)) x; QUASAR_ASSERT(no_gl_error(#x, __FILE__, __LINE__))
-#endif
-#else
-#ifndef QUASAR_ASSERT
-#define QUASAR_ASSERT(x) ;
-#endif
-#ifndef QUASAR_GL
-#define QUASAR_GL(x) x;
-#endif
-#endif
+#include "Sprite.h"
 
 constexpr unsigned short QUASAR_MAX_VERTICES = 1024;
 constexpr unsigned short QUASAR_MAX_INDEXES = 2048;
@@ -33,17 +11,6 @@ static void glfw_error_callback(int error, const char* description)
 {
 	std::cerr << "[GLFW ERROR " << error << "]: " << description << std::endl;
 	QUASAR_ASSERT(false);
-}
-
-static bool no_gl_error(const char* function, const char* file, int line)
-{
-	bool no_err = true;
-	while (GLenum error = glGetError())
-	{
-		std::cerr << "[OpenGL ERROR " << error << "]: " << function << " " << file << ":" << line << std::endl;
-		no_err = false;
-	}
-	return no_err;
 }
 
 static GLuint compile_shader(GLenum type, const char* shader, const char* filepath)
@@ -147,91 +114,97 @@ int main()
 	QUASAR_GL(glUseProgram(shader));
 
 	stbi_set_flip_vertically_on_load(true);
-	int width, height, bpp;
-	unsigned char* buffer = stbi_load("ex/tux.png", &width, &height, &bpp, 0);
-
-	GLuint tux;
-	QUASAR_GL(glGenTextures(1, &tux));
-
+	Image img;
+	img.pixels = stbi_load("ex/tux.png", &img.width, &img.height, &img.bpp, 0);
+	img.deletion_policy = ImageDeletionPolicy::FROM_STBI;
 	GLint internal_format;
 	GLenum format;
-	if (bpp == 4)
+	if (img.bpp == 4)
 	{
 		internal_format = GL_RGBA8;
 		format = GL_RGBA;
 	}
-	else if (bpp == 3)
+	else if (img.bpp == 3)
 	{
 		internal_format = GL_RGB8;
 		format = GL_RGB;
 	}
-	else if (bpp == 2)
+	else if (img.bpp == 2)
 	{
 		internal_format = GL_RG8;
 		format = GL_RG;
 	}
-	else if (bpp == 1)
+	else if (img.bpp == 1)
 	{
 		internal_format = GL_R8;
 		format = GL_RED;
 	}
+	
+	Sprite sprite;
+	sprite.img = new ImageReferencer{1};
+	sprite.img->image = std::move(img);
+	sprite.buf = new BufferReferencer{1};
+	sprite.tex = new TextureReferencer{1};
+	QUASAR_GL(glGenTextures(1, &sprite.tex->texture));
+
 	QUASAR_GL(glActiveTexture(GL_TEXTURE0 + 0));
-	QUASAR_GL(glBindTexture(GL_TEXTURE_2D, tux));
-	QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, format, GL_UNSIGNED_BYTE, buffer));
+	QUASAR_GL(glBindTexture(GL_TEXTURE_2D, sprite.tex->texture));
+	QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, sprite.img->image.width, sprite.img->image.height,
+		0, format, GL_UNSIGNED_BYTE, sprite.img->image.pixels));
+	TextureParams params;
+	bind_texture_params(params);
 
-	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-
-	constexpr int vstride = 14;
-	GLfloat varr[4 * vstride] = {
-		0.0f, -0.5f * width, -0.5f * height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 0.0f, 1.0f, 1.0f,
-		1.0f,  0.5f * width, -0.5f * height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 1.0f, 0.0f, 1.0f,
-		2.0f,  0.5f * width,  0.5f * height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 0.0f, 1.0f, 1.0f, 1.0f,
-		3.0f, -0.5f * width,  0.5f * height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 0.0f, 0.0f, 1.0f
+	sprite.buf->stride = 14;
+	sprite.buf->vlen_bytes = 4 * sprite.buf->stride * sizeof(GLfloat);
+	sprite.buf->varr = new GLfloat[4 * sprite.buf->stride]{
+		0.0f, -0.5f * img.width, -0.5f * img.height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 0.0f, 1.0f, 1.0f,
+		1.0f,  0.5f * img.width, -0.5f * img.height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 1.0f, 0.0f, 1.0f,
+		2.0f,  0.5f * img.width,  0.5f * img.height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 0.0f, 1.0f, 1.0f, 1.0f,
+		3.0f, -0.5f * img.width,  0.5f * img.height, 0.0f, 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 0.3f, 1.0f, 0.0f, 0.0f, 1.0f
 	};
-	GLuint iarr[6] = {
+	sprite.buf->ilen_bytes = 6 * sizeof(GLuint);
+	sprite.buf->iarr = new GLuint[6]{
 		0, 1, 2,
 		2, 3, 0
 	};
+
 
 	int offset = 0;
 	int i = 0;
 	int len = 1;
 	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, vstride * sizeof(GL_FLOAT), (const GLvoid*)offset));
+	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
 	offset += len * sizeof(GLfloat);
 	len = 2;
 	++i;
 	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, vstride * sizeof(GL_FLOAT), (const GLvoid*)offset));
+	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
 	offset += len * sizeof(GLfloat);
 	len = 1;
 	++i;
 	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, vstride * sizeof(GL_FLOAT), (const GLvoid*)offset));
+	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
 	offset += len * sizeof(GLfloat);
 	len = 2;
 	++i;
 	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, vstride * sizeof(GL_FLOAT), (const GLvoid*)offset));
+	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
 	offset += len * sizeof(GLfloat);
 	len = 4;
 	++i;
 	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, vstride * sizeof(GL_FLOAT), (const GLvoid*)offset));
+	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
 	offset += len * sizeof(GLfloat);
 	len = 4;
 	++i;
 	QUASAR_GL(glEnableVertexAttribArray(i));
-	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, vstride * sizeof(GL_FLOAT), (const GLvoid*)offset));
+	QUASAR_GL(glVertexAttribPointer(i, len, GL_FLOAT, GL_FALSE, sprite.buf->stride * sizeof(GL_FLOAT), (const GLvoid*)offset));
 
-	memcpy(vertex_pool, varr, 4 * vstride * sizeof(GLfloat));
-	memcpy(index_pool, iarr, 6 * sizeof(GLuint));
+	memcpy(vertex_pool, sprite.buf->varr, sprite.buf->vlen_bytes);
+	memcpy(index_pool, sprite.buf->iarr, sprite.buf->ilen_bytes);
 
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * vstride * sizeof(GLfloat), vertex_pool));
-	QUASAR_GL(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, 6 * sizeof(GLuint), index_pool));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, sprite.buf->vlen_bytes, vertex_pool));
+	QUASAR_GL(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sprite.buf->ilen_bytes, index_pool));
 
 	QUASAR_GL(glEnable(GL_BLEND));
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
@@ -252,8 +225,6 @@ int main()
 		glfwSwapBuffers(window);
 		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 	}
-
-	stbi_image_free(buffer);
 
 	QUASAR_GL(glDeleteProgram(shader));
 	QUASAR_GL(glDeleteBuffers(1, &vao));
