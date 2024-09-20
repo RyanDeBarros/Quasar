@@ -219,7 +219,7 @@ void Sprite::set_tex_ref(TextureReferencer* new_tex)
 	}
 }
 
-inline Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_params, TextureReferencer* heap_texture)
+Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_params, TextureReferencer* heap_texture)
 {
 	Sprite sprite;
 	ImageReferencer* img_ref = new ImageReferencer{};

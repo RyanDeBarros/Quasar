@@ -142,4 +142,4 @@ struct Sprite
 	void set_tex_ref(TextureReferencer* tex);
 };
 
-inline Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_params = {}, TextureReferencer* heap_texture = nullptr);
+extern Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_params = {}, TextureReferencer* heap_texture = nullptr);

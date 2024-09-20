@@ -163,11 +163,13 @@
     <ClCompile Include="src\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />
     <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\IO.h" />
     <ClInclude Include="src\Macros.h" />
+    <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\Sprite.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
