@@ -232,6 +232,7 @@ Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_pa
 	else
 	{
 		sprite.tex = new TextureReferencer{ true };
+		// TODO abstract to another function
 		QUASAR_GL(glGenTextures(1, &sprite.tex->texture));
 		QUASAR_GL(glBindTexture(GL_TEXTURE_2D, sprite.tex->texture));
 		GLint internal_format;
@@ -260,10 +261,9 @@ Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_pa
 			0, format, GL_UNSIGNED_BYTE, sprite.img->image->pixels));
 		bind_texture_params(texture_params);
 	}
-
 	sprite.buf = new BufferReferencer{};
-	sprite.buf->stride = 14;
-	sprite.buf->vlen_bytes = 4 * sprite.buf->stride * sizeof(GLfloat);
+	sprite.buf->stride = Sprite::RECT_STRIDE;
+	sprite.buf->vlen_bytes = size_t(4) * sprite.buf->stride * sizeof(GLfloat);
 	sprite.buf->varr = new GLfloat[4 * sprite.buf->stride]{
 		0.0f, -0.5f * sprite.img->image->width, -0.5f * sprite.img->image->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 		1.0f,  0.5f * sprite.img->image->width, -0.5f * sprite.img->image->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,

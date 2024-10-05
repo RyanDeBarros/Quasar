@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Macros.h"
+#include "Referencers.h"
 
 enum class MinFilter : GLint
 {
@@ -57,8 +57,8 @@ constexpr unsigned int TextureWrapLookupLength = 5;
 
 struct TextureParams
 {
-	MinFilter min_filter = MinFilter::Linear;
-	MagFilter mag_filter = MagFilter::Linear;
+	MinFilter min_filter = MinFilter::Nearest;
+	MagFilter mag_filter = MagFilter::Nearest;
 	TextureWrap wrap_s = TextureWrap::ClampToEdge;
 	TextureWrap wrap_t = TextureWrap::ClampToEdge;
 
@@ -76,56 +76,10 @@ inline void bind_texture_params(const TextureParams& params)
 	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(params.wrap_t)));
 }
 
-enum class ImageDeletionPolicy : unsigned char
-{
-	FROM_STBI,
-	FROM_NEW,
-	FROM_EXTERNAL
-};
-
-struct Image
-{
-	unsigned char* pixels = nullptr;
-	int width = 0, height = 0, bpp = 0;
-	ImageDeletionPolicy deletion_policy = ImageDeletionPolicy::FROM_EXTERNAL;
-
-	Image() = default;
-	Image(const Image&);
-	Image(Image&&) noexcept;
-	Image& operator=(const Image&);
-	Image& operator=(Image&&) noexcept;
-	~Image();
-
-	int stride() const { return width * bpp; }
-};
-
-struct ImageReferencer
-{
-	bool own = false;
-	unsigned short ref = 1;
-	Image* image;
-};
-
-struct BufferReferencer
-{
-	bool own = false;
-	unsigned char ilen_bytes = 0;
-	unsigned short stride;
-	unsigned short vlen_bytes = 0;
-	unsigned short ref = 1;
-	GLfloat* varr = nullptr;
-	GLuint* iarr = nullptr;
-};
-
-struct TextureReferencer
-{
-	bool own = false;
-	unsigned short ref = 0;
-	GLuint texture = 0;
-};
-
 struct Sprite
 {
+	static constexpr unsigned short RECT_STRIDE = 14;
+
 	ImageReferencer* img = nullptr;
 	BufferReferencer* buf = nullptr;
 	TextureReferencer* tex = nullptr;

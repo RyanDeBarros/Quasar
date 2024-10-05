@@ -167,14 +167,20 @@
     <ClCompile Include="src\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />
     <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\Renderer.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
     <ClCompile Include="vendor\glm\detail\glm.cpp" />
     <ClCompile Include="vendor\glm\glm.cppm" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Geometry.h" />
+    <ClInclude Include="src\GLutility.h" />
+    <ClInclude Include="src\Image.h" />
     <ClInclude Include="src\IO.h" />
     <ClInclude Include="src\Macros.h" />
+    <ClInclude Include="src\Referencers.h" />
+    <ClInclude Include="src\Renderer.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\Sprite.h" />
     <ClInclude Include="vendor\glm\common.hpp" />
