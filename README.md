@@ -6,9 +6,9 @@ Using my growing knowledge of OpenGL and graphics programming to make an image e
 
 This project uses the following libraries:
 
-- **GLEW**
+- **nigels-com/glew**
 - **GLFW**
-- **GLM**
-- **STB**
+- **g-truc/glm**
+- **nothings/stb**
 
 For the actual licensing information, refer to the Licenses folder.
