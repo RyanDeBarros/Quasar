@@ -1,68 +1,6 @@
-#include <stb/stb_image.h>
-
 #include "Sprite.h"
 
-Image::Image(const Image& other)
-	: width(other.width), height(other.height), bpp(other.bpp)
-{
-	deletion_policy = ImageDeletionPolicy::FROM_NEW;
-	size_t size = static_cast<size_t>(width) * height * bpp;
-	pixels = new unsigned char[size];
-	memcpy(pixels, other.pixels, size);
-}
-
-Image::Image(Image&& other) noexcept
-	: pixels(other.pixels), width(other.width), height(other.height), bpp(other.bpp), deletion_policy(other.deletion_policy)
-{
-	other.pixels = nullptr;
-}
-
-static void delete_image(const Image& image)
-{
-	if (image.deletion_policy == ImageDeletionPolicy::FROM_STBI) [[likely]]
-		stbi_image_free(image.pixels);
-	else if (image.deletion_policy == ImageDeletionPolicy::FROM_NEW)
-		delete[] image.pixels;
-}
-
-Image& Image::operator=(const Image& other)
-{
-	if (this != &other)
-	{
-		if (pixels)
-			delete_image(*this);
-		deletion_policy = ImageDeletionPolicy::FROM_NEW;
-		width = other.width;
-		height = other.height;
-		bpp = other.bpp;
-		size_t size = static_cast<size_t>(width) * height * bpp;
-		pixels = new unsigned char[size];
-		memcpy(pixels, other.pixels, size);
-	}
-	return *this;
-}
-
-Image& Image::operator=(Image&& other) noexcept
-{
-	if (this != &other)
-	{
-		if (pixels)
-			delete_image(*this);
-		pixels = other.pixels;
-		width = other.width;
-		height = other.height;
-		bpp = other.bpp;
-		deletion_policy = other.deletion_policy;
-		other.pixels = nullptr;
-	}
-	return *this;
-}
-
-Image::~Image()
-{
-	if (pixels)
-		delete_image(*this);
-}
+#include "Renderer.h"
 
 static void increment_image_references(ImageReferencer* img)
 {
@@ -217,6 +155,12 @@ void Sprite::set_tex_ref(TextureReferencer* new_tex)
 		tex = new_tex;
 		increment_texture_references(tex);
 	}
+}
+
+void Sprite::on_draw(Renderer* renderer) const
+{
+	tex->bind(renderer->get_texture_slot(tex->texture));
+	renderer->pool_over_buffer(*buf);
 }
 
 Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_params, TextureReferencer* heap_texture)

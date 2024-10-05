@@ -80,6 +80,7 @@ struct Sprite
 {
 	static constexpr unsigned short RECT_STRIDE = 14;
 
+	// TODO just transition to registries and handles?
 	ImageReferencer* img = nullptr;
 	BufferReferencer* buf = nullptr;
 	TextureReferencer* tex = nullptr;
@@ -94,6 +95,8 @@ struct Sprite
 	void set_img_ref(ImageReferencer* img);
 	void set_buf_ref(BufferReferencer* buf);
 	void set_tex_ref(TextureReferencer* tex);
+
+	void on_draw(class Renderer*) const;
 };
 
 extern Sprite rect_sprite(Image* image, bool own_image, const TextureParams& texture_params = {}, TextureReferencer* heap_texture = nullptr);

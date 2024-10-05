@@ -14,6 +14,7 @@ struct Image
 	ImageDeletionPolicy deletion_policy = ImageDeletionPolicy::FROM_EXTERNAL;
 
 	Image() = default;
+	Image(const char* filepath);
 	Image(const Image&);
 	Image(Image&&) noexcept;
 	Image& operator=(const Image&);
