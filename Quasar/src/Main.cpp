@@ -41,19 +41,33 @@ int main()
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 	QUASAR_GL(glClearColor(0.5f, 0.5f, 0.5f, 0.5f));
 
-	Renderer renderer(window, load_shader());
+	Renderer renderer(window, Shader());
 	// only one renderer, so only needs to be called once, not on every draw frame. if more than one renderer, than call bind() before on_draw().
 	renderer.bind();
 
-	Image img("ex/tux.png");
-	Sprite sprite = rect_sprite(&img, false);
-	renderer.sprites.push_back(&sprite);
+	auto tux = ImageRegistry.construct(ImageConstructor("ex/tux.png"));
+	Sprite sprite(tux);
+	renderer.sprites().push_back(&sprite);
 
-	for (glfwPollEvents(); !glfwWindowShouldClose(window); glfwPollEvents())
+	sprite.transform.scale = { 0.25f, 0.25f };
+	sprite.transform.rotation = 0.3f;
+	sprite.transform.position = { -200.0f, 100.0f };
+	sprite.sync_transform();
+
+	Sprite sprite2(tux);
+	renderer.sprites().push_back(&sprite2);
+	sprite2.transform = { { 200.0f, -100.0f }, { -0.8f }, { 0.1f, 0.1f } };
+	sprite2.sync_transform();
+
+	for (;;)
 	{
+		glfwPollEvents();
+		if (glfwWindowShouldClose(window))
+			break;
+
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 		renderer.on_draw();
 		glfwSwapBuffers(window);
-		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 	}
 
 	return 0;

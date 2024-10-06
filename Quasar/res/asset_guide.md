@@ -1,8 +1,8 @@
 # Overview
 
-Quasar config files use the following format:
+Quasar asset files use the following format:
 
-	1. First line is file type: 'shader'
+	1. First line is asset type: 'shader'
 	2. Lines with the format '#:value'
 
 ## Shader

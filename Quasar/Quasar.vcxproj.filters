@@ -941,6 +941,12 @@
     <ClInclude Include="src\GLutility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Registry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Resources.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="vendor\glm\detail\func_common.inl">

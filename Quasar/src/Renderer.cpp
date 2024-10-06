@@ -50,7 +50,7 @@ static T* advance_bytes(T* ptr, size_t bytes)
 	return reinterpret_cast<T*>(reinterpret_cast<std::byte*>(ptr) + bytes);
 }
 
-void Renderer::pool_over_buffer(const BufferReferencer& buffer)
+void Renderer::prepare_for(const BufferReferencer& buffer)
 {
 	if (advance_bytes(vertex_pos, buffer.vlen_bytes) - vertex_pool >= QUASAR_MAX_VERTICES
 		|| advance_bytes(index_pos, buffer.ilen_bytes) - index_pool >= QUASAR_MAX_INDEXES)
@@ -58,19 +58,23 @@ void Renderer::pool_over_buffer(const BufferReferencer& buffer)
 		flush();
 		reset();
 	}
-	unsigned short num_vs = vertex_pos - vertex_pool;
+}
+
+void Renderer::pool_over_buffer(const BufferReferencer& buffer)
+{
+	// TODO clean up these divisions
 	memcpy(vertex_pos, buffer.varr, buffer.vlen_bytes);
-	for (size_t i = 0; i < buffer.ilen_bytes; ++i)
-		*index_pos++ = buffer.iarr[i] + num_vs;
+	for (size_t i = 0; i < buffer.ilen_bytes / sizeof(GLuint); ++i)
+		*index_pos++ = buffer.iarr[i] + num_vertices;
+	num_vertices += buffer.vlen_bytes / (buffer.stride * sizeof(GLfloat));
 	vertex_pos = advance_bytes(vertex_pos, buffer.vlen_bytes);
-	index_pos = advance_bytes(index_pos, buffer.ilen_bytes);
 }
 
 void Renderer::on_draw()
 {
 	reset();
-	for (size_t i = 0; i < sprites.size(); ++i)
-		sprites[i]->on_draw(this);
+	for (size_t i = 0; i < _sprites.size(); ++i)
+		_sprites[i]->on_draw(this);
 	flush();
 }
 
@@ -78,13 +82,14 @@ void Renderer::flush() const
 {
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, (vertex_pos - vertex_pool) * sizeof(decltype(vertex_pool)), vertex_pool));
 	QUASAR_GL(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, (index_pos - index_pool) * sizeof(decltype(index_pool)), index_pool));
-	QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+	QUASAR_GL(glDrawElements(GL_TRIANGLES, index_pos - index_pool, GL_UNSIGNED_INT, 0));
 }
 
 void Renderer::reset()
 {
 	vertex_pos = vertex_pool;
 	index_pos = index_pool;
+	num_vertices = 0;
 	texture_slot_cap = 0;
 }
 

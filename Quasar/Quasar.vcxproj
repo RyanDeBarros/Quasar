@@ -181,7 +181,9 @@
     <ClInclude Include="src\IO.h" />
     <ClInclude Include="src\Macros.h" />
     <ClInclude Include="src\Referencers.h" />
+    <ClInclude Include="src\Registry.h" />
     <ClInclude Include="src\Renderer.h" />
+    <ClInclude Include="src\Resources.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\Sprite.h" />
     <ClInclude Include="vendor\glm\common.hpp" />

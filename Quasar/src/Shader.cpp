@@ -26,18 +26,6 @@ static GLuint compile_shader(GLenum type, const char* shader, const char* filepa
 	return id;
 }
 
-Shader::~Shader()
-{
-	QUASAR_GL(glDeleteProgram(rid));
-}
-
-void Shader::query_location(std::string&& attribute)
-{
-	QUASAR_GL(GLint location = glGetUniformLocation(rid, attribute.c_str()));
-	if (!std::signbit(location))
-		locations.emplace(std::move(attribute), location);
-}
-
 static GLuint load_program(const char* vert, const char* frag)
 {
 	std::string vertex_shader;
@@ -105,17 +93,16 @@ static unsigned short stride_of(const std::vector<unsigned short>& attributes)
 	return sum;
 }
 
-Shader load_shader(const char* assetfile)
+Shader::Shader(const ShaderConstructor& args)
 {
-	Shader shader;
 	std::string file;
-	if (!IO::read_file(assetfile, file))
-		return shader;
+	if (!IO::read_file(args.filepath.c_str(), file))
+		return;
 	std::istringstream iss(file);
 	std::string line;
 	std::getline(iss, line, '\n');
 	if (line != "shader")
-		return shader;
+		return;
 	std::string vert, frag;
 	while (std::getline(iss, line, '\n'))
 	{
@@ -129,11 +116,22 @@ Shader load_shader(const char* assetfile)
 			frag = std::move(line);
 			break;
 		case 3:
-			shader.attributes = parse_attributes(line.c_str() + 2);
+			attributes = parse_attributes(line.c_str() + 2);
 			break;
 		}
 	}
-	shader.rid = load_program(vert.c_str() + 2, frag.c_str() + 2);
-	shader.stride = stride_of(shader.attributes);
-	return shader;
+	stride = stride_of(attributes);
+	rid = load_program(vert.c_str() + 2, frag.c_str() + 2);
+}
+
+Shader::~Shader()
+{
+	QUASAR_GL(glDeleteProgram(rid));
+}
+
+void Shader::query_location(std::string&& attribute)
+{
+	QUASAR_GL(GLint location = glGetUniformLocation(rid, attribute.c_str()));
+	if (!std::signbit(location))
+		locations.emplace(std::move(attribute), location);
 }

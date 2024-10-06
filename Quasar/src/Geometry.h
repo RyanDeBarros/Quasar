@@ -4,7 +4,7 @@
 
 struct Position : glm::vec2
 {
-	Position() : glm::vec2(0.0f, 0.0f) {}
+	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
 };
 struct Rotation
 {
@@ -18,7 +18,7 @@ struct Rotation
 };
 struct Scale : glm::vec2
 {
-	Scale() : glm::vec2(1.0f, 1.0f) {}
+	Scale(float x = 1.0f, float y = 1.0f) : glm::vec2(x, y) {}
 };
 
 struct Transform
@@ -29,6 +29,9 @@ struct Transform
 
 	glm::mat3 inverse() const
 	{
-		return glm::mat3(cosf(rotation) / scale.x, -sinf(rotation) / scale.x, 0, sinf(rotation) / scale.y, cosf(rotation) / scale.y, 0, -position.x, -position.y, 1);
+		return glm::mat3(glm::cos(rotation) / scale.x, -glm::sin(rotation) / scale.x, 0, glm::sin(rotation) / scale.y, glm::cos(rotation) / scale.y, 0, -position.x, -position.y, 1);
 	}
+
+	glm::vec2 packed_p() const { return position; }
+	glm::vec4 packed_rs() const { return { scale.x * glm::cos(rotation), scale.x * glm::sin(rotation), -scale.y * glm::sin(rotation), scale.y * glm::cos(rotation)}; }
 };

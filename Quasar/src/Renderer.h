@@ -2,6 +2,7 @@
 
 #include "Macros.h"
 #include "Referencers.h"
+#include "Resources.h"
 #include "Geometry.h"
 #include "Shader.h"
 
@@ -18,11 +19,13 @@ class Renderer
 	GLuint* index_pos = nullptr;
 	GLFWwindow* window;
 	GLuint* const texture_slots = nullptr;
+	unsigned short num_vertices = 0;
 	glm::mat3 projection;
 	Transform view;
 	GLuint vao = 0, vb = 0, ib = 0;
 	Shader shader;
 	unsigned char texture_slot_cap = 0;
+	std::vector<struct Sprite*> _sprites;
 
 public:
 	Renderer(GLFWwindow* window, Shader&& shader);
@@ -31,6 +34,7 @@ public:
 	~Renderer();
 
 	void bind() const;
+	void prepare_for(const BufferReferencer& buffer);
 	void pool_over_buffer(const BufferReferencer& buffer);
 	void on_draw();
 	void flush() const;
@@ -39,5 +43,5 @@ public:
 	void set_view(const Transform& view);
 	unsigned short get_texture_slot(GLuint texture);
 
-	std::vector<struct Sprite*> sprites;
+	std::vector<struct Sprite*>& sprites() { return _sprites; };
 };
