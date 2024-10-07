@@ -97,12 +97,14 @@ struct Path;
 
 struct Image
 {
-	typedef unsigned char byte;
-	typedef int dim;
+	typedef unsigned char Byte;
+	typedef int Dim;
+	typedef int BPP;
 
-	byte* pixels = nullptr;
+	Byte* pixels = nullptr;
 	GLuint tid = 0;
-	dim width = 0, height = 0, bpp = 0;
+	Dim width = 0, height = 0;
+	BPP bpp = 0;
 
 	Image() = default;
 	Image(const ImageConstructor& args);
@@ -119,13 +121,13 @@ struct Image
 	void gen_texture(const TextureParams& texture_params = {});
 	void update_texture_params(const TextureParams& texture_params = {}) const;
 	void update_texture() const;
+	void update_texture_fully() const;
 	void send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const;
-	GLenum bpp_format() const;
 
 	// buffer operations
 
-	dim stride() const { return width * bpp; }
-	dim area() const { return width * height * bpp; }
+	Dim stride() const { return width * bpp; }
+	Dim area() const { return width * height * bpp; }
 
 	void flip_vertically() const;
 	void flip_horizontally() const;
@@ -134,20 +136,20 @@ struct Image
 	void rotate_180() const { flip_vertically(); flip_horizontally(); /* TODO combine into 1 operation */ }
 	//void rotate_270();
 
-	void iterate_path(const Path& path_, const std::function<void(byte*)>& func);
-	void riterate_path(const Path& path_, const std::function<void(byte*)>& func);
-	void set(byte* pixel, const Path& path_);
+	void iterate_path(const Path& path_, const std::function<void(Byte*)>& func);
+	void riterate_path(const Path& path_, const std::function<void(Byte*)>& func);
+	void set(Byte* pixel, const Path& path_);
 };
 
 struct PathIterator
 {
-	Image::dim x = 0;
-	Image::dim y = 0;
+	Image::Dim x = 0;
+	Image::Dim y = 0;
 	Image& im;
 
 	PathIterator(Image& image) : im(image) {}
 
-	Image::byte* operator*() const { return im.pixels + y * im.stride() + x * im.bpp; }
+	Image::Byte* operator*() const { return im.pixels + y * im.stride() + x * im.bpp; }
 
 	bool operator==(const PathIterator& other) const { return x == other.x && y == other.y && &im == &other.im; }
 	bool operator!=(const PathIterator& other) const { return x != other.x || y != other.y || &im != &other.im; }
@@ -166,7 +168,7 @@ struct Path
 
 struct horizontal_line : public Path
 {
-	Image::dim x0 = 0, x1 = 0, y = 0;
+	Image::Dim x0 = 0, x1 = 0, y = 0;
 	void first(PathIterator& pit) const override { pit.x = x0; pit.y = y; }
 	void last(PathIterator& pit) const override { pit.x = x1; pit.y = y; }
 	void prev(PathIterator& pit) const override { --pit.x; }
@@ -175,7 +177,7 @@ struct horizontal_line : public Path
 
 struct vertical_line : public Path
 {
-	Image::dim x = 0, y0 = 0, y1 = 0;
+	Image::Dim x = 0, y0 = 0, y1 = 0;
 	void first(PathIterator& pit) const override { pit.x = x; pit.y = y0; }
 	void last(PathIterator& pit) const override { pit.x = x; pit.y = y1; }
 	void prev(PathIterator& pit) const override { --pit.y; }
@@ -184,7 +186,7 @@ struct vertical_line : public Path
 
 struct upright_rect : public Path
 {
-	Image::dim x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+	Image::Dim x0 = 0, x1 = 0, y0 = 0, y1 = 0;
 	void first(PathIterator& pit) const override { pit.x = x0; pit.y = y0; }
 	void last(PathIterator& pit) const override { pit.x = x1; pit.y = y1; }
 	void prev(PathIterator& pit) const override { if (pit.x == x0) { pit.x = x1; --pit.y; } else { --pit.x; } }
