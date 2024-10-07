@@ -93,6 +93,7 @@ struct std::hash<ImageConstructor>
 	size_t operator()(const ImageConstructor& ic) const { return std::hash<std::string>{}(ic.filepath); }
 };
 
+struct PathIterator;
 struct Path;
 
 struct Image
@@ -121,38 +122,40 @@ struct Image
 	void gen_texture(const TextureParams& texture_params = {});
 	void update_texture_params(const TextureParams& texture_params = {}) const;
 	void update_texture() const;
-	void update_texture_fully() const;
+	void resend_texture() const;
 	void send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const;
 
 	// buffer operations
 
+	static Dim bufoffset(Dim x, Dim y, Dim width, Dim bpp) { return (y * width + x) * bpp; }
 	Dim stride() const { return width * bpp; }
 	Dim area() const { return width * height * bpp; }
 
-	void flip_vertically() const;
-	void flip_horizontally() const;
+	void _flip_vertically() const;
+	void _flip_horizontally() const;
+	void flip_vertically() const { _flip_vertically(); update_texture(); }
+	void flip_horizontally() const { _flip_horizontally(); update_texture(); }
 
-	//void rotate_90();
-	void rotate_180() const { flip_vertically(); flip_horizontally(); /* TODO combine into 1 operation */ }
-	//void rotate_270();
+	//void _rotate_90();
+	void _rotate_180() const;
+	void rotate_180() const { _rotate_180(); update_texture(); }
+	//void _rotate_270();
+	// change bpp
+	// crop width / height --> create new image and return it, so old image isn't lost?
+	// This reminds me, implement a undo/redo action history stack.
 
-	void iterate_path(const Path& path_, const std::function<void(Byte*)>& func);
-	void riterate_path(const Path& path_, const std::function<void(Byte*)>& func);
-	void set(Byte* pixel, const Path& path_);
+	void iterate_path(const Path& path_, const std::function<void(PathIterator&)>& func) const;
+	void riterate_path(const Path& path_, const std::function<void(PathIterator&)>& func) const;
+	void _set(Byte* pixel, const Path& path_) const;
+	void set(Byte* pixel, const Path& path_) const { _set(pixel, path_); update_texture(); }
 };
 
 struct PathIterator
 {
 	Image::Dim x = 0;
 	Image::Dim y = 0;
-	Image& im;
 
-	PathIterator(Image& image) : im(image) {}
-
-	Image::Byte* operator*() const { return im.pixels + y * im.stride() + x * im.bpp; }
-
-	bool operator==(const PathIterator& other) const { return x == other.x && y == other.y && &im == &other.im; }
-	bool operator!=(const PathIterator& other) const { return x != other.x || y != other.y || &im != &other.im; }
+	bool operator==(const PathIterator& other) const = default;
 };
 
 struct Path
@@ -162,11 +165,11 @@ struct Path
 	virtual void prev(PathIterator&) const = 0;
 	virtual void next(PathIterator&) const = 0;
 
-	PathIterator first(Image& image) const { PathIterator pit(image); first(pit); return pit; }
-	PathIterator last(Image& image) const { PathIterator pit(image); last(pit); return pit; }
+	PathIterator first() const { PathIterator pit; first(pit); return pit; }
+	PathIterator last() const { PathIterator pit; last(pit); return pit; }
 };
 
-struct horizontal_line : public Path
+struct HorizontalLine : public Path
 {
 	Image::Dim x0 = 0, x1 = 0, y = 0;
 	void first(PathIterator& pit) const override { pit.x = x0; pit.y = y; }
@@ -175,7 +178,7 @@ struct horizontal_line : public Path
 	void next(PathIterator& pit) const override { ++pit.x; }
 };
 
-struct vertical_line : public Path
+struct VerticalLine : public Path
 {
 	Image::Dim x = 0, y0 = 0, y1 = 0;
 	void first(PathIterator& pit) const override { pit.x = x; pit.y = y0; }
@@ -184,9 +187,13 @@ struct vertical_line : public Path
 	void next(PathIterator& pit) const override { ++pit.y; }
 };
 
-struct upright_rect : public Path
+struct UprightRect : public Path
 {
 	Image::Dim x0 = 0, x1 = 0, y0 = 0, y1 = 0;
+
+	UprightRect() = default;
+	UprightRect(const Image& im) : x0(0), x1(im.width - 1), y0(0), y1(im.height - 1) {}
+
 	void first(PathIterator& pit) const override { pit.x = x0; pit.y = y0; }
 	void last(PathIterator& pit) const override { pit.x = x1; pit.y = y1; }
 	void prev(PathIterator& pit) const override { if (pit.x == x0) { pit.x = x1; --pit.y; } else { --pit.x; } }

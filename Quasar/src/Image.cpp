@@ -126,7 +126,7 @@ void Image::gen_texture(const TextureParams& texture_params)
 	if (tid == 0)
 	{
 		QUASAR_GL(glGenTextures(1, &tid));
-		update_texture_fully();
+		resend_texture();
 		update_texture_params();
 	}
 }
@@ -149,7 +149,7 @@ void Image::update_texture() const
 	}
 }
 
-void Image::update_texture_fully() const
+void Image::resend_texture() const
 {
 	if (tid)
 	{
@@ -165,7 +165,7 @@ void Image::send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, bpp_format(bpp), GL_UNSIGNED_BYTE, pixels);
 }
 
-void Image::flip_vertically() const
+void Image::_flip_vertically() const
 {
 	Dim stride = width * bpp;
 	Byte* temp = new Byte[stride];
@@ -182,7 +182,7 @@ void Image::flip_vertically() const
 	delete[] temp;
 }
 
-void Image::flip_horizontally() const
+void Image::_flip_horizontally() const
 {
 	Dim stride = width * bpp;
 	Byte* temp = new Byte[bpp];
@@ -206,14 +206,29 @@ void Image::flip_horizontally() const
 	delete[] temp;
 }
 
-void Image::iterate_path(const Path& path, const std::function<void(Byte*)>& func)
+void Image::_rotate_180() const
 {
-	PathIterator pit = path.first(*this);
-	const PathIterator plast = path.last(*this);
+	UprightRect full;
+	full.x1 = width - 1;
+	full.y1 = height / 2 - 1;
+	Dim* temp = new Dim[bpp];
+	iterate_path(full, [this, temp](PathIterator& pit) {
+		Byte* p1 = pixels + bufoffset(pit.x, pit.y, width, bpp);
+		Byte* p2 = pixels + bufoffset(width - 1 - pit.x, height - 1 - pit.y, width, bpp);
+		memcpy(temp, p1, bpp);
+		memcpy(p1, p2, bpp);
+		memcpy(p2, temp, bpp);
+		});
+	delete[] temp;
+}
+
+void Image::iterate_path(const Path& path, const std::function<void(PathIterator&)>& func) const
+{
+	PathIterator pit = path.first();
+	const PathIterator plast = path.last();
 	while (true)
 	{
-		Byte* pixel = *pit;
-		func(pixel);
+		func(pit);
 		if (pit == plast)
 			break;
 		else
@@ -221,14 +236,13 @@ void Image::iterate_path(const Path& path, const std::function<void(Byte*)>& fun
 	}
 }
 
-void Image::riterate_path(const Path& path, const std::function<void(Byte*)>& func)
+void Image::riterate_path(const Path& path, const std::function<void(PathIterator&)>& func) const
 {
-	PathIterator pit = path.last(*this);
-	const PathIterator pfirst = path.first(*this);
+	PathIterator pit = path.last();
+	const PathIterator pfirst = path.first();
 	while (true)
 	{
-		Byte* pixel = *pit;
-		func(pixel);
+		func(pit);
 		if (pit == pfirst)
 			break;
 		else
@@ -236,7 +250,7 @@ void Image::riterate_path(const Path& path, const std::function<void(Byte*)>& fu
 	}
 }
 
-void Image::set(Byte* pixel, const Path& path)
+void Image::_set(Byte* pixel, const Path& path) const
 {
-	iterate_path(path, [pixel, this](Byte* pos) { memcpy(pos, pixel, bpp); });
+	iterate_path(path, [this, pixel](PathIterator& pit) { memcpy(pixels + bufoffset(pit.x, pit.y, width, bpp), pixel, bpp); });
 }

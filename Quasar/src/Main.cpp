@@ -51,7 +51,6 @@ int main()
 	Sprite sprite(tux);
 	renderer.sprites().push_back(&sprite);
 	tux_img->rotate_180();
-	tux_img->update_texture();
 
 	for (;;)
 	{
