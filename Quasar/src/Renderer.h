@@ -5,10 +5,14 @@
 #include "Geometry.h"
 #include "Shader.h"
 
-// TODO put these in a settings file
-constexpr unsigned short QUASAR_MAX_VERTICES = 512;
-constexpr unsigned short QUASAR_MAX_INDEXES = 1024;
-constexpr unsigned short QUASAR_TEXTURE_SLOTS = 32;
+struct QuasarSettings
+{
+	static unsigned short VERTEX_COUNT;
+	static unsigned short INDEX_COUNT;
+	static unsigned short TEXTURES_COUNT;
+
+	static void load_settings(const char* filepath = "res/settings.asset");
+};
 
 class Renderer
 {

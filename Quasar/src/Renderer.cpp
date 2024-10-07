@@ -1,10 +1,46 @@
 #include "Renderer.h"
 
+#include <sstream>
+
 #include "Sprite.h"
 #include "GLutility.h"
+#include "IO.h"
+
+unsigned short QuasarSettings::VERTEX_COUNT = 512;
+unsigned short QuasarSettings::INDEX_COUNT = 768;
+unsigned short QuasarSettings::TEXTURES_COUNT = 32;
+
+void QuasarSettings::load_settings(const char* filepath)
+{
+	std::string file;
+	if (!IO::read_file(filepath, file))
+		return;
+	std::istringstream iss(file);
+	std::string line;
+	std::getline(iss, line, '\n');
+	if (line != "settings")
+		return;
+	while (std::getline(iss, line, '\n'))
+	{
+		int i = line[0] - '0';
+		switch (i)
+		{
+		case 1:
+			VERTEX_COUNT = std::stoi(line.substr(2));
+			break;
+		case 2:
+			INDEX_COUNT = std::stoi(line.substr(2));
+			break;
+		case 3:
+			TEXTURES_COUNT = std::stoi(line.substr(2));
+			break;
+		}
+	}
+}
 
 Renderer::Renderer(GLFWwindow* window, Shader&& shader_)
-	: window(window), shader(shader_), vertex_pool(new GLfloat[QUASAR_MAX_VERTICES]), index_pool(new GLuint[QUASAR_MAX_INDEXES]), texture_slots(new GLuint[QUASAR_TEXTURE_SLOTS])
+	: window(window), shader(shader_), vertex_pool(new GLfloat[QuasarSettings::VERTEX_COUNT]),
+	index_pool(new GLuint[QuasarSettings::INDEX_COUNT]), texture_slots(new GLuint[QuasarSettings::TEXTURES_COUNT])
 {
 	reset();
 
@@ -13,10 +49,10 @@ Renderer::Renderer(GLFWwindow* window, Shader&& shader_)
 
 	QUASAR_GL(glGenBuffers(1, &vb));
 	QUASAR_GL(glBindBuffer(GL_ARRAY_BUFFER, vb));
-	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, QUASAR_MAX_VERTICES * sizeof(GLfloat), vertex_pool, GL_DYNAMIC_DRAW));
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, QuasarSettings::VERTEX_COUNT * sizeof(GLfloat), vertex_pool, GL_DYNAMIC_DRAW));
 	QUASAR_GL(glGenBuffers(1, &ib));
 	QUASAR_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib));
-	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, QUASAR_MAX_INDEXES * sizeof(GLuint), index_pool, GL_DYNAMIC_DRAW));
+	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, QuasarSettings::INDEX_COUNT * sizeof(GLuint), index_pool, GL_DYNAMIC_DRAW));
 
 	attrib_pointers(shader.attributes, shader.stride);
 	int ww, wh;
@@ -53,8 +89,8 @@ static T* advance_bytes(T* ptr, size_t bytes)
 
 void Renderer::prepare_for_sprite()
 {
-	if (advance_bytes(vertex_pos, Sprite::VLEN_BYTES) - vertex_pool >= QUASAR_MAX_VERTICES
-		|| advance_bytes(index_pos, Sprite::ILEN_BYTES) - index_pool >= QUASAR_MAX_INDEXES)
+	if (advance_bytes(vertex_pos, Sprite::VLEN_BYTES) - vertex_pool >= QuasarSettings::VERTEX_COUNT
+		|| advance_bytes(index_pos, Sprite::ILEN_BYTES) - index_pool >= QuasarSettings::INDEX_COUNT)
 	{
 		flush();
 		reset();
@@ -108,7 +144,7 @@ unsigned short Renderer::get_texture_slot(GLuint texture)
 		if (texture_slots[i] == texture)
 			return i;
 	}
-	if (texture_slot_cap == QUASAR_TEXTURE_SLOTS)
+	if (texture_slot_cap == QuasarSettings::TEXTURES_COUNT)
 	{
 		flush();
 		reset();

@@ -16,6 +16,7 @@ static void glfw_error_callback(int error, const char* description)
 
 int main()
 {
+	QuasarSettings::load_settings();
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);
