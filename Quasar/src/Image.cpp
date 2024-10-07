@@ -5,49 +5,53 @@
 
 #include "GLutility.h"
 
+static void delete_buffer(Image& image)
+{
+	stbi_image_free(image.pixels); // equivalent to delete[] image.pixels
+}
+
+static void delete_texture(Image& image)
+{
+	QUASAR_GL(glDeleteTextures(1, &image.tid));
+}
+
 Image::Image(const ImageConstructor& args)
 {
 	stbi_set_flip_vertically_on_load(true);
 	pixels = stbi_load(args.filepath.c_str(), &width, &height, &bpp, 0);
-	deletion_policy = ImageDeletionPolicy::FROM_STBI;
+	if (args.gen_texture)
+		gen_texture();
 }
 
 Image::Image(const Image& other)
 	: width(other.width), height(other.height), bpp(other.bpp)
 {
-	deletion_policy = ImageDeletionPolicy::FROM_NEW;
-	size_t size = static_cast<size_t>(width) * height * bpp;
-	pixels = new unsigned char[size];
-	memcpy(pixels, other.pixels, size);
+	pixels = new byte[area()];
+	memcpy(pixels, other.pixels, area());
+	if (other.tid != 0)
+		gen_texture();
 }
 
 Image::Image(Image&& other) noexcept
-	: pixels(other.pixels), width(other.width), height(other.height), bpp(other.bpp), deletion_policy(other.deletion_policy)
+	: width(other.width), height(other.height), bpp(other.bpp), pixels(other.pixels), tid(other.tid)
 {
 	other.pixels = nullptr;
-}
-
-static void delete_image(const Image& image)
-{
-	if (image.deletion_policy == ImageDeletionPolicy::FROM_STBI) [[likely]]
-		stbi_image_free(image.pixels);
-	else if (image.deletion_policy == ImageDeletionPolicy::FROM_NEW)
-		delete[] image.pixels;
+	other.tid = 0;
 }
 
 Image& Image::operator=(const Image& other)
 {
 	if (this != &other)
 	{
-		if (pixels)
-			delete_image(*this);
-		deletion_policy = ImageDeletionPolicy::FROM_NEW;
+		delete_buffer(*this);
+		delete_texture(*this);
 		width = other.width;
 		height = other.height;
 		bpp = other.bpp;
-		size_t size = static_cast<size_t>(width) * height * bpp;
-		pixels = new unsigned char[size];
-		memcpy(pixels, other.pixels, size);
+		pixels = new byte[area()];
+		memcpy(pixels, other.pixels, area());
+		if (other.tid != 0)
+			gen_texture();
 	}
 	return *this;
 }
@@ -56,22 +60,23 @@ Image& Image::operator=(Image&& other) noexcept
 {
 	if (this != &other)
 	{
-		if (pixels)
-			delete_image(*this);
-		pixels = other.pixels;
+		delete_buffer(*this);
+		delete_texture(*this);
 		width = other.width;
 		height = other.height;
 		bpp = other.bpp;
-		deletion_policy = other.deletion_policy;
+		pixels = other.pixels;
+		tid = other.tid;
 		other.pixels = nullptr;
+		other.tid = 0;
 	}
 	return *this;
 }
 
 Image::~Image()
 {
-	if (pixels)
-		delete_image(*this);
+	delete_buffer(*this);
+	delete_texture(*this);
 }
 
 void Image::gen_texture(const TextureParams& texture_params)
@@ -113,13 +118,19 @@ void Image::gen_texture(const TextureParams& texture_params)
 	}
 }
 
-void Image::update_texture(const TextureParams& texture_params) const
+void Image::update_texture_params(const TextureParams& texture_params) const
 {
 	if (tid != 0)
 	{
 		bind_texture(tid);
 		bind_texture_params(texture_params);
 	}
+}
+
+void Image::update_texture() const
+{
+	bind_texture(tid);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, bpp_format(), GL_UNSIGNED_BYTE, pixels);
 }
 
 void Image::send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const
@@ -140,4 +151,80 @@ GLenum Image::bpp_format() const
 		return GL_RED;
 	else
 		return 0;
+}
+
+void Image::flip_vertically() const
+{
+	dim stride = width * bpp;
+	byte* temp = new byte[stride];
+	byte* bottom = pixels;
+	byte* top = pixels + (height - 1) * stride;
+	for (dim _ = 0; _ < height >> 1; ++_)
+	{
+		memcpy(temp, bottom, stride);
+		memcpy(bottom, top, stride);
+		memcpy(top, temp, stride);
+		bottom += stride;
+		top -= stride;
+	}
+	delete[] temp;
+}
+
+void Image::flip_horizontally() const
+{
+	dim stride = width * bpp;
+	byte* temp = new byte[bpp];
+	byte* row = pixels;
+	byte* left = nullptr;
+	byte* right = nullptr;
+	for (dim _ = 0; _ < height; ++_)
+	{
+		left = row;
+		right = row + (width - 1) * bpp;
+		for (dim i = 0; i < width >> 1; ++i)
+		{
+			memcpy(temp, left, bpp);
+			memcpy(left, right, bpp);
+			memcpy(right, temp, bpp);
+			left += bpp;
+			right -= bpp;
+		}
+		row += stride;
+	}
+	delete[] temp;
+}
+
+void Image::iterate_path(const Path& path, const std::function<void(byte*)>& func)
+{
+	PathIterator pit = path.first(*this);
+	const PathIterator plast = path.last(*this);
+	while (true)
+	{
+		byte* pixel = *pit;
+		func(pixel);
+		if (pit == plast)
+			break;
+		else
+			path.next(pit);
+	}
+}
+
+void Image::riterate_path(const Path& path, const std::function<void(byte*)>& func)
+{
+	PathIterator pit = path.last(*this);
+	const PathIterator pfirst = path.first(*this);
+	while (true)
+	{
+		byte* pixel = *pit;
+		func(pixel);
+		if (pit == pfirst)
+			break;
+		else
+			path.prev(pit);
+	}
+}
+
+void Image::set(byte* pixel, const Path& path)
+{
+	iterate_path(path, [pixel, this](byte* pos) { memcpy(pos, pixel, bpp); });
 }

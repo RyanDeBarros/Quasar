@@ -40,25 +40,18 @@ int main()
 	}
 	glfwSwapInterval(1);
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
-	QUASAR_GL(glClearColor(0.5f, 0.5f, 0.5f, 0.5f));
+	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 
 	Renderer renderer(window, Shader());
 	// only one renderer, so only needs to be called once, not on every draw frame. if more than one renderer, than call bind() before on_draw().
 	renderer.bind();
 
-	auto tux = ImageRegistry.construct(ImageConstructor("ex/tux.png"));
+	auto tux = ImageRegistry.construct(ImageConstructor("ex/einstein.png"));
+	auto tux_img = ImageRegistry.get(tux);
 	Sprite sprite(tux);
 	renderer.sprites().push_back(&sprite);
-
-	sprite.transform.scale = { 0.25f, 0.25f };
-	sprite.transform.rotation = 0.3f;
-	sprite.transform.position = { -200.0f, 100.0f };
-	sprite.sync_transform();
-
-	Sprite sprite2(tux);
-	renderer.sprites().push_back(&sprite2);
-	sprite2.transform = { { 200.0f, -100.0f }, { -0.8f }, { 0.1f, 0.1f } };
-	sprite2.sync_transform();
+	tux_img->rotate_180();
+	tux_img->update_texture();
 
 	for (;;)
 	{

@@ -7,7 +7,6 @@ Sprite::Sprite(ImageHandle image)
 	: image(image)
 {
 	Image* img = ImageRegistry.get(image);
-	img->gen_texture();
 	varr = new GLfloat[NUM_VERTICES * STRIDE]{
 		0.0f, -0.5f * img->width, -0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 		1.0f,  0.5f * img->width, -0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
