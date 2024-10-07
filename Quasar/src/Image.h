@@ -119,6 +119,5 @@ struct Image
 	void update_texture(const TextureParams& texture_params = {}) const;
 	void send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const;
 	GLenum bpp_format() const;
-	void bind_texture(GLuint slot = 0) const;
 	int stride() const { return width * bpp; }
 };

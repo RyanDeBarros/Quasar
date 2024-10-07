@@ -3,6 +3,8 @@
 #include <stb/stb_image.h>
 #include <memory>
 
+#include "GLutility.h"
+
 Image::Image(const ImageConstructor& args)
 {
 	stbi_set_flip_vertically_on_load(true);
@@ -77,7 +79,7 @@ void Image::gen_texture(const TextureParams& texture_params)
 	if (tid == 0)
 	{
 		QUASAR_GL(glGenTextures(1, &tid));
-		bind_texture();
+		bind_texture(tid);
 		GLint internal_format = 0;
 		GLenum format = 0;
 		GLint alignment = 0;
@@ -115,14 +117,14 @@ void Image::update_texture(const TextureParams& texture_params) const
 {
 	if (tid != 0)
 	{
-		bind_texture();
+		bind_texture(tid);
 		bind_texture_params(texture_params);
 	}
 }
 
 void Image::send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const
 {
-	bind_texture();
+	bind_texture(tid);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, bpp_format(), GL_UNSIGNED_BYTE, pixels);
 }
 
@@ -138,10 +140,4 @@ GLenum Image::bpp_format() const
 		return GL_RED;
 	else
 		return 0;
-}
-
-void Image::bind_texture(GLuint slot) const
-{
-	QUASAR_GL(glActiveTexture(GL_TEXTURE0 + slot));
-	QUASAR_GL(glBindTexture(GL_TEXTURE_2D, tid));
 }

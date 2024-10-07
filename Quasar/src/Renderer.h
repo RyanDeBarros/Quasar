@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Macros.h"
-#include "Referencers.h"
 #include "Resources.h"
 #include "Geometry.h"
 #include "Shader.h"
@@ -34,8 +33,8 @@ public:
 	~Renderer();
 
 	void bind() const;
-	void prepare_for(const BufferReferencer& buffer);
-	void pool_over_buffer(const BufferReferencer& buffer);
+	void prepare_for_sprite();
+	void pool_over_varr(GLfloat* varr);
 	void on_draw();
 	void flush() const;
 	void reset();

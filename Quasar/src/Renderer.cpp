@@ -1,6 +1,7 @@
 #include "Renderer.h"
 
 #include "Sprite.h"
+#include "GLutility.h"
 
 Renderer::Renderer(GLFWwindow* window, Shader&& shader_)
 	: window(window), shader(shader_), vertex_pool(new GLfloat[QUASAR_MAX_VERTICES]), index_pool(new GLuint[QUASAR_MAX_INDEXES]), texture_slots(new GLuint[QUASAR_TEXTURE_SLOTS])
@@ -50,24 +51,23 @@ static T* advance_bytes(T* ptr, size_t bytes)
 	return reinterpret_cast<T*>(reinterpret_cast<std::byte*>(ptr) + bytes);
 }
 
-void Renderer::prepare_for(const BufferReferencer& buffer)
+void Renderer::prepare_for_sprite()
 {
-	if (advance_bytes(vertex_pos, buffer.vlen_bytes) - vertex_pool >= QUASAR_MAX_VERTICES
-		|| advance_bytes(index_pos, buffer.ilen_bytes) - index_pool >= QUASAR_MAX_INDEXES)
+	if (advance_bytes(vertex_pos, Sprite::VLEN_BYTES) - vertex_pool >= QUASAR_MAX_VERTICES
+		|| advance_bytes(index_pos, Sprite::ILEN_BYTES) - index_pool >= QUASAR_MAX_INDEXES)
 	{
 		flush();
 		reset();
 	}
 }
 
-void Renderer::pool_over_buffer(const BufferReferencer& buffer)
+void Renderer::pool_over_varr(GLfloat* varr)
 {
-	// TODO clean up these divisions
-	memcpy(vertex_pos, buffer.varr, buffer.vlen_bytes);
-	for (size_t i = 0; i < buffer.ilen_bytes / sizeof(GLuint); ++i)
-		*index_pos++ = buffer.iarr[i] + num_vertices;
-	num_vertices += buffer.vlen_bytes / (buffer.stride * sizeof(GLfloat));
-	vertex_pos = advance_bytes(vertex_pos, buffer.vlen_bytes);
+	memcpy(vertex_pos, varr, Sprite::VLEN_BYTES);
+	for (size_t i = 0; i < Sprite::NUM_INDICES; ++i)
+		*index_pos++ = Sprite::IARR[i] + num_vertices;
+	num_vertices += Sprite::NUM_VERTICES;
+	vertex_pos = advance_bytes(vertex_pos, Sprite::VLEN_BYTES);
 }
 
 void Renderer::on_draw()
@@ -82,7 +82,7 @@ void Renderer::flush() const
 {
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, (vertex_pos - vertex_pool) * sizeof(decltype(vertex_pool)), vertex_pool));
 	QUASAR_GL(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, (index_pos - index_pool) * sizeof(decltype(index_pool)), index_pool));
-	QUASAR_GL(glDrawElements(GL_TRIANGLES, index_pos - index_pool, GL_UNSIGNED_INT, 0));
+	QUASAR_GL(glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(index_pos - index_pool), GL_UNSIGNED_INT, 0));
 }
 
 void Renderer::reset()
