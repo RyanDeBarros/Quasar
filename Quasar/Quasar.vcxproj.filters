@@ -944,6 +944,9 @@
     <ClInclude Include="src\Resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\History.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="vendor\glm\detail\func_common.inl">

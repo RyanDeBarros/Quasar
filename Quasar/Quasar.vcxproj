@@ -177,6 +177,7 @@
   <ItemGroup>
     <ClInclude Include="src\Geometry.h" />
     <ClInclude Include="src\GLutility.h" />
+    <ClInclude Include="src\History.h" />
     <ClInclude Include="src\Image.h" />
     <ClInclude Include="src\IO.h" />
     <ClInclude Include="src\Macros.h" />
