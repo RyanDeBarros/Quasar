@@ -1,0 +1,4 @@
+shader
+1:res/standard.vert
+2:res/standard.frag
+3:1|2|1|2|4|4
