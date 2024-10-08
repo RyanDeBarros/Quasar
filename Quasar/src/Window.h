@@ -27,6 +27,37 @@ enum class MouseMode
 	CAPTURED = GLFW_CURSOR_CAPTURED
 };
 
+enum class Key
+{
+	F11 = GLFW_KEY_F11,
+	ENTER = GLFW_KEY_ENTER,
+	ESCAPE = GLFW_KEY_ESCAPE,
+};
+
+enum class MouseButton
+{
+	LEFT = GLFW_MOUSE_BUTTON_LEFT,
+	RIGHT = GLFW_MOUSE_BUTTON_RIGHT,
+	MIDDLE = GLFW_MOUSE_BUTTON_MIDDLE
+};
+
+enum class Action
+{
+	PRESS = GLFW_PRESS,
+	RELEASE = GLFW_RELEASE,
+	DOWN = GLFW_REPEAT
+};
+
+enum class Mod
+{
+	SHIFT = GLFW_MOD_SHIFT,
+	CONTROL = GLFW_MOD_CONTROL,
+	ALT = GLFW_MOD_ALT,
+	SUPER = GLFW_MOD_SUPER,
+	CAPS_LOCK = GLFW_MOD_CAPS_LOCK,
+	NUM_LOCK = GLFW_MOD_NUM_LOCK
+};
+
 extern GLFWcursor* create_cursor(StandardCursor standard_cursor);
 extern GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot);
 
@@ -90,7 +121,8 @@ struct Window
 	void set_size(int width, int height) const;
 	void set_title(const char* title) const;
 
-	void focus() const { glfwMakeContextCurrent(window); }
+	void focus_context() const { glfwMakeContextCurrent(window); }
+	void focus() const { glfwFocusWindow(window); }
 	int width() const { int w, h; glfwGetWindowSize(window, &w, &h); return w; }
 	int height() const { int w, h; glfwGetWindowSize(window, &w, &h); return h; }
 	glm::ivec2 size() const { int w, h; glfwGetWindowSize(window, &w, &h); return { w, h }; }
@@ -105,8 +137,21 @@ struct Window
 	bool raw_mouse_motion() const { return glfwGetInputMode(window, GLFW_RAW_MOUSE_MOTION) == GLFW_TRUE; }
 	void set_raw_mouse_motion(bool raw_mouse_motion) const
 	{ if (glfwRawMouseMotionSupported()) glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, raw_mouse_motion ? GLFW_TRUE : GLFW_FALSE); }
+	void toggle_fullscreen();
+	void set_fullscreen(bool fullscreen);
+	bool is_fullscreen() const { return fullscreen; }
+	void toggle_maximized();
+	void set_maximized(bool maximized);
+	bool is_maximized() const { return maximized; }
 
 private:
+	int pre_fullscreen_x = 0;
+	int pre_fullscreen_y = 0;
+	int pre_fullscreen_width = 0;
+	int pre_fullscreen_height = 0;
+	bool fullscreen = false;
+	bool maximized = false;
+
 	void destroy();
 };
 

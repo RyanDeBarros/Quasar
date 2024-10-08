@@ -30,6 +30,11 @@ class Renderer
 	Shader shader;
 	unsigned char texture_slot_cap = 0;
 	std::vector<struct Sprite*> _sprites;
+	float app_scale_x = 1.0f;
+	float app_scale_y = 1.0f;
+
+	void set_projection(float width, float height);
+	void set_projection();
 
 public:
 	Renderer(Window* window, Shader&& shader);
@@ -45,7 +50,10 @@ public:
 	void reset();
 	const Transform& get_view() const { return view; }
 	void set_view(const Transform& view);
+	void set_app_scale(float x = 1.0f, float y = 1.0f);
 	unsigned short get_texture_slot(GLuint texture);
 
 	std::vector<struct Sprite*>& sprites() { return _sprites; };
+
+	void set_window_callbacks();
 };

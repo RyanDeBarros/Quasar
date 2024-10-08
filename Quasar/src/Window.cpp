@@ -60,6 +60,7 @@ Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLF
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+	glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
 	window = glfwCreateWindow(width, height, title, monitor, share);
 	if (!window)
 	{
@@ -67,7 +68,7 @@ Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLF
 		return;
 	}
 	Windows[window] = this;
-	focus();
+	focus_context();
 	if (glewInit() != GLEW_OK)
 	{
 		destroy();
@@ -87,6 +88,64 @@ Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLF
 Window::~Window()
 {
 	destroy();
+}
+
+void Window::toggle_fullscreen()
+{
+	fullscreen = !fullscreen;
+	if (fullscreen)
+	{
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		swap_buffers();
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* vidmode = glfwGetVideoMode(monitor);
+		glfwGetWindowPos(window, &pre_fullscreen_x, &pre_fullscreen_y);
+		glfwGetWindowSize(window, &pre_fullscreen_width, &pre_fullscreen_height);
+		glfwSetWindowMonitor(window, monitor, 0, 0, vidmode->width, vidmode->height, vidmode->refreshRate);
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		swap_buffers();
+	}
+	else
+	{
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		swap_buffers();
+		glfwSetWindowMonitor(window, nullptr, pre_fullscreen_x, pre_fullscreen_y, pre_fullscreen_width, pre_fullscreen_height, 0);
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		swap_buffers();
+	}
+}
+
+void Window::set_fullscreen(bool fullscreen_)
+{
+	if (fullscreen != fullscreen_)
+		toggle_fullscreen();
+}
+
+void Window::toggle_maximized()
+{
+	maximized = !maximized;
+	if (maximized)
+	{
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		swap_buffers();
+		glfwMaximizeWindow(window);
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		swap_buffers();
+	}
+	else
+	{
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		swap_buffers();
+		glfwRestoreWindow(window);
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		swap_buffers();
+	}
+}
+
+void Window::set_maximized(bool maximized_)
+{
+	if (maximized != maximized_)
+		toggle_maximized();
 }
 
 void Window::destroy()

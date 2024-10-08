@@ -41,16 +41,11 @@ Renderer::Renderer(Window* window, Shader&& shader_)
 	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, QuasarSettings::INDEX_COUNT * sizeof(GLuint), index_pool, GL_DYNAMIC_DRAW));
 
 	attrib_pointers(shader.attributes, shader.stride);
-	projection = glm::ortho<float>(0.0f, float(window->width()), 0.0f, float(window->height()));
+	set_projection();
 	shader.query_location("u_VP");
 	set_view(view);
 
-	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
-		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
-		projection = glm::ortho<float>(0.0f, float(ws.width), 0.0f, float(ws.height));
-		set_view(view);
-		on_draw();
-		});
+	set_window_callbacks();
 }
 
 Renderer::~Renderer()
@@ -64,13 +59,23 @@ Renderer::~Renderer()
 	QUASAR_GL(glDeleteBuffers(1, &ib));
 }
 
+void Renderer::set_projection(float width, float height)
+{
+	projection = glm::ortho<float>(0.0f, width * app_scale_x, 0.0f, height * app_scale_y);
+}
+
+void Renderer::set_projection()
+{
+	projection = glm::ortho<float>(0.0f, window->width() * app_scale_x, 0.0f, window->height() * app_scale_y);
+}
+
 void Renderer::bind() const
 {
 	QUASAR_GL(glBindVertexArray(vao));
 	QUASAR_GL(glUseProgram(shader.rid));
 	QUASAR_GL(glEnable(GL_BLEND));
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-	window->focus();
+	window->focus_context();
 }
 
 template<typename T>
@@ -131,6 +136,15 @@ void Renderer::set_view(const Transform& view_)
 	QUASAR_GL(glUniformMatrix3fv(shader.locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 }
 
+void Renderer::set_app_scale(float x, float y)
+{
+	app_scale_x = 1.0f / x;
+	app_scale_y = 1.0f / y;
+	set_projection();
+	set_view(view);
+	// TODO scale cursor?
+}
+
 unsigned short Renderer::get_texture_slot(GLuint texture)
 {
 	for (unsigned char i = 0; i < texture_slot_cap; ++i)
@@ -145,4 +159,34 @@ unsigned short Renderer::get_texture_slot(GLuint texture)
 	}
 	texture_slots[texture_slot_cap] = texture;
 	return texture_slot_cap++;
+}
+
+void Renderer::set_window_callbacks()
+{
+	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
+		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
+		set_projection(float(ws.width), float(ws.height));
+		set_view(view);
+		on_draw();
+		});
+	window->clbk_key.push_back([this](const Callback::Key& k) {
+		if (k.key == int(Key::F11) && k.action == int(Action::PRESS) && !(k.mods & int(Mod::SHIFT)))
+		{
+			if (!window->is_maximized())
+				window->toggle_fullscreen();
+			on_draw();
+		}
+		else if (k.key == int(Key::ENTER) && k.action == int(Action::PRESS) && k.mods & int(Mod::ALT))
+		{
+			if (!window->is_fullscreen())
+				window->toggle_maximized();
+			on_draw();
+		}
+		else if (k.key == int(Key::ESCAPE) && k.action == int(Action::PRESS) && !(k.mods & int(Mod::SHIFT)))
+		{
+			window->set_fullscreen(false);
+			window->set_maximized(false);
+			on_draw();
+		}
+		});
 }
