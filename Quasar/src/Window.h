@@ -2,9 +2,33 @@
 
 #include <vector>
 #include <functional>
-#include <variant>
 
 #include "Macros.h"
+
+enum class StandardCursor
+{
+	ARROW = GLFW_ARROW_CURSOR,
+	IBEAM = GLFW_IBEAM_CURSOR,
+	CROSSHAIR = GLFW_CROSSHAIR_CURSOR,
+	HAND = GLFW_POINTING_HAND_CURSOR,
+	RESIZE_EW = GLFW_RESIZE_EW_CURSOR,
+	RESIZE_NS = GLFW_RESIZE_NS_CURSOR,
+	RESIZE_NW_SE = GLFW_RESIZE_NWSE_CURSOR,
+	RESIZE_NE_SW = GLFW_RESIZE_NESW_CURSOR,
+	RESIZE_OMNI = GLFW_RESIZE_ALL_CURSOR,
+	CANCEL = GLFW_NOT_ALLOWED_CURSOR
+};
+
+enum class MouseMode
+{
+	VISIBLE = GLFW_CURSOR_NORMAL,
+	HIDDEN = GLFW_CURSOR_HIDDEN,
+	VIRTUAL = GLFW_CURSOR_DISABLED,
+	CAPTURED = GLFW_CURSOR_CAPTURED
+};
+
+extern GLFWcursor* create_cursor(StandardCursor standard_cursor);
+extern GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot);
 
 namespace Callback
 {
@@ -43,43 +67,9 @@ namespace Callback
 	};
 }
 
-struct WindowArgs
-{
-	const char* title;
-	int width;
-	int height;
-	GLFWmonitor* monitor = nullptr;
-	GLFWwindow* share = nullptr;
-
-	WindowArgs(const char* title, int width, int height) : title(title), width(width), height(height) {}
-};
-
-struct StandardCursorArgs
-{
-	int shape;
-	StandardCursorArgs(int shape) : shape(shape) {}
-};
-
-struct CustomCursorArgs
-{
-	GLFWimage* image;
-	int xhot;
-	int yhot;
-	CustomCursorArgs(GLFWimage* image, int xhot, int yhot) : image(image), xhot(xhot), yhot(yhot) {}
-};
-
-struct CursorArgs
-{
-	std::variant<StandardCursorArgs, CustomCursorArgs> c;
-	CursorArgs(int shape) : c(StandardCursorArgs(shape)) {}
-	CursorArgs(GLFWimage* image, int xhot, int yhot) : c(CustomCursorArgs(image, xhot, yhot)) {}
-	GLFWcursor* create() const;
-};
-
 struct Window
 {
 	GLFWwindow* window = nullptr;
-	GLFWcursor* cursor = nullptr;
 
 	std::vector<std::function<void(const Callback::WindowSize&)>> clbk_window_size;
 	std::vector<std::function<void(const Callback::PathDrop&)>> clbk_path_drop;
@@ -87,12 +77,14 @@ struct Window
 	std::vector<std::function<void(const Callback::MouseButton&)>> clbk_mouse_button;
 	std::vector<std::function<void(const Callback::Scroll&)>> clbk_scroll;
 
-	Window(const WindowArgs& wargs, const CursorArgs& cargs);
+	Window(const char* title, int width, int height, GLFWcursor* cursor = nullptr, GLFWmonitor* monitor = nullptr, GLFWwindow* share = nullptr);
+	Window(const Window&) = delete;
+	Window(Window&&) noexcept = delete;
 	~Window();
 
 	operator bool() const { return window != nullptr; }
 
-	void set_cursor(const CursorArgs& cargs);
+	void set_cursor(GLFWcursor* cursor) const;
 	void set_width(int width) const;
 	void set_height(int height) const;
 	void set_size(int width, int height) const;
@@ -107,6 +99,12 @@ struct Window
 	float cursor_x() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return float(xpos); }
 	float cursor_y() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return float(ypos); }
 	glm::vec2 cursor_pos() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return { float(xpos), float(ypos) }; }
+
+	MouseMode mouse_mode() const { return MouseMode(glfwGetInputMode(window, GLFW_CURSOR)); }
+	void set_mouse_mode(MouseMode mouse_mode) const { glfwSetInputMode(window, GLFW_CURSOR, int(mouse_mode)); }
+	bool raw_mouse_motion() const { return glfwGetInputMode(window, GLFW_RAW_MOUSE_MOTION) == GLFW_TRUE; }
+	void set_raw_mouse_motion(bool raw_mouse_motion) const
+	{ if (glfwRawMouseMotionSupported()) glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, raw_mouse_motion ? GLFW_TRUE : GLFW_FALSE); }
 
 private:
 	void destroy();

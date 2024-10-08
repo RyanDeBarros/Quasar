@@ -1,5 +1,19 @@
 #include "Window.h"
 
+GLFWcursor* create_cursor(StandardCursor standard_cursor)
+{
+	return glfwCreateStandardCursor(int(standard_cursor));
+}
+
+GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot)
+{
+	GLFWimage image{};
+	image.pixels = rgba_pixels;
+	image.width = width;
+	image.height = height;
+	return glfwCreateCursor(&image, xhot, yhot);
+}
+
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
 	auto win = Windows[window];
@@ -40,23 +54,13 @@ static void scroll_callback(GLFWwindow* window, double xoff, double yoff)
 		f(args);
 }
 
-GLFWcursor* CursorArgs::create() const
-{
-	if (c.index() == 0)
-		return glfwCreateStandardCursor(std::get<0>(c).shape);
-	else if (c.index() == 1)
-		return glfwCreateCursor(std::get<1>(c).image, std::get<1>(c).xhot, std::get<1>(c).yhot);
-	else
-		return nullptr;
-}
-
-Window::Window(const WindowArgs& wargs, const CursorArgs& cargs)
+Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLFWmonitor* monitor, GLFWwindow* share)
 {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	window = glfwCreateWindow(wargs.width, wargs.height, wargs.title, wargs.monitor, wargs.share);
+	window = glfwCreateWindow(width, height, title, monitor, share);
 	if (!window)
 	{
 		destroy();
@@ -76,8 +80,8 @@ Window::Window(const WindowArgs& wargs, const CursorArgs& cargs)
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 
-	cursor = cargs.create();
-	glfwSetCursor(window, cursor);
+	if (cursor)
+		glfwSetCursor(window, cursor);
 }
 
 Window::~Window()
@@ -95,17 +99,10 @@ void Window::destroy()
 		glfwDestroyWindow(window);
 		window = nullptr;
 	}
-	if (cursor)
-	{
-		glfwDestroyCursor(cursor);
-		cursor = nullptr;
-	}
 }
 
-void Window::set_cursor(const CursorArgs& cargs)
+void Window::set_cursor(GLFWcursor* cursor) const
 {
-	glfwDestroyCursor(cursor);
-	cursor = cargs.create();
 	glfwSetCursor(window, cursor);
 }
 

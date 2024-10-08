@@ -21,7 +21,7 @@ int main()
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);
-	Window window(WindowArgs("Quasar", 1440, 1080), CursorArgs(GLFW_CROSSHAIR_CURSOR));
+	Window window("Quasar", 1440, 1080);
 	if (!window)
 	{
 		glfwTerminate();
@@ -40,6 +40,8 @@ int main()
 	Sprite sprite(tux);
 	renderer.sprites().push_back(&sprite);
 	tux_img->rotate_180();
+
+	window.set_cursor(create_cursor(StandardCursor::CROSSHAIR));
 
 	for (;;)
 	{

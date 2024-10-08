@@ -41,9 +41,16 @@ Renderer::Renderer(Window* window, Shader&& shader_)
 	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, QuasarSettings::INDEX_COUNT * sizeof(GLuint), index_pool, GL_DYNAMIC_DRAW));
 
 	attrib_pointers(shader.attributes, shader.stride);
-	projection = glm::ortho<float>(0.0f, static_cast<float>(window->width()), 0.0f, static_cast<float>(window->height()));
+	projection = glm::ortho<float>(0.0f, float(window->width()), 0.0f, float(window->height()));
 	shader.query_location("u_VP");
 	set_view(view);
+
+	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
+		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
+		projection = glm::ortho<float>(0.0f, float(ws.width), 0.0f, float(ws.height));
+		set_view(view);
+		on_draw();
+		});
 }
 
 Renderer::~Renderer()
