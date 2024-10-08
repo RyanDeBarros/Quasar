@@ -65,25 +65,25 @@ static GLuint load_program(const char* vert, const char* frag)
 	return shader;
 }
 
-static std::vector<unsigned short> parse_attributes(const char* line)
-{
-	std::vector<unsigned short> attributes;
-	std::string attrib;
-	while (*line != '\0')
-	{
-		if (*line == '|')
-		{
-			attributes.push_back(std::stoi(attrib));
-			attrib.clear();
-		}
-		else
-			attrib += *line;
-		line++;
-	}
-	if (!attrib.empty())
-		attributes.push_back(std::stoi(attrib));
-	return attributes;
-}
+//static std::vector<unsigned short> parse_attributes(const char* line)
+//{
+//	std::vector<unsigned short> attributes;
+//	std::string attrib;
+//	while (*line != '\0')
+//	{
+//		if (*line == '|')
+//		{
+//			attributes.push_back(std::stoi(attrib));
+//			attrib.clear();
+//		}
+//		else
+//			attrib += *line;
+//		line++;
+//	}
+//	if (!attrib.empty())
+//		attributes.push_back(std::stoi(attrib));
+//	return attributes;
+//}
 
 static unsigned short stride_of(const std::vector<unsigned short>& attributes)
 {
@@ -95,31 +95,18 @@ static unsigned short stride_of(const std::vector<unsigned short>& attributes)
 
 Shader::Shader(const ShaderConstructor& args)
 {
-	std::string file;
-	if (!IO::read_file(args.filepath.c_str(), file))
-		return;
-	std::istringstream iss(file);
-	std::string line;
-	std::getline(iss, line, '\n');
-	if (line != "shader")
-		return;
 	std::string vert, frag;
-	while (std::getline(iss, line, '\n'))
-	{
-		int i = line[0] - '0';
-		switch (i)
-		{
-		case 1:
-			vert = std::move(line);
-			break;
-		case 2:
-			frag = std::move(line);
-			break;
-		case 3:
-			attributes = parse_attributes(line.c_str() + 2);
-			break;
-		}
-	}
+	auto values = IO::load_asset(args.filepath.c_str(), "shader");
+	auto iter = values.find("VERT");
+	if (iter != values.end())
+		vert = std::move(iter->second.moving_parse());
+	iter = values.find("FRAG");
+	if (iter != values.end())
+		frag = std::move(iter->second.moving_parse());
+	iter = values.find("ATTRIBS");
+	if (iter != values.end())
+		attributes = std::move(iter->second.parse<std::vector<unsigned short>>());
+
 	stride = stride_of(attributes);
 	rid = load_program(vert.c_str() + 2, frag.c_str() + 2);
 }

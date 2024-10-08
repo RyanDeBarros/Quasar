@@ -12,30 +12,16 @@ unsigned short QuasarSettings::TEXTURES_COUNT = 32;
 
 void QuasarSettings::load_settings(const char* filepath)
 {
-	std::string file;
-	if (!IO::read_file(filepath, file))
-		return;
-	std::istringstream iss(file);
-	std::string line;
-	std::getline(iss, line, '\n');
-	if (line != "settings")
-		return;
-	while (std::getline(iss, line, '\n'))
-	{
-		int i = line[0] - '0';
-		switch (i)
-		{
-		case 1:
-			VERTEX_COUNT = std::stoi(line.substr(2));
-			break;
-		case 2:
-			INDEX_COUNT = std::stoi(line.substr(2));
-			break;
-		case 3:
-			TEXTURES_COUNT = std::stoi(line.substr(2));
-			break;
-		}
-	}
+	auto values = IO::load_asset(filepath, "settings");
+	auto iter = values.find("VERTEX_COUNT");
+	if (iter != values.end())
+		VERTEX_COUNT = iter->second.parse<unsigned short>();
+	iter = values.find("INDEX_COUNT");
+	if (iter != values.end())
+		INDEX_COUNT = iter->second.parse<unsigned short>();
+	iter = values.find("TEXTURES_COUNT");
+	if (iter != values.end())
+		TEXTURES_COUNT = iter->second.parse<unsigned short>();
 }
 
 Renderer::Renderer(GLFWwindow* window, Shader&& shader_)
