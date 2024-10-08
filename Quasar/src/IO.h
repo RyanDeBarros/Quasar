@@ -26,7 +26,6 @@ public:
 	{
 		return io._read_file(filepath, content, mode);
 	}
-
 	static std::unordered_map<std::string, AssetValue> load_asset(const char* filepath, const char* type)
 	{
 		return io._load_asset(filepath, type);

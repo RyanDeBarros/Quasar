@@ -74,6 +74,7 @@ public:
 	Handle construct(const Constructor& constructor);
 	template<typename Constructor>
 	Handle construct(Constructor&& constructor);
+	void clear();
 
 	struct full_error : public std::runtime_error
 	{
@@ -159,4 +160,10 @@ inline Registry<_Element, _Handle, _Constructors...>::Handle Registry<_Element, 
 	_data.emplace(handle, std::move(element));
 	lookup.emplace(std::move(constructor), handle);
 	return handle;
+}
+template<typename _Element, typename _Handle, typename ..._Constructors>
+inline void Registry<_Element, _Handle, _Constructors...>::clear()
+{
+	std::apply([](auto&& lookup) { lookup.clear(); }, _lookups);
+	_data.clear();
 }

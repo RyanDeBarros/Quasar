@@ -24,7 +24,7 @@ void QuasarSettings::load_settings(const char* filepath)
 		TEXTURES_COUNT = iter->second.parse<unsigned short>();
 }
 
-Renderer::Renderer(GLFWwindow* window, Shader&& shader_)
+Renderer::Renderer(Window* window, Shader&& shader_)
 	: window(window), shader(shader_), vertex_pool(new GLfloat[QuasarSettings::VERTEX_COUNT]),
 	index_pool(new GLuint[QuasarSettings::INDEX_COUNT]), texture_slots(new GLuint[QuasarSettings::TEXTURES_COUNT])
 {
@@ -41,9 +41,7 @@ Renderer::Renderer(GLFWwindow* window, Shader&& shader_)
 	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, QuasarSettings::INDEX_COUNT * sizeof(GLuint), index_pool, GL_DYNAMIC_DRAW));
 
 	attrib_pointers(shader.attributes, shader.stride);
-	int ww, wh;
-	glfwGetWindowSize(window, &ww, &wh);
-	projection = glm::ortho<float>(0.0f, static_cast<float>(ww), 0.0f, static_cast<float>(wh));
+	projection = glm::ortho<float>(0.0f, static_cast<float>(window->width()), 0.0f, static_cast<float>(window->height()));
 	shader.query_location("u_VP");
 	set_view(view);
 }
@@ -65,6 +63,7 @@ void Renderer::bind() const
 	QUASAR_GL(glUseProgram(shader.rid));
 	QUASAR_GL(glEnable(GL_BLEND));
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+	window->focus();
 }
 
 template<typename T>
@@ -94,10 +93,12 @@ void Renderer::pool_over_varr(GLfloat* varr)
 
 void Renderer::on_draw()
 {
+	QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 	reset();
 	for (size_t i = 0; i < _sprites.size(); ++i)
 		_sprites[i]->on_draw(this);
 	flush();
+	window->swap_buffers();
 }
 
 void Renderer::flush() const

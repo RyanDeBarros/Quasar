@@ -4,6 +4,7 @@
 #include "Resources.h"
 #include "Geometry.h"
 #include "Shader.h"
+#include "Window.h"
 
 struct QuasarSettings
 {
@@ -20,7 +21,7 @@ class Renderer
 	GLuint* const index_pool = nullptr;
 	GLfloat* vertex_pos = nullptr;
 	GLuint* index_pos = nullptr;
-	GLFWwindow* window;
+	Window* window;
 	GLuint* const texture_slots = nullptr;
 	unsigned short num_vertices = 0;
 	glm::mat3 projection;
@@ -31,7 +32,7 @@ class Renderer
 	std::vector<struct Sprite*> _sprites;
 
 public:
-	Renderer(GLFWwindow* window, Shader&& shader);
+	Renderer(Window* window, Shader&& shader);
 	Renderer(const Renderer&) = delete;
 	Renderer(Renderer&&) noexcept = delete;
 	~Renderer();

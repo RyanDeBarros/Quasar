@@ -65,26 +65,6 @@ static GLuint load_program(const char* vert, const char* frag)
 	return shader;
 }
 
-//static std::vector<unsigned short> parse_attributes(const char* line)
-//{
-//	std::vector<unsigned short> attributes;
-//	std::string attrib;
-//	while (*line != '\0')
-//	{
-//		if (*line == '|')
-//		{
-//			attributes.push_back(std::stoi(attrib));
-//			attrib.clear();
-//		}
-//		else
-//			attrib += *line;
-//		line++;
-//	}
-//	if (!attrib.empty())
-//		attributes.push_back(std::stoi(attrib));
-//	return attributes;
-//}
-
 static unsigned short stride_of(const std::vector<unsigned short>& attributes)
 {
 	unsigned short sum = 0;
