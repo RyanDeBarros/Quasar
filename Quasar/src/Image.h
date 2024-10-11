@@ -100,12 +100,12 @@ struct Image
 {
 	typedef unsigned char Byte;
 	typedef int Dim;
-	typedef int BPP;
+	typedef int CHPP;
 
 	Byte* pixels = nullptr;
 	GLuint tid = 0;
 	Dim width = 0, height = 0;
-	BPP bpp = 0;
+	CHPP chpp = 0;
 
 	Image() = default;
 	Image(const ImageConstructor& args);
@@ -128,8 +128,8 @@ struct Image
 	// buffer operations
 
 	static Dim bufoffset(Dim x, Dim y, Dim width, Dim bpp) { return (y * width + x) * bpp; }
-	Dim stride() const { return width * bpp; }
-	Dim area() const { return width * height * bpp; }
+	Dim stride() const { return width * chpp; }
+	Dim area() const { return width * height * chpp; }
 
 	void _flip_vertically() const;
 	void _flip_horizontally() const;

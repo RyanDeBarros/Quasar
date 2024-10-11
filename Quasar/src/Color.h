@@ -140,3 +140,13 @@ public:
 	glm::vec4 hsva_as_vec() const { return { _hsv.get_hue() * inv359, _hsv.sat_as_float(), _hsv.v * inv255, alpha * inv255 }; }
 	glm::vec4 hsla_as_vec() const { return { _hsl.get_hue() * inv359, _hsl.sat_as_float(), _hsl.l * inv255, alpha * inv255 }; }
 };
+
+struct RedGreen
+{
+	unsigned char r, g;
+};
+
+struct GrayScale
+{
+	unsigned char v;
+};
