@@ -189,6 +189,7 @@
     <ClInclude Include="src\Resources.h" />
     <ClInclude Include="src\Shader.h" />
     <ClInclude Include="src\Sprite.h" />
+    <ClInclude Include="src\Utils.h" />
     <ClInclude Include="src\Window.h" />
     <ClInclude Include="vendor\glm\common.hpp" />
     <ClInclude Include="vendor\glm\detail\compute_common.hpp" />

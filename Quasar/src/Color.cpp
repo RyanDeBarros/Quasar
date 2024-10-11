@@ -4,16 +4,16 @@
 
 constexpr float NEAR_ZERO = 0.00001f;
 
-HSV to_hsv(RGB rgb)
+HSV RGB::to_hsv() const
 {
 	// Normalize RGB
-	float r = rgb.r * inv255;
-	float g = rgb.g * inv255;
-	float b = rgb.b * inv255;
+	float nr = r * inv255;
+	float ng = g * inv255;
+	float nb = b * inv255;
 	// Compute max, min and chroma
-	unsigned char max_hex = std::max({ rgb.r, rgb.g, rgb.b });
+	unsigned char max_hex = std::max({ r, g, b });
 	float max = max_hex * inv255;
-	float min = std::min({ r, g, b });
+	float min = std::min({ nr, ng, nb });
 	float chroma = max - min;
 	
 	HSV hsv(0, 0, max_hex);
@@ -23,12 +23,12 @@ HSV to_hsv(RGB rgb)
 	{
 		// Compute hue angle
 		float hue = 0;
-		if (max == r)
-			hue = (g - b) / chroma;
-		else if (max == g)
-			hue = 2.0f + (b - r) / chroma;
+		if (max_hex == r)
+			hue = (ng - nb) / chroma;
+		else if (max_hex == g)
+			hue = 2.0f + (nb - nr) / chroma;
 		else
-			hue = 4.0f + (r - g) / chroma;
+			hue = 4.0f + (nr - ng) / chroma;
 		hue *= 60.0f;
 		if (hue < 0.0f)
 			hue += 360.0f;
@@ -37,68 +37,16 @@ HSV to_hsv(RGB rgb)
 	return hsv;
 }
 
-RGB to_rgb(HSV hsv)
-{
-	if (hsv.s == 0)
-		return RGB(hsv.v, hsv.v, hsv.v);
-	// Normalize
-	float s = hsv.sat_as_float();
-	// Sextant index
-	unsigned char si = hsv.get_hue() / 60;
-	// Fractional part
-	float fr = (hsv.get_hue() * inv60) - si;
-	// Compute non-primary color characteristics
-	unsigned char min = round_uchar(hsv.v * (1 - s));
-	unsigned char pre = round_uchar(hsv.v * (1 - s * fr));
-	unsigned char post = round_uchar(hsv.v * (1 - s * (1.0f - fr)));
-	// Switch on sextant
-	RGB rgb{};
-	switch (si)
-	{
-	case 0:
-		rgb.r = hsv.v;
-		rgb.g = post;
-		rgb.b = min;
-		break;
-	case 1:
-		rgb.g = hsv.v;
-		rgb.r = pre;
-		rgb.b = min;
-		break;
-	case 2:
-		rgb.g = hsv.v;
-		rgb.b = post;
-		rgb.r = min;
-		break;
-	case 3:
-		rgb.b = hsv.v;
-		rgb.g = pre;
-		rgb.r = min;
-		break;
-	case 4:
-		rgb.b = hsv.v;
-		rgb.r = post;
-		rgb.g = min;
-		break;
-	case 5:
-		rgb.r = hsv.v;
-		rgb.b = pre;
-		rgb.g = min;
-		break;
-	}
-	return rgb;
-}
-
-HSL to_hsl(RGB rgb)
+HSL RGB::to_hsl() const
 {
 	HSL hsl{};
 	// Normalize RGB
-	float r = rgb.r * inv255;
-	float g = rgb.g * inv255;
-	float b = rgb.b * inv255;
+	float nr = r * inv255;
+	float ng = g * inv255;
+	float nb = b * inv255;
 	// Compute max, min and chroma
-	unsigned char max_hex = std::max({ rgb.r, rgb.g, rgb.b });
-	unsigned char min_hex = std::min({ rgb.r, rgb.g, rgb.b });
+	unsigned char max_hex = std::max({ r, g, b });
+	unsigned char min_hex = std::min({ r, g, b });
 	float chroma = (max_hex - min_hex) * inv255;
 	// Lightness
 	hsl.l = round_uchar((max_hex + min_hex) * 0.5f);
@@ -106,12 +54,12 @@ HSL to_hsl(RGB rgb)
 	{
 		// Compute hue angle
 		float hue = 0;
-		if (max_hex == rgb.r)
-			hue = (g - b) / chroma;
-		else if (max_hex == rgb.g)
-			hue = 2.0f + (b - r) / chroma;
+		if (max_hex == r)
+			hue = (ng - nb) / chroma;
+		else if (max_hex == g)
+			hue = 2.0f + (nb - nr) / chroma;
 		else
-			hue = 4.0f + (r - g) / chroma;
+			hue = 4.0f + (nr - ng) / chroma;
 		hue *= 60.0f;
 		if (hue < 0.0f)
 			hue += 360.0f;
@@ -121,18 +69,67 @@ HSL to_hsl(RGB rgb)
 	return hsl;
 }
 
-RGB to_rgb(HSL hsl)
+RGB HSV::to_rgb() const
+{
+	if (s == 0)
+		return RGB(v, v, v);
+	// Normalize
+	float ns = sat_as_float();
+	// Sextant index
+	unsigned char si = get_hue() / 60;
+	// Fractional part
+	float fr = (get_hue() * inv60) - si;
+	// Compute non-primary color characteristics
+	unsigned char min = round_uchar(v * (1 - ns));
+	unsigned char pre = round_uchar(v * (1 - ns * fr));
+	unsigned char post = round_uchar(v * (1 - ns * (1.0f - fr)));
+	// Switch on sextant
+	switch (si)
+	{
+	case 0:
+		return RGB(v, post, min);
+	case 1:
+		return RGB(pre, v, min);
+	case 2:
+		return RGB(min, v, post);
+	case 3:
+		return RGB(min, pre, v);
+	case 4:
+		return RGB(post, min, v);
+	case 5:
+		return RGB(v, min, pre);
+	}
+	return RGB{};
+}
+
+HSL HSV::to_hsl() const
+{
+	if (v == 0)
+		return HSL(get_hue(), 0, 0);
+	// Normalize
+	float sat_hsv = sat_as_float();
+	float nv = v * inv255;
+	// Lightness
+	float l = nv * (1.0f - 0.5f * sat_hsv);
+	// HSL saturation
+	float sat_hsl = 0.0f;
+	if (l < 1.0f - NEAR_ZERO)
+		sat_hsl = 0.5f * nv * sat_hsv / std::min(l, 1.0f - l);
+	return HSL(get_hue(), round_uchar(127 * sat_hsl), round_uchar(255 * l));
+}
+
+RGB HSL::to_rgb() const
 {
 	// Chroma
-	unsigned short h = hsl.get_hue();
-	float l = hsl.l * inv255;
-	float chroma = (1.0f - std::abs(2 * l - 1.0f)) * hsl.sat_as_float();
-	float x = chroma * (1.0f - std::abs(fmod((h * inv60), 2.0f) - 1.0f));
-	
+	unsigned short hue = get_hue();
+	float nl = l * inv255;
+	float chroma = (1.0f - std::abs(2 * nl - 1.0f)) * sat_as_float();
+	float x = chroma * (1.0f - std::abs(modulo((hue * inv60), 2.0f) - 1.0f));
+
 	// RGB channels (unordered)
-	unsigned char c1 = round_uchar(hsl.l + 255 * chroma * 0.5f);
-	unsigned char c2 = round_uchar(hsl.l - 255 * chroma * 0.5f + 255 * x);
-	unsigned char c3 = round_uchar(hsl.l - 255 * chroma * 0.5f);
+	unsigned char c1 = round_uchar(l + 255 * chroma * 0.5f);
+	unsigned char c2 = round_uchar(l - 255 * chroma * 0.5f + 255 * x);
+	unsigned char c3 = round_uchar(l - 255 * chroma * 0.5f);
 
 	// Order RGB channels
 	switch (h / 60)
@@ -153,32 +150,15 @@ RGB to_rgb(HSL hsl)
 	return RGB{};
 }
 
-HSV to_hsv(HSL hsl)
+HSV HSL::to_hsv() const
 {
 	// Normalize
-	float sat_hsl = hsl.sat_as_float();
-	float l = hsl.l * inv255;
+	float nl = l * inv255;
 	// Value
-	float v = l + sat_hsl * std::min(l, 1.0f - l);
+	float v = nl + sat_as_float() * std::min(nl, 1.0f - nl);
 	// HSV saturation
 	float sat_hsv = 0.0f;
 	if (v > NEAR_ZERO)
-		sat_hsv = 2.0f * (1.0f - l / v);
-	return HSV(hsl.get_hue(),  round_uchar(127 * sat_hsv), round_uchar(255 * v));
-}
-
-HSL to_hsl(HSV hsv)
-{
-	if (hsv.v == 0)
-		return HSL(hsv.get_hue(), 0, 0);
-	// Normalize
-	float sat_hsv = hsv.sat_as_float();
-	float v = hsv.v * inv255;
-	// Lightness
-	float l = v * (1.0f - 0.5f * sat_hsv);
-	// HSL saturation
-	float sat_hsl = 0.0f;
-	if (l < 1.0f - NEAR_ZERO)
-		sat_hsl = 0.5f * v * sat_hsv / std::min(l, 1.0f - l);
-	return HSL(hsv.get_hue(), round_uchar(127 * sat_hsl), round_uchar(255 * l));
+		sat_hsv = 2.0f * (1.0f - nl / v);
+	return HSV(get_hue(), round_uchar(127 * sat_hsv), round_uchar(255 * v));
 }

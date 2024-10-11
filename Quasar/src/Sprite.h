@@ -2,6 +2,7 @@
 
 #include "Geometry.h"
 #include "Resources.h"
+#include "Color.h"
 
 struct Sprite
 {
@@ -36,4 +37,6 @@ struct Sprite
 	
 	glm::vec4 modulation() const;
 	void set_modulation(const glm::vec4& color) const;
+	ColorFrame modulation_color_frame() const;
+	void set_modulation(ColorFrame color) const;
 };

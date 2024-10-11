@@ -114,3 +114,19 @@ void Sprite::set_modulation(const glm::vec4& color) const
 		row += STRIDE;
 	}
 }
+
+ColorFrame Sprite::modulation_color_frame() const
+{
+	return ColorFrame(RGB(varr[SHADER_POS_MODULATE], varr[SHADER_POS_MODULATE + 1], varr[SHADER_POS_MODULATE + 2]), varr[SHADER_POS_MODULATE + 3]);
+}
+
+void Sprite::set_modulation(ColorFrame color) const
+{
+	GLfloat* row = varr;
+	glm::vec4 cvec = color.rgba_as_vec();
+	for (size_t i = 0; i < 4; ++i)
+	{
+		memcpy(row + SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
+		row += STRIDE;
+	}
+}
