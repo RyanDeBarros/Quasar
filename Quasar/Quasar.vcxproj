@@ -164,6 +164,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Color.cpp" />
     <ClCompile Include="src\Image.cpp" />
     <ClCompile Include="src\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />
@@ -176,6 +177,7 @@
     <ClCompile Include="vendor\glm\glm.cppm" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Color.h" />
     <ClInclude Include="src\Geometry.h" />
     <ClInclude Include="src\GLutility.h" />
     <ClInclude Include="src\History.h" />
