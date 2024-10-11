@@ -127,7 +127,7 @@ struct Image
 
 	// buffer operations
 
-	static Dim bufoffset(Dim x, Dim y, Dim width, Dim bpp) { return (y * width + x) * bpp; }
+	static Dim bufoffset(Dim x, Dim y, Dim width, Dim chpp) { return (y * width + x) * chpp; }
 	Dim stride() const { return width * chpp; }
 	Dim area() const { return width * height * chpp; }
 

@@ -164,7 +164,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Color.cpp" />
     <ClCompile Include="src\Image.cpp" />
     <ClCompile Include="src\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />

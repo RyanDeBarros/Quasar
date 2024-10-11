@@ -19,6 +19,11 @@ constexpr float modulo(float x, float y)
 	return y != 0.0f ? x - y * std::floorf(x / y) : 0.0f;
 }
 
+constexpr float absolute(float x)
+{
+	return x >= 0.0f ? x : -x;
+}
+
 template<char i>
 constexpr unsigned char hex_to_byte(unsigned int hex)
 {
