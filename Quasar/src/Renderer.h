@@ -4,7 +4,7 @@
 #include "Resources.h"
 #include "Geometry.h"
 #include "Shader.h"
-#include "Window.h"
+#include "Platform.h"
 
 struct QuasarSettings
 {
@@ -51,9 +51,11 @@ public:
 	const Transform& get_view() const { return view; }
 	void set_view(const Transform& view);
 	void set_app_scale(float x = 1.0f, float y = 1.0f);
+	glm::vec2 get_app_scale() const { return { app_scale_x, app_scale_y }; }
 	unsigned short get_texture_slot(GLuint texture);
 
 	std::vector<struct Sprite*>& sprites() { return _sprites; };
 
 	void set_window_callbacks();
+	Window* get_window() const { return window; }
 };

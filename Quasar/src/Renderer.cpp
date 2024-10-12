@@ -170,19 +170,19 @@ void Renderer::set_window_callbacks()
 		on_draw();
 		});
 	window->clbk_key.push_back([this](const Callback::Key& k) {
-		if (k.key == int(Key::F11) && k.action == int(Action::PRESS) && !(k.mods & int(Mod::SHIFT)))
+		if (k.key == Key::F11 && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
 		{
 			if (!window->is_maximized())
 				window->toggle_fullscreen();
 			on_draw();
 		}
-		else if (k.key == int(Key::ENTER) && k.action == int(Action::PRESS) && k.mods & int(Mod::ALT))
+		else if (k.key == Key::ENTER && k.action == Action::PRESS && k.mods & Mod::ALT)
 		{
 			if (!window->is_fullscreen())
 				window->toggle_maximized();
 			on_draw();
 		}
-		else if (k.key == int(Key::ESCAPE) && k.action == int(Action::PRESS) && !(k.mods & int(Mod::SHIFT)))
+		else if (k.key == Key::ESCAPE && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
 		{
 			window->set_fullscreen(false);
 			window->set_maximized(false);

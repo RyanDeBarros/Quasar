@@ -7,8 +7,9 @@
 #include "Sprite.h"
 #include "Renderer.h"
 #include "Geometry.h"
-#include "Window.h"
+#include "Platform.h"
 #include "Color.h"
+#include "UserInput.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -22,8 +23,8 @@ int main()
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);
-	Window window("Quasar", 1440, 1080);
-	if (!window)
+	Window main_window("Quasar", 1440, 1080);
+	if (!main_window)
 	{
 		glfwTerminate();
 		return -1;
@@ -32,7 +33,10 @@ int main()
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 
-	Renderer renderer(&window, Shader());
+	Renderer renderer(&main_window, Shader());
+	UserInputManager uim(&renderer);
+	main_window.set_raw_mouse_motion(true); // NOTE settable from user settings
+
 	// only one renderer, so only needs to be called once, not on every draw frame. if more than one renderer, than call bind() before on_draw().
 	renderer.bind();
 
@@ -42,15 +46,18 @@ int main()
 	renderer.sprites().push_back(&sprite);
 	tux_img->rotate_180();
 
-	window.set_cursor(create_cursor(StandardCursor::CROSSHAIR));
-	
+	main_window.set_cursor(create_cursor(StandardCursor::CROSSHAIR));
+
+	renderer.set_app_scale(1.2f, 1.2f);
+
 	for (;;)
 	{
 		glfwPollEvents();
-		if (window.should_close())
+		if (main_window.should_close())
 			break;
 		renderer.on_draw();
-		
+		uim.update();
+
 		sprite.set_modulation(ColorFrame(HSV(modulo(0.25f * glfwGetTime(), 1.0f), 0.15f, 1.0f), 255));
 	}
 

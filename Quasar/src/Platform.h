@@ -29,6 +29,7 @@ enum class MouseMode
 
 enum class Key
 {
+	SPACE = GLFW_KEY_SPACE,
 	F11 = GLFW_KEY_F11,
 	ENTER = GLFW_KEY_ENTER,
 	ESCAPE = GLFW_KEY_ESCAPE,
@@ -58,6 +59,10 @@ enum class Mod
 	NUM_LOCK = GLFW_MOD_NUM_LOCK
 };
 
+constexpr int operator~(Mod m1) { return ~int(m1); }
+constexpr int operator&(Mod m1, Mod m2) { return int(m1) & int(m2); }
+constexpr int operator|(Mod m1, Mod m2) { return int(m1) | int(m2); }
+
 extern GLFWcursor* create_cursor(StandardCursor standard_cursor);
 extern GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot);
 
@@ -77,18 +82,18 @@ namespace Callback
 	};
 	struct Key
 	{
-		int key;
+		::Key key;
 		int scancode;
-		int action;
-		int mods;
-		Key(int key, int scancode, int action, int mods) : key(key), scancode(scancode), action(action), mods(mods) {}
+		::Action action;
+		::Mod mods;
+		Key(int key, int scancode, int action, int mods) : key(::Key(key)), scancode(scancode), action(::Action(action)), mods(::Mod(mods)) {}
 	};
 	struct MouseButton
 	{
-		int button;
-		int action;
-		int mods;
-		MouseButton(int button, int action, int mods) : button(button), action(action), mods(mods) {}
+		::MouseButton button;
+		::Action action;
+		::Mod mods;
+		MouseButton(int button, int action, int mods) : button(::MouseButton(button)), action(::Action(action)), mods(::Mod(mods)) {}
 	};
 	struct Scroll
 	{
@@ -143,6 +148,7 @@ struct Window
 	void toggle_maximized();
 	void set_maximized(bool maximized);
 	bool is_maximized() const { return maximized; }
+	bool is_key_pressed(Key key) const { return glfwGetKey(window, int(key)) == int(Action::PRESS); }
 
 private:
 	int pre_fullscreen_x = 0;

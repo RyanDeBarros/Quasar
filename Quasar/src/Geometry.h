@@ -5,6 +5,7 @@
 struct Position : glm::vec2
 {
 	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
+	Position(const glm::vec2& vec) : glm::vec2(vec) {}
 };
 struct Rotation
 {
@@ -19,6 +20,7 @@ struct Rotation
 struct Scale : glm::vec2
 {
 	Scale(float x = 1.0f, float y = 1.0f) : glm::vec2(x, y) {}
+	Scale(const glm::vec2& vec) : glm::vec2(vec) {}
 };
 
 struct Transform

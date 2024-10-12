@@ -1,4 +1,4 @@
-#include "Window.h"
+#include "Platform.h"
 
 GLFWcursor* create_cursor(StandardCursor standard_cursor)
 {
@@ -13,7 +13,6 @@ GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int
 	image.height = height;
 	return glfwCreateCursor(&image, xhot, yhot);
 }
-
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
 	auto win = Windows[window];
