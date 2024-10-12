@@ -1,5 +1,7 @@
 #include "Platform.h"
 
+#include "Quasar.h"
+
 GLFWcursor* create_cursor(StandardCursor standard_cursor)
 {
 	return glfwCreateStandardCursor(int(standard_cursor));
@@ -13,6 +15,7 @@ GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int
 	image.height = height;
 	return glfwCreateCursor(&image, xhot, yhot);
 }
+
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
 	auto win = Windows[window];
@@ -82,6 +85,27 @@ Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLF
 
 	if (cursor)
 		glfwSetCursor(window, cursor);
+
+	clbk_key.push_back([this](const Callback::Key& k) {
+		if (k.key == Key::F11 && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
+		{
+			if (!is_maximized())
+				toggle_fullscreen();
+			on_render();
+		}
+		else if (k.key == Key::ENTER && k.action == Action::PRESS && k.mods & Mod::ALT)
+		{
+			if (!is_fullscreen())
+				toggle_maximized();
+			on_render();
+		}
+		else if (k.key == Key::ESCAPE && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
+		{
+			set_fullscreen(false);
+			set_maximized(false);
+			on_render();
+		}
+		});
 }
 
 Window::~Window()

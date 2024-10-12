@@ -52,7 +52,7 @@ int Quasar::exec()
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 
 	canavas_renderer = new Renderer(main_window, Shader());
-	UserInputManager uim(canavas_renderer);
+	attach_canvas_controls(canavas_renderer);
 	main_window->set_raw_mouse_motion(true); // TODO settable from user settings
 
 	// TODO for now, only one renderer, so only needs to be called once, not on every draw frame.
@@ -75,7 +75,6 @@ int Quasar::exec()
 		if (main_window->should_close())
 			break;
 		on_render();
-		uim.update();
 
 		sprite.set_modulation(ColorFrame(HSV(modulo(0.25f * glfwGetTime(), 1.0f), 0.2f, 1.0f), 255));
 	}
@@ -91,7 +90,7 @@ int Quasar::exec()
 
 void Quasar::on_render()
 {
-	canavas_renderer->on_draw();
+	canavas_renderer->on_render();
 }
 
 void on_render()

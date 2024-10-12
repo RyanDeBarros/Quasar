@@ -17,21 +17,28 @@ struct QuasarSettings
 
 class Renderer
 {
+	// Batches
 	GLfloat* const vertex_pool = nullptr;
 	GLuint* const index_pool = nullptr;
 	GLfloat* vertex_pos = nullptr;
 	GLuint* index_pos = nullptr;
-	Window* window;
 	GLuint* const texture_slots = nullptr;
 	unsigned short num_vertices = 0;
-	glm::mat3 projection;
-	Transform view;
 	GLuint vao = 0, vb = 0, ib = 0;
 	Shader shader;
 	unsigned char texture_slot_cap = 0;
 	std::vector<struct Sprite*> _sprites;
+	
+	// View
+	glm::mat3 projection;
+	Transform view;
 	float app_scale_x = 1.0f;
 	float app_scale_y = 1.0f;
+
+	// User controls
+	Window* window;
+	glm::vec2 pan_initial_delta{};
+	bool panning = false;
 
 	void set_projection(float width, float height);
 	void set_projection();
@@ -45,7 +52,7 @@ public:
 	void bind() const;
 	void prepare_for_sprite();
 	void pool_over_varr(GLfloat* varr);
-	void on_draw();
+	void on_render();
 	void flush() const;
 	void reset();
 	const Transform& get_view() const { return view; }
@@ -58,4 +65,12 @@ public:
 
 	void set_window_callbacks();
 	Window* get_window() const { return window; }
+
+	// User controls
+	void begin_panning();
+	void end_panning();
+
+private:
+	void draw();
+	void update_panning();
 };

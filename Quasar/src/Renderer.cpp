@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include "Quasar.h"
 #include "Sprite.h"
 #include "GLutility.h"
 #include "IO.h"
@@ -104,7 +103,13 @@ void Renderer::pool_over_varr(GLfloat* varr)
 	vertex_pos = advance_bytes(vertex_pos, Sprite::VLEN_BYTES);
 }
 
-void Renderer::on_draw()
+void Renderer::on_render()
+{
+	update_panning();
+	draw();
+}
+
+void Renderer::draw()
 {
 	QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 	reset();
@@ -168,26 +173,23 @@ void Renderer::set_window_callbacks()
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
 		set_projection(float(ws.width), float(ws.height));
 		set_view(view);
-		on_draw();
+		on_render();
 		});
-	window->clbk_key.push_back([this](const Callback::Key& k) {
-		if (k.key == Key::F11 && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
-		{
-			if (!window->is_maximized())
-				window->toggle_fullscreen();
-			on_render();
-		}
-		else if (k.key == Key::ENTER && k.action == Action::PRESS && k.mods & Mod::ALT)
-		{
-			if (!window->is_fullscreen())
-				window->toggle_maximized();
-			on_render();
-		}
-		else if (k.key == Key::ESCAPE && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
-		{
-			window->set_fullscreen(false);
-			window->set_maximized(false);
-			on_render();
-		}
-		});
+}
+
+void Renderer::begin_panning()
+{
+	pan_initial_delta = view.position - glm::vec2{ -app_scale_x, app_scale_y } * window->cursor_pos();
+	panning = true;
+}
+
+void Renderer::end_panning()
+{
+	panning = false;
+}
+
+void Renderer::update_panning()
+{
+	if (panning)
+		set_view(Transform{ glm::vec2{ -app_scale_x, app_scale_y } * window->cursor_pos() + pan_initial_delta });
 }
