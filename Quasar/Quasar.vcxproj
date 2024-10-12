@@ -167,7 +167,7 @@
     <ClCompile Include="src\Image.cpp" />
     <ClCompile Include="src\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />
-    <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\Quasar.cpp" />
     <ClCompile Include="src\Renderer.cpp" />
     <ClCompile Include="src\Shader.cpp" />
     <ClCompile Include="src\Sprite.cpp" />
@@ -184,6 +184,7 @@
     <ClInclude Include="src\Image.h" />
     <ClInclude Include="src\IO.h" />
     <ClInclude Include="src\Macros.h" />
+    <ClInclude Include="src\Quasar.h" />
     <ClInclude Include="src\Registry.h" />
     <ClInclude Include="src\Renderer.h" />
     <ClInclude Include="src\Resources.h" />

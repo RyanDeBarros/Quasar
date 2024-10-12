@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "Quasar.h"
 #include "Sprite.h"
 #include "GLutility.h"
 #include "IO.h"
@@ -174,19 +175,19 @@ void Renderer::set_window_callbacks()
 		{
 			if (!window->is_maximized())
 				window->toggle_fullscreen();
-			on_draw();
+			on_render();
 		}
 		else if (k.key == Key::ENTER && k.action == Action::PRESS && k.mods & Mod::ALT)
 		{
 			if (!window->is_fullscreen())
 				window->toggle_maximized();
-			on_draw();
+			on_render();
 		}
 		else if (k.key == Key::ESCAPE && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
 		{
 			window->set_fullscreen(false);
 			window->set_maximized(false);
-			on_draw();
+			on_render();
 		}
 		});
 }

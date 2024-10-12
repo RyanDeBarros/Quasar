@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Main.cpp">
+    <ClCompile Include="src\Quasar.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\IO.cpp">
@@ -963,6 +963,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\UserInput.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Quasar.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
