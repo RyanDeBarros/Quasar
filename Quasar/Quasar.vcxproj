@@ -178,6 +178,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Color.h" />
+    <ClInclude Include="src\Debug.h" />
     <ClInclude Include="src\Geometry.h" />
     <ClInclude Include="src\GLutility.h" />
     <ClInclude Include="src\History.h" />

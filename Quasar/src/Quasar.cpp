@@ -12,11 +12,12 @@
 #include "Platform.h"
 #include "Color.h"
 #include "UserInput.h"
+#include "Debug.h"
 
 struct Quasar
 {
 	Window* main_window = nullptr;
-	Renderer* canavas_renderer = nullptr;
+	Renderer* canvas_renderer = nullptr;
 
 	int exec();
 	void on_render();
@@ -51,24 +52,46 @@ int Quasar::exec()
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 
-	canavas_renderer = new Renderer(main_window, Shader());
-	attach_canvas_controls(canavas_renderer);
+	canvas_renderer = new Renderer(main_window, Shader());
+	attach_canvas_controls(canvas_renderer);
 	main_window->set_raw_mouse_motion(true); // TODO settable from user settings
 
 	// TODO for now, only one renderer, so only needs to be called once, not on every draw frame.
 	// if more than one renderer, than call bind() before on_draw(). This will be the case for UI renderer.
-	canavas_renderer->bind();
+	canvas_renderer->bind();
 
 	auto tux = ImageRegistry.construct(ImageConstructor("ex/einstein.png"));
 	auto tux_img = ImageRegistry.get(tux);
 	Sprite sprite(tux);
-	canavas_renderer->sprites().push_back(&sprite);
+	canvas_renderer->sprites().push_back(&sprite);
 	tux_img->rotate_180();
 
 	main_window->set_cursor(create_cursor(StandardCursor::CROSSHAIR));
 
-	canavas_renderer->set_app_scale(1.2f, 1.2f);
+	canvas_renderer->set_app_scale(1.5f, 1.5f);
 
+	Sprite p1(tux);
+	p1.transform = { { 200.0f, 100.0f }, 0.0f, { 0.1f, 0.1f } };
+	p1.sync_transform();
+	Sprite p2(tux);
+	p2.transform = { { -100.0f, 100.0f }, 0.0f, { 0.1f, 0.1f } };
+	p2.sync_transform();
+	Sprite p3(tux);
+	p3.transform = { { -100.0f, -100.0f }, 0.0f, { 0.1f, 0.1f } };
+	p3.sync_transform();
+	Sprite p4(tux);
+	p4.transform = { { 100.0f, -100.0f }, 0.0f, { 0.1f, 0.1f } };
+	p4.sync_transform();
+	canvas_renderer->sprites().push_back(&p1);
+	canvas_renderer->sprites().push_back(&p2);
+	canvas_renderer->sprites().push_back(&p3);
+	canvas_renderer->sprites().push_back(&p4);
+
+	Sprite c(tux);
+	c.transform.scale = 0.1f * Scale();
+	c.sync_transform();
+	canvas_renderer->sprites().push_back(&c);
+		
 	for (;;)
 	{
 		glfwPollEvents();
@@ -77,12 +100,15 @@ int Quasar::exec()
 		on_render();
 
 		sprite.set_modulation(ColorFrame(HSV(modulo(0.25f * glfwGetTime(), 1.0f), 0.2f, 1.0f), 255));
+
+		c.transform.position = canvas_renderer->to_world_coordinates(main_window->cursor_pos());
+		c.sync_transform_p();
 	}
 
 	ImageRegistry.clear();
 	ShaderRegistry.clear();
-	delete canavas_renderer;
-	canavas_renderer = nullptr;
+	delete canvas_renderer;
+	canvas_renderer = nullptr;
 	delete main_window;
 	main_window = nullptr;
 	return 0;
@@ -90,7 +116,7 @@ int Quasar::exec()
 
 void Quasar::on_render()
 {
-	canavas_renderer->on_render();
+	canvas_renderer->on_render();
 }
 
 void on_render()

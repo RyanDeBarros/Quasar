@@ -29,8 +29,11 @@ enum class MouseMode
 
 enum class Key
 {
+	LEFT_SHIFT = GLFW_KEY_LEFT_SHIFT,
+	RIGHT_SHIFT = GLFW_KEY_RIGHT_SHIFT,
 	SPACE = GLFW_KEY_SPACE,
 	F11 = GLFW_KEY_F11,
+	ROW0 = GLFW_KEY_0,
 	ENTER = GLFW_KEY_ENTER,
 	ESCAPE = GLFW_KEY_ESCAPE,
 };
@@ -97,9 +100,9 @@ namespace Callback
 	};
 	struct Scroll
 	{
-		double xoff;
-		double yoff;
-		Scroll(double xoff, double yoff) : xoff(xoff), yoff(yoff) {}
+		float xoff;
+		float yoff;
+		Scroll(double xoff, double yoff) : xoff(float(xoff)), yoff(float(yoff)) {}
 	};
 }
 
@@ -128,14 +131,16 @@ struct Window
 
 	void focus_context() const { glfwMakeContextCurrent(window); }
 	void focus() const { glfwFocusWindow(window); }
+	bool should_close() const { return glfwWindowShouldClose(window); }
+	void swap_buffers() const { glfwSwapBuffers(window); }
+	
 	int width() const { int w, h; glfwGetWindowSize(window, &w, &h); return w; }
 	int height() const { int w, h; glfwGetWindowSize(window, &w, &h); return h; }
 	glm::ivec2 size() const { int w, h; glfwGetWindowSize(window, &w, &h); return { w, h }; }
-	bool should_close() const { return glfwWindowShouldClose(window); }
-	void swap_buffers() const { glfwSwapBuffers(window); }
 	float cursor_x() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return float(xpos); }
 	float cursor_y() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return float(ypos); }
-	glm::vec2 cursor_pos() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return { float(xpos), float(ypos) }; }
+	glm::vec2 cursor_pos() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return { float(xpos), height() - float(ypos)}; }
+	glm::vec2 pos_center_normalized(const glm::vec2& pos) const { return glm::vec2{ -0.5f * width() + pos.x, 0.5f * height() - pos.y }; }
 
 	MouseMode mouse_mode() const { return MouseMode(glfwGetInputMode(window, GLFW_CURSOR)); }
 	void set_mouse_mode(MouseMode mouse_mode) const { glfwSetInputMode(window, GLFW_CURSOR, int(mouse_mode)); }
@@ -149,6 +154,7 @@ struct Window
 	void set_maximized(bool maximized);
 	bool is_maximized() const { return maximized; }
 	bool is_key_pressed(Key key) const { return glfwGetKey(window, int(key)) == int(Action::PRESS); }
+	bool is_shift_pressed() const { return is_key_pressed(Key::LEFT_SHIFT) || is_key_pressed(Key::RIGHT_SHIFT); }
 
 private:
 	int pre_fullscreen_x = 0;

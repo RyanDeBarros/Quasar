@@ -43,7 +43,7 @@ Renderer::Renderer(Window* window, Shader&& shader_)
 	attrib_pointers(shader.attributes, shader.stride);
 	set_projection();
 	shader.query_location("u_VP");
-	set_view(view);
+	send_view();
 
 	set_window_callbacks();
 }
@@ -134,12 +134,62 @@ void Renderer::reset()
 	texture_slot_cap = 0;
 }
 
+void Renderer::send_view()
+{
+	glm::mat3 cameraVP = projection * view.camera();
+	bind();
+	QUASAR_GL(glUniformMatrix3fv(shader.locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+}
+
 void Renderer::set_view(const Transform& view_)
 {
 	view = view_;
-	glm::mat3 cameraVP = projection * view.inverse();
-	bind();
-	QUASAR_GL(glUniformMatrix3fv(shader.locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+	send_view();
+}
+
+void Renderer::set_view_position(const Position& pos)
+{
+	view.position = pos;
+	send_view();
+}
+
+void Renderer::set_view_rotation(Rotation rot)
+{
+	view.rotation = rot;
+	send_view();
+}
+
+void Renderer::set_view_scale(const Scale& sca)
+{
+	view.scale = sca;
+	send_view();
+}
+
+glm::vec2 Renderer::to_world_coordinates(const glm::vec2& screen_coordinates) const
+{
+	glm::vec3 ndc{};
+	ndc.x = 1.0f - 2.0f * (screen_coordinates.x / window->width());
+	ndc.y = 1.0f - 2.0f * (screen_coordinates.y / window->height());
+	ndc.z = 1.0f;
+
+	glm::mat3 invVP = glm::inverse(projection * view.camera());
+	glm::vec3 world_pos = invVP * ndc;
+
+	if (world_pos.z != 0.0f)
+		world_pos / world_pos.z;
+
+	return glm::vec2{ -world_pos.x, -world_pos.y };
+}
+
+glm::vec2 Renderer::to_screen_coordinates(const glm::vec2& world_coordinates) const
+{
+	glm::vec3 world_pos{ world_coordinates.x, world_coordinates.y, 1.0f };
+	glm::mat3 VP = projection * view.camera();
+	glm::vec3 clip_space_pos = VP * world_pos;
+	glm::vec2 screen_coo{};
+	screen_coo.x = (1.0f + clip_space_pos.x) * 0.5f * window->width();
+	screen_coo.y = (1.0f + clip_space_pos.y) * 0.5f * window->height();
+	return screen_coo;
 }
 
 void Renderer::set_app_scale(float x, float y)
@@ -147,7 +197,7 @@ void Renderer::set_app_scale(float x, float y)
 	app_scale_x = 1.0f / x;
 	app_scale_y = 1.0f / y;
 	set_projection();
-	set_view(view);
+	send_view();
 	// TODO scale cursor?
 }
 
@@ -172,14 +222,15 @@ void Renderer::set_window_callbacks()
 	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
 		set_projection(float(ws.width), float(ws.height));
-		set_view(view);
+		send_view();
 		on_render();
 		});
 }
 
 void Renderer::begin_panning()
 {
-	pan_initial_delta = view.position - glm::vec2{ -app_scale_x, app_scale_y } * window->cursor_pos();
+	pan_initial_view_pos = view.position;
+	pan_initial_cursor_pos = glm::vec2{ app_scale_x, app_scale_y } * window->cursor_pos();
 	panning = true;
 }
 
@@ -191,5 +242,38 @@ void Renderer::end_panning()
 void Renderer::update_panning()
 {
 	if (panning)
-		set_view(Transform{ glm::vec2{ -app_scale_x, app_scale_y } * window->cursor_pos() + pan_initial_delta });
+	{
+		glm::vec2 pan_delta = - glm::vec2{ app_scale_x, app_scale_y } * window->cursor_pos() + pan_initial_cursor_pos;
+		glm::vec2 pos = pan_delta + pan_initial_view_pos;
+		if (window->is_shift_pressed())
+		{
+			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
+				pos.x = pan_initial_view_pos.x;
+			else
+				pos.y = pan_initial_view_pos.y;
+		}
+		set_view_position(pos);
+	}
+}
+
+void Renderer::zoom_by(float z)
+{
+	glm::vec2 cursor_screen_before = window->cursor_pos();
+	glm::vec2 cursor_world = to_world_coordinates(cursor_screen_before);
+
+	float factor = window->is_shift_pressed() ? zoom_factor_shift : zoom_factor;
+	float new_zoom = std::clamp(zoom * glm::pow(factor, -z), zoom_out_min, zoom_out_max);
+	view.scale *= new_zoom / zoom;
+	
+	glm::vec2 cursor_screen_after = to_screen_coordinates(cursor_world);
+	view.position -= (cursor_screen_before - cursor_screen_after) * glm::vec2{ app_scale_x, app_scale_y };
+	
+	send_view();
+	zoom = new_zoom;
+}
+
+void Renderer::reset_camera()
+{
+	set_view({});
+	zoom = zoom_initial;
 }

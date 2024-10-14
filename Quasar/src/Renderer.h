@@ -37,8 +37,16 @@ class Renderer
 
 	// User controls
 	Window* window;
-	glm::vec2 pan_initial_delta{};
+	glm::vec2 pan_initial_cursor_pos{};
+	glm::vec2 pan_initial_view_pos{};
 	bool panning = false;
+	// TODO put these zoom constants somewhere else? In settings? They would be variable in that case.
+	constexpr static float zoom_initial = 0.5f;
+	constexpr static float zoom_out_min = 0.005f;
+	constexpr static float zoom_out_max = 5.0f;
+	constexpr static float zoom_factor = 1.5f;
+	constexpr static float zoom_factor_shift = 1.05f;
+	float zoom = zoom_initial;
 
 	void set_projection(float width, float height);
 	void set_projection();
@@ -55,8 +63,15 @@ public:
 	void on_render();
 	void flush() const;
 	void reset();
+
 	const Transform& get_view() const { return view; }
 	void set_view(const Transform& view);
+	void set_view_position(const Position& pos);
+	void set_view_rotation(Rotation rot);
+	void set_view_scale(const Scale& sca);
+	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
+	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
+
 	void set_app_scale(float x = 1.0f, float y = 1.0f);
 	glm::vec2 get_app_scale() const { return { app_scale_x, app_scale_y }; }
 	unsigned short get_texture_slot(GLuint texture);
@@ -69,8 +84,11 @@ public:
 	// User controls
 	void begin_panning();
 	void end_panning();
+	void zoom_by(float zoom);
+	void reset_camera();
 
 private:
+	void send_view();
 	void draw();
 	void update_panning();
 };
