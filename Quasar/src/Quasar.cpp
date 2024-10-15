@@ -51,22 +51,17 @@ int Quasar::exec()
 	glfwSwapInterval(1);
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
+	glEnable(GL_SCISSOR_TEST);
 
 	canvas_renderer = new Renderer(main_window, Shader());
 	attach_canvas_controls(canvas_renderer);
 	main_window->set_raw_mouse_motion(true); // TODO settable from user settings
-
-	// TODO for now, only one renderer, so only needs to be called once, not on every draw frame.
-	// if more than one renderer, than call bind() before on_draw(). This will be the case for UI renderer.
-	canvas_renderer->bind();
 
 	auto tux = ImageRegistry.construct(ImageConstructor("ex/einstein.png"));
 	auto tux_img = ImageRegistry.get(tux);
 	Sprite sprite(tux);
 	canvas_renderer->sprites().push_back(&sprite);
 	tux_img->rotate_180();
-
-	main_window->set_cursor(create_cursor(StandardCursor::CROSSHAIR));
 
 	canvas_renderer->set_app_scale(1.5f, 1.5f);
 
@@ -87,11 +82,14 @@ int Quasar::exec()
 	canvas_renderer->sprites().push_back(&p3);
 	canvas_renderer->sprites().push_back(&p4);
 
-	Sprite c(tux);
-	c.transform.scale = 0.1f * Scale();
-	c.sync_transform();
-	canvas_renderer->sprites().push_back(&c);
-		
+	canvas_renderer->clipping_rect().window_size_to_bounds = [](int w, int h) -> glm::ivec4 { return {
+		w / 10, h / 10, 8 * w / 10, 8 * h / 10
+	}; };
+	canvas_renderer->clipping_rect().update_window_size(main_window->width(), main_window->height());
+
+	// NOTE for now, only one renderer, so only needs to be called once, not on every draw frame.
+	// if more than one renderer, than call bind() before on_draw(). This will be the case for UI renderer.
+	canvas_renderer->bind();
 	for (;;)
 	{
 		glfwPollEvents();
@@ -100,9 +98,6 @@ int Quasar::exec()
 		on_render();
 
 		sprite.set_modulation(ColorFrame(HSV(modulo(0.25f * glfwGetTime(), 1.0f), 0.2f, 1.0f), 255));
-
-		c.transform.position = canvas_renderer->to_world_coordinates(main_window->cursor_pos());
-		c.sync_transform_p();
 	}
 
 	ImageRegistry.clear();

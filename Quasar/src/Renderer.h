@@ -15,6 +15,27 @@ struct QuasarSettings
 	static void load_settings(const char* filepath = "res/settings.asset");
 };
 
+struct ClippingRect
+{
+	GLint x, y;
+	GLsizei screen_w, screen_h;
+
+	std::function<glm::ivec4(int, int)> window_size_to_bounds;
+
+	bool contains_point(const glm::vec2& point) const
+	{
+		return x <= point.x && point.x < x + screen_w && y <= point.y && point.y < y + screen_h;
+	}
+	void update_window_size(int width, int height)
+	{
+		glm::ivec4 bnds = window_size_to_bounds(width, height);
+		x = bnds[0];
+		y = bnds[1];
+		screen_w = bnds[2];
+		screen_h = bnds[3];
+	}
+};
+
 class Renderer
 {
 	// Batches
@@ -34,6 +55,7 @@ class Renderer
 	Transform view;
 	float app_scale_x = 1.0f;
 	float app_scale_y = 1.0f;
+	ClippingRect clip{};
 
 	// User controls
 	Window* window;
@@ -77,6 +99,10 @@ public:
 	unsigned short get_texture_slot(GLuint texture);
 
 	std::vector<struct Sprite*>& sprites() { return _sprites; };
+	const std::vector<struct Sprite*>& sprites() const { return _sprites; };
+	ClippingRect& clipping_rect() { return clip; }
+	const ClippingRect& clipping_rect() const { return clip; }
+	bool cursor_in_clipping() const { return clip.contains_point(window->cursor_pos()); }
 
 	void set_window_callbacks();
 	Window* get_window() const { return window; }

@@ -5,6 +5,7 @@
 #include "Sprite.h"
 #include "GLutility.h"
 #include "IO.h"
+#include "Debug.h"
 
 unsigned short QuasarSettings::VERTEX_COUNT = 512;
 unsigned short QuasarSettings::INDEX_COUNT = 768;
@@ -46,6 +47,12 @@ Renderer::Renderer(Window* window, Shader&& shader_)
 	send_view();
 
 	set_window_callbacks();
+
+	clip.x = 0;
+	clip.y = 0;
+	clip.screen_w = window->width();
+	clip.screen_h = window->height();
+	clip.window_size_to_bounds = [](int width, int height) -> glm::ivec4 { return { 0, 0, width, height }; };
 }
 
 Renderer::~Renderer()
@@ -76,6 +83,7 @@ void Renderer::bind() const
 	QUASAR_GL(glEnable(GL_BLEND));
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	window->focus_context();
+	QUASAR_GL(glScissor(clip.x, clip.y, clip.screen_w, clip.screen_h));
 }
 
 template<typename T>
@@ -198,7 +206,7 @@ void Renderer::set_app_scale(float x, float y)
 	app_scale_y = 1.0f / y;
 	set_projection();
 	send_view();
-	// TODO scale cursor?
+	// TODO scale cursor? Have different discrete cursor sizes (only works for custom cursors).
 }
 
 unsigned short Renderer::get_texture_slot(GLuint texture)
@@ -221,6 +229,7 @@ void Renderer::set_window_callbacks()
 {
 	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
+		clip.update_window_size(ws.width, ws.height);
 		set_projection(float(ws.width), float(ws.height));
 		send_view();
 		on_render();
@@ -232,11 +241,14 @@ void Renderer::begin_panning()
 	pan_initial_view_pos = view.position;
 	pan_initial_cursor_pos = glm::vec2{ app_scale_x, app_scale_y } * window->cursor_pos();
 	panning = true;
+	window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
 }
 
 void Renderer::end_panning()
 {
 	panning = false;
+	window->set_cursor(create_cursor(StandardCursor::ARROW));
+	window->set_mouse_mode(MouseMode::VISIBLE);
 }
 
 void Renderer::update_panning()
@@ -253,6 +265,9 @@ void Renderer::update_panning()
 				pos.y = pan_initial_view_pos.y;
 		}
 		set_view_position(pos);
+
+		if (window->mouse_mode() != MouseMode::VIRTUAL && !cursor_in_clipping())
+			window->set_mouse_mode(MouseMode::VIRTUAL);
 	}
 }
 
