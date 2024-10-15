@@ -87,19 +87,19 @@ Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLF
 		glfwSetCursor(window, cursor);
 
 	clbk_key.push_back([this](const Callback::Key& k) {
-		if (k.key == Key::F11 && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
+		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mod::SHIFT))
 		{
 			if (!is_maximized())
 				toggle_fullscreen();
 			on_render();
 		}
-		else if (k.key == Key::ENTER && k.action == Action::PRESS && k.mods & Mod::ALT)
+		else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mod::ALT)
 		{
 			if (!is_fullscreen())
 				toggle_maximized();
 			on_render();
 		}
-		else if (k.key == Key::ESCAPE && k.action == Action::PRESS && !(k.mods & Mod::SHIFT))
+		else if (k.key == Key::ESCAPE && k.action == IAction::PRESS && !(k.mods & Mod::SHIFT))
 		{
 			set_fullscreen(false);
 			set_maximized(false);

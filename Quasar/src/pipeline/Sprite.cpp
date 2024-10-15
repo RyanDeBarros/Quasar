@@ -1,7 +1,7 @@
 #include "Sprite.h"
 
 #include "Renderer.h"
-#include "GLutility.h"
+#include "variety/GLutility.h"
 
 Sprite::Sprite(ImageHandle image)
 	: image(image)

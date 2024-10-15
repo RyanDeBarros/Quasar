@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "Utils.h"
+#include "variety/Utils.h"
 
 constexpr float NEAR_ZERO = 0.00001f;
 constexpr float inv60 = 1.0f / 60;

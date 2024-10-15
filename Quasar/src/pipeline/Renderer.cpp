@@ -3,9 +3,8 @@
 #include <sstream>
 
 #include "Sprite.h"
-#include "GLutility.h"
-#include "IO.h"
-#include "Debug.h"
+#include "variety/GLutility.h"
+#include "variety/IO.h"
 
 unsigned short QuasarSettings::VERTEX_COUNT = 512;
 unsigned short QuasarSettings::INDEX_COUNT = 768;

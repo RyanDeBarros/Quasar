@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Macros.h"
-#include "Resources.h"
-#include "Geometry.h"
+#include "Globals.h"
+#include "variety/Geometry.h"
 #include "Shader.h"
-#include "Platform.h"
+#include "user/Platform.h"
 
 struct QuasarSettings
 {

@@ -45,7 +45,7 @@ enum class MouseButton
 	MIDDLE = GLFW_MOUSE_BUTTON_MIDDLE
 };
 
-enum class Action
+enum class IAction
 {
 	PRESS = GLFW_PRESS,
 	RELEASE = GLFW_RELEASE,
@@ -87,16 +87,16 @@ namespace Callback
 	{
 		::Key key;
 		int scancode;
-		::Action action;
+		::IAction action;
 		::Mod mods;
-		Key(int key, int scancode, int action, int mods) : key(::Key(key)), scancode(scancode), action(::Action(action)), mods(::Mod(mods)) {}
+		Key(int key, int scancode, int action, int mods) : key(::Key(key)), scancode(scancode), action(::IAction(action)), mods(::Mod(mods)) {}
 	};
 	struct MouseButton
 	{
 		::MouseButton button;
-		::Action action;
+		::IAction action;
 		::Mod mods;
-		MouseButton(int button, int action, int mods) : button(::MouseButton(button)), action(::Action(action)), mods(::Mod(mods)) {}
+		MouseButton(int button, int action, int mods) : button(::MouseButton(button)), action(::IAction(action)), mods(::Mod(mods)) {}
 	};
 	struct Scroll
 	{
@@ -154,7 +154,7 @@ struct Window
 	void toggle_maximized();
 	void set_maximized(bool maximized);
 	bool is_maximized() const { return maximized; }
-	bool is_key_pressed(Key key) const { return glfwGetKey(window, int(key)) == int(Action::PRESS); }
+	bool is_key_pressed(Key key) const { return glfwGetKey(window, int(key)) == int(IAction::PRESS); }
 	bool is_shift_pressed() const { return is_key_pressed(Key::LEFT_SHIFT) || is_key_pressed(Key::RIGHT_SHIFT); }
 
 private:

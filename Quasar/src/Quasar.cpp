@@ -5,14 +5,14 @@
 #include <stb/stb_image.h>
 
 #include "Macros.h"
-#include "Shader.h"
-#include "Sprite.h"
-#include "Renderer.h"
-#include "Geometry.h"
-#include "Platform.h"
-#include "Color.h"
-#include "UserInput.h"
-#include "Debug.h"
+#include "pipeline/Shader.h"
+#include "pipeline/Sprite.h"
+#include "pipeline/Renderer.h"
+#include "variety/Geometry.h"
+#include "user/Platform.h"
+#include "edit/Color.h"
+#include "user/UserInput.h"
+#include "variety/Debug.h"
 
 struct Quasar
 {

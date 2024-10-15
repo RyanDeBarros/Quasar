@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "IO.h"
+#include "variety/IO.h"
 
 static GLuint compile_shader(GLenum type, const char* shader, const char* filepath)
 {

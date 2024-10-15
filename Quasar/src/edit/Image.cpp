@@ -3,7 +3,7 @@
 #include <stb/stb_image.h>
 #include <memory>
 
-#include "GLutility.h"
+#include "variety/GLutility.h"
 
 inline static GLenum chpp_format(Image::CHPP chpp)
 {

@@ -64,5 +64,3 @@ public:
 		}
 	}
 };
-
-inline ActionHistory GlobalActionHistory;

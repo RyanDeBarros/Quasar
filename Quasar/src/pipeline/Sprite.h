@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Geometry.h"
-#include "Resources.h"
-#include "Color.h"
+#include "variety/Geometry.h"
+#include "Globals.h"
+#include "edit/Color.h"
 
 struct Sprite
 {
