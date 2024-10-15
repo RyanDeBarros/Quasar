@@ -10,5 +10,6 @@ This project uses the following libraries:
 - **GLFW**
 - **g-truc/glm**
 - **nothings/stb**
+- **ocornut/imgui**
 
 For the actual licensing information, refer to the Licenses folder.
