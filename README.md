@@ -11,5 +11,6 @@ This project uses the following libraries:
 - **g-truc/glm**
 - **nothings/stb**
 - **ocornut/imgui**
+- **tinyfiledialogs**
 
 For the actual licensing information, refer to the Licenses folder.
