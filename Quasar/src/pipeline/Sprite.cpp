@@ -1,13 +1,12 @@
 #include "Sprite.h"
 
 #include "Renderer.h"
-#include "GLutility.h"
+#include "variety/GLutility.h"
 
 Sprite::Sprite(ImageHandle image)
 	: image(image)
 {
 	Image* img = ImageRegistry.get(image);
-	img->gen_texture();
 	varr = new GLfloat[NUM_VERTICES * STRIDE]{
 		0.0f, -0.5f * img->width, -0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 		1.0f,  0.5f * img->width, -0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
@@ -73,8 +72,8 @@ void Sprite::sync_transform() const
 	GLfloat* row = varr;
 	for (size_t i = 0; i < 4; ++i)
 	{
-		memcpy(row + 4, &pp[0], 2 * sizeof(GLfloat));
-		memcpy(row + 6, &prs[0], 4 * sizeof(GLfloat));
+		memcpy(row + SHADER_POS_PACKED_P, &pp[0], 2 * sizeof(GLfloat));
+		memcpy(row + SHADER_POS_PACKED_RS, &prs[0], 4 * sizeof(GLfloat));
 		row += STRIDE;
 	}
 }
@@ -85,7 +84,7 @@ void Sprite::sync_transform_p() const
 	GLfloat* row = varr;
 	for (size_t i = 0; i < 4; ++i)
 	{
-		memcpy(row + 4, &pp[0], 2 * sizeof(GLfloat));
+		memcpy(row + SHADER_POS_PACKED_P, &pp[0], 2 * sizeof(GLfloat));
 		row += STRIDE;
 	}
 }
@@ -96,7 +95,38 @@ void Sprite::sync_transform_rs() const
 	GLfloat* row = varr;
 	for (size_t i = 0; i < 4; ++i)
 	{
-		memcpy(row + 6, &prs[0], 4 * sizeof(GLfloat));
+		memcpy(row + SHADER_POS_PACKED_RS, &prs[0], 4 * sizeof(GLfloat));
+		row += STRIDE;
+	}
+}
+
+glm::vec4 Sprite::modulation() const
+{
+	return glm::vec4{ varr[SHADER_POS_MODULATE], varr[SHADER_POS_MODULATE + 1], varr[SHADER_POS_MODULATE + 2], varr[SHADER_POS_MODULATE + 3] };
+}
+
+void Sprite::set_modulation(const glm::vec4& color) const
+{
+	GLfloat* row = varr;
+	for (size_t i = 0; i < 4; ++i)
+	{
+		memcpy(row + SHADER_POS_MODULATE, &color[0], 4 * sizeof(GLfloat));
+		row += STRIDE;
+	}
+}
+
+ColorFrame Sprite::modulation_color_frame() const
+{
+	return ColorFrame(RGB(varr[SHADER_POS_MODULATE], varr[SHADER_POS_MODULATE + 1], varr[SHADER_POS_MODULATE + 2]), varr[SHADER_POS_MODULATE + 3]);
+}
+
+void Sprite::set_modulation(ColorFrame color) const
+{
+	GLfloat* row = varr;
+	glm::vec4 cvec = color.rgba_as_vec();
+	for (size_t i = 0; i < 4; ++i)
+	{
+		memcpy(row + SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
 		row += STRIDE;
 	}
 }

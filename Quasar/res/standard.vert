@@ -13,13 +13,6 @@ out vec4 t_Color;
 out float t_TexSlot;
 out vec2 t_TexCoord;
 
-const vec2 positions[4] = vec2[4](
-	vec2(-0.5, -0.5),
-	vec2(0.5, -0.5),
-	vec2(0.5, 0.5),
-	vec2(-0.5, 0.5)
-);
-
 const vec2 tex_coords[4] = vec2[4](
 	vec2(0.0, 0.0),
 	vec2(1.0, 0.0),
@@ -33,6 +26,6 @@ void main() {
 	t_TexCoord = tex_coords[int(i_Vert)];
 
 	// model matrix
-	mat3 M = mat3(vec3(i_TransformRS[0], i_TransformRS[1], 0.0), vec3(i_TransformRS[2], i_TransformRS[3], 0.0), vec3(i_TransformP[0], i_TransformP[1], 0.0));
+	mat3 M = mat3(vec3(i_TransformRS[0], i_TransformRS[1], 0.0), vec3(i_TransformRS[2], i_TransformRS[3], 0.0), vec3(i_TransformP[0], i_TransformP[1], 1.0));
 	gl_Position.xy = (u_VP * M * vec3(i_Position, 1.0)).xy;
 }
