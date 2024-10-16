@@ -27,8 +27,9 @@ struct Shader
 	std::vector<unsigned short> attributes;
 
 	Shader(const ShaderConstructor& args = {});
-	Shader(const Shader&) = default;
-	Shader(Shader&&) noexcept = default;
+	Shader(const Shader&) = delete;
+	Shader(Shader&&) noexcept;
+	Shader& operator()(Shader&&) noexcept = delete;
 	~Shader();
 
 	operator bool() const { return rid != 0; }

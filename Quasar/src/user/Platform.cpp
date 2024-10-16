@@ -77,6 +77,8 @@ Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLF
 		return;
 	}
 
+	// NOTE due to potential conflict with ImGui input handling, only set glfw callbacks in Window constructor, since IMGui is initialized on window after.
+	// For any and all actual callbacks, use clbk vectors.
 	glfwSetWindowSizeCallback(window, window_size_callback);
 	glfwSetDropCallback(window, path_drop_callback);
 	glfwSetKeyCallback(window, key_callback);

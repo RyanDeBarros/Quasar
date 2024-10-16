@@ -91,8 +91,15 @@ Shader::Shader(const ShaderConstructor& args)
 	rid = load_program(vert.c_str() + 2, frag.c_str() + 2);
 }
 
+Shader::Shader(Shader&& other) noexcept
+	: rid(other.rid), stride(other.stride), locations(std::move(other.locations)), attributes(std::move(other.attributes))
+{
+	other.rid = 0;
+}
+
 Shader::~Shader()
 {
+	bool isp = glIsProgram(rid);
 	QUASAR_GL(glDeleteProgram(rid));
 }
 

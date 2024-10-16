@@ -80,6 +80,7 @@ public:
 	~Renderer();
 
 	void bind() const;
+	void unbind() const;
 	void prepare_for_sprite();
 	void pool_over_varr(GLfloat* varr);
 	void on_render();

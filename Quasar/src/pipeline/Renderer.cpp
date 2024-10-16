@@ -25,7 +25,7 @@ void QuasarSettings::load_settings(const char* filepath)
 }
 
 Renderer::Renderer(Window* window, Shader&& shader_)
-	: window(window), shader(shader_), vertex_pool(new GLfloat[QuasarSettings::VERTEX_COUNT]),
+	: window(window), shader(std::move(shader_)), vertex_pool(new GLfloat[QuasarSettings::VERTEX_COUNT]),
 	index_pool(new GLuint[QuasarSettings::INDEX_COUNT]), texture_slots(new GLuint[QuasarSettings::TEXTURES_COUNT])
 {
 	reset();
@@ -85,6 +85,13 @@ void Renderer::bind() const
 	QUASAR_GL(glScissor(clip.x, clip.y, clip.screen_w, clip.screen_h));
 }
 
+void Renderer::unbind() const
+{
+	QUASAR_GL(glBindVertexArray(0));
+	QUASAR_GL(glUseProgram(0));
+	QUASAR_GL(glScissor(0, 0, window->width(), window->height()));
+}
+
 template<typename T>
 static T* advance_bytes(T* ptr, size_t bytes)
 {
@@ -118,12 +125,10 @@ void Renderer::on_render()
 
 void Renderer::draw()
 {
-	QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 	reset();
 	for (size_t i = 0; i < _sprites.size(); ++i)
 		_sprites[i]->on_draw(this);
 	flush();
-	window->swap_buffers();
 }
 
 void Renderer::flush() const

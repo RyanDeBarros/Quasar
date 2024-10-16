@@ -3,6 +3,10 @@
 #include <array>
 
 #include <stb/stb_image.h>
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_opengl3.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <tinyfd/tinyfiledialogs.h>
 
 #include "Macros.h"
 #include "pipeline/Shader.h"
@@ -48,6 +52,13 @@ int Quasar::exec()
 		glfwTerminate();
 		return -1;
 	}
+	// TODO put at end of Window constructor?
+	ImGui::CreateContext();
+	ImGui_ImplOpenGL3_Init();
+	ImGui_ImplGlfw_InitForOpenGL(main_window->window, true);
+	ImGui::GetStyle().ScaleAllSizes(2.0f);
+	ImGui::GetIO().FontGlobalScale = 2.0f;
+
 	glfwSwapInterval(1);
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
@@ -87,18 +98,17 @@ int Quasar::exec()
 	}; };
 	canvas_renderer->clipping_rect().update_window_size(main_window->width(), main_window->height());
 
-	// NOTE for now, only one renderer, so only needs to be called once, not on every draw frame.
-	// if more than one renderer, than call bind() before on_draw(). This will be the case for UI renderer.
-	canvas_renderer->bind();
 	for (;;)
 	{
 		glfwPollEvents();
 		if (main_window->should_close())
 			break;
 		on_render();
-
-		sprite.set_modulation(ColorFrame(HSV(modulo(0.25f * glfwGetTime(), 1.0f), 0.2f, 1.0f), 255));
 	}
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
 
 	ImageRegistry.clear();
 	ShaderRegistry.clear();
@@ -106,12 +116,56 @@ int Quasar::exec()
 	canvas_renderer = nullptr;
 	delete main_window;
 	main_window = nullptr;
+	glfwTerminate();
 	return 0;
 }
 
 void Quasar::on_render()
 {
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+	QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+	canvas_renderer->bind();
 	canvas_renderer->on_render();
+	canvas_renderer->unbind();
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	if (ImGui::BeginMainMenuBar())
+	{
+		ImGui::PopStyleVar();
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("New file", "CTRL+N")) {}
+			if (ImGui::MenuItem("Open file", "CTRL+O")) {}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Save", "CTRL+S"))
+			{
+				const char* filters[3] = { "*.qua", "*.png", "*.gif" };
+				//const char* savefile = tinyfd_saveFileDialog("Save file", "", 3, filters, "");
+				const char* savefile = tinyfd_openFileDialog("Open file", "", 3, filters, "", true);
+				std::cout << savefile << std::endl;
+			}
+			if (ImGui::MenuItem("Save as", "CTRL+SHIFT+S")) {}
+			if (ImGui::MenuItem("Save a copy", "CTRL+ALT+S")) {}
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Edit"))
+		{
+			if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
+			if (ImGui::MenuItem("Redo", "CTRL+SHIFT+Z", false, false)) {}  // Disabled item
+			ImGui::Separator();
+			if (ImGui::MenuItem("Copy", "CTRL+C")) {}
+			if (ImGui::MenuItem("Paste", "CTRL+V")) {}
+			if (ImGui::MenuItem("Cut", "CTRL+X")) {}
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+	}
+	ImGui::EndFrame();
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	main_window->swap_buffers();
 }
 
 void on_render()
