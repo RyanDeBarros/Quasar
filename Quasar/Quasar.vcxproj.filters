@@ -75,6 +75,12 @@
     <ClCompile Include="vendor\tinyfd\tinyfiledialogs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\user\Machine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\user\GUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\variety\IO.h">
@@ -974,9 +980,6 @@
     <ClInclude Include="src\variety\Registry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Globals.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\variety\History.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1029,6 +1032,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="vendor\tinyfd\tinyfiledialogs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\user\Machine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\user\GUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

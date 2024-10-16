@@ -31,8 +31,11 @@ enum class MouseMode
 
 enum class Key
 {
+	Z = GLFW_KEY_Z,
 	LEFT_SHIFT = GLFW_KEY_LEFT_SHIFT,
 	RIGHT_SHIFT = GLFW_KEY_RIGHT_SHIFT,
+	LEFT_CTRL = GLFW_KEY_LEFT_CONTROL,
+	RIGHT_CTRL = GLFW_KEY_RIGHT_CONTROL,
 	SPACE = GLFW_KEY_SPACE,
 	F11 = GLFW_KEY_F11,
 	ROW0 = GLFW_KEY_0,
@@ -139,6 +142,7 @@ struct Window
 	void end_frame() const;
 	bool should_close() const { return glfwWindowShouldClose(window); }
 	void swap_buffers() const { glfwSwapBuffers(window); }
+	void request_close() const { glfwSetWindowShouldClose(window, GLFW_TRUE); }
 	
 	int width() const { int w, h; glfwGetWindowSize(window, &w, &h); return w; }
 	int height() const { int w, h; glfwGetWindowSize(window, &w, &h); return h; }
@@ -162,6 +166,7 @@ struct Window
 	bool is_maximized() const { return maximized; }
 	bool is_key_pressed(Key key) const { return glfwGetKey(window, int(key)) == int(IAction::PRESS); }
 	bool is_shift_pressed() const { return is_key_pressed(Key::LEFT_SHIFT) || is_key_pressed(Key::RIGHT_SHIFT); }
+	bool is_ctrl_pressed() const { return is_key_pressed(Key::LEFT_CTRL) || is_key_pressed(Key::RIGHT_CTRL); }
 
 private:
 	int pre_fullscreen_x = 0;

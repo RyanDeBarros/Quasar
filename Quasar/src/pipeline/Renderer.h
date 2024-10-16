@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Macros.h"
-#include "Globals.h"
 #include "variety/Geometry.h"
 #include "Shader.h"
 #include "user/Platform.h"

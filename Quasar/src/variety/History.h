@@ -30,7 +30,22 @@ public:
 		redo_deque.clear();
 	}
 
+	void execute(const Action& action)
+	{
+		action.forward();
+		if (undo_deque.size() == tracking_length)
+			undo_deque.pop_front();
+		undo_deque.push_back(action);
+		redo_deque.clear();
+	}
+
 	void execute_no_undo(Action&& action)
+	{
+		action.forward();
+		clear_history();
+	}
+
+	void execute_no_undo(const Action& action)
 	{
 		action.forward();
 		clear_history();
@@ -53,6 +68,11 @@ public:
 		}
 	}
 
+	size_t undo_size() const
+	{
+		return undo_deque.size();
+	}
+
 	void redo()
 	{
 		if (!redo_deque.empty())
@@ -62,5 +82,10 @@ public:
 			action.forward();
 			undo_deque.push_back(std::move(action));
 		}
+	}
+
+	size_t redo_size() const
+	{
+		return redo_deque.size();
 	}
 };

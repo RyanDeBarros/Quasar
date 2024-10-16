@@ -3,10 +3,10 @@
 #include "Renderer.h"
 #include "variety/GLutility.h"
 
-Sprite::Sprite(ImageHandle image)
+Sprite::Sprite(MachineImpl::ImageHandle image)
 	: image(image)
 {
-	Image* img = ImageRegistry.get(image);
+	Image* img = Machine.images.get(image);
 	varr = new GLfloat[NUM_VERTICES * STRIDE]{
 		0.0f, -0.5f * img->width, -0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 		1.0f,  0.5f * img->width, -0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
@@ -60,7 +60,7 @@ Sprite::~Sprite()
 void Sprite::on_draw(Renderer* renderer) const
 {
 	renderer->prepare_for_sprite();
-	Image* img = ImageRegistry.get(image);
+	Image* img = Machine.images.get(image);
 	bind_texture(img->tid, renderer->get_texture_slot(img->tid));
 	renderer->pool_over_varr(varr);
 }

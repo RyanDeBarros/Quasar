@@ -1,8 +1,8 @@
 #pragma once
 
 #include "variety/Geometry.h"
-#include "Globals.h"
 #include "edit/Color.h"
+#include "user/Machine.h"
 
 struct Sprite
 {
@@ -21,9 +21,9 @@ struct Sprite
 	
 	GLfloat* varr = nullptr;
 	Transform transform;
-	ImageHandle image;
+	MachineImpl::ImageHandle image;
 
-	Sprite(ImageHandle image);
+	Sprite(MachineImpl::ImageHandle image);
 	Sprite(const Sprite&);
 	Sprite(Sprite&&) noexcept;
 	Sprite& operator=(const Sprite&);

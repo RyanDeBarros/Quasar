@@ -165,6 +165,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\edit\Image.cpp" />
+    <ClCompile Include="src\user\GUI.cpp" />
+    <ClCompile Include="src\user\Machine.cpp" />
     <ClCompile Include="src\variety\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />
     <ClCompile Include="src\Quasar.cpp" />
@@ -187,6 +189,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\edit\Color.h" />
+    <ClInclude Include="src\user\GUI.h" />
+    <ClInclude Include="src\user\Machine.h" />
     <ClInclude Include="src\variety\Debug.h" />
     <ClInclude Include="src\variety\Geometry.h" />
     <ClInclude Include="src\variety\GLutility.h" />
@@ -197,7 +201,6 @@
     <ClInclude Include="src\Quasar.h" />
     <ClInclude Include="src\variety\Registry.h" />
     <ClInclude Include="src\pipeline\Renderer.h" />
-    <ClInclude Include="src\Globals.h" />
     <ClInclude Include="src\pipeline\Shader.h" />
     <ClInclude Include="src\pipeline\Sprite.h" />
     <ClInclude Include="src\user\UserInput.h" />
