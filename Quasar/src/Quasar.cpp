@@ -4,8 +4,6 @@
 
 #include <stb/stb_image.h>
 #include <imgui/imgui.h>
-#include <imgui/imgui_impl_opengl3.h>
-#include <imgui/imgui_impl_glfw.h>
 #include <tinyfd/tinyfiledialogs.h>
 
 #include "Macros.h"
@@ -46,16 +44,12 @@ int Quasar::exec()
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);
-	main_window = new Window("Quasar", 1440, 1080);
+	main_window = new Window("Quasar", 1440, 1080, true);
 	if (!main_window)
 	{
 		glfwTerminate();
 		return -1;
 	}
-	// TODO put at end of Window constructor?
-	ImGui::CreateContext();
-	ImGui_ImplOpenGL3_Init();
-	ImGui_ImplGlfw_InitForOpenGL(main_window->window, true);
 	ImGui::GetStyle().ScaleAllSizes(2.0f);
 	ImGui::GetIO().FontGlobalScale = 2.0f;
 
@@ -98,6 +92,8 @@ int Quasar::exec()
 	}; };
 	canvas_renderer->clipping_rect().update_window_size(main_window->width(), main_window->height());
 
+	// NOTE only one window, so no need to call bind_gui() at each frame.
+	main_window->bind_gui();
 	for (;;)
 	{
 		glfwPollEvents();
@@ -105,10 +101,6 @@ int Quasar::exec()
 			break;
 		on_render();
 	}
-
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
 
 	ImageRegistry.clear();
 	ShaderRegistry.clear();
@@ -122,14 +114,19 @@ int Quasar::exec()
 
 void Quasar::on_render()
 {
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-	QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
-	canvas_renderer->bind();
-	canvas_renderer->on_render();
-	canvas_renderer->unbind();
+	main_window->new_frame();
+	canvas_renderer->frame_cycle();
+	gui_render();
+	main_window->end_frame();
+}
 
+void on_render()
+{
+	quasar.on_render();
+}
+
+void gui_render()
+{
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	if (ImGui::BeginMainMenuBar())
 	{
@@ -144,7 +141,8 @@ void Quasar::on_render()
 				const char* filters[3] = { "*.qua", "*.png", "*.gif" };
 				//const char* savefile = tinyfd_saveFileDialog("Save file", "", 3, filters, "");
 				const char* savefile = tinyfd_openFileDialog("Open file", "", 3, filters, "", true);
-				std::cout << savefile << std::endl;
+				if (savefile)
+					std::cout << savefile << std::endl;
 			}
 			if (ImGui::MenuItem("Save as", "CTRL+SHIFT+S")) {}
 			if (ImGui::MenuItem("Save a copy", "CTRL+ALT+S")) {}
@@ -162,13 +160,4 @@ void Quasar::on_render()
 		}
 		ImGui::EndMainMenuBar();
 	}
-	ImGui::EndFrame();
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	main_window->swap_buffers();
-}
-
-void on_render()
-{
-	quasar.on_render();
 }

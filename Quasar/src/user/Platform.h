@@ -1,5 +1,7 @@
 #pragma once
 
+#include <imgui/imgui.h>
+
 #include <vector>
 #include <functional>
 
@@ -109,6 +111,7 @@ namespace Callback
 struct Window
 {
 	GLFWwindow* window = nullptr;
+	ImGuiContext* gui_context = nullptr;
 
 	std::vector<std::function<void(const Callback::WindowSize&)>> clbk_window_size;
 	std::vector<std::function<void(const Callback::PathDrop&)>> clbk_path_drop;
@@ -116,7 +119,7 @@ struct Window
 	std::vector<std::function<void(const Callback::MouseButton&)>> clbk_mouse_button;
 	std::vector<std::function<void(const Callback::Scroll&)>> clbk_scroll;
 
-	Window(const char* title, int width, int height, GLFWcursor* cursor = nullptr, GLFWmonitor* monitor = nullptr, GLFWwindow* share = nullptr);
+	Window(const char* title, int width, int height, bool enable_gui = true, ImFontAtlas* gui_font_atlas = nullptr, GLFWcursor* cursor = nullptr);
 	Window(const Window&) = delete;
 	Window(Window&&) noexcept = delete;
 	~Window();
@@ -131,6 +134,9 @@ struct Window
 
 	void focus_context() const { glfwMakeContextCurrent(window); }
 	void focus() const { glfwFocusWindow(window); }
+	bool bind_gui() const;
+	void new_frame() const;
+	void end_frame() const;
 	bool should_close() const { return glfwWindowShouldClose(window); }
 	void swap_buffers() const { glfwSwapBuffers(window); }
 	

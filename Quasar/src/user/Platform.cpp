@@ -1,5 +1,8 @@
 #include "Platform.h"
 
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+
 #include "Quasar.h"
 
 GLFWcursor* create_cursor(StandardCursor standard_cursor)
@@ -56,14 +59,14 @@ static void scroll_callback(GLFWwindow* window, double xoff, double yoff)
 		f(args);
 }
 
-Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLFWmonitor* monitor, GLFWwindow* share)
+Window::Window(const char* title, int width, int height, bool enable_gui, ImFontAtlas* gui_font_atlas, GLFWcursor* cursor)
 {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
-	window = glfwCreateWindow(width, height, title, monitor, share);
+	window = glfwCreateWindow(width, height, title, nullptr, nullptr);
 	if (!window)
 	{
 		destroy();
@@ -87,6 +90,13 @@ Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLF
 
 	if (cursor)
 		glfwSetCursor(window, cursor);
+
+	if (enable_gui)
+	{
+		gui_context = ImGui::CreateContext(gui_font_atlas);
+		ImGui_ImplGlfw_InitForOpenGL(window, true);
+		ImGui_ImplOpenGL3_Init();
+	}
 
 	clbk_key.push_back([this](const Callback::Key& k) {
 		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mod::SHIFT))
@@ -113,6 +123,13 @@ Window::Window(const char* title, int width, int height, GLFWcursor* cursor, GLF
 Window::~Window()
 {
 	destroy();
+	if (gui_context)
+	{
+		ImGui::SetCurrentContext(gui_context);
+		ImGui_ImplGlfw_Shutdown();
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui::DestroyContext(gui_context);
+	}
 }
 
 void Window::toggle_fullscreen()
@@ -208,4 +225,29 @@ void Window::set_size(int width, int height) const
 void Window::set_title(const char* title) const
 {
 	glfwSetWindowTitle(window, title);
+}
+
+bool Window::bind_gui() const
+{
+	if (gui_context)
+	{
+		ImGui::SetCurrentContext(gui_context);
+		return true;
+	}
+	return false;
+}
+
+void Window::new_frame() const
+{
+	QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+}
+
+void Window::end_frame() const
+{
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	swap_buffers();
 }

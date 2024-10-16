@@ -86,6 +86,7 @@ public:
 	void on_render();
 	void flush() const;
 	void reset();
+	void frame_cycle() { bind(); on_render(); unbind(); }
 
 	const Transform& get_view() const { return view; }
 	void set_view(const Transform& view);
