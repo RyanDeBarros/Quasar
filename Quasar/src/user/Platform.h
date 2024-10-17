@@ -176,6 +176,8 @@ struct Window
 	bool is_ctrl_pressed() const { return is_key_pressed(Key::LEFT_CTRL) || is_key_pressed(Key::RIGHT_CTRL); }
 	bool is_alt_pressed() const { return is_key_pressed(Key::LEFT_ALT) || is_key_pressed(Key::RIGHT_ALT); }
 
+	void override_gui_cursor_change(bool _override) const;
+
 private:
 	int pre_fullscreen_x = 0;
 	int pre_fullscreen_y = 0;

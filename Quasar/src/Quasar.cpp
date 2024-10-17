@@ -37,7 +37,7 @@ int main()
 	ImGui::GetStyle().ScaleAllSizes(2.0f);
 	ImGui::GetIO().FontGlobalScale = 2.0f;
 
-	glfwSwapInterval(1);
+	glfwSwapInterval(GLFW_FALSE); // TODO off by default, but add to user settings.
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 	glEnable(GL_SCISSOR_TEST);
@@ -64,7 +64,7 @@ int main()
 		glfwPollEvents();
 		if (Machine.main_window->should_close())
 			break;
-		on_render();
+		Quasar::on_render();
 	}
 
 	Machine.destroy();
@@ -72,8 +72,9 @@ int main()
 	return 0;
 }
 
-void on_render()
+void Quasar::on_render()
 {
+	Machine.on_update();
 	Machine.main_window->new_frame();
 	Machine.canvas_renderer->frame_cycle();
 	render_gui();

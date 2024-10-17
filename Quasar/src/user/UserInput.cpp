@@ -10,28 +10,27 @@ void attach_canvas_controls()
 		if (mb.button == MouseButton::MIDDLE)
 		{
 			if (mb.action == IAction::PRESS && Machine.canvas_renderer->cursor_in_clipping())
-				Machine.canvas_renderer->begin_panning();
+				Machine.canvas_begin_panning();
 			else if (mb.action == IAction::RELEASE)
-				Machine.canvas_renderer->end_panning();
+				Machine.canvas_end_panning();
 		}
-		if (mb.button == MouseButton::LEFT)
+		else if (mb.button == MouseButton::LEFT && Machine.main_window->is_key_pressed(Key::SPACE))
 		{
-			if (mb.action == IAction::PRESS && Machine.main_window->is_key_pressed(Key::SPACE) && Machine.canvas_renderer->cursor_in_clipping())
-				Machine.canvas_renderer->begin_panning();
+			if (mb.action == IAction::PRESS && Machine.canvas_renderer->cursor_in_clipping())
+				Machine.canvas_begin_panning();
 			else if (mb.action == IAction::RELEASE)
-				Machine.canvas_renderer->end_panning();
+				Machine.canvas_end_panning();
 		}
 		});
 	// Zooming
 	Machine.main_window->clbk_scroll.push_back([](const Callback::Scroll& s) {
-		if (!Machine.canvas_renderer->clipping_rect().contains_point(Machine.main_window->cursor_pos()))
-			return;
-		Machine.canvas_renderer->zoom_by(s.yoff);
+		if (Machine.canvas_renderer->clipping_rect().contains_point(Machine.main_window->cursor_pos()))
+			Machine.canvas_zoom_by(s.yoff);
 		});
 	// Reset camera
 	Machine.main_window->clbk_key.push_back([](const Callback::Key& k) {
 		if (k.key == Key::ROW0 && k.action == IAction::PRESS)
-			Machine.canvas_renderer->reset_camera();
+			Machine.canvas_reset_camera();
 		});
 }
 
@@ -73,5 +72,10 @@ void attach_global_user_controls()
 				break;
 			}
 		}
+		});
+	Machine.main_window->clbk_path_drop.push_back([](const Callback::PathDrop& pd) {
+		// TODO if file extension is qua use open(), else if image format that's supported use import(), else do nothing.
+		if (pd.num_paths >= 1 && Machine.canvas_renderer->cursor_in_clipping())
+			Machine.import_file(pd.paths[0]);
 		});
 }

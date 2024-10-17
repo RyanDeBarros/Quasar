@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "Quasar.h"
 #include "Sprite.h"
 #include "variety/GLutility.h"
 #include "variety/IO.h"
@@ -44,8 +45,6 @@ Renderer::Renderer(Window* window, Shader&& shader_)
 	set_projection();
 	shader.query_location("u_VP");
 	send_view();
-
-	set_window_callbacks();
 
 	clip.x = 0;
 	clip.y = 0;
@@ -119,12 +118,6 @@ void Renderer::pool_over_varr(GLfloat* varr)
 
 void Renderer::on_render()
 {
-	update_panning();
-	draw();
-}
-
-void Renderer::draw()
-{
 	reset();
 	for (size_t i = 0; i < _sprites.size(); ++i)
 		_sprites[i]->on_draw(this);
@@ -195,7 +188,7 @@ glm::vec2 Renderer::to_world_coordinates(const glm::vec2& screen_coordinates) co
 
 glm::vec2 Renderer::to_screen_coordinates(const glm::vec2& world_coordinates) const
 {
-	glm::vec3 world_pos{ world_coordinates.x, world_coordinates.y, 1.0f };
+	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
 	glm::mat3 VP = projection * view.camera();
 	glm::vec3 clip_space_pos = VP * world_pos;
 	glm::vec2 screen_coo{};
@@ -229,70 +222,13 @@ unsigned short Renderer::get_texture_slot(GLuint texture)
 	return texture_slot_cap++;
 }
 
-void Renderer::set_window_callbacks()
+void Renderer::set_window_resize_callback()
 {
 	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
 		clip.update_window_size(ws.width, ws.height);
 		set_projection(float(ws.width), float(ws.height));
 		send_view();
-		on_render();
+		Quasar::on_render();
 		});
-}
-
-void Renderer::begin_panning()
-{
-	pan_initial_view_pos = view.position;
-	pan_initial_cursor_pos = glm::vec2{ app_scale_x, app_scale_y } * window->cursor_pos();
-	panning = true;
-	window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
-}
-
-void Renderer::end_panning()
-{
-	panning = false;
-	window->set_cursor(create_cursor(StandardCursor::ARROW));
-	window->set_mouse_mode(MouseMode::VISIBLE);
-}
-
-void Renderer::update_panning()
-{
-	if (panning)
-	{
-		glm::vec2 pan_delta = - glm::vec2{ app_scale_x, app_scale_y } * window->cursor_pos() + pan_initial_cursor_pos;
-		glm::vec2 pos = pan_delta + pan_initial_view_pos;
-		if (window->is_shift_pressed())
-		{
-			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
-				pos.x = pan_initial_view_pos.x;
-			else
-				pos.y = pan_initial_view_pos.y;
-		}
-		set_view_position(pos);
-
-		if (window->mouse_mode() != MouseMode::VIRTUAL && !cursor_in_clipping())
-			window->set_mouse_mode(MouseMode::VIRTUAL);
-	}
-}
-
-void Renderer::zoom_by(float z)
-{
-	glm::vec2 cursor_screen_before = window->cursor_pos();
-	glm::vec2 cursor_world = to_world_coordinates(cursor_screen_before);
-
-	float factor = window->is_shift_pressed() ? zoom_factor_shift : zoom_factor;
-	float new_zoom = std::clamp(zoom * glm::pow(factor, -z), zoom_out_min, zoom_out_max);
-	view.scale *= new_zoom / zoom;
-	
-	glm::vec2 cursor_screen_after = to_screen_coordinates(cursor_world);
-	view.position -= (cursor_screen_before - cursor_screen_after) * glm::vec2{ app_scale_x, app_scale_y };
-	
-	send_view();
-	zoom = new_zoom;
-}
-
-void Renderer::reset_camera()
-{
-	set_view({});
-	zoom = zoom_initial;
 }

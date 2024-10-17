@@ -1,3 +1,6 @@
 #pragma once
 
-extern void on_render();
+namespace Quasar
+{
+	extern void on_render();
+}

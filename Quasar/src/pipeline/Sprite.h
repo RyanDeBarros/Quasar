@@ -20,10 +20,10 @@ struct Sprite
 	static constexpr size_t SHADER_POS_MODULATE = 10;
 	
 	GLfloat* varr = nullptr;
-	Transform transform;
-	MachineImpl::ImageHandle image;
-
-	Sprite(MachineImpl::ImageHandle image);
+	Transform transform{};
+	MachineImpl::ImageHandle image = MachineImpl::ImageHandle(0);
+	
+	Sprite();
 	Sprite(const Sprite&);
 	Sprite(Sprite&&) noexcept;
 	Sprite& operator=(const Sprite&);
@@ -35,9 +35,10 @@ struct Sprite
 	void sync_transform_p() const;
 	void sync_transform_rs() const;
 
-	void set_image(MachineImpl::ImageHandle img) { image = img; sync_pivot(); }
-	void sync_pivot() const;
-	
+	void set_image(MachineImpl::ImageHandle img, Image::Dim v_width = -1, Image::Dim v_height = -1) { image = img; sync_image_dimensions(v_width, v_height); }
+	void sync_image_dimensions(Image::Dim v_width = -1, Image::Dim v_height = -1) const;
+	void sync_texture_slot(float texture_slot) const;
+
 	glm::vec4 modulation() const;
 	void set_modulation(const glm::vec4& color) const;
 	ColorFrame modulation_color_frame() const;

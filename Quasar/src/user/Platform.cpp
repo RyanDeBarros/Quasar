@@ -103,19 +103,19 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 		{
 			if (!is_maximized())
 				toggle_fullscreen();
-			on_render();
+			Quasar::on_render();
 		}
 		else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mod::ALT)
 		{
 			if (!is_fullscreen())
 				toggle_maximized();
-			on_render();
+			Quasar::on_render();
 		}
 		else if (k.key == Key::ESCAPE && k.action == IAction::PRESS && !(k.mods & Mod::SHIFT))
 		{
 			set_fullscreen(false);
 			set_maximized(false);
-			on_render();
+			Quasar::on_render();
 		}
 		});
 }
@@ -188,6 +188,15 @@ void Window::set_maximized(bool maximized_)
 {
 	if (maximized != maximized_)
 		toggle_maximized();
+}
+
+void Window::override_gui_cursor_change(bool _override) const
+{
+	ImGui::SetCurrentContext(gui_context);
+	if (_override)
+		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+	else
+		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
 }
 
 void Window::destroy()

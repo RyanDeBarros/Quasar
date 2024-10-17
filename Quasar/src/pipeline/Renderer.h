@@ -33,11 +33,16 @@ struct ClippingRect
 		screen_w = bnds[2];
 		screen_h = bnds[3];
 	}
+	glm::vec2 center_point() const
+	{
+		return { 0.5f * (x + screen_w), 0.5f * (y + screen_h) };
+	}
 };
 
 class Renderer
 {
 	// Batches
+	Window* window;
 	GLfloat* const vertex_pool = nullptr;
 	GLuint* const index_pool = nullptr;
 	GLfloat* vertex_pos = nullptr;
@@ -52,22 +57,9 @@ class Renderer
 	// View
 	glm::mat3 projection;
 	Transform view;
-	float app_scale_x = 1.0f;
+	float app_scale_x = 1.0f; // TODO to glm::vec2
 	float app_scale_y = 1.0f;
 	ClippingRect clip{};
-
-	// User controls
-	Window* window;
-	glm::vec2 pan_initial_cursor_pos{};
-	glm::vec2 pan_initial_view_pos{};
-	bool panning = false;
-	// TODO put these zoom constants somewhere else? In settings? They would be variable in that case.
-	constexpr static float zoom_initial = 0.5f;
-	constexpr static float zoom_out_min = 0.005f;
-	constexpr static float zoom_out_max = 5.0f;
-	constexpr static float zoom_factor = 1.5f;
-	constexpr static float zoom_factor_shift = 1.05f;
-	float zoom = zoom_initial;
 
 	void set_projection(float width, float height);
 	void set_projection();
@@ -105,17 +97,9 @@ public:
 	const ClippingRect& clipping_rect() const { return clip; }
 	bool cursor_in_clipping() const { return clip.contains_point(window->cursor_pos()); }
 
-	void set_window_callbacks();
+	void set_window_resize_callback();
 	Window* get_window() const { return window; }
-
-	// User controls
-	void begin_panning();
-	void end_panning();
-	void zoom_by(float zoom);
-	void reset_camera();
 
 private:
 	void send_view();
-	void draw();
-	void update_panning();
 };

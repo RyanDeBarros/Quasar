@@ -3,8 +3,7 @@
 #include "Renderer.h"
 #include "variety/GLutility.h"
 
-Sprite::Sprite(MachineImpl::ImageHandle image)
-	: image(image)
+Sprite::Sprite()
 {
 	varr = new GLfloat[NUM_VERTICES * STRIDE]{
 		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
@@ -12,7 +11,6 @@ Sprite::Sprite(MachineImpl::ImageHandle image)
 		2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 		3.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
 	};
-	sync_pivot();
 }
 
 Sprite::Sprite(const Sprite& other)
@@ -61,8 +59,14 @@ void Sprite::on_draw(Renderer* renderer) const
 {
 	renderer->prepare_for_sprite();
 	Image* img = Machine.images.get(image);
-	if (!img) return;
-	bind_texture(img->tid, renderer->get_texture_slot(img->tid));
+	if (img)
+	{
+		auto texture_slot = renderer->get_texture_slot(img->tid);
+		bind_texture(img->tid, texture_slot);
+		sync_texture_slot(texture_slot);
+	}
+	else
+		sync_texture_slot(-1.0f);
 	renderer->pool_over_varr(varr);
 }
 
@@ -101,18 +105,30 @@ void Sprite::sync_transform_rs() const
 	}
 }
 
-void Sprite::sync_pivot() const
+void Sprite::sync_image_dimensions(Image::Dim v_width, Image::Dim v_height) const
 {
 	Image* img = Machine.images.get(image);
-	if (!img) return;
-	varr[size_t(0) * STRIDE + SHADER_POS_COORD    ] = -0.5f * img->width;
-	varr[size_t(0) * STRIDE + SHADER_POS_COORD + 1] = -0.5f * img->height;
-	varr[size_t(1) * STRIDE + SHADER_POS_COORD    ] =  0.5f * img->width;
-	varr[size_t(1) * STRIDE + SHADER_POS_COORD + 1] = -0.5f * img->height;
-	varr[size_t(2) * STRIDE + SHADER_POS_COORD    ] =  0.5f * img->width;
-	varr[size_t(2) * STRIDE + SHADER_POS_COORD + 1] =  0.5f * img->height;
-	varr[size_t(3) * STRIDE + SHADER_POS_COORD    ] = -0.5f * img->width;
-	varr[size_t(3) * STRIDE + SHADER_POS_COORD + 1] =  0.5f * img->height;
+	Image::Dim w = v_width >= 0 ? v_width : (img ? img->width : 0);
+	Image::Dim h = v_height >= 0 ? v_height : (img ? img->height : 0);
+	
+	varr[size_t(0) * STRIDE + SHADER_POS_COORD    ] = -0.5f * w;
+	varr[size_t(0) * STRIDE + SHADER_POS_COORD + 1] = -0.5f * h;
+	varr[size_t(1) * STRIDE + SHADER_POS_COORD    ] =  0.5f * w;
+	varr[size_t(1) * STRIDE + SHADER_POS_COORD + 1] = -0.5f * h;
+	varr[size_t(2) * STRIDE + SHADER_POS_COORD    ] =  0.5f * w;
+	varr[size_t(2) * STRIDE + SHADER_POS_COORD + 1] =  0.5f * h;
+	varr[size_t(3) * STRIDE + SHADER_POS_COORD    ] = -0.5f * w;
+	varr[size_t(3) * STRIDE + SHADER_POS_COORD + 1] =  0.5f * h;
+}
+
+void Sprite::sync_texture_slot(float texture_slot) const
+{
+	GLfloat* row = varr;
+	for (size_t i = 0; i < NUM_VERTICES; ++i)
+	{
+		row[SHADER_POS_TEXTURE] = texture_slot;
+		row += STRIDE;
+	}
 }
 
 glm::vec4 Sprite::modulation() const

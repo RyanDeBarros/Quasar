@@ -283,12 +283,12 @@ public:
 	constexpr ColorFrame(RGB rgb, unsigned char alpha = 255) : alpha(alpha) { set_rgb(rgb); }
 	constexpr ColorFrame(HSV hsv, unsigned char alpha = 255) : alpha(alpha) { set_hsv(hsv); }
 	constexpr ColorFrame(HSL hsl, unsigned char alpha = 255) : alpha(alpha) { set_hsl(hsl); }
-	constexpr ColorFrame(RGB rgb, int alpha = 255) : alpha(static_cast<unsigned char>(alpha)) { set_rgb(rgb); }
-	constexpr ColorFrame(HSV hsv, int alpha = 255) : alpha(static_cast<unsigned char>(alpha)) { set_hsv(hsv); }
-	constexpr ColorFrame(HSL hsl, int alpha = 255) : alpha(static_cast<unsigned char>(alpha)) { set_hsl(hsl); }
-	constexpr ColorFrame(RGB rgb, float alpha = 1.0f) : alpha(round_uchar(255 * alpha)) { set_rgb(rgb); }
-	constexpr ColorFrame(HSV hsv, float alpha = 1.0f) : alpha(round_uchar(255 * alpha)) { set_hsv(hsv); }
-	constexpr ColorFrame(HSL hsl, float alpha = 1.0f) : alpha(round_uchar(255 * alpha)) { set_hsl(hsl); }
+	constexpr ColorFrame(RGB rgb, int alpha) : alpha(static_cast<unsigned char>(alpha)) { set_rgb(rgb); }
+	constexpr ColorFrame(HSV hsv, int alpha) : alpha(static_cast<unsigned char>(alpha)) { set_hsv(hsv); }
+	constexpr ColorFrame(HSL hsl, int alpha) : alpha(static_cast<unsigned char>(alpha)) { set_hsl(hsl); }
+	constexpr ColorFrame(RGB rgb, float alpha) : alpha(round_uchar(255 * alpha)) { set_rgb(rgb); }
+	constexpr ColorFrame(HSV hsv, float alpha) : alpha(round_uchar(255 * alpha)) { set_hsv(hsv); }
+	constexpr ColorFrame(HSL hsl, float alpha) : alpha(round_uchar(255 * alpha)) { set_hsl(hsl); }
 
 	constexpr RGB rgb() const { return _rgb; }
 	constexpr HSV hsv() const { return _hsv; }
