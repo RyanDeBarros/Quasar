@@ -34,6 +34,9 @@ struct Sprite
 	void sync_transform() const;
 	void sync_transform_p() const;
 	void sync_transform_rs() const;
+
+	void set_image(MachineImpl::ImageHandle img) { image = img; sync_pivot(); }
+	void sync_pivot() const;
 	
 	glm::vec4 modulation() const;
 	void set_modulation(const glm::vec4& color) const;

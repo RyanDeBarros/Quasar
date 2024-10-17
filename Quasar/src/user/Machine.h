@@ -20,8 +20,31 @@ struct MachineImpl
 	Window* main_window = nullptr;
 	Renderer* canvas_renderer = nullptr;
 	Image* canvas_image = nullptr;
+	struct Sprite* canvas_sprite = nullptr;
 
+	std::string current_filepath = "";
+	bool unsaved = true;
+
+	std::vector<std::string> recent_files;
+	std::vector<std::string> recent_image_files;
+
+	void init_renderer();
 	void destroy();
+	void exit() const { main_window->request_close(); }
+	void mark();
+	void unmark();
+
+	bool new_file();
+	bool open_file();
+	bool import_file();
+	bool export_file() const;
+	bool save_file();
+	bool save_file_as();
+	bool save_file_copy();
+
+	void open_file(const char* filepath);
+	void import_file(const char* filepath);
+	void save_file(const char* filepath);
 
 	void undo() { history.undo(); }
 	bool undo_enabled() const { return history.undo_size() != 0; }

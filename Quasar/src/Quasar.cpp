@@ -12,7 +12,6 @@
 #include "variety/Geometry.h"
 #include "user/Platform.h"
 #include "edit/Color.h"
-#include "user/UserInput.h"
 #include "variety/Debug.h"
 #include "user/Machine.h"
 #include "user/GUI.h"
@@ -43,34 +42,15 @@ int main()
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 	glEnable(GL_SCISSOR_TEST);
 
-	Machine.canvas_renderer = new Renderer(Machine.main_window, Shader());
-	attach_canvas_controls();
+	Machine.init_renderer();
 	Machine.main_window->set_raw_mouse_motion(true); // TODO settable from user settings
-	attach_global_user_controls();
 
-	auto tux = Machine.images.construct(ImageConstructor("ex/einstein.png"));
-	Machine.canvas_image = Machine.images.get(tux);
-	Sprite sprite(tux);
-	Machine.canvas_renderer->sprites().push_back(&sprite);
+	Machine.recent_files = { "a.qua", "b.qua", "c.qua" };
+	Machine.recent_image_files = { "1.png", "2.gif", "3.jpg" };
+
+	//Machine.import_file("ex/einstein.png");
 	
 	Machine.canvas_renderer->set_app_scale(1.5f, 1.5f);
-
-	Sprite p1(tux);
-	p1.transform = { { 200.0f, 100.0f }, 0.0f, { 0.1f, 0.1f } };
-	p1.sync_transform();
-	Sprite p2(tux);
-	p2.transform = { { -100.0f, 100.0f }, 0.0f, { 0.1f, 0.1f } };
-	p2.sync_transform();
-	Sprite p3(tux);
-	p3.transform = { { -100.0f, -100.0f }, 0.0f, { 0.1f, 0.1f } };
-	p3.sync_transform();
-	Sprite p4(tux);
-	p4.transform = { { 100.0f, -100.0f }, 0.0f, { 0.1f, 0.1f } };
-	p4.sync_transform();
-	Machine.canvas_renderer->sprites().push_back(&p1);
-	Machine.canvas_renderer->sprites().push_back(&p2);
-	Machine.canvas_renderer->sprites().push_back(&p3);
-	Machine.canvas_renderer->sprites().push_back(&p4);
 
 	Machine.canvas_renderer->clipping_rect().window_size_to_bounds = [](int w, int h) -> glm::ivec4 { return {
 		w / 10, h / 10, 8 * w / 10, 8 * h / 10

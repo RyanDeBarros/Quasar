@@ -6,13 +6,13 @@
 Sprite::Sprite(MachineImpl::ImageHandle image)
 	: image(image)
 {
-	Image* img = Machine.images.get(image);
 	varr = new GLfloat[NUM_VERTICES * STRIDE]{
-		0.0f, -0.5f * img->width, -0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		1.0f,  0.5f * img->width, -0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		2.0f,  0.5f * img->width,  0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		3.0f, -0.5f * img->width,  0.5f * img->height, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+		1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+		2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+		3.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
 	};
+	sync_pivot();
 }
 
 Sprite::Sprite(const Sprite& other)
@@ -61,6 +61,7 @@ void Sprite::on_draw(Renderer* renderer) const
 {
 	renderer->prepare_for_sprite();
 	Image* img = Machine.images.get(image);
+	if (!img) return;
 	bind_texture(img->tid, renderer->get_texture_slot(img->tid));
 	renderer->pool_over_varr(varr);
 }
@@ -70,7 +71,7 @@ void Sprite::sync_transform() const
 	glm::vec2 pp = transform.packed_p();
 	glm::vec4 prs = transform.packed_rs();
 	GLfloat* row = varr;
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < NUM_VERTICES; ++i)
 	{
 		memcpy(row + SHADER_POS_PACKED_P, &pp[0], 2 * sizeof(GLfloat));
 		memcpy(row + SHADER_POS_PACKED_RS, &prs[0], 4 * sizeof(GLfloat));
@@ -82,7 +83,7 @@ void Sprite::sync_transform_p() const
 {
 	glm::vec2 pp = transform.packed_p();
 	GLfloat* row = varr;
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < NUM_VERTICES; ++i)
 	{
 		memcpy(row + SHADER_POS_PACKED_P, &pp[0], 2 * sizeof(GLfloat));
 		row += STRIDE;
@@ -93,11 +94,25 @@ void Sprite::sync_transform_rs() const
 {
 	glm::vec4 prs = transform.packed_rs();
 	GLfloat* row = varr;
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < NUM_VERTICES; ++i)
 	{
 		memcpy(row + SHADER_POS_PACKED_RS, &prs[0], 4 * sizeof(GLfloat));
 		row += STRIDE;
 	}
+}
+
+void Sprite::sync_pivot() const
+{
+	Image* img = Machine.images.get(image);
+	if (!img) return;
+	varr[size_t(0) * STRIDE + SHADER_POS_COORD    ] = -0.5f * img->width;
+	varr[size_t(0) * STRIDE + SHADER_POS_COORD + 1] = -0.5f * img->height;
+	varr[size_t(1) * STRIDE + SHADER_POS_COORD    ] =  0.5f * img->width;
+	varr[size_t(1) * STRIDE + SHADER_POS_COORD + 1] = -0.5f * img->height;
+	varr[size_t(2) * STRIDE + SHADER_POS_COORD    ] =  0.5f * img->width;
+	varr[size_t(2) * STRIDE + SHADER_POS_COORD + 1] =  0.5f * img->height;
+	varr[size_t(3) * STRIDE + SHADER_POS_COORD    ] = -0.5f * img->width;
+	varr[size_t(3) * STRIDE + SHADER_POS_COORD + 1] =  0.5f * img->height;
 }
 
 glm::vec4 Sprite::modulation() const
@@ -108,7 +123,7 @@ glm::vec4 Sprite::modulation() const
 void Sprite::set_modulation(const glm::vec4& color) const
 {
 	GLfloat* row = varr;
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < NUM_VERTICES; ++i)
 	{
 		memcpy(row + SHADER_POS_MODULATE, &color[0], 4 * sizeof(GLfloat));
 		row += STRIDE;
@@ -124,7 +139,7 @@ void Sprite::set_modulation(ColorFrame color) const
 {
 	GLfloat* row = varr;
 	glm::vec4 cvec = color.rgba_as_vec();
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < NUM_VERTICES; ++i)
 	{
 		memcpy(row + SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
 		row += STRIDE;

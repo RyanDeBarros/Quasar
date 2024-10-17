@@ -1,10 +1,8 @@
 #include "GUI.h"
 
-#include <tinyfd/tinyfiledialogs.h>
-
 #include "Machine.h"
 
-void render_gui()
+static void render_main_menu()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	if (ImGui::BeginMainMenuBar())
@@ -12,28 +10,33 @@ void render_gui()
 		ImGui::PopStyleVar();
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("New file", "CTRL+N")) {}
-			if (ImGui::MenuItem("Open file", "CTRL+O")) {}
-			if (ImGui::BeginMenu("Open recent"))
+			if (ImGui::MenuItem("New file", "CTRL+N")) { Machine.new_file(); }
+			if (ImGui::MenuItem("Open file", "CTRL+O")) { Machine.open_file(); }
+			if (ImGui::MenuItem("Import file", "CTRL+I")) { Machine.import_file(); }
+			if (ImGui::MenuItem("Export file", "CTRL+E")) { Machine.export_file(); }
+			ImGui::Separator();
+			if (ImGui::MenuItem("Save", "CTRL+S")) { Machine.save_file(); }
+			if (ImGui::BeginMenu("Open recent", !Machine.recent_files.empty()))
 			{
-				if (ImGui::MenuItem("a.qua")) {}
-				if (ImGui::MenuItem("b.qua")) {}
-				if (ImGui::MenuItem("c.qua")) {}
+				for (const auto& recent_file : Machine.recent_files)
+				{
+					if (ImGui::MenuItem(recent_file.c_str())) { Machine.open_file(recent_file.c_str()); }
+				}
 				ImGui::EndMenu();
 			}
-			if (ImGui::MenuItem("Save", "CTRL+S"))
+			if (ImGui::BeginMenu("Import recent", !Machine.recent_files.empty()))
 			{
-				const char* filters[3] = { "*.qua", "*.png", "*.gif" };
-				//const char* savefile = tinyfd_saveFileDialog("Save file", "", 3, filters, "");
-				const char* savefile = tinyfd_openFileDialog("Open file", "", 3, filters, "", true);
-				if (savefile)
-					std::cout << savefile << std::endl;
+				for (const auto& recent_file : Machine.recent_image_files)
+				{
+					if (ImGui::MenuItem(recent_file.c_str())) { Machine.import_file(recent_file.c_str()); }
+				}
+				ImGui::EndMenu();
 			}
 			ImGui::Separator();
-			if (ImGui::MenuItem("Save as", "CTRL+SHIFT+S")) {}
-			if (ImGui::MenuItem("Save a copy", "CTRL+ALT+S")) {}
+			if (ImGui::MenuItem("Save as", "CTRL+SHIFT+S")) { Machine.save_file_as(); }
+			if (ImGui::MenuItem("Save a copy", "CTRL+ALT+S")) { Machine.save_file_copy(); }
 			ImGui::Separator();
-			if (ImGui::MenuItem("Exit", "ALT+F4")) { Machine.main_window->request_close(); }
+			if (ImGui::MenuItem("Exit", "ALT+F4")) { Machine.exit(); }
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Edit"))
@@ -48,4 +51,9 @@ void render_gui()
 		}
 		ImGui::EndMainMenuBar();
 	}
+}
+
+void render_gui()
+{
+	render_main_menu();
 }
