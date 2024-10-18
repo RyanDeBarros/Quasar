@@ -76,7 +76,7 @@ void attach_global_user_controls()
 		}
 		});
 	Machine.main_window->clbk_path_drop.push_back([](const Callback::PathDrop& pd) {
-		// TODO if file extension is qua use open(), else if image format that's supported use import(), else do nothing.
+		// LATER if file extension is qua use open(), else if image format that's supported use import(), else do nothing.
 		if (pd.num_paths >= 1 && Machine.canvas_renderer->cursor_in_clipping())
 			Machine.import_file(pd.paths[0]);
 		});

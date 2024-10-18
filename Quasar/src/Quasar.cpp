@@ -34,7 +34,7 @@ int main()
 	ImGui::GetStyle().ScaleAllSizes(2.0f);
 	ImGui::GetIO().FontGlobalScale = 2.0f;
 
-	glfwSwapInterval(GLFW_FALSE); // TODO off by default, but add to user settings.
+	glfwSwapInterval(GLFW_FALSE); // LATER off by default, but add to user settings.
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 	glEnable(GL_SCISSOR_TEST);

@@ -68,7 +68,7 @@ struct Canvas
 	Image* image = nullptr;
 	Sprite sprite;
 	Checkerboard checkerboard;
-	float checker_size = 16.0f; // TODO settings
+	float checker_size = 16.0f; // LATER settings
 
 	Canvas(RGBA c1, RGBA c2)
 		: checkerboard(c1, c2)
@@ -129,7 +129,7 @@ bool MachineImpl::create_main_window()
 	main_window = new Window("Quasar", 1440, 1080, true);
 	if (main_window)
 	{
-		main_window->set_raw_mouse_motion(true); // TODO settable from user settings
+		main_window->set_raw_mouse_motion(true); // LATER settable from user settings
 		return true;
 	}
 	return false;
@@ -197,13 +197,13 @@ void MachineImpl::draw_gridlines()
 void MachineImpl::mark()
 {
 	unsaved = true;
-	// TODO edit title to include (*)
+	// LATER edit title to include (*)
 }
 
 void MachineImpl::unmark()
 {
 	unsaved = false;
-	// TODO remove (*) from title if it exists
+	// LATER remove (*) from title if it exists
 }
 
 Transform& MachineImpl::canvas_transform() const
@@ -244,7 +244,7 @@ bool MachineImpl::new_file()
 		}
 	}
 	mark();
-	// TODO clear palletes/frames/layers/etc.
+	// LATER clear palletes/frames/layers/etc.
 	return true;
 }
 
@@ -252,7 +252,7 @@ bool MachineImpl::open_file()
 {
 	if (unsaved)
 	{
-		// TODO ask if user wants to save
+		// LATER ask if user wants to save
 	}
 	static const int num_filters = 1;
 	static const char* const filters[num_filters] = { "*.qua" };
@@ -279,10 +279,10 @@ bool MachineImpl::export_file() const
 {
 	static const int num_filters = 4;
 	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp" };
-	// TODO open custom dialog for export settings first
+	// LATER open custom dialog for export settings first
 	const char* exportfile = tinyfd_saveFileDialog("Export file", "", num_filters, filters, "");
 	if (!exportfile) return false;
-	// TODO actually export file
+	// LATER actually export file
 	return true;
 }
 
@@ -294,7 +294,7 @@ bool MachineImpl::save_file()
 	{
 		const char* savefile = tinyfd_saveFileDialog("Save file", "", num_filters, filters, "");
 		if (!savefile) return false;
-		// TODO create new file
+		// LATER create new file
 		current_filepath = savefile;
 	}
 	save_file(current_filepath.c_str());
@@ -308,7 +308,7 @@ bool MachineImpl::save_file_as()
 	static const char* const filters[num_filters] = { "*.qua" };
 	const char* savefile = tinyfd_saveFileDialog("Save file as", "", num_filters, filters, "");
 	if (!savefile) return false;
-	// TODO create new file
+	// LATER create new file
 	current_filepath = savefile;
 	save_file(savefile);
 	unmark();
@@ -321,7 +321,7 @@ bool MachineImpl::save_file_copy()
 	static const char* const filters[num_filters] = { "*.qua" };
 	const char* savefile = tinyfd_saveFileDialog("Save file copy", "", num_filters, filters, "");
 	if (!savefile) return false;
-	// TODO create new file
+	// LATER create new file
 	save_file(savefile);
 	unmark();
 	return true;
@@ -329,12 +329,12 @@ bool MachineImpl::save_file_copy()
 
 void MachineImpl::open_file(const char* filepath)
 {
-	// TODO actually open quasar file
+	// LATER actually open quasar file
 }
 
 void MachineImpl::import_file(const char* filepath)
 {
-	// TODO register instead to ensure unique? or use secondary registry specifically for canvas_image
+	// LATER register instead to ensure unique? or use secondary registry specifically for canvas_image
 	auto img = Images.construct(ImageConstructor(filepath));
 	canvas->set_image(img);
 	canvas_reset_camera();
@@ -342,7 +342,7 @@ void MachineImpl::import_file(const char* filepath)
 
 void MachineImpl::save_file(const char* filepath)
 {
-	// TODO actually save changes to filepath
+	// LATER actually save changes to filepath
 }
 
 void MachineImpl::canvas_begin_panning()

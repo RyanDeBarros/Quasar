@@ -25,7 +25,7 @@ struct MachineImpl
 	Position pan_initial_cursor_pos{};
 	Position pan_initial_view_pos{};
 	bool panning = false;
-	// TODO put these zoom constants somewhere else? In settings? They would be variable in that case.
+	// LATER put these zoom constants somewhere else? In settings? They would be variable in that case.
 	constexpr static float zoom_initial = 0.5f;
 	constexpr static float zoom_in_min = 0.01f;
 	constexpr static float zoom_in_max = 100.0f;

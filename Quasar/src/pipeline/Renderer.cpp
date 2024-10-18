@@ -203,7 +203,7 @@ void Renderer::set_app_scale(float x, float y)
 	app_scale.y = 1.0f / y;
 	set_projection();
 	send_view();
-	// TODO scale cursor? Have different discrete cursor sizes (only works for custom cursors).
+	// LATER scale cursor? Have different discrete cursor sizes (only works for custom cursors).
 }
 
 glm::vec2 Renderer::get_app_scale() const
