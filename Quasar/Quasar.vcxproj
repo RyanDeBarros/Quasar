@@ -189,6 +189,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\edit\Color.h" />
+    <ClInclude Include="src\pipeline\Resources.h" />
     <ClInclude Include="src\user\GUI.h" />
     <ClInclude Include="src\user\Machine.h" />
     <ClInclude Include="src\variety\Debug.h" />
@@ -198,7 +199,6 @@
     <ClInclude Include="src\edit\Image.h" />
     <ClInclude Include="src\variety\IO.h" />
     <ClInclude Include="src\Macros.h" />
-    <ClInclude Include="src\Quasar.h" />
     <ClInclude Include="src\variety\Registry.h" />
     <ClInclude Include="src\pipeline\Renderer.h" />
     <ClInclude Include="src\pipeline\Shader.h" />

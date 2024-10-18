@@ -2,7 +2,7 @@
 
 #include "variety/Geometry.h"
 #include "edit/Color.h"
-#include "user/Machine.h"
+#include "Resources.h"
 
 struct Sprite
 {
@@ -21,7 +21,7 @@ struct Sprite
 	
 	GLfloat* varr = nullptr;
 	Transform transform{};
-	MachineImpl::ImageHandle image = MachineImpl::ImageHandle(0);
+	ImageHandle image = ImageHandle(0);
 	
 	Sprite();
 	Sprite(const Sprite&);
@@ -35,7 +35,7 @@ struct Sprite
 	void sync_transform_p() const;
 	void sync_transform_rs() const;
 
-	void set_image(MachineImpl::ImageHandle img, Image::Dim v_width = -1, Image::Dim v_height = -1) { image = img; sync_image_dimensions(v_width, v_height); }
+	void set_image(ImageHandle img, Image::Dim v_width = -1, Image::Dim v_height = -1) { image = img; sync_image_dimensions(v_width, v_height); }
 	void sync_image_dimensions(Image::Dim v_width = -1, Image::Dim v_height = -1) const;
 	void sync_texture_slot(float texture_slot) const;
 
@@ -43,4 +43,6 @@ struct Sprite
 	void set_modulation(const glm::vec4& color) const;
 	ColorFrame modulation_color_frame() const;
 	void set_modulation(ColorFrame color) const;
+
+	void set_uvs(const Bounds& bounds) const;
 };

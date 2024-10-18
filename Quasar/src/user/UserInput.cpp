@@ -14,9 +14,9 @@ void attach_canvas_controls()
 			else if (mb.action == IAction::RELEASE)
 				Machine.canvas_end_panning();
 		}
-		else if (mb.button == MouseButton::LEFT && Machine.main_window->is_key_pressed(Key::SPACE))
+		else if (mb.button == MouseButton::LEFT)
 		{
-			if (mb.action == IAction::PRESS && Machine.canvas_renderer->cursor_in_clipping())
+			if (mb.action == IAction::PRESS && Machine.canvas_renderer->cursor_in_clipping() && Machine.main_window->is_key_pressed(Key::SPACE))
 				Machine.canvas_begin_panning();
 			else if (mb.action == IAction::RELEASE)
 				Machine.canvas_end_panning();

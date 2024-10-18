@@ -995,9 +995,6 @@
     <ClInclude Include="src\user\UserInput.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Quasar.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\variety\Debug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1038,6 +1035,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\user\GUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\Resources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

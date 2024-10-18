@@ -3,7 +3,7 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
-#include "Quasar.h"
+#include "Machine.h"
 
 GLFWcursor* create_cursor(StandardCursor standard_cursor)
 {
@@ -103,19 +103,19 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 		{
 			if (!is_maximized())
 				toggle_fullscreen();
-			Quasar::on_render();
+			Machine.on_render();
 		}
 		else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mod::ALT)
 		{
 			if (!is_fullscreen())
 				toggle_maximized();
-			Quasar::on_render();
+			Machine.on_render();
 		}
 		else if (k.key == Key::ESCAPE && k.action == IAction::PRESS && !(k.mods & Mod::SHIFT))
 		{
 			set_fullscreen(false);
 			set_maximized(false);
-			Quasar::on_render();
+			Machine.on_render();
 		}
 		});
 }

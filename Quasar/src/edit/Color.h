@@ -255,18 +255,30 @@ struct RGBA
 {
 	RGB rgb{};
 	unsigned char alpha = 255;
+
+	constexpr RGBA(RGB rgb = {}, unsigned char alpha = 255) : rgb(rgb), alpha(alpha) {}
+	constexpr RGBA(RGB rgb, int alpha) : rgb(rgb), alpha(static_cast<unsigned char>(alpha)) {}
+	constexpr RGBA(RGB rgb, float alpha) : rgb(rgb), alpha(round_uchar(255 * alpha)) {}
 };
 
 struct HSVA
 {
 	HSV hsv{};
 	unsigned char alpha = 255;
+
+	constexpr HSVA(HSV hsv = {}, unsigned char alpha = 255) : hsv(hsv), alpha(alpha) {}
+	constexpr HSVA(HSV hsv, int alpha) : hsv(hsv), alpha(static_cast<unsigned char>(alpha)) {}
+	constexpr HSVA(HSV hsv, float alpha) : hsv(hsv), alpha(round_uchar(255 * alpha)) {}
 };
 
 struct HSLA
 {
 	HSL hsl{};
 	unsigned char alpha = 255;
+
+	constexpr HSLA(HSL hsl = {}, unsigned char alpha = 255) : hsl(hsl), alpha(alpha) {}
+	constexpr HSLA(HSL hsl, int alpha) : hsl(hsl), alpha(static_cast<unsigned char>(alpha)) {}
+	constexpr HSLA(HSL hsl, float alpha) : hsl(hsl), alpha(round_uchar(255 * alpha)) {}
 };
 
 struct ColorFrame

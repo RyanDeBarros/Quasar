@@ -1,5 +1,3 @@
-#include "Quasar.h"
-
 #include <array>
 
 #include <stb/stb_image.h>
@@ -28,8 +26,7 @@ int main()
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);
-	Machine.main_window = new Window("Quasar", 1440, 1080, true);
-	if (!Machine.main_window)
+	if (!Machine.create_main_window())
 	{
 		glfwTerminate();
 		return -1;
@@ -43,13 +40,11 @@ int main()
 	glEnable(GL_SCISSOR_TEST);
 
 	Machine.init_renderer();
-	Machine.main_window->set_raw_mouse_motion(true); // TODO settable from user settings
 
-	Machine.recent_files = { "a.qua", "b.qua", "c.qua" };
-	Machine.recent_image_files = { "1.png", "2.gif", "3.jpg" };
+	Machine.recent_files = {"a.qua", "b.qua", "c.qua"};
+	Machine.recent_image_files = {"1.png", "2.gif", "3.jpg"};
 
 	//Machine.import_file("ex/einstein.png");
-	
 	Machine.canvas_renderer->set_app_scale(1.5f, 1.5f);
 
 	Machine.canvas_renderer->clipping_rect().window_size_to_bounds = [](int w, int h) -> glm::ivec4 { return {
@@ -62,21 +57,12 @@ int main()
 	for (;;)
 	{
 		glfwPollEvents();
-		if (Machine.main_window->should_close())
+		if (Machine.should_exit())
 			break;
-		Quasar::on_render();
+		Machine.on_render();
 	}
 
 	Machine.destroy();
 	glfwTerminate();
 	return 0;
-}
-
-void Quasar::on_render()
-{
-	Machine.on_update();
-	Machine.main_window->new_frame();
-	Machine.canvas_renderer->frame_cycle();
-	render_gui();
-	Machine.main_window->end_frame();
 }

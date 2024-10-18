@@ -2,10 +2,10 @@
 
 #include <sstream>
 
-#include "Quasar.h"
 #include "Sprite.h"
 #include "variety/GLutility.h"
 #include "variety/IO.h"
+#include "user/Machine.h"
 
 unsigned short QuasarSettings::VERTEX_COUNT = 512;
 unsigned short QuasarSettings::INDEX_COUNT = 768;
@@ -229,6 +229,6 @@ void Renderer::set_window_resize_callback()
 		clip.update_window_size(ws.width, ws.height);
 		set_projection(float(ws.width), float(ws.height));
 		send_view();
-		Quasar::on_render();
+		Machine.on_render();
 		});
 }

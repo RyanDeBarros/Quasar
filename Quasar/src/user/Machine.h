@@ -1,27 +1,21 @@
 #pragma once
 
-#include "variety/Registry.h"
 #include "edit/Image.h"
-#include "pipeline/Shader.h"
 #include "variety/History.h"
 #include "pipeline/Renderer.h"
 
 struct MachineImpl
 {
-	typedef Registry<Image, unsigned short, ImageConstructor> ImageRegistry;
-	typedef ImageRegistry::Handle ImageHandle;
-	typedef Registry<Shader, unsigned short, ShaderConstructor> ShaderRegistry;
-	typedef ShaderRegistry::Handle ShaderHandle;
-	
-	ImageRegistry images;
-	ShaderRegistry shaders;
+	MachineImpl() = default;
+	MachineImpl(const MachineImpl&) = delete;
+	MachineImpl(MachineImpl&&) noexcept = delete;
+	~MachineImpl() = default;
+
 	ActionHistory history;
 
 	Window* main_window = nullptr;
 	Renderer* canvas_renderer = nullptr;
 	Image* canvas_image = nullptr;
-	struct Sprite* canvas_background = nullptr;
-	struct Sprite* canvas_sprite = nullptr;
 
 	std::string current_filepath = "";
 	bool unsaved = true;
@@ -30,8 +24,8 @@ struct MachineImpl
 	std::vector<std::string> recent_image_files;
 
 	// Canvas camera
-	glm::vec2 pan_initial_cursor_pos{};
-	glm::vec2 pan_initial_view_pos{};
+	Position pan_initial_cursor_pos{};
+	Position pan_initial_view_pos{};
 	bool panning = false;
 	// TODO put these zoom constants somewhere else? In settings? They would be variable in that case.
 	constexpr static float zoom_initial = 0.5f;
@@ -41,11 +35,24 @@ struct MachineImpl
 	constexpr static float zoom_factor_shift = 1.05f;
 	float zoom = zoom_initial;
 
+	bool create_main_window();
 	void init_renderer();
 	void destroy();
 	void exit() const { main_window->request_close(); }
+	bool should_exit() const;
+	void on_render();
+	void draw_gridlines();
 	void mark();
 	void unmark();
+	Transform canvas_transform() const;
+	Position canvas_position() const { return canvas_transform().position; }
+	Rotation canvas_rotation() const { return canvas_transform().rotation; }
+	Scale canvas_scale() const { return canvas_transform().scale; }
+	void set_canvas_transform(Transform transform) const;
+	void set_canvas_position(Position position) const;
+	void set_canvas_rotation_scale(Rotation rotation, Scale scale) const;
+	void set_canvas_rotation(Rotation rotation) const;
+	void set_canvas_scale(Scale scale) const;
 
 	bool new_file();
 	bool open_file();
@@ -64,14 +71,12 @@ struct MachineImpl
 	void redo() { history.redo(); }
 	bool redo_enabled() const { return history.redo_size() != 0; }
 
-	void on_update();
-
 	// User controls
 	void canvas_begin_panning();
 	void canvas_end_panning();
 	void canvas_zoom_by(float zoom);
 	void canvas_reset_camera();
-	void canvas_update_panning();
+	void canvas_update_panning() const;
 
 	void flip_horizontally();
 	void flip_vertically();

@@ -58,7 +58,7 @@ Sprite::~Sprite()
 void Sprite::on_draw(Renderer* renderer) const
 {
 	renderer->prepare_for_sprite();
-	Image* img = Machine.images.get(image);
+	Image* img = Images.get(image);
 	if (img)
 	{
 		auto texture_slot = renderer->get_texture_slot(img->tid);
@@ -107,7 +107,7 @@ void Sprite::sync_transform_rs() const
 
 void Sprite::sync_image_dimensions(Image::Dim v_width, Image::Dim v_height) const
 {
-	Image* img = Machine.images.get(image);
+	Image* img = Images.get(image);
 	Image::Dim w = v_width >= 0 ? v_width : (img ? img->width : 0);
 	Image::Dim h = v_height >= 0 ? v_height : (img ? img->height : 0);
 	
@@ -160,4 +160,9 @@ void Sprite::set_modulation(ColorFrame color) const
 		memcpy(row + SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
 		row += STRIDE;
 	}
+}
+
+void Sprite::set_uvs(const Bounds& bounds) const
+{
+	// TODO
 }
