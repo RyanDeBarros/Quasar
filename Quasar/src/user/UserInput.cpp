@@ -3,8 +3,10 @@
 #include "pipeline/Renderer.h"
 #include "Machine.h"
 
+// TODO disable panning and zooming at same time
 void attach_canvas_controls()
 {
+	// TODO ESCAPE to cancel panning
 	// Panning
 	Machine.main_window->clbk_mouse_button.push_back([](const Callback::MouseButton& mb) {
 		if (mb.button == MouseButton::MIDDLE)

@@ -66,12 +66,12 @@ Renderer::~Renderer()
 
 void Renderer::set_projection(float width, float height)
 {
-	projection = glm::ortho<float>(0.0f, width * app_scale_x, 0.0f, height * app_scale_y);
+	projection = glm::ortho<float>(0.0f, width * app_scale.x, 0.0f, height * app_scale.y);
 }
 
 void Renderer::set_projection()
 {
-	projection = glm::ortho<float>(0.0f, window->width() * app_scale_x, 0.0f, window->height() * app_scale_y);
+	projection = glm::ortho<float>(0.0f, window->width() * app_scale.x, 0.0f, window->height() * app_scale.y);
 }
 
 void Renderer::bind() const
@@ -199,11 +199,16 @@ glm::vec2 Renderer::to_screen_coordinates(const glm::vec2& world_coordinates) co
 
 void Renderer::set_app_scale(float x, float y)
 {
-	app_scale_x = 1.0f / x;
-	app_scale_y = 1.0f / y;
+	app_scale.x = 1.0f / x;
+	app_scale.y = 1.0f / y;
 	set_projection();
 	send_view();
 	// TODO scale cursor? Have different discrete cursor sizes (only works for custom cursors).
+}
+
+glm::vec2 Renderer::get_app_scale() const
+{
+	return 1.0f / app_scale;
 }
 
 unsigned short Renderer::get_texture_slot(GLuint texture)

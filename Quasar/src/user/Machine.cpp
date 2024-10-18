@@ -65,6 +65,7 @@ struct Checkerboard : public Sprite
 
 struct Canvas
 {
+	Image* image = nullptr;
 	Sprite sprite;
 	Checkerboard checkerboard;
 	float checker_size = 16.0f; // TODO settings
@@ -78,9 +79,9 @@ struct Canvas
 	void set_image(ImageHandle img)
 	{
 		sprite.set_image(img);
-		if (img != ImageHandle(0))
+		image = Images.get(img);
+		if (image)
 		{
-			Image* image = Images.get(img);
 			checkerboard.set_uv_size(0.5f * image->width / checker_size, 0.5f * image->height / checker_size);
 			checkerboard.set_modulation(ColorFrame());
 		}
@@ -99,8 +100,8 @@ struct Canvas
 	{
 		sprite.sync_transform();
 		checkerboard.transform = sprite.transform;
-		if (Image* img = Images.get(sprite.image))
-			checkerboard.transform.scale *= glm::vec2{ img->width * 0.5f, img->height * 0.5f };
+		if (image)
+			checkerboard.transform.scale *= glm::vec2{ image->width * 0.5f, image->height * 0.5f };
 		checkerboard.sync_transform();
 	}
 
@@ -115,8 +116,8 @@ struct Canvas
 	{
 		sprite.sync_transform_rs();
 		checkerboard.transform.rotation = sprite.transform.rotation;
-		if (Image* img = Images.get(sprite.image))
-			checkerboard.transform.scale = sprite.transform.scale * glm::vec2{ img->width * 0.5f, img->height * 0.5f };
+		if (image)
+			checkerboard.transform.scale = sprite.transform.scale * glm::vec2{ image->width * 0.5f, image->height * 0.5f };
 		checkerboard.sync_transform_rs();
 	}
 };
@@ -153,7 +154,7 @@ void MachineImpl::init_renderer()
 	canvas_renderer->sprites().push_back(&canvas->checkerboard);
 	canvas_renderer->sprites().push_back(&canvas->sprite);
 
-	sync_canvas_transform();
+	canvas_reset_camera();
 	canvas_renderer->set_window_resize_callback();
 	attach_canvas_controls();
 	attach_global_user_controls();
@@ -336,7 +337,6 @@ void MachineImpl::import_file(const char* filepath)
 	// TODO register instead to ensure unique? or use secondary registry specifically for canvas_image
 	auto img = Images.construct(ImageConstructor(filepath));
 	canvas->set_image(img);
-	canvas_image = Images.get(img);
 	canvas_reset_camera();
 }
 
@@ -350,7 +350,7 @@ void MachineImpl::canvas_begin_panning()
 	if (!panning)
 	{
 		pan_initial_view_pos = canvas_position();
-		pan_initial_cursor_pos = canvas_renderer->get_app_scale() * main_window->cursor_pos();
+		pan_initial_cursor_pos = canvas_renderer->get_app_cursor_pos();
 		panning = true;
 		main_window->override_gui_cursor_change(true);
 		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
@@ -377,27 +377,33 @@ void MachineImpl::canvas_zoom_by(float z)
 	float factor = main_window->is_shift_pressed() ? zoom_factor_shift : zoom_factor;
 	float new_zoom = std::clamp(zoom * glm::pow(factor, z), zoom_in_min, zoom_in_max);
 	float zoom_change = new_zoom / zoom;
-	Scale scale = canvas_scale() * zoom_change;
+	canvas_scale() *= zoom_change;
 	Position delta_position = (canvas_position() - cursor_world) * zoom_change;
-	Position position = cursor_world + delta_position;
+	canvas_position() = cursor_world + delta_position;
 
-	canvas_transform() = { position, 0, scale };
 	sync_canvas_transform();
 	zoom = new_zoom;
 }
 
 void MachineImpl::canvas_reset_camera()
 {
-	canvas_transform() = {};
-	sync_canvas_transform();
 	zoom = zoom_initial;
+	canvas_transform() = {};
+	if (canvas->image)
+	{
+		float fit_scale = std::min(canvas_renderer->get_app_width() / canvas->image->width, canvas_renderer->get_app_height() / canvas->image->height);
+		if (fit_scale < 1.0f)
+			canvas_scale() *= fit_scale;
+		zoom *= fit_scale;
+	}
+	sync_canvas_transform();
 }
 
 void MachineImpl::canvas_update_panning() const
 {
 	if (panning)
 	{
-		Position pan_delta = canvas_renderer->get_app_scale() * main_window->cursor_pos() - pan_initial_cursor_pos;
+		Position pan_delta = canvas_renderer->get_app_cursor_pos() - pan_initial_cursor_pos;
 		Position pos = pan_delta + pan_initial_view_pos;
 		if (main_window->is_shift_pressed())
 		{
@@ -416,18 +422,18 @@ void MachineImpl::canvas_update_panning() const
 
 void MachineImpl::flip_horizontally()
 {
-	static Action a([this]() { canvas_image->flip_horizontally(); mark(); }, [this]() { canvas_image->flip_horizontally(); mark(); });
+	static Action a([this]() { canvas->image->flip_horizontally(); mark(); }, [this]() { canvas->image->flip_horizontally(); mark(); });
 	history.execute(a);
 }
 
 void MachineImpl::flip_vertically()
 {
-	static Action a([this]() { canvas_image->flip_vertically(); mark(); }, [this]() { canvas_image->flip_vertically(); mark(); });
+	static Action a([this]() { canvas->image->flip_vertically(); mark(); }, [this]() { canvas->image->flip_vertically(); mark(); });
 	history.execute(a);
 }
 
 void MachineImpl::rotate_180()
 {
-	static Action a([this]() { canvas_image->rotate_180(); mark(); }, [this]() { canvas_image->rotate_180(); mark(); });
+	static Action a([this]() { canvas->image->rotate_180(); mark(); }, [this]() { canvas->image->rotate_180(); mark(); });
 	history.execute(a);
 }

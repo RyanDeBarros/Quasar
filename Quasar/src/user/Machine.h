@@ -1,6 +1,5 @@
 #pragma once
 
-#include "edit/Image.h"
 #include "variety/History.h"
 #include "pipeline/Renderer.h"
 
@@ -15,7 +14,6 @@ struct MachineImpl
 
 	Window* main_window = nullptr;
 	Renderer* canvas_renderer = nullptr;
-	Image* canvas_image = nullptr;
 
 	std::string current_filepath = "";
 	bool unsaved = true;

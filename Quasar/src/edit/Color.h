@@ -7,6 +7,8 @@
 
 #include "variety/Utils.h"
 
+// TODO define literals for unsigned char/short
+
 constexpr float NEAR_ZERO = 0.00001f;
 constexpr float inv60 = 1.0f / 60;
 constexpr float inv255 = 1.0f / 255;

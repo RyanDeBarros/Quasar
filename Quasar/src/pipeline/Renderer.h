@@ -27,6 +27,7 @@ struct ClippingRect
 	}
 	void update_window_size(int width, int height)
 	{
+		if (!window_size_to_bounds) return;
 		glm::ivec4 bnds = window_size_to_bounds(width, height);
 		x = bnds[0];
 		y = bnds[1];
@@ -57,8 +58,7 @@ class Renderer
 	// View
 	glm::mat3 projection;
 	Transform view;
-	float app_scale_x = 1.0f; // TODO to glm::vec2
-	float app_scale_y = 1.0f;
+	Scale app_scale;
 	ClippingRect clip{};
 
 	void set_projection(float width, float height);
@@ -88,7 +88,7 @@ public:
 	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
 
 	void set_app_scale(float x = 1.0f, float y = 1.0f);
-	glm::vec2 get_app_scale() const { return { app_scale_x, app_scale_y }; }
+	glm::vec2 get_app_scale() const;
 	unsigned short get_texture_slot(GLuint texture);
 
 	std::vector<struct Sprite*>& sprites() { return _sprites; };
@@ -96,6 +96,9 @@ public:
 	ClippingRect& clipping_rect() { return clip; }
 	const ClippingRect& clipping_rect() const { return clip; }
 	bool cursor_in_clipping() const { return clip.contains_point(window->cursor_pos()); }
+	float get_app_width() const { return clip.screen_w * app_scale.x; }
+	float get_app_height() const { return clip.screen_h * app_scale.y; }
+	glm::vec2 get_app_cursor_pos() const { return window->cursor_pos() * app_scale; }
 
 	void set_window_resize_callback();
 	Window* get_window() const { return window; }

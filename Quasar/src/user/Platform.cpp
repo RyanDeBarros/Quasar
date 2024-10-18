@@ -87,6 +87,7 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetScrollCallback(window, scroll_callback);
+	// TODO add callbacks for maximized and fullscreen, and remove respective boolean variables.
 
 	if (cursor)
 		glfwSetCursor(window, cursor);
