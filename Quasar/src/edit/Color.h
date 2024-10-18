@@ -7,17 +7,18 @@
 
 #include "variety/Utils.h"
 
-// TODO define literals for unsigned char/short
+constexpr unsigned char operator"" _UC(unsigned long long num) { return static_cast<unsigned char>(num); }
+constexpr unsigned short operator"" _US(unsigned long long num) { return static_cast<unsigned short>(num); }
 
 constexpr float NEAR_ZERO = 0.00001f;
-constexpr float inv60 = 1.0f / 60;
-constexpr float inv255 = 1.0f / 255;
-constexpr float inv359 = 1.0f / 359;
-constexpr unsigned short sq255 = 255 * 255;
+constexpr float inv60 = 1.0f / 60_UC;
+constexpr float inv255 = 1.0f / 255_UC;
+constexpr float inv359 = 1.0f / 359_US;
+constexpr unsigned short sq255 = 255_US * 255_US;
 
 constexpr float float_from_7bit(unsigned char _7bit)
 {
-	return _7bit < 64 ? (_7bit << 1) * inv255 : (_7bit << 1 | 0x1) * inv255;
+	return _7bit < 64_UC ? (_7bit << 1) * inv255 : (_7bit << 1 | 0x1) * inv255;
 }
 
 struct RGB;
@@ -27,13 +28,12 @@ struct HSL;
 /// R[0,255] - G[0,255] - B[0,255]
 struct RGB
 {
-	unsigned char r = 0;
-	unsigned char g = 0;
-	unsigned char b = 0;
+	unsigned char r = 0_UC;
+	unsigned char g = 0_UC;
+	unsigned char b = 0_UC;
 
 	constexpr RGB() = default;
 	constexpr RGB(unsigned char r, unsigned char g, unsigned char b) : r(r), g(g), b(b) {}
-	constexpr RGB(int r, int g, int b) : r(static_cast<unsigned char>(r)), g(static_cast<unsigned char>(g)), b(static_cast<unsigned char>(b)) {}
 	constexpr RGB(unsigned int hex) : r(hex_to_byte<2>(hex)), g(hex_to_byte<1>(hex)), b(hex_to_byte<0>(hex)) {}
 	constexpr RGB(const glm::vec3& vec) : r(round_uchar(255 * vec.x)), g(round_uchar(255 * vec.y)), b(round_uchar(255 * vec.z)) {}
 	constexpr RGB(float r, float g, float b) : r(round_uchar(255 * r)), g(round_uchar(255 * g)), b(round_uchar(255 * b)) {}
@@ -47,22 +47,21 @@ struct RGB
 struct HSV
 {
 private:
-	unsigned char h : 8 = 0;
-	unsigned char h_msb : 1 = 0;
+	unsigned char h : 8 = 0_UC;
+	unsigned char h_msb : 1 = 0_UC;
 
 public:
-	unsigned char s : 7 = 0;
-	unsigned char v : 8 = 0;
+	unsigned char s : 7 = 0_UC;
+	unsigned char v : 8 = 0_UC;
 
 	constexpr HSV() = default;
 	constexpr HSV(unsigned short h, unsigned char s, unsigned char v) : s(s), v(v) { set_hue(h); }
-	constexpr HSV(int h, int s, int v) : s(static_cast<unsigned char>(s)), v(static_cast<unsigned char>(v)) { set_hue(static_cast<unsigned char>(h)); }
 	constexpr HSV(unsigned int hex) : s(hex_to_byte<1>(hex)), v(hex_to_byte<0>(hex)) { set_hue(hex_to_byte<2>(hex)); }
 	constexpr HSV(const glm::vec3& vec) : s(round_uchar(127 * vec.y)), v(round_uchar(255 * vec.z)) { set_hue(round_ushort(359 * vec.x)); }
 	constexpr HSV(float h, float s, float v) : s(round_uchar(127 * s)), v(round_uchar(255 * v)) { set_hue(round_ushort(359 * h)); }
 	
 	constexpr unsigned short get_hue() const { return static_cast<unsigned short>(h) | (h_msb << 8); }
-	constexpr void set_hue(unsigned short hue) { if (hue < 360) { h = hue & 0xFF; h_msb = hue >> 8; } else { h = 0xFF; h_msb = 0x1; } }
+	constexpr void set_hue(unsigned short hue) { if (hue < 360_US) { h = hue & 0xFF; h_msb = hue >> 8; } else { h = 0xFF; h_msb = 0x1; } }
 	constexpr float sat_as_float() const { return float_from_7bit(s); }
 
 	constexpr RGB to_rgb() const;
@@ -74,22 +73,21 @@ public:
 struct HSL
 {
 private:
-	unsigned char h : 8 = 0;
-	unsigned char h_msb : 1 = 0;
+	unsigned char h : 8 = 0_UC;
+	unsigned char h_msb : 1 = 0_UC;
 
 public:
-	unsigned char s : 7 = 0;
-	unsigned char l : 8 = 0;
+	unsigned char s : 7 = 0_UC;
+	unsigned char l : 8 = 0_UC;
 
 	constexpr HSL() = default;
 	constexpr HSL(unsigned short h, unsigned char s, unsigned char l) : s(s), l(l) { set_hue(h); }
-	constexpr HSL(int h, int s, int l) : s(static_cast<unsigned char>(s)), l(static_cast<unsigned char>(l)) { set_hue(static_cast<unsigned char>(h)); }
 	constexpr HSL(unsigned int hex) : s(hex_to_byte<1>(hex)), l(hex_to_byte<0>(hex)) { set_hue(hex_to_byte<2>(hex)); }
 	constexpr HSL(const glm::vec3& vec) : s(round_uchar(127 * vec.y)), l(round_uchar(255 * vec.z)) { set_hue(round_ushort(359 * vec.x)); }
 	constexpr HSL(float h, float s, float l) : s(round_uchar(127 * s)), l(round_uchar(255 * l)) { set_hue(round_ushort(359 * h)); }
 
 	constexpr unsigned short get_hue() const { return static_cast<unsigned short>(h) | (h_msb << 8); }
-	constexpr void set_hue(unsigned short hue) { if (hue < 360) { h = hue & 0xFF; h_msb = hue >> 8; } else { h = 0xFF; h_msb = 0x1; } }
+	constexpr void set_hue(unsigned short hue) { if (hue < 360_US) { h = hue & 0xFF; h_msb = hue >> 8; } else { h = 0xFF; h_msb = 0x1; } }
 	constexpr float sat_as_float() const { return float_from_7bit(s); }
 
 	constexpr RGB to_rgb() const;
@@ -109,13 +107,13 @@ constexpr HSV RGB::to_hsv() const
 	float min = std::min({ nr, ng, nb });
 	float chroma = max - min;
 
-	HSV hsv(unsigned short(0), unsigned char(0), max_hex);
+	HSV hsv(0_US, 0_UC, max_hex);
 	if (max_hex != 0)
 		hsv.s = round_uchar(127 * chroma / max);
 	if (chroma > NEAR_ZERO)
 	{
 		// Compute hue angle
-		float hue = 0;
+		float hue = 0.0f;
 		if (max_hex == r)
 			hue = (ng - nb) / chroma;
 		else if (max_hex == g)
@@ -146,7 +144,7 @@ constexpr HSL RGB::to_hsl() const
 	if (chroma > NEAR_ZERO)
 	{
 		// Compute hue angle
-		float hue = 0;
+		float hue = 0.0f;
 		if (max_hex == r)
 			hue = (ng - nb) / chroma;
 		else if (max_hex == g)
@@ -198,7 +196,7 @@ constexpr RGB HSV::to_rgb() const
 constexpr HSL HSV::to_hsl() const
 {
 	if (v == 0)
-		return HSL(get_hue(), unsigned char(0), unsigned char(0));
+		return HSL(get_hue(), 0_UC, 0_UC);
 	// Normalize
 	float sat_hsv = sat_as_float();
 	float nv = v * inv255;
@@ -261,7 +259,7 @@ struct RGBA
 	RGB rgb;
 	unsigned char alpha = 255;
 
-	constexpr RGBA(RGB rgb = RGB(255, 255, 255), unsigned char alpha = 255) : rgb(rgb), alpha(alpha) {}
+	constexpr RGBA(RGB rgb = RGB(255_UC, 255_UC, 255_UC), unsigned char alpha = 255_UC) : rgb(rgb), alpha(alpha) {}
 	constexpr RGBA(RGB rgb, int alpha) : rgb(rgb), alpha(static_cast<unsigned char>(alpha)) {}
 	constexpr RGBA(RGB rgb, float alpha) : rgb(rgb), alpha(round_uchar(255 * alpha)) {}
 };
@@ -271,7 +269,7 @@ struct HSVA
 	HSV hsv;
 	unsigned char alpha = 255;
 
-	constexpr HSVA(HSV hsv = HSV(0, 0, 255), unsigned char alpha = 255) : hsv(hsv), alpha(alpha) {}
+	constexpr HSVA(HSV hsv = HSV(0_US, 0_UC, 255_UC), unsigned char alpha = 255_UC) : hsv(hsv), alpha(alpha) {}
 	constexpr HSVA(HSV hsv, int alpha) : hsv(hsv), alpha(static_cast<unsigned char>(alpha)) {}
 	constexpr HSVA(HSV hsv, float alpha) : hsv(hsv), alpha(round_uchar(255 * alpha)) {}
 };
@@ -281,7 +279,7 @@ struct HSLA
 	HSL hsl;
 	unsigned char alpha = 255;
 
-	constexpr HSLA(HSL hsl = HSL(0, 0, 255), unsigned char alpha = 255) : hsl(hsl), alpha(alpha) {}
+	constexpr HSLA(HSL hsl = HSL(0_US, 0_UC, 255_UC), unsigned char alpha = 255) : hsl(hsl), alpha(alpha) {}
 	constexpr HSLA(HSL hsl, int alpha) : hsl(hsl), alpha(static_cast<unsigned char>(alpha)) {}
 	constexpr HSLA(HSL hsl, float alpha) : hsl(hsl), alpha(round_uchar(255 * alpha)) {}
 };
@@ -291,16 +289,16 @@ struct ColorFrame
 	unsigned char alpha = 255;
 
 private:
-	RGB _rgb = RGB(255, 255, 255);
-	HSV _hsv = HSV(0, 0, 255);
-	HSL _hsl = HSL(0, 0, 255);
+	RGB _rgb = RGB(255_UC, 255_UC, 255_UC);
+	HSV _hsv = HSV(0_US, 0_UC, 255_UC);
+	HSL _hsl = HSL(0_US, 0_UC, 255_UC);
 
 public:
-	constexpr ColorFrame(unsigned char alpha = 255) : alpha(alpha) {}
+	constexpr ColorFrame(unsigned char alpha = 255_UC) : alpha(alpha) {}
 	constexpr ColorFrame(int alpha) : alpha(static_cast<unsigned char>(alpha)) {}
-	constexpr ColorFrame(RGB rgb, unsigned char alpha = 255) : alpha(alpha) { set_rgb(rgb); }
-	constexpr ColorFrame(HSV hsv, unsigned char alpha = 255) : alpha(alpha) { set_hsv(hsv); }
-	constexpr ColorFrame(HSL hsl, unsigned char alpha = 255) : alpha(alpha) { set_hsl(hsl); }
+	constexpr ColorFrame(RGB rgb, unsigned char alpha = 255_UC) : alpha(alpha) { set_rgb(rgb); }
+	constexpr ColorFrame(HSV hsv, unsigned char alpha = 255_UC) : alpha(alpha) { set_hsv(hsv); }
+	constexpr ColorFrame(HSL hsl, unsigned char alpha = 255_UC) : alpha(alpha) { set_hsl(hsl); }
 	constexpr ColorFrame(RGB rgb, int alpha) : alpha(static_cast<unsigned char>(alpha)) { set_rgb(rgb); }
 	constexpr ColorFrame(HSV hsv, int alpha) : alpha(static_cast<unsigned char>(alpha)) { set_hsv(hsv); }
 	constexpr ColorFrame(HSL hsl, int alpha) : alpha(static_cast<unsigned char>(alpha)) { set_hsl(hsl); }
@@ -323,10 +321,10 @@ public:
 
 struct RedGreen
 {
-	unsigned char r = 0, g = 0;
+	unsigned char r = 0_UC, g = 0_UC;
 };
 
 struct GrayScale
 {
-	unsigned char v = 0;
+	unsigned char v = 0_UC;
 };
