@@ -127,7 +127,7 @@ void Image::gen_texture(const TextureParams& texture_params)
 	{
 		QUASAR_GL(glGenTextures(1, &tid));
 		resend_texture();
-		update_texture_params();
+		update_texture_params(texture_params);
 	}
 }
 

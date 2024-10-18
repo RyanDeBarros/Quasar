@@ -44,15 +44,13 @@ struct MachineImpl
 	void draw_gridlines();
 	void mark();
 	void unmark();
-	Transform canvas_transform() const;
-	Position canvas_position() const { return canvas_transform().position; }
-	Rotation canvas_rotation() const { return canvas_transform().rotation; }
-	Scale canvas_scale() const { return canvas_transform().scale; }
-	void set_canvas_transform(Transform transform) const;
-	void set_canvas_position(Position position) const;
-	void set_canvas_rotation_scale(Rotation rotation, Scale scale) const;
-	void set_canvas_rotation(Rotation rotation) const;
-	void set_canvas_scale(Scale scale) const;
+	Transform& canvas_transform() const;
+	Position& canvas_position() const { return canvas_transform().position; }
+	Rotation& canvas_rotation() const { return canvas_transform().rotation; }
+	Scale& canvas_scale() const { return canvas_transform().scale; }
+	void sync_canvas_transform() const;
+	void sync_canvas_transform_p() const;
+	void sync_canvas_transform_rs() const;
 
 	bool new_file();
 	bool open_file();

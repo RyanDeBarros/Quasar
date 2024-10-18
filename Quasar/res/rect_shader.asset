@@ -1,4 +1,4 @@
 shader
 VERT:res/standard.vert
 FRAG:res/standard.frag
-ATTRIBS:1|2|1|2|4|4
+ATTRIBS:1|2|2|2|4|4

@@ -6,10 +6,10 @@
 Sprite::Sprite()
 {
 	varr = new GLfloat[NUM_VERTICES * STRIDE]{
-		0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		3.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+		-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+		-1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+		-1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+		-1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
 	};
 }
 
@@ -111,14 +111,14 @@ void Sprite::sync_image_dimensions(Image::Dim v_width, Image::Dim v_height) cons
 	Image::Dim w = v_width >= 0 ? v_width : (img ? img->width : 0);
 	Image::Dim h = v_height >= 0 ? v_height : (img ? img->height : 0);
 	
-	varr[size_t(0) * STRIDE + SHADER_POS_COORD    ] = -0.5f * w;
-	varr[size_t(0) * STRIDE + SHADER_POS_COORD + 1] = -0.5f * h;
-	varr[size_t(1) * STRIDE + SHADER_POS_COORD    ] =  0.5f * w;
-	varr[size_t(1) * STRIDE + SHADER_POS_COORD + 1] = -0.5f * h;
-	varr[size_t(2) * STRIDE + SHADER_POS_COORD    ] =  0.5f * w;
-	varr[size_t(2) * STRIDE + SHADER_POS_COORD + 1] =  0.5f * h;
-	varr[size_t(3) * STRIDE + SHADER_POS_COORD    ] = -0.5f * w;
-	varr[size_t(3) * STRIDE + SHADER_POS_COORD + 1] =  0.5f * h;
+	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS    ] = -0.5f * w;
+	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;
+	varr[size_t(1) * STRIDE + SHADER_POS_VERT_POS    ] =  0.5f * w;
+	varr[size_t(1) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;
+	varr[size_t(2) * STRIDE + SHADER_POS_VERT_POS    ] =  0.5f * w;
+	varr[size_t(2) * STRIDE + SHADER_POS_VERT_POS + 1] =  0.5f * h;
+	varr[size_t(3) * STRIDE + SHADER_POS_VERT_POS    ] = -0.5f * w;
+	varr[size_t(3) * STRIDE + SHADER_POS_VERT_POS + 1] =  0.5f * h;
 }
 
 void Sprite::sync_texture_slot(float texture_slot) const
@@ -164,5 +164,5 @@ void Sprite::set_modulation(ColorFrame color) const
 
 void Sprite::set_uvs(const Bounds& bounds) const
 {
-	// TODO
+	bounds.pass_uvs(varr + SHADER_POS_UV, STRIDE);
 }

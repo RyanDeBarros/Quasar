@@ -1,5 +1,6 @@
 #pragma once
 
+#include <gl/glew.h>
 #include <glm/glm.hpp>
 
 struct Position : glm::vec2
@@ -45,7 +46,7 @@ struct Transform
 	}
 
 	glm::vec2 packed_p() const { return position; }
-	glm::vec4 packed_rs() const { return { scale.x * glm::cos(rotation), scale.x * glm::sin(rotation), -scale.y * glm::sin(rotation), scale.y * glm::cos(rotation)}; }
+	glm::vec4 packed_rs() const { return { scale.x * glm::cos(rotation), scale.x * glm::sin(rotation), -scale.y * glm::sin(rotation), scale.y * glm::cos(rotation) }; }
 };
 
 struct Bounds
