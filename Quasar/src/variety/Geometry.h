@@ -3,6 +3,8 @@
 #include <gl/glew.h>
 #include <glm/glm.hpp>
 
+#include <functional>
+
 struct Position : glm::vec2
 {
 	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
@@ -60,6 +62,7 @@ struct ClippingRect
 	{
 		return x <= point.x && point.x < x + screen_w && y <= point.y && point.y < y + screen_h;
 	}
+
 	void update_window_size(int width, int height)
 	{
 		if (!window_size_to_bounds) return;
@@ -69,6 +72,7 @@ struct ClippingRect
 		screen_w = bnds[2];
 		screen_h = bnds[3];
 	}
+
 	glm::vec2 center_point() const
 	{
 		return { 0.5f * (x + screen_w), 0.5f * (y + screen_h) };

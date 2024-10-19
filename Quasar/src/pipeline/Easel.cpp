@@ -103,10 +103,10 @@ Easel::Easel(Window* w)
 	: window(w), canvas(RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f), RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f)),
 	sprite_shader("res/sprite.vert", "res/sprite.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" })
 {
-	gen_vao_dynamic_draw(&canvas_sprite_VAO, &canvas_sprite_VB, &canvas_sprite_IB, 4, sprite_shader.stride, 6, canvas.sprite.varr, Sprite::IARR);
-	gen_vao_dynamic_draw(&checkerboard_VAO, &checkerboard_VB, &checkerboard_IB, 4, sprite_shader.stride, 6, canvas.checkerboard.varr, Sprite::IARR);
-	gen_vao_dynamic_draw(&background_VAO, &background_VB, &background_IB, 4, sprite_shader.stride, 6, background.varr, Sprite::IARR);
-	attrib_pointers(sprite_shader.attributes, sprite_shader.stride);
+	gen_dynamic_vao(background_VAO, background_VB, background_IB, 4, sprite_shader.stride, 6, background.varr, Sprite::IARR, sprite_shader.attributes);
+	gen_dynamic_vao(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB, 4, sprite_shader.stride, 6, canvas.sprite.varr, Sprite::IARR, sprite_shader.attributes);
+	gen_dynamic_vao(checkerboard_VAO, checkerboard_VB, checkerboard_IB, 4, sprite_shader.stride, 6, canvas.checkerboard.varr, Sprite::IARR, sprite_shader.attributes);
+
 	set_projection();
 	send_view();
 
@@ -120,6 +120,7 @@ Easel::Easel(Window* w)
 	canvas.checkerboard.sync_texture_slot(CHECKERBOARD_TSLOT);
 	canvas.sprite.sync_texture_slot(CANVAS_SPRITE_TSLOT);
 
+	background.set_image(ImageHandle(0), 1, 1);
 	background.set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
 	background.transform.scale = { float(window->width()), float(window->height()) };
 	background.sync_transform_rs();
@@ -128,8 +129,6 @@ Easel::Easel(Window* w)
 		clip.update_window_size(ws.width, ws.height);
 		set_projection(float(ws.width), float(ws.height));
 		send_view();
-		background.transform.scale = { float(ws.width), float(ws.height) };
-		background.sync_transform_rs();
 		Machine.on_render();
 		});
 }
@@ -157,29 +156,31 @@ void Easel::render() const
 	QUASAR_GL(glUseProgram(sprite_shader.rid));
 	QUASAR_GL(glScissor(clip.x, clip.y, clip.screen_w, clip.screen_h));
 	// background
-	QUASAR_GL(glBindVertexArray(background_VAO));
-	Image* img = Images.get(background.image); // LATER honestly, since there aren't many images/shaders, not much point in registries. This isn't a game engine.
-	bind_texture(img->tid, BACKGROUND_TSLOT);
+	bind_vao_buffers(background_VAO, background_VB, background_IB);
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), background.varr)); // TODO only buffersubdata when modifying varr, not every draw call.
 	QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
 	// canvas
 	if (canvas_visible)
 	{
 		// checkerboard
-		QUASAR_GL(glBindVertexArray(checkerboard_VAO));
-		img = Images.get(canvas.checkerboard.image);
-		bind_texture(img->tid, CHECKERBOARD_TSLOT);
+		Image* img = Images.get(canvas.checkerboard.image); // LATER honestly, since there aren't many images/shaders, not much point in registries. This isn't a game engine.
+		bind_texture(img->tid, GLuint(CHECKERBOARD_TSLOT));
+		bind_vao_buffers(checkerboard_VAO, checkerboard_VB, checkerboard_IB);
 		QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), canvas.checkerboard.varr));
 		QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
 		// canvas sprite
-		QUASAR_GL(glBindVertexArray(canvas_sprite_VAO));
-		img = Images.get(canvas.sprite.image);
-		bind_texture(img->tid, CANVAS_SPRITE_TSLOT);
-		QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), canvas.sprite.varr));
-		QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+		if (canvas.sprite.image)
+		{
+			img = Images.get(canvas.sprite.image);
+			bind_texture(img->tid, GLuint(CANVAS_SPRITE_TSLOT));
+			bind_vao_buffers(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB);
+			//QUASAR_GL(glBindVertexArray(canvas_sprite_VAO));
+			QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), canvas.sprite.varr));
+			QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+		}
 	}
 	// unbind
-	QUASAR_GL(glBindVertexArray(0));
+	unbind_vao_buffers();
 	QUASAR_GL(glUseProgram(0));
 	QUASAR_GL(glScissor(0, 0, window->width(), window->height()));
 }

@@ -39,8 +39,7 @@ struct MachineImpl
 	void destroy();
 	void exit() const { main_window->request_close(); }
 	bool should_exit() const;
-	void on_render();
-	void draw_gridlines();
+	void on_render() const;
 	void mark();
 	void unmark();
 

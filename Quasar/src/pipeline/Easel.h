@@ -36,9 +36,9 @@ struct Canvas
 
 struct Easel
 {
-	constexpr static unsigned short BACKGROUND_TSLOT = 0;
-	constexpr static unsigned short CHECKERBOARD_TSLOT = 1;
-	constexpr static unsigned short CANVAS_SPRITE_TSLOT = 2;
+	constexpr static float BACKGROUND_TSLOT = -1.0f;
+	constexpr static float CHECKERBOARD_TSLOT = 0.0f;
+	constexpr static float CANVAS_SPRITE_TSLOT = 1.0f;
 
 	Window* window;
 	Canvas canvas;
@@ -48,7 +48,7 @@ struct Easel
 	GLuint background_VAO = 0, background_VB = 0, background_IB = 0;
 	Shader sprite_shader;
 
-	bool canvas_visible = true;
+	bool canvas_visible = false;
 	
 	// View
 	glm::mat3 projection{};

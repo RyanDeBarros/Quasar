@@ -4,15 +4,12 @@
 
 #include "UserInput.h"
 #include "GUI.h"
-#include "pipeline/Renderer.h"
 #include "pipeline/Easel.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
 
-static Sprite* easel_background = nullptr;
-static Canvas* canvas = nullptr;
-static Renderer* easel_renderer = nullptr;
+static Easel* easel = nullptr;
 
 bool MachineImpl::create_main_window()
 {
@@ -27,45 +24,29 @@ bool MachineImpl::create_main_window()
 
 void MachineImpl::init_renderer()
 {
+	glfwSwapInterval(GLFW_FALSE); // LATER off by default, but add to user settings.
+	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
+	QUASAR_GL(glEnable(GL_SCISSOR_TEST));
 	QUASAR_GL(glEnable(GL_BLEND));
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	main_window->focus_context();
 
-	easel_renderer = new Renderer(main_window, Shader("res/standard.vert", "res/standard.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" })); // LATER don't really need modulation in future
-	
-	easel_background = new Sprite();
-	easel_background->set_image(ImageHandle(0), 1, 1);
-	easel_background->set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
-	easel_renderer->sprites().push_back(easel_background);
-	auto canvas_background_resize = [this](const Callback::WindowSize& ws) {
-		easel_background->transform.scale = { float(ws.width), float(ws.height) };
-		easel_background->sync_transform_rs();
-		};
-	canvas_background_resize(Callback::WindowSize(main_window->width(), main_window->height()));
-	main_window->clbk_window_size.push_back(std::move(canvas_background_resize));
-
-	canvas = new Canvas(RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f), RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f));
-	easel_renderer->sprites().push_back(&canvas->checkerboard);
-	easel_renderer->sprites().push_back(&canvas->sprite);
+	easel = new Easel(main_window);
 
 	canvas_reset_camera();
-	easel_renderer->set_window_resize_callback();
 	attach_canvas_controls();
 	attach_global_user_controls();
 
-	easel_renderer->clipping_rect().window_size_to_bounds = [](int w, int h) -> glm::ivec4 { return {
+	easel->clip.window_size_to_bounds = [](int w, int h) -> glm::ivec4 { return {
 		w / 10, h / 10, 8 * w / 10, 8 * h / 10
 	}; };
-	easel_renderer->clipping_rect().update_window_size(main_window->width(), main_window->height());
-
+	easel->clip.update_window_size(main_window->width(), main_window->height());
 }
 
 void MachineImpl::destroy()
 {
 	Images.clear();
-	QUASAR_INVALIDATE_PTR(easel_renderer);
-	QUASAR_INVALIDATE_PTR(canvas);
-	QUASAR_INVALIDATE_PTR(easel_background);
+	QUASAR_INVALIDATE_PTR(easel);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 
@@ -74,19 +55,14 @@ bool MachineImpl::should_exit() const
 	return main_window->should_close();
 }
 
-void MachineImpl::on_render()
+void MachineImpl::on_render() const
 {
 	canvas_update_panning();
 	main_window->new_frame();
-	easel_renderer->frame_cycle();
-	draw_gridlines();
+	easel->render();
+	// TODO draw gridlines
 	render_gui();
 	main_window->end_frame();
-}
-
-void MachineImpl::draw_gridlines()
-{
-	// TODO gridlines
 }
 
 void MachineImpl::mark()
@@ -103,32 +79,32 @@ void MachineImpl::unmark()
 
 Transform& MachineImpl::canvas_transform() const
 {
-	return canvas->transform();
+	return easel->canvas.transform();
 }
 
 void MachineImpl::sync_canvas_transform() const
 {
-	canvas->sync_transform();
+	easel->canvas.sync_transform();
 }
 
 void MachineImpl::sync_canvas_transform_p() const
 {
-	canvas->sync_transform_p();
+	easel->canvas.sync_transform_p();
 }
 
 void MachineImpl::sync_canvas_transform_rs() const
 {
-	canvas->sync_transform_rs();
+	easel->canvas.sync_transform_rs();
 }
 
 bool MachineImpl::cursor_in_easel() const
 {
-	return easel_renderer->cursor_in_clipping();
+	return easel->cursor_in_clipping();
 }
 
 void MachineImpl::set_easel_scale(float sx, float sy) const
 {
-	easel_renderer->set_app_scale(sx, sy);
+	easel->set_app_scale(sx, sy);
 }
 
 bool MachineImpl::new_file()
@@ -140,14 +116,7 @@ bool MachineImpl::new_file()
 		if (response == 1) if (!save_file()) return false;
 	}
 	current_filepath.clear();
-	for (auto iter = easel_renderer->sprites().begin(); iter != easel_renderer->sprites().end(); ++iter)
-	{
-		if (*iter == &canvas->sprite)
-		{
-			easel_renderer->sprites().erase(iter);
-			break;
-		}
-	}
+	easel->canvas_visible = false;
 	mark();
 	// LATER clear palletes/frames/layers/etc.
 	return true;
@@ -241,7 +210,8 @@ void MachineImpl::import_file(const char* filepath)
 {
 	// LATER register instead to ensure unique? or use secondary registry specifically for canvas_image
 	auto img = Images.construct(ImageConstructor(filepath));
-	canvas->set_image(img);
+	easel->canvas.set_image(img);
+	easel->canvas_visible = true;
 	canvas_reset_camera();
 }
 
@@ -255,7 +225,7 @@ void MachineImpl::canvas_begin_panning()
 	if (!panning)
 	{
 		pan_initial_view_pos = canvas_position();
-		pan_initial_cursor_pos = easel_renderer->get_app_cursor_pos();
+		pan_initial_cursor_pos = easel->get_app_cursor_pos();
 		panning = true;
 		main_window->override_gui_cursor_change(true);
 		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
@@ -277,7 +247,7 @@ void MachineImpl::canvas_zoom_by(float z)
 {
 	Position cursor_world;
 	if (!main_window->is_ctrl_pressed())
-		cursor_world = easel_renderer->to_world_coordinates(main_window->cursor_pos());
+		cursor_world = easel->to_world_coordinates(main_window->cursor_pos());
 
 	float factor = main_window->is_shift_pressed() ? zoom_factor_shift : zoom_factor;
 	float new_zoom = std::clamp(zoom * glm::pow(factor, z), zoom_in_min, zoom_in_max);
@@ -294,9 +264,9 @@ void MachineImpl::canvas_reset_camera()
 {
 	zoom = zoom_initial;
 	canvas_transform() = {};
-	if (canvas->image)
+	if (easel->canvas.image)
 	{
-		float fit_scale = std::min(easel_renderer->get_app_width() / canvas->image->width, easel_renderer->get_app_height() / canvas->image->height);
+		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->width, easel->get_app_height() / easel->canvas.image->height);
 		if (fit_scale < 1.0f)
 			canvas_scale() *= fit_scale;
 		zoom *= fit_scale;
@@ -308,7 +278,7 @@ void MachineImpl::canvas_update_panning() const
 {
 	if (panning)
 	{
-		Position pan_delta = easel_renderer->get_app_cursor_pos() - pan_initial_cursor_pos;
+		Position pan_delta = easel->get_app_cursor_pos() - pan_initial_cursor_pos;
 		Position pos = pan_delta + pan_initial_view_pos;
 		if (main_window->is_shift_pressed())
 		{
@@ -320,25 +290,25 @@ void MachineImpl::canvas_update_panning() const
 		canvas_position() = pos;
 		sync_canvas_transform_p();
 
-		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel_renderer->cursor_in_clipping())
+		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel->cursor_in_clipping())
 			main_window->set_mouse_mode(MouseMode::VIRTUAL);
 	}
 }
 
 void MachineImpl::flip_horizontally()
 {
-	static Action a([this]() { canvas->image->flip_horizontally(); mark(); }, [this]() { canvas->image->flip_horizontally(); mark(); });
+	static Action a([this]() { easel->canvas.image->flip_horizontally(); mark(); }, [this]() { easel->canvas.image->flip_horizontally(); mark(); });
 	history.execute(a);
 }
 
 void MachineImpl::flip_vertically()
 {
-	static Action a([this]() { canvas->image->flip_vertically(); mark(); }, [this]() { canvas->image->flip_vertically(); mark(); });
+	static Action a([this]() { easel->canvas.image->flip_vertically(); mark(); }, [this]() { easel->canvas.image->flip_vertically(); mark(); });
 	history.execute(a);
 }
 
 void MachineImpl::rotate_180()
 {
-	static Action a([this]() { canvas->image->rotate_180(); mark(); }, [this]() { canvas->image->rotate_180(); mark(); });
+	static Action a([this]() { easel->canvas.image->rotate_180(); mark(); }, [this]() { easel->canvas.image->rotate_180(); mark(); });
 	history.execute(a);
 }
