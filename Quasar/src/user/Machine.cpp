@@ -6,7 +6,8 @@
 #include "UserInput.h"
 #include "GUI.h"
 
-static Sprite* easel_background = nullptr;
+#define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
+#define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
 
 struct Checkerboard : public Sprite
 {
@@ -122,11 +123,12 @@ struct Canvas
 	}
 };
 
+static Sprite* easel_background = nullptr;
 static Canvas* canvas = nullptr;
 
 bool MachineImpl::create_main_window()
 {
-	main_window = new Window("Quasar", 1440, 1080, true);
+	main_window = new Window("Quasar", 2160, 1440, true);
 	if (main_window)
 	{
 		main_window->set_raw_mouse_motion(true); // LATER settable from user settings
@@ -137,7 +139,7 @@ bool MachineImpl::create_main_window()
 
 void MachineImpl::init_renderer()
 {
-	canvas_renderer = new Renderer(main_window, Shader());
+	canvas_renderer = new Renderer(main_window, Shader("res/standard.vert", "res/standard.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" })); // LATER don't really need modulation in future
 	
 	easel_background = new Sprite();
 	easel_background->set_image(ImageHandle(0), 1, 1);
@@ -163,15 +165,10 @@ void MachineImpl::init_renderer()
 void MachineImpl::destroy()
 {
 	Images.clear();
-	Shaders.clear();
-	delete canvas_renderer;
-	canvas_renderer = nullptr;
-	delete main_window;
-	main_window = nullptr;
-	delete canvas;
-	canvas = nullptr;
-	delete easel_background;
-	easel_background = nullptr;
+	QUASAR_INVALIDATE_PTR(canvas_renderer);
+	QUASAR_INVALIDATE_PTR(canvas);
+	QUASAR_INVALIDATE_PTR(easel_background);
+	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 
 bool MachineImpl::should_exit() const

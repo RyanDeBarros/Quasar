@@ -6,8 +6,5 @@
 
 typedef Registry<Image, unsigned short, ImageConstructor> ImageRegistry;
 typedef ImageRegistry::Handle ImageHandle;
-typedef Registry<Shader, unsigned short, ShaderConstructor> ShaderRegistry;
-typedef ShaderRegistry::Handle ShaderHandle;
 
 inline ImageRegistry Images;
-inline ShaderRegistry Shaders;

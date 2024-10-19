@@ -4,7 +4,7 @@
 
 #include "variety/IO.h"
 
-static GLuint compile_shader(GLenum type, const char* shader, const char* filepath)
+static GLuint compile_shader(GLenum type, const char* shader)
 {
 	QUASAR_GL(GLuint id = glCreateShader(type));
 	QUASAR_GL(glShaderSource(id, 1, &shader, nullptr));
@@ -18,7 +18,6 @@ static GLuint compile_shader(GLenum type, const char* shader, const char* filepa
 		QUASAR_GL(glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length));
 		GLchar* message = new GLchar[length];
 		QUASAR_GL(glGetShaderInfoLog(id, length, &length, message));
-		std::cerr << "Failed to compile " << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << " shader: \"" << filepath << "\"\n" << message << std::endl;
 		delete[] message;
 		QUASAR_GL(glDeleteShader(id));
 		return 0;
@@ -29,15 +28,15 @@ static GLuint compile_shader(GLenum type, const char* shader, const char* filepa
 static GLuint load_program(const char* vert, const char* frag)
 {
 	std::string vertex_shader;
-	if (!IO::read_file("res/standard.vert", vertex_shader))
+	if (!IO::read_file(vert, vertex_shader))
 		QUASAR_ASSERT(false);
 	std::string fragment_shader;
-	if (!IO::read_file("res/standard.frag", fragment_shader))
+	if (!IO::read_file(frag, fragment_shader))
 		QUASAR_ASSERT(false);
 
 	QUASAR_GL(GLuint shader = glCreateProgram());
-	GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader.c_str(), "res/standard.vert");
-	GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader.c_str(), "res/standard.frag");
+	GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader.c_str());
+	GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader.c_str());
 	if (vs)
 	{
 		if (fs)
@@ -62,6 +61,8 @@ static GLuint load_program(const char* vert, const char* frag)
 		QUASAR_GL(glDeleteProgram(shader));
 		shader = 0;
 	}
+	QUASAR_GL(bool valid = glIsProgram(shader));
+	QUASAR_ASSERT(valid);
 	return shader;
 }
 
@@ -73,39 +74,29 @@ static unsigned short stride_of(const std::vector<unsigned short>& attributes)
 	return sum;
 }
 
-Shader::Shader(const ShaderConstructor& args)
+Shader::Shader(const char* vertex_shader, const char* fragment_shader, std::vector<unsigned short>&& attribs, std::vector<std::string>&& uniforms)
+	: attributes(std::move(attribs))
 {
-	std::string vert, frag;
-	auto values = IO::load_asset(args.filepath.c_str(), "shader");
-	auto iter = values.find("VERT");
-	if (iter != values.end())
-		vert = std::move(iter->second.moving_parse());
-	iter = values.find("FRAG");
-	if (iter != values.end())
-		frag = std::move(iter->second.moving_parse());
-	iter = values.find("ATTRIBS");
-	if (iter != values.end())
-		attributes = std::move(iter->second.parse<std::vector<unsigned short>>());
-
 	stride = stride_of(attributes);
-	rid = load_program(vert.c_str() + 2, frag.c_str() + 2);
+	rid = load_program(vertex_shader, fragment_shader);
+	for (auto&& uniform : uniforms)
+		query_location(std::move(uniform));
 }
 
 Shader::Shader(Shader&& other) noexcept
-	: rid(other.rid), stride(other.stride), locations(std::move(other.locations)), attributes(std::move(other.attributes))
+	: rid(other.rid), stride(other.stride), uniform_locations(std::move(other.uniform_locations)), attributes(std::move(other.attributes))
 {
 	other.rid = 0;
 }
 
 Shader::~Shader()
 {
-	bool isp = glIsProgram(rid);
 	QUASAR_GL(glDeleteProgram(rid));
 }
 
-void Shader::query_location(std::string&& attribute)
+void Shader::query_location(std::string&& uniform)
 {
-	QUASAR_GL(GLint location = glGetUniformLocation(rid, attribute.c_str()));
+	QUASAR_GL(GLint location = glGetUniformLocation(rid, uniform.c_str()));
 	if (!std::signbit(location))
-		locations.emplace(std::move(attribute), location);
+		uniform_locations.emplace(std::move(uniform), location);
 }

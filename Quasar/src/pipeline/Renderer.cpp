@@ -43,7 +43,6 @@ Renderer::Renderer(Window* window, Shader&& shader_)
 
 	attrib_pointers(shader.attributes, shader.stride);
 	set_projection();
-	shader.query_location("u_VP");
 	send_view();
 
 	clip.x = 0;
@@ -143,7 +142,7 @@ void Renderer::send_view()
 {
 	glm::mat3 cameraVP = projection * view.camera();
 	bind();
-	QUASAR_GL(glUniformMatrix3fv(shader.locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+	QUASAR_GL(glUniformMatrix3fv(shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 }
 
 void Renderer::set_view(const Transform& view_)
