@@ -27,6 +27,10 @@ bool MachineImpl::create_main_window()
 
 void MachineImpl::init_renderer()
 {
+	QUASAR_GL(glEnable(GL_BLEND));
+	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+	main_window->focus_context();
+
 	easel_renderer = new Renderer(main_window, Shader("res/standard.vert", "res/standard.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" })); // LATER don't really need modulation in future
 	
 	easel_background = new Sprite();

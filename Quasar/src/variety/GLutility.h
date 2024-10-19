@@ -24,3 +24,29 @@ inline void attrib_pointers(const std::vector<unsigned short> attrib_lengths, un
 		offset += attrib_lengths[i] * sizeof(GLfloat);
 	}
 }
+
+inline void gen_vao_dynamic_draw(GLuint* vao, GLuint* vb, GLuint* ib, size_t vertex_count, size_t vertex_stride, size_t index_count, const GLfloat* varr, const GLuint* iarr)
+{
+	QUASAR_GL(glGenVertexArrays(1, vao));
+	QUASAR_GL(glBindVertexArray(*vao));
+
+	QUASAR_GL(glGenBuffers(1, vb));
+	QUASAR_GL(glBindBuffer(GL_ARRAY_BUFFER, *vb));
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, vertex_count * vertex_stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
+	if (ib)
+	{
+		QUASAR_GL(glGenBuffers(1, ib));
+		QUASAR_GL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, *ib));
+		QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_count * sizeof(GLuint), iarr, GL_DYNAMIC_DRAW));
+	}
+}
+
+inline void delete_vao_buffers(GLuint vao, GLuint vb, GLuint ib)
+{
+	QUASAR_GL(glDeleteBuffers(1, &vao));
+	QUASAR_GL(glDeleteBuffers(1, &vb));
+	if (ib != 0)
+	{
+		QUASAR_GL(glDeleteBuffers(1, &ib));
+	}
+}

@@ -49,6 +49,32 @@ struct Transform
 	glm::vec4 packed_rs() const { return { scale.x * glm::cos(rotation), scale.x * glm::sin(rotation), -scale.y * glm::sin(rotation), scale.y * glm::cos(rotation) }; }
 };
 
+struct ClippingRect
+{
+	GLint x, y;
+	GLsizei screen_w, screen_h;
+
+	std::function<glm::ivec4(int, int)> window_size_to_bounds;
+
+	bool contains_point(const glm::vec2& point) const
+	{
+		return x <= point.x && point.x < x + screen_w && y <= point.y && point.y < y + screen_h;
+	}
+	void update_window_size(int width, int height)
+	{
+		if (!window_size_to_bounds) return;
+		glm::ivec4 bnds = window_size_to_bounds(width, height);
+		x = bnds[0];
+		y = bnds[1];
+		screen_w = bnds[2];
+		screen_h = bnds[3];
+	}
+	glm::vec2 center_point() const
+	{
+		return { 0.5f * (x + screen_w), 0.5f * (y + screen_h) };
+	}
+};
+
 struct Bounds
 {
 	GLfloat x1, x2;

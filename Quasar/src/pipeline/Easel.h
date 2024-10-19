@@ -1,5 +1,6 @@
 #pragma once
 
+#include "user/Platform.h"
 #include "Sprite.h"
 
 struct Checkerboard : public Sprite // TODO migrate out of Sprite
@@ -31,4 +32,52 @@ struct Canvas
 	void sync_transform();
 	void sync_transform_p();
 	void sync_transform_rs();
+};
+
+struct Easel
+{
+	constexpr static unsigned short BACKGROUND_TSLOT = 0;
+	constexpr static unsigned short CHECKERBOARD_TSLOT = 1;
+	constexpr static unsigned short CANVAS_SPRITE_TSLOT = 2;
+
+	Window* window;
+	Canvas canvas;
+	GLuint canvas_sprite_VAO = 0, canvas_sprite_VB = 0, canvas_sprite_IB = 0;
+	GLuint checkerboard_VAO = 0, checkerboard_VB = 0, checkerboard_IB = 0; // TODO combine along with background into one VAO/VB/IB.
+	Sprite background;
+	GLuint background_VAO = 0, background_VB = 0, background_IB = 0;
+	Shader sprite_shader;
+
+	bool canvas_visible = true;
+	
+	// View
+	glm::mat3 projection{};
+	Transform view;
+private:
+	Scale app_scale;
+public:
+	ClippingRect clip{};
+
+	Easel(Window* window);
+	Easel(const Easel&) = delete;
+	Easel(Easel&&) noexcept = delete;
+	~Easel();
+
+	void set_projection(float width, float height);
+	void set_projection();
+
+	void render() const;
+
+	void send_view();
+
+	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
+	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
+
+	void set_app_scale(float x = 1.0f, float y = 1.0f);
+	glm::vec2 get_app_scale() const;
+	
+	bool cursor_in_clipping() const { return clip.contains_point(window->cursor_pos()); }
+	float get_app_width() const { return clip.screen_w * app_scale.x; }
+	float get_app_height() const { return clip.screen_h * app_scale.y; }
+	glm::vec2 get_app_cursor_pos() const { return window->cursor_pos() * app_scale; }
 };

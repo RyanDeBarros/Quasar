@@ -253,6 +253,7 @@ void Window::new_frame() const
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	//focus_context(); NOTE only one window
 }
 
 void Window::end_frame() const
