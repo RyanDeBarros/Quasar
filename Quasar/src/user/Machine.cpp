@@ -2,129 +2,17 @@
 
 #include <tinyfd/tinyfiledialogs.h>
 
-#include "pipeline/Sprite.h"
 #include "UserInput.h"
 #include "GUI.h"
+#include "pipeline/Renderer.h"
+#include "pipeline/Easel.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
 
-struct Checkerboard : public Sprite
-{
-	RGBA c1, c2;
-
-	Checkerboard(RGBA c1, RGBA c2)
-		: c1(c1), c2(c2)
-	{
-		Image img;
-		img.width = 2;
-		img.height = 2;
-		img.chpp = 4;
-		img.pixels = new Image::Byte[img.area()];
-		img.gen_texture();
-		set_image(Images.add(std::move(img)));
-		sync_colors();
-		set_uv_size(0, 0);
-	}
-
-	void sync_colors() const
-	{
-		Image* img = Images.get(image);
-		for (size_t i = 0; i < 2; ++i)
-		{
-			img->pixels[0 + 12 * i] = c1.rgb.r;
-			img->pixels[1 + 12 * i] = c1.rgb.g;
-			img->pixels[2 + 12 * i] = c1.rgb.b;
-			img->pixels[3 + 12 * i] = c1.alpha;
-		}
-		for (size_t i = 0; i < 2; ++i)
-		{
-			img->pixels[4 + 4 * i] = c2.rgb.r;
-			img->pixels[5 + 4 * i] = c2.rgb.g;
-			img->pixels[6 + 4 * i] = c2.rgb.b;
-			img->pixels[7 + 4 * i] = c2.alpha;
-		}
-		sync_texture();
-	}
-
-	void sync_texture() const
-	{
-		Image* img = Images.get(image);
-		img->resend_texture();
-		TextureParams tparams;
-		tparams.wrap_s = TextureWrap::Repeat;
-		tparams.wrap_t = TextureWrap::Repeat;
-		img->update_texture_params(tparams);
-	}
-
-	void set_uv_size(float width, float height) const
-	{
-		set_uvs(Bounds{ 0.0f, width, 0.0f, height });
-		sync_texture();
-	}
-};
-
-struct Canvas
-{
-	Image* image = nullptr;
-	Sprite sprite;
-	Checkerboard checkerboard;
-	float checker_size = 16.0f; // LATER settings
-
-	Canvas(RGBA c1, RGBA c2)
-		: checkerboard(c1, c2)
-	{
-		set_image(ImageHandle(0));
-	}
-
-	void set_image(ImageHandle img)
-	{
-		sprite.set_image(img);
-		image = Images.get(img);
-		if (image)
-		{
-			checkerboard.set_uv_size(0.5f * image->width / checker_size, 0.5f * image->height / checker_size);
-			checkerboard.set_modulation(ColorFrame());
-		}
-		else
-		{
-			checkerboard.set_modulation(ColorFrame(0));
-		}
-	}
-
-	Transform& transform() { return sprite.transform; }
-	Position& position() { return sprite.transform.position; }
-	Rotation& rotation() { return sprite.transform.rotation; }
-	Scale& scale() { return sprite.transform.scale; }
-
-	void sync_transform()
-	{
-		sprite.sync_transform();
-		checkerboard.transform = sprite.transform;
-		if (image)
-			checkerboard.transform.scale *= glm::vec2{ image->width * 0.5f, image->height * 0.5f };
-		checkerboard.sync_transform();
-	}
-
-	void sync_transform_p()
-	{
-		sprite.sync_transform_p();
-		checkerboard.transform.position = sprite.transform.position;
-		checkerboard.sync_transform_p();
-	}
-
-	void sync_transform_rs()
-	{
-		sprite.sync_transform_rs();
-		checkerboard.transform.rotation = sprite.transform.rotation;
-		if (image)
-			checkerboard.transform.scale = sprite.transform.scale * glm::vec2{ image->width * 0.5f, image->height * 0.5f };
-		checkerboard.sync_transform_rs();
-	}
-};
-
 static Sprite* easel_background = nullptr;
 static Canvas* canvas = nullptr;
+static Renderer* easel_renderer = nullptr;
 
 bool MachineImpl::create_main_window()
 {
@@ -139,12 +27,12 @@ bool MachineImpl::create_main_window()
 
 void MachineImpl::init_renderer()
 {
-	canvas_renderer = new Renderer(main_window, Shader("res/standard.vert", "res/standard.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" })); // LATER don't really need modulation in future
+	easel_renderer = new Renderer(main_window, Shader("res/standard.vert", "res/standard.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" })); // LATER don't really need modulation in future
 	
 	easel_background = new Sprite();
 	easel_background->set_image(ImageHandle(0), 1, 1);
 	easel_background->set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
-	canvas_renderer->sprites().push_back(easel_background);
+	easel_renderer->sprites().push_back(easel_background);
 	auto canvas_background_resize = [this](const Callback::WindowSize& ws) {
 		easel_background->transform.scale = { float(ws.width), float(ws.height) };
 		easel_background->sync_transform_rs();
@@ -153,19 +41,25 @@ void MachineImpl::init_renderer()
 	main_window->clbk_window_size.push_back(std::move(canvas_background_resize));
 
 	canvas = new Canvas(RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f), RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f));
-	canvas_renderer->sprites().push_back(&canvas->checkerboard);
-	canvas_renderer->sprites().push_back(&canvas->sprite);
+	easel_renderer->sprites().push_back(&canvas->checkerboard);
+	easel_renderer->sprites().push_back(&canvas->sprite);
 
 	canvas_reset_camera();
-	canvas_renderer->set_window_resize_callback();
+	easel_renderer->set_window_resize_callback();
 	attach_canvas_controls();
 	attach_global_user_controls();
+
+	easel_renderer->clipping_rect().window_size_to_bounds = [](int w, int h) -> glm::ivec4 { return {
+		w / 10, h / 10, 8 * w / 10, 8 * h / 10
+	}; };
+	easel_renderer->clipping_rect().update_window_size(main_window->width(), main_window->height());
+
 }
 
 void MachineImpl::destroy()
 {
 	Images.clear();
-	QUASAR_INVALIDATE_PTR(canvas_renderer);
+	QUASAR_INVALIDATE_PTR(easel_renderer);
 	QUASAR_INVALIDATE_PTR(canvas);
 	QUASAR_INVALIDATE_PTR(easel_background);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
@@ -180,7 +74,7 @@ void MachineImpl::on_render()
 {
 	canvas_update_panning();
 	main_window->new_frame();
-	canvas_renderer->frame_cycle();
+	easel_renderer->frame_cycle();
 	draw_gridlines();
 	render_gui();
 	main_window->end_frame();
@@ -223,6 +117,16 @@ void MachineImpl::sync_canvas_transform_rs() const
 	canvas->sync_transform_rs();
 }
 
+bool MachineImpl::cursor_in_easel() const
+{
+	return easel_renderer->cursor_in_clipping();
+}
+
+void MachineImpl::set_easel_scale(float sx, float sy) const
+{
+	easel_renderer->set_app_scale(sx, sy);
+}
+
 bool MachineImpl::new_file()
 {
 	if (unsaved)
@@ -232,11 +136,11 @@ bool MachineImpl::new_file()
 		if (response == 1) if (!save_file()) return false;
 	}
 	current_filepath.clear();
-	for (auto iter = canvas_renderer->sprites().begin(); iter != canvas_renderer->sprites().end(); ++iter)
+	for (auto iter = easel_renderer->sprites().begin(); iter != easel_renderer->sprites().end(); ++iter)
 	{
 		if (*iter == &canvas->sprite)
 		{
-			canvas_renderer->sprites().erase(iter);
+			easel_renderer->sprites().erase(iter);
 			break;
 		}
 	}
@@ -347,7 +251,7 @@ void MachineImpl::canvas_begin_panning()
 	if (!panning)
 	{
 		pan_initial_view_pos = canvas_position();
-		pan_initial_cursor_pos = canvas_renderer->get_app_cursor_pos();
+		pan_initial_cursor_pos = easel_renderer->get_app_cursor_pos();
 		panning = true;
 		main_window->override_gui_cursor_change(true);
 		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
@@ -369,7 +273,7 @@ void MachineImpl::canvas_zoom_by(float z)
 {
 	Position cursor_world;
 	if (!main_window->is_ctrl_pressed())
-		cursor_world = canvas_renderer->to_world_coordinates(main_window->cursor_pos());
+		cursor_world = easel_renderer->to_world_coordinates(main_window->cursor_pos());
 
 	float factor = main_window->is_shift_pressed() ? zoom_factor_shift : zoom_factor;
 	float new_zoom = std::clamp(zoom * glm::pow(factor, z), zoom_in_min, zoom_in_max);
@@ -388,7 +292,7 @@ void MachineImpl::canvas_reset_camera()
 	canvas_transform() = {};
 	if (canvas->image)
 	{
-		float fit_scale = std::min(canvas_renderer->get_app_width() / canvas->image->width, canvas_renderer->get_app_height() / canvas->image->height);
+		float fit_scale = std::min(easel_renderer->get_app_width() / canvas->image->width, easel_renderer->get_app_height() / canvas->image->height);
 		if (fit_scale < 1.0f)
 			canvas_scale() *= fit_scale;
 		zoom *= fit_scale;
@@ -400,7 +304,7 @@ void MachineImpl::canvas_update_panning() const
 {
 	if (panning)
 	{
-		Position pan_delta = canvas_renderer->get_app_cursor_pos() - pan_initial_cursor_pos;
+		Position pan_delta = easel_renderer->get_app_cursor_pos() - pan_initial_cursor_pos;
 		Position pos = pan_delta + pan_initial_view_pos;
 		if (main_window->is_shift_pressed())
 		{
@@ -412,7 +316,7 @@ void MachineImpl::canvas_update_panning() const
 		canvas_position() = pos;
 		sync_canvas_transform_p();
 
-		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !canvas_renderer->cursor_in_clipping())
+		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel_renderer->cursor_in_clipping())
 			main_window->set_mouse_mode(MouseMode::VIRTUAL);
 	}
 }

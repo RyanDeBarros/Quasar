@@ -45,12 +45,7 @@ int main()
 	Machine.recent_image_files = {"1.png", "2.gif", "3.jpg"};
 
 	//Machine.import_file("ex/einstein.png");
-	Machine.canvas_renderer->set_app_scale(1.5f, 1.5f);
-
-	Machine.canvas_renderer->clipping_rect().window_size_to_bounds = [](int w, int h) -> glm::ivec4 { return {
-		w / 10, h / 10, 8 * w / 10, 8 * h / 10
-	}; };
-	Machine.canvas_renderer->clipping_rect().update_window_size(Machine.main_window->width(), Machine.main_window->height());
+	Machine.set_easel_scale(1.5f, 1.5f);
 
 	// NOTE only one window, so no need to call bind_gui() at each frame.
 	Machine.main_window->bind_gui();

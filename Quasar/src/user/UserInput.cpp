@@ -11,14 +11,14 @@ void attach_canvas_controls()
 	Machine.main_window->clbk_mouse_button.push_back([](const Callback::MouseButton& mb) {
 		if (mb.button == MouseButton::MIDDLE)
 		{
-			if (mb.action == IAction::PRESS && Machine.canvas_renderer->cursor_in_clipping())
+			if (mb.action == IAction::PRESS && Machine.cursor_in_easel())
 				Machine.canvas_begin_panning();
 			else if (mb.action == IAction::RELEASE)
 				Machine.canvas_end_panning();
 		}
 		else if (mb.button == MouseButton::LEFT)
 		{
-			if (mb.action == IAction::PRESS && Machine.canvas_renderer->cursor_in_clipping() && Machine.main_window->is_key_pressed(Key::SPACE))
+			if (mb.action == IAction::PRESS && Machine.cursor_in_easel() && Machine.main_window->is_key_pressed(Key::SPACE))
 				Machine.canvas_begin_panning();
 			else if (mb.action == IAction::RELEASE)
 				Machine.canvas_end_panning();
@@ -26,7 +26,7 @@ void attach_canvas_controls()
 		});
 	// Zooming
 	Machine.main_window->clbk_scroll.push_back([](const Callback::Scroll& s) {
-		if (Machine.canvas_renderer->clipping_rect().contains_point(Machine.main_window->cursor_pos()))
+		if (Machine.cursor_in_easel())
 			Machine.canvas_zoom_by(s.yoff);
 		});
 	// Reset camera
@@ -77,7 +77,7 @@ void attach_global_user_controls()
 		});
 	Machine.main_window->clbk_path_drop.push_back([](const Callback::PathDrop& pd) {
 		// LATER if file extension is qua use open(), else if image format that's supported use import(), else do nothing.
-		if (pd.num_paths >= 1 && Machine.canvas_renderer->cursor_in_clipping())
+		if (pd.num_paths >= 1 && Machine.cursor_in_easel())
 			Machine.import_file(pd.paths[0]);
 		});
 }

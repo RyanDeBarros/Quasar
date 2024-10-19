@@ -1,7 +1,10 @@
 #pragma once
 
+#include <string>
+
+#include "variety/Geometry.h"
 #include "variety/History.h"
-#include "pipeline/Renderer.h"
+#include "Platform.h"
 
 struct MachineImpl
 {
@@ -11,9 +14,7 @@ struct MachineImpl
 	~MachineImpl() = default;
 
 	ActionHistory history;
-
 	Window* main_window = nullptr;
-	Renderer* canvas_renderer = nullptr;
 
 	std::string current_filepath = "";
 	bool unsaved = true;
@@ -42,6 +43,12 @@ struct MachineImpl
 	void draw_gridlines();
 	void mark();
 	void unmark();
+
+	// Easel
+	bool cursor_in_easel() const;
+	void set_easel_scale(float sx, float sy) const;
+
+	// Canvas
 	Transform& canvas_transform() const;
 	Position& canvas_position() const { return canvas_transform().position; }
 	Rotation& canvas_rotation() const { return canvas_transform().rotation; }
@@ -50,6 +57,7 @@ struct MachineImpl
 	void sync_canvas_transform_p() const;
 	void sync_canvas_transform_rs() const;
 
+	// Menuing
 	bool new_file();
 	bool open_file();
 	bool import_file();
