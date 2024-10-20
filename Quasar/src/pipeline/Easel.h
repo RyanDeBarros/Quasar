@@ -77,8 +77,8 @@ struct Easel
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
 
-	bool minor_gridlines_visible = true;
-	bool major_gridlines_visible = true;
+	bool minor_gridlines_visible = false;
+	bool major_gridlines_visible = false;
 	
 	// View
 	glm::mat3 projection{};

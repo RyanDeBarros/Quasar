@@ -49,6 +49,27 @@ static void render_main_menu()
 			if (ImGui::MenuItem("Rotate 180")) { Machine.rotate_180(); }
 			ImGui::EndMenu();
 		}
+		if (ImGui::BeginMenu("View"))
+		{
+			if (ImGui::MenuItem("Reset canvas view", "0 (Row)")) { Machine.canvas_reset_camera(); }
+			if (Machine.minor_gridlines_visible())
+			{
+				if (ImGui::MenuItem("Hide minor gridlines")) { Machine.hide_minor_gridlines(); }
+			}
+			else
+			{
+				if (ImGui::MenuItem("Show minor gridlines")) { Machine.show_minor_gridlines(); }
+			}
+			if (Machine.major_gridlines_visible())
+			{
+				if (ImGui::MenuItem("Hide major gridlines")) { Machine.hide_major_gridlines(); }
+			}
+			else
+			{
+				if (ImGui::MenuItem("Show major gridlines")) { Machine.show_major_gridlines(); }
+			}
+			ImGui::EndMenu();
+		}
 		ImGui::EndMainMenuBar();
 	}
 }

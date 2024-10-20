@@ -56,7 +56,7 @@ struct MachineImpl
 	void sync_canvas_transform_p() const;
 	void sync_canvas_transform_rs() const;
 
-	// Menuing
+	// File menu
 	bool new_file();
 	bool open_file();
 	bool import_file();
@@ -78,12 +78,21 @@ struct MachineImpl
 	void canvas_begin_panning();
 	void canvas_end_panning();
 	void canvas_zoom_by(float zoom);
-	void canvas_reset_camera();
 	void canvas_update_panning() const;
 
+	// Edit menu
 	void flip_horizontally();
 	void flip_vertically();
 	void rotate_180();
+
+	// View menu
+	void canvas_reset_camera();
+	bool minor_gridlines_visible();
+	void show_minor_gridlines();
+	void hide_minor_gridlines();
+	bool major_gridlines_visible();
+	void show_major_gridlines();
+	void hide_major_gridlines();
 };
 
 inline MachineImpl Machine;

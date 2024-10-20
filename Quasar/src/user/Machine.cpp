@@ -43,8 +43,8 @@ void MachineImpl::init_renderer()
 	}; };
 	easel->clip.update_window_size(main_window->width(), main_window->height());
 
-	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 100_UC)));
-	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 150_UC)));
+	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 127_UC)));
+	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC)));
 	easel->major_gridlines.line_width_scale = 0.5f; // TODO test that major gridlines work with image sizes that are not divisible by 16.
 }
 
@@ -265,20 +265,6 @@ void MachineImpl::canvas_zoom_by(float z)
 	zoom = new_zoom;
 }
 
-void MachineImpl::canvas_reset_camera()
-{
-	zoom = zoom_initial;
-	canvas_transform() = {};
-	if (easel->canvas.image)
-	{
-		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->width, easel->get_app_height() / easel->canvas.image->height);
-		if (fit_scale < 1.0f)
-			canvas_scale() *= fit_scale;
-		zoom *= fit_scale;
-	}
-	sync_canvas_transform();
-}
-
 void MachineImpl::canvas_update_panning() const
 {
 	if (panning)
@@ -316,4 +302,48 @@ void MachineImpl::rotate_180()
 {
 	static Action a([this]() { easel->canvas.image->rotate_180(); mark(); }, [this]() { easel->canvas.image->rotate_180(); mark(); });
 	history.execute(a);
+}
+
+void MachineImpl::canvas_reset_camera()
+{
+	zoom = zoom_initial;
+	canvas_transform() = {};
+	if (easel->canvas.image)
+	{
+		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->width, easel->get_app_height() / easel->canvas.image->height);
+		if (fit_scale < 1.0f)
+			canvas_scale() *= fit_scale;
+		zoom *= fit_scale;
+	}
+	sync_canvas_transform();
+}
+
+bool MachineImpl::minor_gridlines_visible()
+{
+	return easel->minor_gridlines_visible;
+}
+
+void MachineImpl::show_minor_gridlines()
+{
+	easel->minor_gridlines_visible = true;
+}
+
+void MachineImpl::hide_minor_gridlines()
+{
+	easel->minor_gridlines_visible = false;
+}
+
+bool MachineImpl::major_gridlines_visible()
+{
+	return easel->major_gridlines_visible;
+}
+
+void MachineImpl::show_major_gridlines()
+{
+	easel->major_gridlines_visible = true;
+}
+
+void MachineImpl::hide_major_gridlines()
+{
+	easel->major_gridlines_visible = false;
 }
