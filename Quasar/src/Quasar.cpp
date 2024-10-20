@@ -40,9 +40,6 @@ int main()
 	Machine.recent_files = {"a.qua", "b.qua", "c.qua"};
 	Machine.recent_image_files = {"1.png", "2.gif", "3.jpg"};
 
-	//Machine.import_file("ex/einstein.png");
-	Machine.set_easel_scale(1.5f, 1.5f);
-
 	// NOTE only one window, so no need to call bind_gui() at each frame.
 	Machine.main_window->bind_gui();
 	for (;;)

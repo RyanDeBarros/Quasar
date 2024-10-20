@@ -109,49 +109,88 @@ Gridlines::~Gridlines()
 {
 	delete_vao_buffers(vao, vb);
 	delete[] varr;
+	delete[] arrays_firsts;
+	delete[] arrays_counts;
 }
 
-void Gridlines::sync_grid()
+void Gridlines::resize_grid(const Scale& scale)
 {
 	delete[] varr;
 	varr = new GLfloat[num_vertices() * shader.stride];
+	update_scale(scale);
+#pragma warning(push)
+#pragma warning(disable : 6386)
+	delete[] arrays_firsts;
+	delete[] arrays_counts;
+	arrays_firsts = new GLint[num_quads()];
+	arrays_counts = new GLsizei[num_quads()];
+	for (size_t i = 0; i < num_quads(); ++i)
+	{
+		arrays_firsts[i] = 4 * i;
+		arrays_counts[i] = 4;
+	}
+#pragma warning(pop)
+}
+
+void Gridlines::update_scale(const Scale& scale) const
+{
+	if (!varr) return;
 	GLfloat* setter = varr;
 	// TODO check if logic works for odd-sized images
 #pragma warning(push)
 #pragma warning(disable : 6386)
+	float lwx = 0.5f * line_width / scale.x;
+	float lwy = 0.5f * line_width / scale.y;
+	float x1 = -float(width / 2) - lwx;
+	float y1 = -float(height / 2) - lwy;
+	float x2 = -float(width / 2) + lwx;
+	float y2 = float(height / 2) + lwy;
 	for (unsigned short i = 0; i < num_cols(); ++i)
 	{
-		setter[0] = -float(width / 2) + i * line_spacing;
-		setter[1] =	-float(height / 2);
+		setter[0] = x1 + i * line_spacing;
+		setter[1] = y1;
 		setter += shader.stride;
-		setter[0] = -float(width / 2) + i * line_spacing;
-		setter[1] =  float(height / 2);
+		setter[0] = x2 + i * line_spacing;
+		setter[1] = y1;
+		setter += shader.stride;
+		setter[0] = x1 + i * line_spacing;
+		setter[1] = y2;
+		setter += shader.stride;
+		setter[0] = x2 + i * line_spacing;
+		setter[1] = y2;
 		setter += shader.stride;
 	}
+	x2 = float(width / 2) + lwx;
+	y2 = -float(height / 2) + lwy;
 	for (unsigned short i = 0; i < num_rows(); ++i)
 	{
-		setter[0] = -float(width / 2);
-		setter[1] = -float(height / 2) + i * line_spacing;
+		setter[0] = x1;
+		setter[1] = y1 + i * line_spacing;
 		setter += shader.stride;
-		setter[0] =  float(width / 2);
-		setter[1] = -float(height / 2) + i * line_spacing;
+		setter[0] = x1;
+		setter[1] = y2 + i * line_spacing;
+		setter += shader.stride;
+		setter[0] = x2;
+		setter[1] = y1 + i * line_spacing;
+		setter += shader.stride;
+		setter[0] = x2;
+		setter[1] = y2 + i * line_spacing;
 		setter += shader.stride;
 	}
 #pragma warning(pop)
 }
 
-void Gridlines::draw(float canvas_scale) const
+void Gridlines::draw() const
 {
 	bind_shader(shader.rid);
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glLineWidth(canvas_scale * line_width_scale));
-	QUASAR_GL(glDrawArrays(GL_LINES, 0, num_vertices()));
+	QUASAR_GL(glMultiDrawArrays(GL_TRIANGLE_STRIP, arrays_firsts, arrays_counts, num_quads()));
 }
 
 void Gridlines::set_color(ColorFrame color)
 {
 	bind_shader(shader.rid);
-	glUniform4fv(shader.uniform_locations["u_Color"], 1, &color.rgba_as_vec()[0]);
+	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_Color"], 1, &color.rgba_as_vec()[0]));
 	unbind_shader();
 }
 
@@ -159,7 +198,7 @@ void Gridlines::set_color(ColorFrame color)
 // No transfom, and no packed(). Maybe not even position/scale. Just vertex pos.
 Easel::Easel(Window* w)
 	: window(w), canvas(RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f), RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f)),
-	sprite_shader("res/sprite.vert", "res/sprite.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" })
+	sprite_shader("res/sprite.vert", "res/sprite.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
 {
 	gen_dynamic_vao(background_VAO, background_VB, background_IB, 4, sprite_shader.stride, 6, background.varr, Sprite::IARR, sprite_shader.attributes);
 	gen_dynamic_vao(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB, 4, sprite_shader.stride, 6, canvas.sprite.varr, Sprite::IARR, sprite_shader.attributes);
@@ -167,11 +206,6 @@ Easel::Easel(Window* w)
 
 	set_projection();
 	send_view();
-
-	clip.x = 0;
-	clip.y = 0;
-	clip.screen_w = window->width();
-	clip.screen_h = window->height();
 	clip.window_size_to_bounds = [](int width, int height) -> glm::ivec4 { return { 0, 0, width, height }; };
 
 	background.sync_texture_slot(BACKGROUND_TSLOT);
@@ -191,7 +225,7 @@ Easel::Easel(Window* w)
 		Machine.on_render();
 		});
 
-	major_gridlines.line_spacing = 16.0f;
+	major_gridlines.line_spacing = 16.0f; // TODO test that major gridlines work with image sizes that are not divisible by 16.
 }
 
 Easel::~Easel()
@@ -237,10 +271,10 @@ void Easel::render() const
 		}
 		// minor gridlines
 		if (minor_gridlines_visible)
-			minor_gridlines.draw(canvas.sprite.transform.scale.x);
+			minor_gridlines.draw();
 		// major gridlines
 		if (major_gridlines_visible)
-			major_gridlines.draw(canvas.sprite.transform.scale.x);
+			major_gridlines.draw();
 	}
 	// unbind
 	unbind_vao_buffers();
@@ -273,14 +307,14 @@ void Easel::subsend_canvas_sprite_vao() const
 void Easel::send_minor_gridlines_vao() const
 {
 	bind_vao_buffers(minor_gridlines.vao, minor_gridlines.vb);
-	glBufferData(GL_ARRAY_BUFFER, minor_gridlines.num_vertices() * minor_gridlines.shader.stride * sizeof(GLfloat), minor_gridlines.varr, GL_DYNAMIC_DRAW);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, minor_gridlines.num_vertices() * minor_gridlines.shader.stride * sizeof(GLfloat), minor_gridlines.varr, GL_DYNAMIC_DRAW));
 	unbind_vao_buffers();
 }
 
 void Easel::send_major_gridlines_vao() const
 {
 	bind_vao_buffers(major_gridlines.vao, major_gridlines.vb);
-	glBufferData(GL_ARRAY_BUFFER, major_gridlines.num_vertices() * major_gridlines.shader.stride * sizeof(GLfloat), major_gridlines.varr, GL_DYNAMIC_DRAW);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, major_gridlines.num_vertices() * major_gridlines.shader.stride * sizeof(GLfloat), major_gridlines.varr, GL_DYNAMIC_DRAW));
 	unbind_vao_buffers();
 }
 
@@ -296,6 +330,7 @@ void Easel::send_view()
 	unbind_shader();
 }
 
+// TODO buffer updates to gridlines when not they aren't visible
 void Easel::sync_canvas_transform()
 {
 	canvas.sync_transform();
@@ -304,9 +339,11 @@ void Easel::sync_canvas_transform()
 	bind_shader(minor_gridlines.shader.rid);
 	glUniform2fv(minor_gridlines.shader.uniform_locations["u_TransformP"], 1, &canvas.transform().packed_p()[0]);
 	glUniform4fv(minor_gridlines.shader.uniform_locations["u_TransformRS"], 1, &canvas.transform().packed_rs()[0]);
+	update_minor_gridlines();
 	bind_shader(major_gridlines.shader.rid);
 	glUniform2fv(major_gridlines.shader.uniform_locations["u_TransformP"], 1, &canvas.transform().packed_p()[0]);
 	glUniform4fv(major_gridlines.shader.uniform_locations["u_TransformRS"], 1, &canvas.transform().packed_rs()[0]);
+	update_major_gridlines();
 	unbind_shader();
 }
 
@@ -329,9 +366,36 @@ void Easel::sync_canvas_transform_rs()
 	subsend_checkerboard_vao();
 	bind_shader(minor_gridlines.shader.rid);
 	glUniform4fv(minor_gridlines.shader.uniform_locations["u_TransformRS"], 1, &canvas.transform().packed_rs()[0]);
+	update_minor_gridlines();
 	bind_shader(major_gridlines.shader.rid);
 	glUniform4fv(major_gridlines.shader.uniform_locations["u_TransformRS"], 1, &canvas.transform().packed_rs()[0]);
+	update_major_gridlines();
 	unbind_shader();
+}
+
+// TODO set line width in some way relative to zoom. As you zoom out, line width should approach 1.0 and at some limit drop straight to 0.0.
+void Easel::resize_minor_gridlines()
+{
+	minor_gridlines.resize_grid({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });
+	send_minor_gridlines_vao();
+}
+
+void Easel::update_minor_gridlines() const
+{
+	minor_gridlines.update_scale({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });
+	send_minor_gridlines_vao();
+}
+
+void Easel::resize_major_gridlines()
+{
+	major_gridlines.resize_grid({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });
+	send_major_gridlines_vao();
+}
+
+void Easel::update_major_gridlines() const
+{
+	major_gridlines.update_scale({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });
+	send_major_gridlines_vao();
 }
 
 void Easel::set_canvas_image(ImageHandle img)
@@ -340,11 +404,11 @@ void Easel::set_canvas_image(ImageHandle img)
 	canvas_visible = true;
 	minor_gridlines.width = canvas.image->width;
 	minor_gridlines.height = canvas.image->height;
-	minor_gridlines.sync_grid();
+	resize_minor_gridlines();
 	send_minor_gridlines_vao();
 	major_gridlines.width = canvas.image->width;
 	major_gridlines.height = canvas.image->height;
-	major_gridlines.sync_grid();
+	resize_major_gridlines();
 	send_major_gridlines_vao();
 }
 

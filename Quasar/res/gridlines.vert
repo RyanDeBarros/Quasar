@@ -1,6 +1,6 @@
 #version 440 core
 
-layout(location=0) in vec2 i_VertexPosition;
+layout(location = 0) in vec2 i_VertexPosition;
 
 uniform mat3 u_VP = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
 uniform vec2 u_TransformP = vec2(0.0, 0.0);

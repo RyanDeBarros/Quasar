@@ -43,9 +43,14 @@ void MachineImpl::init_renderer()
 	}; };
 	easel->clip.update_window_size(main_window->width(), main_window->height());
 
-	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 127_UC)));
+	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 255_UC)));
+	easel->minor_gridlines.line_width = 1.5f; // cannot be < 1.0
 	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC)));
-	easel->major_gridlines.line_width_scale = 0.5f; // TODO test that major gridlines work with image sizes that are not divisible by 16.
+	easel->major_gridlines.line_width = 3.0f; // cannot be < 1.0
+
+	set_easel_scale(1.5f, 1.5f); // TODO 1-dimensional scale
+	import_file("ex/einstein.png");
+	show_major_gridlines();
 }
 
 void MachineImpl::destroy()

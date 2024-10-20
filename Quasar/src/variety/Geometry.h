@@ -56,6 +56,8 @@ struct ClippingRect
 	GLint x, y;
 	GLsizei screen_w, screen_h;
 
+	ClippingRect(GLint x, GLint y, GLsizei screen_w, GLsizei screen_h) : x(x), y(y), screen_w(screen_w), screen_h(screen_h) {}
+
 	std::function<glm::ivec4(int, int)> window_size_to_bounds;
 
 	bool contains_point(const glm::vec2& point) const

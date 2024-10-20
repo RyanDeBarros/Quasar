@@ -41,19 +41,24 @@ struct Gridlines
 	Shader shader;
 	GLfloat* varr = nullptr;
 	float line_spacing = 1.0f;
-	float line_width_scale = 0.05f;
+	float line_width = 1.0f;
+
+	GLint* arrays_firsts = nullptr;
+	GLsizei* arrays_counts = nullptr;
 
 	Gridlines();
 	Gridlines(const Gridlines&) = delete;
 	Gridlines(Gridlines&&) noexcept = delete;
 	~Gridlines();
 
-	void sync_grid();
-	void draw(float canvas_scale) const;
+	void resize_grid(const Scale& scale);
+	void update_scale(const Scale& scale) const;
+	void draw() const;
 
 	unsigned short num_cols() const { return unsigned short(width / line_spacing) + 1_US; }
 	unsigned short num_rows() const { return unsigned short(height / line_spacing) + 1_US; }
-	GLsizei num_vertices() const { return (num_rows() + num_cols()) * 2; }
+	GLsizei num_quads() const { return num_rows() + num_cols(); }
+	GLsizei num_vertices() const { return num_quads() * 4; }
 
 	void set_color(ColorFrame color);
 };
@@ -86,7 +91,7 @@ struct Easel
 private:
 	Scale app_scale;
 public:
-	ClippingRect clip{};
+	ClippingRect clip;
 
 	Easel(Window* window);
 	Easel(const Easel&) = delete;
@@ -109,6 +114,11 @@ public:
 	void sync_canvas_transform();
 	void sync_canvas_transform_p();
 	void sync_canvas_transform_rs();
+	
+	void resize_minor_gridlines();
+	void update_minor_gridlines() const;
+	void resize_major_gridlines();
+	void update_major_gridlines() const;
 
 	void set_canvas_image(ImageHandle img);
 
