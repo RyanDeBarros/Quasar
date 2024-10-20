@@ -260,8 +260,9 @@ struct RGBA
 	unsigned char alpha = 255;
 
 	constexpr RGBA(RGB rgb = RGB(255_UC, 255_UC, 255_UC), unsigned char alpha = 255_UC) : rgb(rgb), alpha(alpha) {}
-	constexpr RGBA(RGB rgb, int alpha) : rgb(rgb), alpha(static_cast<unsigned char>(alpha)) {}
 	constexpr RGBA(RGB rgb, float alpha) : rgb(rgb), alpha(round_uchar(255 * alpha)) {}
+	constexpr RGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a) : rgb(r, g, b), alpha(a) {}
+	constexpr RGBA(float r, float g, float b, float a) : rgb(r, g, b), alpha(round_uchar(a)) {}
 };
 
 struct HSVA
@@ -270,8 +271,9 @@ struct HSVA
 	unsigned char alpha = 255;
 
 	constexpr HSVA(HSV hsv = HSV(0_US, 0_UC, 255_UC), unsigned char alpha = 255_UC) : hsv(hsv), alpha(alpha) {}
-	constexpr HSVA(HSV hsv, int alpha) : hsv(hsv), alpha(static_cast<unsigned char>(alpha)) {}
 	constexpr HSVA(HSV hsv, float alpha) : hsv(hsv), alpha(round_uchar(255 * alpha)) {}
+	constexpr HSVA(unsigned short h, unsigned char s, unsigned char v, unsigned char a) : hsv(h, s, v), alpha(a) {}
+	constexpr HSVA(float h, float s, float v, float a) : hsv(h, s, v), alpha(round_uchar(a)) {}
 };
 
 struct HSLA
@@ -282,6 +284,8 @@ struct HSLA
 	constexpr HSLA(HSL hsl = HSL(0_US, 0_UC, 255_UC), unsigned char alpha = 255) : hsl(hsl), alpha(alpha) {}
 	constexpr HSLA(HSL hsl, int alpha) : hsl(hsl), alpha(static_cast<unsigned char>(alpha)) {}
 	constexpr HSLA(HSL hsl, float alpha) : hsl(hsl), alpha(round_uchar(255 * alpha)) {}
+	constexpr HSLA(unsigned short h, unsigned char s, unsigned char l, unsigned char a) : hsl(h, s, l), alpha(a) {}
+	constexpr HSLA(float h, float s, float l, float a) : hsl(h, s, l), alpha(round_uchar(a)) {}
 };
 
 struct ColorFrame
@@ -305,6 +309,9 @@ public:
 	constexpr ColorFrame(RGB rgb, float alpha) : alpha(round_uchar(255 * alpha)) { set_rgb(rgb); }
 	constexpr ColorFrame(HSV hsv, float alpha) : alpha(round_uchar(255 * alpha)) { set_hsv(hsv); }
 	constexpr ColorFrame(HSL hsl, float alpha) : alpha(round_uchar(255 * alpha)) { set_hsl(hsl); }
+	constexpr ColorFrame(RGBA rgba) : alpha(rgba.alpha) { set_rgb(rgba.rgb); }
+	constexpr ColorFrame(HSVA hsva) : alpha(hsva.alpha) { set_hsv(hsva.hsv); }
+	constexpr ColorFrame(HSLA hsla) : alpha(hsla.alpha) { set_hsl(hsla.hsl); }
 
 	constexpr RGB rgb() const { return _rgb; }
 	constexpr HSV hsv() const { return _hsv; }

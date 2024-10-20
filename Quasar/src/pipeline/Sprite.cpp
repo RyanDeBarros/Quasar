@@ -1,6 +1,5 @@
 #include "Sprite.h"
 
-#include "Renderer.h"
 #include "variety/GLutility.h"
 
 Sprite::Sprite()
@@ -55,20 +54,20 @@ Sprite::~Sprite()
 	delete[] varr;
 }
 
-void Sprite::on_draw(Renderer* renderer) const
-{
-	renderer->prepare_for_sprite();
-	Image* img = Images.get(image);
-	if (img)
-	{
-		auto texture_slot = renderer->get_texture_slot(img->tid);
-		bind_texture(img->tid, texture_slot);
-		sync_texture_slot(texture_slot);
-	}
-	else
-		sync_texture_slot(-1.0f);
-	renderer->pool_over_varr(varr);
-}
+//void Sprite::on_draw(Renderer* renderer) const
+//{
+//	renderer->prepare_for_sprite();
+//	Image* img = Images.get(image);
+//	if (img)
+//	{
+//		auto texture_slot = renderer->get_texture_slot(img->tid);
+//		bind_texture(img->tid, texture_slot);
+//		sync_texture_slot(texture_slot);
+//	}
+//	else
+//		sync_texture_slot(-1.0f);
+//	renderer->pool_over_varr(varr);
+//}
 
 void Sprite::sync_transform() const
 {

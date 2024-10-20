@@ -80,3 +80,28 @@ inline void delete_vao_buffers(GLuint vao, GLuint vb)
 	QUASAR_GL(glDeleteBuffers(1, &vao));
 	QUASAR_GL(glDeleteBuffers(1, &vb));
 }
+
+inline static GLint _currently_bound_shader = 0;
+
+inline void update_currently_bound_shader()
+{
+	QUASAR_GL(glGetIntegerv(GL_CURRENT_PROGRAM, &_currently_bound_shader));
+}
+
+inline void bind_shader(GLint shader)
+{
+	if (shader != _currently_bound_shader)
+	{
+		QUASAR_GL(glUseProgram(shader));
+		_currently_bound_shader = shader;
+	}
+}
+
+inline void unbind_shader()
+{
+	if (_currently_bound_shader)
+	{
+		QUASAR_GL(glUseProgram(0));
+		_currently_bound_shader = 0;
+	}
+}

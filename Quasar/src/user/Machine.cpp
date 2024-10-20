@@ -5,6 +5,7 @@
 #include "UserInput.h"
 #include "GUI.h"
 #include "pipeline/Easel.h"
+#include "variety/GLutility.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
@@ -41,6 +42,10 @@ void MachineImpl::init_renderer()
 		w / 10, h / 10, 8 * w / 10, 8 * h / 10
 	}; };
 	easel->clip.update_window_size(main_window->width(), main_window->height());
+
+	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 100_UC)));
+	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 150_UC)));
+	easel->major_gridlines.line_width_scale = 0.5f; // TODO test that major gridlines work with image sizes that are not divisible by 16.
 }
 
 void MachineImpl::destroy()
@@ -62,6 +67,7 @@ void MachineImpl::on_render() const
 	easel->render();
 	// TODO draw gridlines
 	render_gui();
+	update_currently_bound_shader();
 	main_window->end_frame();
 }
 
@@ -84,17 +90,17 @@ Transform& MachineImpl::canvas_transform() const
 
 void MachineImpl::sync_canvas_transform() const
 {
-	easel->canvas.sync_transform();
+	easel->sync_canvas_transform();
 }
 
 void MachineImpl::sync_canvas_transform_p() const
 {
-	easel->canvas.sync_transform_p();
+	easel->sync_canvas_transform_p();
 }
 
 void MachineImpl::sync_canvas_transform_rs() const
 {
-	easel->canvas.sync_transform_rs();
+	easel->sync_canvas_transform_rs();
 }
 
 bool MachineImpl::cursor_in_easel() const
@@ -210,8 +216,7 @@ void MachineImpl::import_file(const char* filepath)
 {
 	// LATER register instead to ensure unique? or use secondary registry specifically for canvas_image
 	auto img = Images.construct(ImageConstructor(filepath));
-	easel->canvas.set_image(img);
-	easel->canvas_visible = true;
+	easel->set_canvas_image(img);
 	canvas_reset_camera();
 }
 

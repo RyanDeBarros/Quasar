@@ -1,4 +1,0 @@
-shader
-VERT:res/standard.vert
-FRAG:res/standard.frag
-ATTRIBS

@@ -6,7 +6,6 @@
 #include "Macros.h"
 #include "pipeline/Shader.h"
 #include "pipeline/Sprite.h"
-#include "pipeline/Renderer.h"
 #include "variety/Geometry.h"
 #include "user/Platform.h"
 #include "edit/Color.h"
@@ -22,7 +21,7 @@ static void glfw_error_callback(int error, const char* description)
 
 int main()
 {
-	QuasarSettings::load_settings();
+	//QuasarSettings::load_settings();
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);

@@ -171,7 +171,6 @@
     <ClCompile Include="src\variety\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />
     <ClCompile Include="src\Quasar.cpp" />
-    <ClCompile Include="src\pipeline\Renderer.cpp" />
     <ClCompile Include="src\pipeline\Shader.cpp" />
     <ClCompile Include="src\pipeline\Sprite.cpp" />
     <ClCompile Include="src\user\Platform.cpp" />
@@ -202,7 +201,6 @@
     <ClInclude Include="src\variety\IO.h" />
     <ClInclude Include="src\Macros.h" />
     <ClInclude Include="src\variety\Registry.h" />
-    <ClInclude Include="src\pipeline\Renderer.h" />
     <ClInclude Include="src\pipeline\Shader.h" />
     <ClInclude Include="src\pipeline\Sprite.h" />
     <ClInclude Include="src\user\UserInput.h" />

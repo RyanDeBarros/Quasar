@@ -34,6 +34,30 @@ struct Canvas
 	void sync_transform_rs();
 };
 
+struct Gridlines
+{
+	unsigned short width = 0, height = 0;
+	GLuint vao = 0, vb = 0;
+	Shader shader;
+	GLfloat* varr = nullptr;
+	float line_spacing = 1.0f;
+	float line_width_scale = 0.05f;
+
+	Gridlines();
+	Gridlines(const Gridlines&) = delete;
+	Gridlines(Gridlines&&) noexcept = delete;
+	~Gridlines();
+
+	void sync_grid();
+	void draw(float canvas_scale) const;
+
+	unsigned short num_cols() const { return unsigned short(width / line_spacing) + 1_US; }
+	unsigned short num_rows() const { return unsigned short(height / line_spacing) + 1_US; }
+	GLsizei num_vertices() const { return (num_rows() + num_cols()) * 2; }
+
+	void set_color(ColorFrame color);
+};
+
 struct Easel
 {
 	constexpr static float BACKGROUND_TSLOT = -1.0f;
@@ -49,6 +73,12 @@ struct Easel
 	Shader sprite_shader;
 
 	bool canvas_visible = false;
+	
+	Gridlines minor_gridlines;
+	Gridlines major_gridlines;
+
+	bool minor_gridlines_visible = true;
+	bool major_gridlines_visible = true;
 	
 	// View
 	glm::mat3 projection{};
@@ -68,7 +98,19 @@ public:
 
 	void render() const;
 
+	void subsend_background_vao() const;
+	void subsend_checkerboard_vao() const;
+	void subsend_canvas_sprite_vao() const;
+	void send_minor_gridlines_vao() const;
+	void send_major_gridlines_vao() const;
+
 	void send_view();
+	
+	void sync_canvas_transform();
+	void sync_canvas_transform_p();
+	void sync_canvas_transform_rs();
+
+	void set_canvas_image(ImageHandle img);
 
 	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
 	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;

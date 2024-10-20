@@ -30,7 +30,7 @@ struct Sprite
 	Sprite& operator=(Sprite&&) noexcept;
 	~Sprite();
 
-	void on_draw(class Renderer*) const;
+	//void on_draw(class Renderer*) const;
 	void sync_transform() const;
 	void sync_transform_p() const;
 	void sync_transform_rs() const;

@@ -1,6 +1,5 @@
 #include "UserInput.h"
 
-#include "pipeline/Renderer.h"
 #include "Machine.h"
 
 // TODO disable panning and zooming at same time
