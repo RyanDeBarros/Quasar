@@ -227,8 +227,6 @@ void Gridlines::set_color(ColorFrame color)
 	unbind_shader();
 }
 
-// LATER when combining vertex buffers, create specialized shader for easel drawing. In it, no rotation is necessary, and scale is 1-dimensional.
-// No transfom, and no packed(). Maybe not even position/scale. Just vertex pos.
 Easel::Easel(Window* w)
 	: window(w), canvas(RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f), RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f)),
 	sprite_shader("res/flatsprite.vert", "res/flatsprite.frag", { 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
@@ -243,9 +241,12 @@ Easel::Easel(Window* w)
 	canvas.checkerboard.create_image();
 	canvas.set_image(ImageHandle(0));
 
-	gen_dynamic_vao(background_VAO, background_VB, background_IB, 4, sprite_shader.stride, 6, background.varr, FlatSprite::IARR, sprite_shader.attributes);
-	gen_dynamic_vao(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB, 4, sprite_shader.stride, 6, canvas.sprite.varr, FlatSprite::IARR, sprite_shader.attributes);
-	gen_dynamic_vao(checkerboard_VAO, checkerboard_VB, checkerboard_IB, 4, sprite_shader.stride, 6, canvas.checkerboard.varr, FlatSprite::IARR, sprite_shader.attributes);
+	GLuint IARR[3*6]{
+		0, 1, 2, 2, 3, 0,
+		4, 5, 6, 6, 7, 4,
+		8, 9, 10, 10, 11, 8
+	};
+	gen_dynamic_vao(vao, vb, ib, size_t(3) * SharedFlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 
 	set_projection();
 	send_view();
@@ -273,9 +274,7 @@ Easel::Easel(Window* w)
 
 Easel::~Easel()
 {
-	delete_vao_buffers(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB);
-	delete_vao_buffers(checkerboard_VAO, checkerboard_VB, checkerboard_IB);
-	delete_vao_buffers(background_VAO, background_VB, background_IB);
+	delete_vao_buffers(vao, vb, ib);
 	delete[] varr;
 }
 
@@ -295,23 +294,27 @@ void Easel::render() const
 	bind_shader(sprite_shader.rid);
 	QUASAR_GL(glScissor(clip.x, clip.y, clip.screen_w, clip.screen_h));
 	// background
-	bind_vao_buffers(background_VAO, background_VB, background_IB);
-	QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+	bind_vao_buffers(vao, vb, ib);
 	// canvas
-	if (canvas_visible)
+	if (!canvas_visible)
+	{
+		QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+	}
+	else
 	{
 		// checkerboard
 		Image* img = Images.get(canvas.checkerboard.image); // LATER honestly, since there aren't many images/shaders, not much point in registries. This isn't a game engine.
 		bind_texture(img->tid, GLuint(CHECKERBOARD_TSLOT));
-		bind_vao_buffers(checkerboard_VAO, checkerboard_VB, checkerboard_IB);
-		QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
-		// canvas sprite
-		if (canvas.sprite.image)
+		if (!canvas.sprite.image)
 		{
+			QUASAR_GL(glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0));
+		}
+		else
+		{
+			// canvas sprite
 			img = Images.get(canvas.sprite.image);
 			bind_texture(img->tid, GLuint(CANVAS_SPRITE_TSLOT));
-			bind_vao_buffers(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB);
-			QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+			QUASAR_GL(glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0));
 		}
 		// minor gridlines
 		if (minor_gridlines_visible)
@@ -326,25 +329,24 @@ void Easel::render() const
 	QUASAR_GL(glScissor(0, 0, window->width(), window->height()));
 }
 
-// LATER When eventually combining vertex buffers, make use of second parameter in glBufferSubData to target the correct subbuffer.
 void Easel::subsend_background_vao() const
 {
-	bind_vao_buffers(background_VAO, background_VB, background_IB);
+	bind_vao_buffers(vao, vb, ib);
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), background.varr)); // TODO only buffersubdata when modifying varr, not every draw call.
 	unbind_vao_buffers();
 }
 
 void Easel::subsend_checkerboard_vao() const
 {
-	bind_vao_buffers(checkerboard_VAO, checkerboard_VB, checkerboard_IB);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), canvas.checkerboard.varr));
+	bind_vao_buffers(vao, vb, ib);
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE * sizeof(GLfloat), 4 * sprite_shader.stride * sizeof(GLfloat), canvas.checkerboard.varr));
 	unbind_vao_buffers();
 }
 
 void Easel::subsend_canvas_sprite_vao() const
 {
-	bind_vao_buffers(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), canvas.sprite.varr));
+	bind_vao_buffers(vao, vb, ib);
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 2 * SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE * sizeof(GLfloat), 4 * sprite_shader.stride * sizeof(GLfloat), canvas.sprite.varr));
 	unbind_vao_buffers();
 }
 

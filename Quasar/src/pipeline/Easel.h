@@ -71,10 +71,8 @@ struct Easel
 	Window* window;
 	GLfloat* varr = nullptr;
 	Canvas canvas;
-	GLuint canvas_sprite_VAO = 0, canvas_sprite_VB = 0, canvas_sprite_IB = 0;
-	GLuint checkerboard_VAO = 0, checkerboard_VB = 0, checkerboard_IB = 0; // TODO combine along with background into one VAO/VB/IB.
+	GLuint vao = 0, vb = 0, ib = 0;
 	SharedFlatSprite background;
-	GLuint background_VAO = 0, background_VB = 0, background_IB = 0;
 	Shader sprite_shader;
 
 	bool canvas_visible = false;
