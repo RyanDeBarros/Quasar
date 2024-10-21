@@ -136,7 +136,7 @@ void Gridlines::update_scale(const Scale& scale) const
 {
 	if (!varr) return;
 	GLfloat* setter = varr;
-	// TODO check if logic works for odd-sized images
+
 #pragma warning(push)
 #pragma warning(disable : 6386)
 	float lwx = 0.5f * line_width / scale.x;
@@ -271,7 +271,7 @@ Easel::Easel(Window* w)
 		Machine.on_render();
 		});
 
-	major_gridlines.line_spacing = 16.0f; // TODO test that major gridlines work with image sizes that are not divisible by 16.
+	major_gridlines.line_spacing = 16.0f;
 }
 
 Easel::~Easel()
@@ -283,12 +283,12 @@ Easel::~Easel()
 
 void Easel::set_projection(float width, float height)
 {
-	projection = glm::ortho<float>(0.0f, width * app_scale.x, 0.0f, height * app_scale.y);
+	projection = glm::ortho<float>(0.0f, width * app_scale, 0.0f, height * app_scale);
 }
 
 void Easel::set_projection()
 {
-	projection = glm::ortho<float>(0.0f, window->width() * app_scale.x, 0.0f, window->height() * app_scale.y);
+	projection = glm::ortho<float>(0.0f, window->width() * app_scale, 0.0f, window->height() * app_scale);
 }
 
 void Easel::render() const
@@ -366,7 +366,7 @@ void Easel::send_major_gridlines_vao() const
 
 void Easel::send_view()
 {
-	glm::mat3 cameraVP = projection * view.camera();
+	glm::mat3 cameraVP = vp_matrix();
 	bind_shader(sprite_shader.rid);
 	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 	bind_shader(minor_gridlines.shader.rid);
@@ -374,6 +374,11 @@ void Easel::send_view()
 	bind_shader(major_gridlines.shader.rid);
 	QUASAR_GL(glUniformMatrix3fv(major_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 	unbind_shader();
+}
+
+glm::mat3 Easel::vp_matrix() const
+{
+	return projection * Transform::camera(view_position, view_scale);
 }
 
 // TODO buffer updates to gridlines when not they aren't visible
@@ -465,7 +470,7 @@ glm::vec2 Easel::to_world_coordinates(const glm::vec2& screen_coordinates) const
 	ndc.y = 1.0f - 2.0f * (screen_coordinates.y / window->height());
 	ndc.z = 1.0f;
 
-	glm::mat3 invVP = glm::inverse(projection * view.camera());
+	glm::mat3 invVP = glm::inverse(vp_matrix());
 	glm::vec3 world_pos = invVP * ndc;
 
 	if (world_pos.z != 0.0f)
@@ -477,24 +482,22 @@ glm::vec2 Easel::to_world_coordinates(const glm::vec2& screen_coordinates) const
 glm::vec2 Easel::to_screen_coordinates(const glm::vec2& world_coordinates) const
 {
 	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
-	glm::mat3 VP = projection * view.camera();
-	glm::vec3 clip_space_pos = VP * world_pos;
+	glm::vec3 clip_space_pos = vp_matrix() * world_pos;
 	glm::vec2 screen_coo{};
 	screen_coo.x = (1.0f + clip_space_pos.x) * 0.5f * window->width();
 	screen_coo.y = (1.0f + clip_space_pos.y) * 0.5f * window->height();
 	return screen_coo;
 }
 
-void Easel::set_app_scale(float x, float y)
+void Easel::set_app_scale(float sc)
 {
-	app_scale.x = 1.0f / x;
-	app_scale.y = 1.0f / y;
+	app_scale = 1.0f / sc;
 	set_projection();
 	send_view();
 	// LATER scale cursor? Have different discrete cursor sizes (only works for custom cursors).
 }
 
-glm::vec2 Easel::get_app_scale() const
+float Easel::get_app_scale() const
 {
 	return 1.0f / app_scale;
 }

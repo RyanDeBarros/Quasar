@@ -87,9 +87,10 @@ struct Easel
 	
 	// View
 	glm::mat3 projection{};
-	Transform view;
+	glm::vec2 view_position{0.0f, 0.0f};
+	float view_scale = 1.0f;
 private:
-	Scale app_scale;
+	float app_scale;
 public:
 	ClippingRect clip;
 
@@ -110,6 +111,7 @@ public:
 	void send_major_gridlines_vao() const;
 
 	void send_view();
+	glm::mat3 vp_matrix() const;
 	
 	void sync_canvas_transform();
 	void sync_canvas_transform_p();
@@ -125,11 +127,11 @@ public:
 	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
 	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
 
-	void set_app_scale(float x = 1.0f, float y = 1.0f);
-	glm::vec2 get_app_scale() const;
+	void set_app_scale(float sc = 1.0f);
+	float get_app_scale() const;
 	
 	bool cursor_in_clipping() const { return clip.contains_point(window->cursor_pos()); }
-	float get_app_width() const { return clip.screen_w * app_scale.x; }
-	float get_app_height() const { return clip.screen_h * app_scale.y; }
+	float get_app_width() const { return clip.screen_w * app_scale; }
+	float get_app_height() const { return clip.screen_h * app_scale; }
 	glm::vec2 get_app_cursor_pos() const { return window->cursor_pos() * app_scale; }
 };

@@ -35,6 +35,7 @@ struct Transform
 	Scale scale;
 
 	glm::mat3 camera() const { return inverse().matrix(); }
+	static glm::mat3 camera(glm::vec2 position, float scale) { return matrix(-position, 1.0f / scale); }
 
 	Transform inverse() const
 	{
@@ -45,6 +46,10 @@ struct Transform
 	{
 		float cos = glm::cos(rotation), sin = glm::sin(rotation);
 		return glm::mat3({ scale.x * cos, scale.x * sin, 0.0f }, { -scale.y * sin, scale.y * cos, 0.0f }, { position.x, position.y, 1.0f });
+	}
+	static glm::mat3 matrix(glm::vec2 position, float scale)
+	{
+		return glm::mat3({ scale, 0.0f, 0.0f }, { 0.0f, scale, 0.0f }, { position.x, position.y, 1.0f });
 	}
 
 	glm::vec2 packed_p() const { return position; }

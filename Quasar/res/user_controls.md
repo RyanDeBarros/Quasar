@@ -30,7 +30,7 @@
 
 * Scroll with mouse wheel or trackpad.
 * Scroll slower by holding SHIFT.
-* Scroll relative to center of canvas (not mouse cursor) by holding CTRL.
+* Scroll relative to center of canvas (not mouse cursor) by holding ALT.
 
 ## Fullscreen/Maximize
 

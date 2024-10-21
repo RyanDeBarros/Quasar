@@ -45,7 +45,7 @@ struct MachineImpl
 
 	// Easel
 	bool cursor_in_easel() const;
-	void set_easel_scale(float sx, float sy) const;
+	void set_easel_app_scale(float sc) const;
 
 	// Canvas
 	Transform& canvas_transform() const;

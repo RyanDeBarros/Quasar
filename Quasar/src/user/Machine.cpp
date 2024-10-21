@@ -48,7 +48,7 @@ void MachineImpl::init_renderer()
 	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC)));
 	easel->major_gridlines.line_width = 3.0f; // cannot be < 1.0
 
-	set_easel_scale(1.5f, 1.5f); // TODO 1-dimensional app scale
+	set_easel_app_scale(1.5f);
 	//import_file("ex/oddtux.png");
 	//show_major_gridlines();
 }
@@ -70,7 +70,6 @@ void MachineImpl::on_render() const
 	canvas_update_panning();
 	main_window->new_frame();
 	easel->render();
-	// TODO draw gridlines
 	render_gui();
 	update_currently_bound_shader();
 	main_window->end_frame();
@@ -113,9 +112,9 @@ bool MachineImpl::cursor_in_easel() const
 	return easel->cursor_in_clipping();
 }
 
-void MachineImpl::set_easel_scale(float sx, float sy) const
+void MachineImpl::set_easel_app_scale(float sc) const
 {
-	easel->set_app_scale(sx, sy);
+	easel->set_app_scale(sc);
 }
 
 bool MachineImpl::new_file()
@@ -256,7 +255,7 @@ void MachineImpl::canvas_end_panning()
 void MachineImpl::canvas_zoom_by(float z)
 {
 	Position cursor_world;
-	if (!main_window->is_ctrl_pressed())
+	if (!main_window->is_alt_pressed())
 		cursor_world = easel->to_world_coordinates(main_window->cursor_pos());
 
 	float factor = main_window->is_shift_pressed() ? zoom_factor_shift : zoom_factor;
