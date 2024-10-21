@@ -141,42 +141,78 @@ void Gridlines::update_scale(const Scale& scale) const
 #pragma warning(disable : 6386)
 	float lwx = 0.5f * line_width / scale.x;
 	float lwy = 0.5f * line_width / scale.y;
-	float x1 = -float(width / 2) - lwx;
-	float y1 = -float(height / 2) - lwy;
-	float x2 = -float(width / 2) + lwx;
-	float y2 = float(height / 2) + lwy;
-	for (unsigned short i = 0; i < num_cols(); ++i)
+	float x1 = -width * 0.5f - lwx;
+	float y1 = -height * 0.5f - lwy;
+	float x2 = -width * 0.5f + lwx;
+	float y2 = height * 0.5f + lwy;
+	
+	for (unsigned short i = 0; i < num_cols() - 1; ++i)
 	{
-		setter[0] = x1 + i * line_spacing;
+		float delta = i * line_spacing;
+		setter[0] = x1 + delta;
 		setter[1] = y1;
 		setter += shader.stride;
-		setter[0] = x2 + i * line_spacing;
+		setter[0] = x2 + delta;
 		setter[1] = y1;
 		setter += shader.stride;
-		setter[0] = x1 + i * line_spacing;
+		setter[0] = x1 + delta;
 		setter[1] = y2;
 		setter += shader.stride;
-		setter[0] = x2 + i * line_spacing;
+		setter[0] = x2 + delta;
 		setter[1] = y2;
 		setter += shader.stride;
 	}
-	x2 = float(width / 2) + lwx;
-	y2 = -float(height / 2) + lwy;
-	for (unsigned short i = 0; i < num_rows(); ++i)
+
+	x1 = width * 0.5f - lwx;
+	x2 = width * 0.5f + lwx;
+	setter[0] = x1;
+	setter[1] = y1;
+	setter += shader.stride;
+	setter[0] = x2;
+	setter[1] = y1;
+	setter += shader.stride;
+	setter[0] = x1;
+	setter[1] = y2;
+	setter += shader.stride;
+	setter[0] = x2;
+	setter[1] = y2;
+	setter += shader.stride;
+
+	x1 = -width * 0.5f - lwx;
+	y1 = -height * 0.5f - lwy;
+	x2 = width * 0.5f + lwx;
+	y2 = -height * 0.5f + lwy;
+	for (unsigned short i = 0; i < num_rows() - 1; ++i)
 	{
+		float delta = i * line_spacing;
 		setter[0] = x1;
-		setter[1] = y1 + i * line_spacing;
+		setter[1] = y1 + delta;
 		setter += shader.stride;
 		setter[0] = x1;
-		setter[1] = y2 + i * line_spacing;
+		setter[1] = y2 + delta;
 		setter += shader.stride;
 		setter[0] = x2;
-		setter[1] = y1 + i * line_spacing;
+		setter[1] = y1 + delta;
 		setter += shader.stride;
 		setter[0] = x2;
-		setter[1] = y2 + i * line_spacing;
+		setter[1] = y2 + delta;
 		setter += shader.stride;
 	}
+
+	y1 = height * 0.5f - lwy;
+	y2 = height * 0.5f + lwy;
+	setter[0] = x1;
+	setter[1] = y1;
+	setter += shader.stride;
+	setter[0] = x1;
+	setter[1] = y2;
+	setter += shader.stride;
+	setter[0] = x2;
+	setter[1] = y1;
+	setter += shader.stride;
+	setter[0] = x2;
+	setter[1] = y2;
+	setter += shader.stride;
 #pragma warning(pop)
 }
 
@@ -185,6 +221,16 @@ void Gridlines::draw() const
 	bind_shader(shader.rid);
 	bind_vao_buffers(vao, vb);
 	QUASAR_GL(glMultiDrawArrays(GL_TRIANGLE_STRIP, arrays_firsts, arrays_counts, num_quads()));
+}
+
+unsigned short Gridlines::num_cols() const
+{
+	return unsigned short(std::ceil(width / line_spacing)) + 1_US;
+}
+
+unsigned short Gridlines::num_rows() const
+{
+	return unsigned short(std::ceil(height / line_spacing)) + 1_US;
 }
 
 void Gridlines::set_color(ColorFrame color)

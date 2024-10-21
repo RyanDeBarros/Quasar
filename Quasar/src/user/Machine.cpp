@@ -48,9 +48,9 @@ void MachineImpl::init_renderer()
 	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC)));
 	easel->major_gridlines.line_width = 3.0f; // cannot be < 1.0
 
-	set_easel_scale(1.5f, 1.5f); // TODO 1-dimensional scale
-	import_file("ex/einstein.png");
-	show_major_gridlines();
+	set_easel_scale(1.5f, 1.5f); // TODO 1-dimensional app scale
+	//import_file("ex/oddtux.png");
+	//show_major_gridlines();
 }
 
 void MachineImpl::destroy()

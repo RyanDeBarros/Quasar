@@ -38,38 +38,64 @@ void attach_canvas_controls()
 void attach_global_user_controls()
 {
 	Machine.main_window->clbk_key.push_back([](const Callback::Key& k) {
-		if (Machine.main_window->is_ctrl_pressed() && k.action == IAction::PRESS)
+		if (k.action == IAction::PRESS)
 		{
 			switch (k.key)
 			{
 			case Key::Z:
-				if (Machine.main_window->is_shift_pressed())
-					Machine.redo();
-				else
-					Machine.undo();
+				if (Machine.main_window->is_ctrl_pressed())
+				{
+					if (Machine.main_window->is_shift_pressed())
+						Machine.redo();
+					else
+						Machine.undo();
+				}
 				break;
 			case Key::N:
-				Machine.new_file();
+				if (Machine.main_window->is_ctrl_pressed())
+					Machine.new_file();
 				break;
 			case Key::O:
-				Machine.open_file();
+				if (Machine.main_window->is_ctrl_pressed())
+					Machine.open_file();
 				break;
 			case Key::I:
-				Machine.import_file();
+				if (Machine.main_window->is_ctrl_pressed())
+					Machine.import_file();
 				break;
 			case Key::E:
-				Machine.export_file();
+				if (Machine.main_window->is_ctrl_pressed())
+					Machine.export_file();
 				break;
 			case Key::S:
+				if (Machine.main_window->is_ctrl_pressed())
+				{
+					if (Machine.main_window->is_shift_pressed())
+					{
+						if (!Machine.main_window->is_alt_pressed())
+							Machine.save_file_as();
+					}
+					else if (Machine.main_window->is_alt_pressed())
+						Machine.save_file_copy();
+					else
+						Machine.save_file();
+				}
+				break;
+			case Key::G:
 				if (Machine.main_window->is_shift_pressed())
 				{
-					if (!Machine.main_window->is_alt_pressed())
-						Machine.save_file_as();
+					if (Machine.major_gridlines_visible())
+						Machine.hide_major_gridlines();
+					else
+						Machine.show_major_gridlines();
 				}
-				else if (Machine.main_window->is_alt_pressed())
-					Machine.save_file_copy();
 				else
-					Machine.save_file();
+				{
+					if (Machine.minor_gridlines_visible())
+						Machine.hide_minor_gridlines();
+					else
+						Machine.show_minor_gridlines();
+				}
 				break;
 			}
 		}

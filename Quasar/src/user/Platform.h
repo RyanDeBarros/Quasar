@@ -32,6 +32,7 @@ enum class MouseMode
 enum class Key
 {
 	E = GLFW_KEY_E,
+	G = GLFW_KEY_G,
 	I = GLFW_KEY_I,
 	N = GLFW_KEY_N,
 	O = GLFW_KEY_O,

@@ -55,8 +55,8 @@ struct Gridlines
 	void update_scale(const Scale& scale) const;
 	void draw() const;
 
-	unsigned short num_cols() const { return unsigned short(width / line_spacing) + 1_US; }
-	unsigned short num_rows() const { return unsigned short(height / line_spacing) + 1_US; }
+	unsigned short num_cols() const;
+	unsigned short num_rows() const;
 	GLsizei num_quads() const { return num_rows() + num_cols(); }
 	GLsizei num_vertices() const { return num_quads() * 4; }
 

@@ -10,14 +10,15 @@ static GLuint compile_shader(GLenum type, const char* shader)
 	QUASAR_GL(glShaderSource(id, 1, &shader, nullptr));
 	QUASAR_GL(glCompileShader(id));
 
-	int result;
+	GLint result;
 	QUASAR_GL(glGetShaderiv(id, GL_COMPILE_STATUS, &result));
 	if (result == GL_FALSE)
 	{
-		int length;
+		GLint length;
 		QUASAR_GL(glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length));
 		GLchar* message = new GLchar[length];
 		QUASAR_GL(glGetShaderInfoLog(id, length, &length, message));
+		std::cerr << "Shader compilation failed: " << message << std::endl;
 		delete[] message;
 		QUASAR_GL(glDeleteShader(id));
 		return 0;
@@ -37,27 +38,40 @@ static GLuint load_program(const char* vert, const char* frag)
 	QUASAR_GL(GLuint shader = glCreateProgram());
 	GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader.c_str());
 	GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader.c_str());
-	if (vs)
+	if (vs && fs)
 	{
-		if (fs)
-		{
-			QUASAR_GL(glAttachShader(shader, vs));
-			QUASAR_GL(glAttachShader(shader, fs));
-			QUASAR_GL(glLinkProgram(shader));
-			QUASAR_GL(glValidateProgram(shader));
+		QUASAR_GL(glAttachShader(shader, vs));
+		QUASAR_GL(glAttachShader(shader, fs));
+		QUASAR_GL(glLinkProgram(shader));
+		QUASAR_GL(glValidateProgram(shader));
 
-			QUASAR_GL(glDeleteShader(vs));
-			QUASAR_GL(glDeleteShader(fs));
-		}
-		else
+		QUASAR_GL(glDeleteShader(vs));
+		QUASAR_GL(glDeleteShader(fs));
+
+		GLint result;
+		QUASAR_GL(glGetProgramiv(shader, GL_LINK_STATUS, &result));
+		if (result == GL_FALSE)
 		{
-			QUASAR_GL(glDeleteProgram(shader));
-			QUASAR_GL(glDeleteShader(vs));
+			GLint length;
+			QUASAR_GL(glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &length));
+			GLchar* message = new GLchar[length];
+			QUASAR_GL(glGetProgramInfoLog(shader, length, &length, message));
+			std::cerr << "Shader linking failed: " << message << std::endl;
+			delete[] message;
+			QUASAR_GL(glDeleteShader(shader));
 			shader = 0;
 		}
 	}
 	else
 	{
+		if (!vs)
+		{
+			QUASAR_GL(glDeleteShader(vs));
+		}
+		if (!fs)
+		{
+			QUASAR_GL(glDeleteShader(fs));
+		}
 		QUASAR_GL(glDeleteProgram(shader));
 		shader = 0;
 	}

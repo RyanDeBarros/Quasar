@@ -1,5 +1,7 @@
 # Menu
 
+## File
+
 * Create new Quasar (.qua) file with CTRL+N.
 * Open Quasar (.qua) file with CTRL+O.
 * Import image into workstation with CTRL+I.
@@ -8,8 +10,15 @@
 * Save as new file with CTRL+SHIFT+S.
 * Save copy of file with CTRL+ALT+S.
 
+## Edit
+
 * Undo last change with CTRL+Z.
 * Redo last undo with CTRL+SHIFT+Z.
+
+## View
+
+* Toggle minor gridlines with G.
+* Toggle major gridlines with SHIFT+G.
 
 # Navigation
 
