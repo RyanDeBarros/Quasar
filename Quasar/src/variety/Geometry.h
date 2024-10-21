@@ -35,7 +35,6 @@ struct Transform
 	Scale scale;
 
 	glm::mat3 camera() const { return inverse().matrix(); }
-	static glm::mat3 camera(glm::vec2 position, float scale) { return matrix(-position, 1.0f / scale); }
 
 	Transform inverse() const
 	{
@@ -47,13 +46,29 @@ struct Transform
 		float cos = glm::cos(rotation), sin = glm::sin(rotation);
 		return glm::mat3({ scale.x * cos, scale.x * sin, 0.0f }, { -scale.y * sin, scale.y * cos, 0.0f }, { position.x, position.y, 1.0f });
 	}
-	static glm::mat3 matrix(glm::vec2 position, float scale)
-	{
-		return glm::mat3({ scale, 0.0f, 0.0f }, { 0.0f, scale, 0.0f }, { position.x, position.y, 1.0f });
-	}
 
 	glm::vec2 packed_p() const { return position; }
 	glm::vec4 packed_rs() const { return { scale.x * glm::cos(rotation), scale.x * glm::sin(rotation), -scale.y * glm::sin(rotation), scale.y * glm::cos(rotation) }; }
+};
+
+struct FlatTransform
+{
+	Position position;
+	Scale scale;
+
+	glm::mat3 camera() const { return inverse().matrix(); }
+	
+	FlatTransform inverse() const
+	{
+		return { -position, 1.0f / scale };
+	}
+
+	glm::mat3 matrix() const
+	{
+		return glm::mat3({ scale.x, 0.0f, 0.0f }, { 0.0f, scale.y, 0.0f }, { position.x, position.y, 1.0f });
+	}
+
+	glm::vec4 packed() const { return { position.x, position.y, scale.x, scale.y }; }
 };
 
 struct ClippingRect

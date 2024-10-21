@@ -87,7 +87,7 @@ void MachineImpl::unmark()
 	// LATER remove (*) from title if it exists
 }
 
-Transform& MachineImpl::canvas_transform() const
+FlatTransform& MachineImpl::canvas_transform() const
 {
 	return easel->canvas.transform();
 }
@@ -95,16 +95,6 @@ Transform& MachineImpl::canvas_transform() const
 void MachineImpl::sync_canvas_transform() const
 {
 	easel->sync_canvas_transform();
-}
-
-void MachineImpl::sync_canvas_transform_p() const
-{
-	easel->sync_canvas_transform_p();
-}
-
-void MachineImpl::sync_canvas_transform_rs() const
-{
-	easel->sync_canvas_transform_rs();
 }
 
 bool MachineImpl::cursor_in_easel() const
@@ -283,7 +273,7 @@ void MachineImpl::canvas_update_panning() const
 				pos.y = pan_initial_view_pos.y;
 		}
 		canvas_position() = pos;
-		sync_canvas_transform_p();
+		sync_canvas_transform();
 
 		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel->cursor_in_clipping())
 			main_window->set_mouse_mode(MouseMode::VIRTUAL);
@@ -318,6 +308,7 @@ void MachineImpl::canvas_reset_camera()
 		if (fit_scale < 1.0f)
 			canvas_scale() *= fit_scale;
 		zoom *= fit_scale;
+		// LATER also scale up if image is too small
 	}
 	sync_canvas_transform();
 }

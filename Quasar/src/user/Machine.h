@@ -48,13 +48,10 @@ struct MachineImpl
 	void set_easel_app_scale(float sc) const;
 
 	// Canvas
-	Transform& canvas_transform() const;
+	FlatTransform& canvas_transform() const;
 	Position& canvas_position() const { return canvas_transform().position; }
-	Rotation& canvas_rotation() const { return canvas_transform().rotation; }
 	Scale& canvas_scale() const { return canvas_transform().scale; }
 	void sync_canvas_transform() const;
-	void sync_canvas_transform_p() const;
-	void sync_canvas_transform_rs() const;
 
 	// File menu
 	bool new_file();

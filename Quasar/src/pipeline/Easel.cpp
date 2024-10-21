@@ -6,6 +6,10 @@
 Checkerboard::Checkerboard(RGBA c1, RGBA c2)
 	: c1(c1), c2(c2)
 {
+}
+
+void Checkerboard::create_image()
+{
 	Image img;
 	img.width = 2;
 	img.height = 2;
@@ -56,7 +60,6 @@ void Checkerboard::set_uv_size(float width, float height) const
 Canvas::Canvas(RGBA c1, RGBA c2)
 	: checkerboard(c1, c2)
 {
-	set_image(ImageHandle(0));
 }
 
 void Canvas::set_image(ImageHandle img)
@@ -83,24 +86,8 @@ void Canvas::sync_transform()
 	checkerboard.sync_transform();
 }
 
-void Canvas::sync_transform_p()
-{
-	sprite.sync_transform_p();
-	checkerboard.transform.position = sprite.transform.position;
-	checkerboard.sync_transform_p();
-}
-
-void Canvas::sync_transform_rs()
-{
-	sprite.sync_transform_rs();
-	checkerboard.transform.rotation = sprite.transform.rotation;
-	if (image)
-		checkerboard.transform.scale = sprite.transform.scale * glm::vec2{ image->width * 0.5f, image->height * 0.5f };
-	checkerboard.sync_transform_rs();
-}
-
 Gridlines::Gridlines()
-	: shader("res/gridlines.vert", "res/gridlines.frag", { 2 }, { "u_VP", "u_TransformP", "u_TransformRS", "u_Color" })
+	: shader("res/gridlines.vert", "res/gridlines.frag", { 2 }, { "u_VP", "u_FlatTransform", "u_Color" })
 {
 	gen_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
 }
@@ -124,7 +111,7 @@ void Gridlines::resize_grid(const Scale& scale)
 	delete[] arrays_counts;
 	arrays_firsts = new GLint[num_quads()];
 	arrays_counts = new GLsizei[num_quads()];
-	for (size_t i = 0; i < num_quads(); ++i)
+	for (unsigned short i = 0; i < num_quads(); ++i)
 	{
 		arrays_firsts[i] = 4 * i;
 		arrays_counts[i] = 4;
@@ -244,11 +231,21 @@ void Gridlines::set_color(ColorFrame color)
 // No transfom, and no packed(). Maybe not even position/scale. Just vertex pos.
 Easel::Easel(Window* w)
 	: window(w), canvas(RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f), RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f)),
-	sprite_shader("res/sprite.vert", "res/sprite.frag", { 1, 2, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
+	sprite_shader("res/flatsprite.vert", "res/flatsprite.frag", { 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
 {
-	gen_dynamic_vao(background_VAO, background_VB, background_IB, 4, sprite_shader.stride, 6, background.varr, Sprite::IARR, sprite_shader.attributes);
-	gen_dynamic_vao(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB, 4, sprite_shader.stride, 6, canvas.sprite.varr, Sprite::IARR, sprite_shader.attributes);
-	gen_dynamic_vao(checkerboard_VAO, checkerboard_VB, checkerboard_IB, 4, sprite_shader.stride, 6, canvas.checkerboard.varr, Sprite::IARR, sprite_shader.attributes);
+	varr = new GLfloat[3 * SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE];
+	background.varr = varr;
+	canvas.checkerboard.varr = background.varr + SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE;
+	canvas.sprite.varr = canvas.checkerboard.varr + SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE;
+	background.initialize_varr();
+	canvas.checkerboard.initialize_varr();
+	canvas.sprite.initialize_varr();
+	canvas.checkerboard.create_image();
+	canvas.set_image(ImageHandle(0));
+
+	gen_dynamic_vao(background_VAO, background_VB, background_IB, 4, sprite_shader.stride, 6, background.varr, FlatSprite::IARR, sprite_shader.attributes);
+	gen_dynamic_vao(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB, 4, sprite_shader.stride, 6, canvas.sprite.varr, FlatSprite::IARR, sprite_shader.attributes);
+	gen_dynamic_vao(checkerboard_VAO, checkerboard_VB, checkerboard_IB, 4, sprite_shader.stride, 6, canvas.checkerboard.varr, FlatSprite::IARR, sprite_shader.attributes);
 
 	set_projection();
 	send_view();
@@ -261,7 +258,7 @@ Easel::Easel(Window* w)
 	background.set_image(ImageHandle(0), 1, 1);
 	background.set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
 	background.transform.scale = { float(window->width()), float(window->height()) };
-	background.sync_transform_rs();
+	background.sync_transform();
 	subsend_background_vao();
 	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
@@ -279,6 +276,7 @@ Easel::~Easel()
 	delete_vao_buffers(canvas_sprite_VAO, canvas_sprite_VB, canvas_sprite_IB);
 	delete_vao_buffers(checkerboard_VAO, checkerboard_VB, checkerboard_IB);
 	delete_vao_buffers(background_VAO, background_VB, background_IB);
+	delete[] varr;
 }
 
 void Easel::set_projection(float width, float height)
@@ -378,7 +376,7 @@ void Easel::send_view()
 
 glm::mat3 Easel::vp_matrix() const
 {
-	return projection * Transform::camera(view_position, view_scale);
+	return projection * view.camera();
 }
 
 // TODO buffer updates to gridlines when not they aren't visible
@@ -388,38 +386,10 @@ void Easel::sync_canvas_transform()
 	subsend_canvas_sprite_vao();
 	subsend_checkerboard_vao();
 	bind_shader(minor_gridlines.shader.rid);
-	glUniform2fv(minor_gridlines.shader.uniform_locations["u_TransformP"], 1, &canvas.transform().packed_p()[0]);
-	glUniform4fv(minor_gridlines.shader.uniform_locations["u_TransformRS"], 1, &canvas.transform().packed_rs()[0]);
+	QUASAR_GL(glUniform4fv(minor_gridlines.shader.uniform_locations["u_FlatTransform"], 1, &canvas.transform().packed()[0]));
 	update_minor_gridlines();
 	bind_shader(major_gridlines.shader.rid);
-	glUniform2fv(major_gridlines.shader.uniform_locations["u_TransformP"], 1, &canvas.transform().packed_p()[0]);
-	glUniform4fv(major_gridlines.shader.uniform_locations["u_TransformRS"], 1, &canvas.transform().packed_rs()[0]);
-	update_major_gridlines();
-	unbind_shader();
-}
-
-void Easel::sync_canvas_transform_p()
-{
-	canvas.sync_transform_p();
-	subsend_canvas_sprite_vao();
-	subsend_checkerboard_vao();
-	bind_shader(minor_gridlines.shader.rid);
-	glUniform2fv(minor_gridlines.shader.uniform_locations["u_TransformP"], 1, &canvas.transform().packed_p()[0]);
-	bind_shader(major_gridlines.shader.rid);
-	glUniform2fv(major_gridlines.shader.uniform_locations["u_TransformP"], 1, &canvas.transform().packed_p()[0]);
-	unbind_shader();
-}
-
-void Easel::sync_canvas_transform_rs()
-{
-	canvas.sync_transform_rs();
-	subsend_canvas_sprite_vao();
-	subsend_checkerboard_vao();
-	bind_shader(minor_gridlines.shader.rid);
-	glUniform4fv(minor_gridlines.shader.uniform_locations["u_TransformRS"], 1, &canvas.transform().packed_rs()[0]);
-	update_minor_gridlines();
-	bind_shader(major_gridlines.shader.rid);
-	glUniform4fv(major_gridlines.shader.uniform_locations["u_TransformRS"], 1, &canvas.transform().packed_rs()[0]);
+	QUASAR_GL(glUniform4fv(major_gridlines.shader.uniform_locations["u_FlatTransform"], 1, &canvas.transform().packed()[0]));
 	update_major_gridlines();
 	unbind_shader();
 }

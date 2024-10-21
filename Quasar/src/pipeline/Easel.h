@@ -1,13 +1,15 @@
 #pragma once
 
 #include "user/Platform.h"
-#include "Sprite.h"
+#include "FlatSprite.h"
 
-struct Checkerboard : public Sprite // TODO migrate out of Sprite
+struct Checkerboard : public SharedFlatSprite
 {
 	RGBA c1, c2;
 
 	Checkerboard(RGBA c1, RGBA c2);
+
+	void create_image();
 	void sync_colors() const;
 	void sync_texture() const;
 	void set_uv_size(float width, float height) const;
@@ -16,7 +18,7 @@ struct Checkerboard : public Sprite // TODO migrate out of Sprite
 struct Canvas
 {
 	Image* image = nullptr;
-	Sprite sprite;
+	SharedFlatSprite sprite;
 	Checkerboard checkerboard;
 	float checker_size = 16.0f; // LATER settings
 
@@ -24,14 +26,11 @@ struct Canvas
 
 	void set_image(ImageHandle img);
 
-	Transform& transform() { return sprite.transform; }
+	FlatTransform& transform() { return sprite.transform; }
 	Position& position() { return sprite.transform.position; }
-	Rotation& rotation() { return sprite.transform.rotation; }
 	Scale& scale() { return sprite.transform.scale; }
 
 	void sync_transform();
-	void sync_transform_p();
-	void sync_transform_rs();
 };
 
 struct Gridlines
@@ -70,10 +69,11 @@ struct Easel
 	constexpr static float CANVAS_SPRITE_TSLOT = 1.0f;
 
 	Window* window;
+	GLfloat* varr = nullptr;
 	Canvas canvas;
 	GLuint canvas_sprite_VAO = 0, canvas_sprite_VB = 0, canvas_sprite_IB = 0;
 	GLuint checkerboard_VAO = 0, checkerboard_VB = 0, checkerboard_IB = 0; // TODO combine along with background into one VAO/VB/IB.
-	Sprite background;
+	SharedFlatSprite background;
 	GLuint background_VAO = 0, background_VB = 0, background_IB = 0;
 	Shader sprite_shader;
 
@@ -87,7 +87,7 @@ struct Easel
 	
 	// View
 	glm::mat3 projection{};
-	glm::vec2 view_position{0.0f, 0.0f};
+	FlatTransform view{};
 	float view_scale = 1.0f;
 private:
 	float app_scale;
@@ -114,8 +114,6 @@ public:
 	glm::mat3 vp_matrix() const;
 	
 	void sync_canvas_transform();
-	void sync_canvas_transform_p();
-	void sync_canvas_transform_rs();
 	
 	void resize_minor_gridlines();
 	void update_minor_gridlines() const;
