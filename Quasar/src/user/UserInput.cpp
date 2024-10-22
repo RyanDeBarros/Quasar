@@ -2,7 +2,6 @@
 
 #include "Machine.h"
 
-// TODO disable panning and zooming at same time
 void attach_canvas_controls()
 {
 	// Panning
@@ -24,7 +23,7 @@ void attach_canvas_controls()
 		});
 	// Zooming
 	Machine.main_window->clbk_scroll.push_back([](const Callback::Scroll& s) {
-		if (Machine.cursor_in_easel())
+		if (Machine.cursor_in_easel() && !Machine.panning_info.panning)
 			Machine.canvas_zoom_by(s.yoff);
 		});
 	// Reset camera
