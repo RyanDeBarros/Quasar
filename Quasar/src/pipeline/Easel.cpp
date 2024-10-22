@@ -3,89 +3,6 @@
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 
-Checkerboard::Checkerboard(RGBA c1, RGBA c2)
-	: c1(c1), c2(c2)
-{
-}
-
-void Checkerboard::create_image()
-{
-	Image img;
-	img.width = 2;
-	img.height = 2;
-	img.chpp = 4;
-	img.pixels = new Image::Byte[img.area()];
-	img.gen_texture();
-	set_image(Images.add(std::move(img)));
-	sync_colors();
-	set_uv_size(0, 0);
-}
-
-void Checkerboard::sync_colors() const
-{
-	Image* img = Images.get(image);
-	for (size_t i = 0; i < 2; ++i)
-	{
-		img->pixels[0 + 12 * i] = c1.rgb.r;
-		img->pixels[1 + 12 * i] = c1.rgb.g;
-		img->pixels[2 + 12 * i] = c1.rgb.b;
-		img->pixels[3 + 12 * i] = c1.alpha;
-	}
-	for (size_t i = 0; i < 2; ++i)
-	{
-		img->pixels[4 + 4 * i] = c2.rgb.r;
-		img->pixels[5 + 4 * i] = c2.rgb.g;
-		img->pixels[6 + 4 * i] = c2.rgb.b;
-		img->pixels[7 + 4 * i] = c2.alpha;
-	}
-	sync_texture();
-}
-
-void Checkerboard::sync_texture() const
-{
-	Image* img = Images.get(image);
-	img->resend_texture();
-	TextureParams tparams;
-	tparams.wrap_s = TextureWrap::Repeat;
-	tparams.wrap_t = TextureWrap::Repeat;
-	img->update_texture_params(tparams);
-}
-
-void Checkerboard::set_uv_size(float width, float height) const
-{
-	set_uvs(Bounds{ 0.0f, width, 0.0f, height });
-	sync_texture();
-}
-
-Canvas::Canvas(RGBA c1, RGBA c2)
-	: checkerboard(c1, c2)
-{
-}
-
-void Canvas::set_image(ImageHandle img)
-{
-	sprite.set_image(img);
-	image = Images.get(img);
-	if (image)
-	{
-		checkerboard.set_uv_size(0.5f * image->width / checker_size, 0.5f * image->height / checker_size);
-		checkerboard.set_modulation(ColorFrame());
-	}
-	else
-	{
-		checkerboard.set_modulation(ColorFrame(0));
-	}
-}
-
-void Canvas::sync_transform()
-{
-	sprite.sync_transform();
-	checkerboard.transform = sprite.transform;
-	if (image)
-		checkerboard.transform.scale *= glm::vec2{ image->width * 0.5f, image->height * 0.5f };
-	checkerboard.sync_transform();
-}
-
 Gridlines::Gridlines()
 	: shader("res/gridlines.vert", "res/gridlines.frag", { 2 }, { "u_VP", "u_FlatTransform", "u_Color" })
 {
@@ -132,7 +49,7 @@ void Gridlines::update_scale(const Scale& scale) const
 	float y1 = -height * 0.5f - lwy;
 	float x2 = -width * 0.5f + lwx;
 	float y2 = height * 0.5f + lwy;
-	
+
 	for (unsigned short i = 0; i < num_cols() - 1; ++i)
 	{
 		float delta = i * line_spacing;
@@ -227,9 +144,78 @@ void Gridlines::set_color(ColorFrame color)
 	unbind_shader();
 }
 
+void Canvas::create_checkerboard_image()
+{
+	Image img;
+	img.width = 2;
+	img.height = 2;
+	img.chpp = 4;
+	img.pixels = new Image::Byte[img.area()];
+	img.gen_texture();
+	checkerboard.set_image(Images.add(std::move(img)));
+	set_checkerboard_uv_size(0, 0);
+}
+
+void Canvas::sync_checkerboard_colors() const
+{
+	Image* img = Images.get(checkerboard.image);
+	for (size_t i = 0; i < 2; ++i)
+	{
+		img->pixels[0 + 12 * i] = checker1.rgb.r;
+		img->pixels[1 + 12 * i] = checker1.rgb.g;
+		img->pixels[2 + 12 * i] = checker1.rgb.b;
+		img->pixels[3 + 12 * i] = checker1.alpha;
+	}
+	for (size_t i = 0; i < 2; ++i)
+	{
+		img->pixels[4 + 4 * i] = checker2.rgb.r;
+		img->pixels[5 + 4 * i] = checker2.rgb.g;
+		img->pixels[6 + 4 * i] = checker2.rgb.b;
+		img->pixels[7 + 4 * i] = checker2.alpha;
+	}
+	sync_checkerboard_texture();
+}
+
+void Canvas::sync_checkerboard_texture() const
+{
+	Image* img = Images.get(checkerboard.image);
+	img->resend_texture();
+	TextureParams tparams;
+	tparams.wrap_s = TextureWrap::Repeat;
+	tparams.wrap_t = TextureWrap::Repeat;
+	img->update_texture_params(tparams);
+}
+
+void Canvas::set_checkerboard_uv_size(float width, float height) const
+{
+	checkerboard.set_uvs(Bounds{ 0.0f, width, 0.0f, height });
+	sync_checkerboard_texture();
+}
+
+void Canvas::set_image(ImageHandle img)
+{
+	sprite.set_image(img);
+	image = Images.get(img);
+	if (image)
+	{
+		set_checkerboard_uv_size(0.5f * image->width * checker_size_inv, 0.5f * image->height * checker_size_inv);
+		checkerboard.set_modulation(ColorFrame());
+	}
+	else
+		checkerboard.set_modulation(ColorFrame(0));
+}
+
+void Canvas::sync_transform()
+{
+	sprite.sync_transform();
+	checkerboard.transform = sprite.transform;
+	if (image)
+		checkerboard.transform.scale *= glm::vec2{ image->width * 0.5f, image->height * 0.5f };
+	checkerboard.sync_transform();
+}
+
 Easel::Easel(Window* w)
-	: window(w), canvas(RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f), RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f)),
-	sprite_shader("res/flatsprite.vert", "res/flatsprite.frag", { 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
+	: window(w), sprite_shader("res/flatsprite.vert", "res/flatsprite.frag", { 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
 {
 	varr = new GLfloat[3 * SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE];
 	background.varr = varr;
@@ -238,8 +224,12 @@ Easel::Easel(Window* w)
 	background.initialize_varr();
 	canvas.checkerboard.initialize_varr();
 	canvas.sprite.initialize_varr();
-	canvas.checkerboard.create_image();
+	canvas.create_checkerboard_image();
 	canvas.set_image(ImageHandle(0));
+
+	canvas.checker1 = RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f); // LATER settings
+	canvas.checker2 = RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f);
+	canvas.sync_checkerboard_colors();
 
 	GLuint IARR[3*6]{
 		0, 1, 2, 2, 3, 0,
@@ -396,7 +386,7 @@ void Easel::sync_canvas_transform()
 	unbind_shader();
 }
 
-// TODO set line width in some way relative to zoom. As you zoom out, line width should approach 1.0 and at some limit drop straight to 0.0.
+// TODO set line width in some way relative to zoom. As you zoom out, line width should approach 1.0 and at some limit drop straight to 0.0 (when line_spacing ~ line_width).
 void Easel::resize_minor_gridlines()
 {
 	minor_gridlines.resize_grid({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });

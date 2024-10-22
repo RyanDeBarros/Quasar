@@ -44,9 +44,9 @@ void MachineImpl::init_renderer()
 	easel->clip.update_window_size(main_window->width(), main_window->height());
 
 	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 255_UC)));
-	easel->minor_gridlines.line_width = 1.5f; // cannot be < 1.0
+	easel->minor_gridlines.line_width = 1.0f; // cannot be < 1.0
 	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC)));
-	easel->major_gridlines.line_width = 3.0f; // cannot be < 1.0
+	easel->major_gridlines.line_width = 4.0f; // cannot be < 1.0
 
 	set_easel_app_scale(1.5f);
 	//import_file("ex/oddtux.png");

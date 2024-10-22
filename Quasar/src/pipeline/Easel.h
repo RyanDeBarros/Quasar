@@ -3,36 +3,6 @@
 #include "user/Platform.h"
 #include "FlatSprite.h"
 
-struct Checkerboard : public SharedFlatSprite
-{
-	RGBA c1, c2;
-
-	Checkerboard(RGBA c1, RGBA c2);
-
-	void create_image();
-	void sync_colors() const;
-	void sync_texture() const;
-	void set_uv_size(float width, float height) const;
-};
-
-struct Canvas
-{
-	Image* image = nullptr;
-	SharedFlatSprite sprite;
-	Checkerboard checkerboard;
-	float checker_size = 16.0f; // LATER settings
-
-	Canvas(RGBA c1, RGBA c2);
-
-	void set_image(ImageHandle img);
-
-	FlatTransform& transform() { return sprite.transform; }
-	Position& position() { return sprite.transform.position; }
-	Scale& scale() { return sprite.transform.scale; }
-
-	void sync_transform();
-};
-
 struct Gridlines
 {
 	unsigned short width = 0, height = 0;
@@ -60,6 +30,32 @@ struct Gridlines
 	GLsizei num_vertices() const { return num_quads() * 4; }
 
 	void set_color(ColorFrame color);
+};
+
+struct Canvas
+{
+	Image* image = nullptr;
+	SharedFlatSprite sprite;
+	SharedFlatSprite checkerboard;
+	RGBA checker1, checker2;
+private:
+	float checker_size_inv = 1.0f / 16.0f; // LATER settings
+public:
+	unsigned short get_checker_size() const { return static_cast<unsigned short>(roundf(1.0f / checker_size_inv)); }
+	void set_checker_size(unsigned short checker_size) { checker_size_inv = 1.0f / checker_size; }
+
+	void set_image(ImageHandle img);
+
+	FlatTransform& transform() { return sprite.transform; }
+	Position& position() { return sprite.transform.position; }
+	Scale& scale() { return sprite.transform.scale; }
+
+	void sync_transform();
+
+	void create_checkerboard_image();
+	void sync_checkerboard_colors() const;
+	void sync_checkerboard_texture() const;
+	void set_checkerboard_uv_size(float width, float height) const;
 };
 
 struct Easel
