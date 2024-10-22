@@ -23,16 +23,22 @@ struct MachineImpl
 	std::vector<std::string> recent_image_files;
 
 	// Canvas camera
-	Position pan_initial_cursor_pos{};
-	Position pan_initial_view_pos{};
-	bool panning = false;
-	// LATER put these zoom constants somewhere else? In settings? They would be variable in that case.
-	constexpr static float zoom_initial = 0.5f;
-	constexpr static float zoom_in_min = 0.01f;
-	constexpr static float zoom_in_max = 100.0f;
-	constexpr static float zoom_factor = 1.5f;
-	constexpr static float zoom_factor_shift = 1.05f;
-	float zoom = zoom_initial;
+	struct
+	{
+		Position initial_cursor_pos{};
+		Position initial_canvas_pos{};
+		bool panning = false;
+	} panning_info;
+	struct
+	{
+		// LATER put these zoom constants somewhere else? In settings? They would be variable in that case.
+		constexpr static float initial = 0.5f;
+		constexpr static float in_min = 0.01f;
+		constexpr static float in_max = 100.0f;
+		constexpr static float factor = 1.5f;
+		constexpr static float factor_shift = 1.05f;
+		float zoom = initial;
+	} zoom_info;
 
 	bool create_main_window();
 	void init_renderer();
@@ -74,8 +80,9 @@ struct MachineImpl
 	// User controls
 	void canvas_begin_panning();
 	void canvas_end_panning();
-	void canvas_zoom_by(float zoom);
+	void canvas_cancel_panning();
 	void canvas_update_panning() const;
+	void canvas_zoom_by(float zoom);
 
 	// Edit menu
 	void flip_horizontally();

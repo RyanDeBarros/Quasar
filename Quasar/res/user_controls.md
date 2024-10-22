@@ -26,6 +26,7 @@
 ## Panning
 
 * Move mouse while holding MMB or SPACE+LMB.
+* Press ESCAPE to cancel panning.
 
 ## Zooming
 

@@ -221,11 +221,11 @@ void MachineImpl::save_file(const char* filepath)
 
 void MachineImpl::canvas_begin_panning()
 {
-	if (!panning)
+	if (!panning_info.panning)
 	{
-		pan_initial_view_pos = canvas_position();
-		pan_initial_cursor_pos = easel->get_app_cursor_pos();
-		panning = true;
+		panning_info.initial_canvas_pos = canvas_position();
+		panning_info.initial_cursor_pos = easel->get_app_cursor_pos();
+		panning_info.panning = true;
 		main_window->override_gui_cursor_change(true);
 		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
 	}
@@ -233,12 +233,46 @@ void MachineImpl::canvas_begin_panning()
 
 void MachineImpl::canvas_end_panning()
 {
-	if (panning)
+	if (panning_info.panning)
 	{
-		panning = false;
+		panning_info.panning = false;
 		main_window->override_gui_cursor_change(false);
 		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
 		main_window->set_mouse_mode(MouseMode::VISIBLE);
+	}
+}
+
+void MachineImpl::canvas_cancel_panning()
+{
+	if (panning_info.panning)
+	{
+		panning_info.panning = false;
+		canvas_position() = panning_info.initial_canvas_pos;
+		sync_canvas_transform();
+		main_window->override_gui_cursor_change(false);
+		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
+		main_window->set_mouse_mode(MouseMode::VISIBLE);
+	}
+}
+
+void MachineImpl::canvas_update_panning() const
+{
+	if (panning_info.panning)
+	{
+		Position pan_delta = easel->get_app_cursor_pos() - panning_info.initial_cursor_pos;
+		Position pos = pan_delta + panning_info.initial_canvas_pos;
+		if (main_window->is_shift_pressed())
+		{
+			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
+				pos.x = panning_info.initial_canvas_pos.x;
+			else
+				pos.y = panning_info.initial_canvas_pos.y;
+		}
+		canvas_position() = pos;
+		sync_canvas_transform();
+
+		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel->cursor_in_clipping())
+			main_window->set_mouse_mode(MouseMode::VIRTUAL);
 	}
 }
 
@@ -248,36 +282,15 @@ void MachineImpl::canvas_zoom_by(float z)
 	if (!main_window->is_alt_pressed())
 		cursor_world = easel->to_world_coordinates(main_window->cursor_pos());
 
-	float factor = main_window->is_shift_pressed() ? zoom_factor_shift : zoom_factor;
-	float new_zoom = std::clamp(zoom * glm::pow(factor, z), zoom_in_min, zoom_in_max);
-	float zoom_change = new_zoom / zoom;
+	float factor = main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
+	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, z), zoom_info.in_min, zoom_info.in_max);
+	float zoom_change = new_zoom / zoom_info.zoom;
 	canvas_scale() *= zoom_change;
 	Position delta_position = (canvas_position() - cursor_world) * zoom_change;
 	canvas_position() = cursor_world + delta_position;
 
 	sync_canvas_transform();
-	zoom = new_zoom;
-}
-
-void MachineImpl::canvas_update_panning() const
-{
-	if (panning)
-	{
-		Position pan_delta = easel->get_app_cursor_pos() - pan_initial_cursor_pos;
-		Position pos = pan_delta + pan_initial_view_pos;
-		if (main_window->is_shift_pressed())
-		{
-			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
-				pos.x = pan_initial_view_pos.x;
-			else
-				pos.y = pan_initial_view_pos.y;
-		}
-		canvas_position() = pos;
-		sync_canvas_transform();
-
-		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel->cursor_in_clipping())
-			main_window->set_mouse_mode(MouseMode::VIRTUAL);
-	}
+	zoom_info.zoom = new_zoom;
 }
 
 void MachineImpl::flip_horizontally()
@@ -300,15 +313,15 @@ void MachineImpl::rotate_180()
 
 void MachineImpl::canvas_reset_camera()
 {
-	zoom = zoom_initial;
+	zoom_info.zoom = zoom_info.initial;
 	canvas_transform() = {};
 	if (easel->canvas.image)
 	{
 		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->width, easel->get_app_height() / easel->canvas.image->height);
 		if (fit_scale < 1.0f)
 			canvas_scale() *= fit_scale;
-		zoom *= fit_scale;
-		// LATER also scale up if image is too small
+		zoom_info.zoom *= fit_scale;
+		// TODO also scale up if image is too small
 	}
 	sync_canvas_transform();
 }
