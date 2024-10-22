@@ -44,7 +44,7 @@ struct Canvas
 	SharedFlatSprite checkerboard;
 	RGBA checker1, checker2;
 private:
-	float checker_size_inv = 1.0f / 16.0f; // LATER settings
+	float checker_size_inv = 1.0f / 16.0f; // SETTINGS
 public:
 	unsigned short get_checker_size() const { return static_cast<unsigned short>(roundf(1.0f / checker_size_inv)); }
 	void set_checker_size(unsigned short checker_size) { checker_size_inv = 1.0f / checker_size; }

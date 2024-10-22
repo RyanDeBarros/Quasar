@@ -242,7 +242,7 @@ Easel::Easel(Window* w)
 	canvas.create_checkerboard_image();
 	canvas.set_image(ImageHandle(0));
 
-	canvas.checker1 = RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f); // LATER settings
+	canvas.checker1 = RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f); // SETTINGS
 	canvas.checker2 = RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f);
 	canvas.sync_checkerboard_colors();
 

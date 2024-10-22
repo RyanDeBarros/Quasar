@@ -17,7 +17,7 @@ bool MachineImpl::create_main_window()
 	main_window = new Window("Quasar", 2160, 1440, true);
 	if (main_window)
 	{
-		main_window->set_raw_mouse_motion(true); // LATER settable from user settings
+		main_window->set_raw_mouse_motion(true); // SETTINGS
 		return true;
 	}
 	return false;
@@ -25,7 +25,7 @@ bool MachineImpl::create_main_window()
 
 void MachineImpl::init_renderer()
 {
-	glfwSwapInterval(GLFW_FALSE); // LATER off by default, but add to user settings.
+	glfwSwapInterval(GLFW_FALSE); // SETTINGS (off by default)
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 	QUASAR_GL(glEnable(GL_SCISSOR_TEST));
 	QUASAR_GL(glEnable(GL_BLEND));
@@ -319,9 +319,19 @@ void MachineImpl::canvas_reset_camera()
 	{
 		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->width, easel->get_app_height() / easel->canvas.image->height);
 		if (fit_scale < 1.0f)
+		{
 			canvas_scale() *= fit_scale;
-		zoom_info.zoom *= fit_scale;
-		// TODO also scale up if image is too small
+			zoom_info.zoom *= fit_scale;
+		}
+		else
+		{
+			fit_scale /= min_initial_image_window_proportion;
+			if (fit_scale > 1.0f)
+			{
+				canvas_scale() *= fit_scale;
+				zoom_info.zoom *= fit_scale;
+			}
+		}
 	}
 	sync_canvas_transform();
 }
