@@ -6,6 +6,7 @@
 #include "GUI.h"
 #include "pipeline/Easel.h"
 #include "variety/GLutility.h"
+#include "variety/Utils.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
@@ -122,15 +123,23 @@ bool MachineImpl::new_file()
 	return true;
 }
 
+static const char* prompt_open_quasar_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
+{
+	static const char* const filters[1] = { "*.qua" };
+	const char* filepath = tinyfd_openFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "", allow_multiple_selects);
+	static const char* const fexts[1] = { "qua" };
+	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+		return filepath;
+	return nullptr;
+}
+
 bool MachineImpl::open_file()
 {
 	if (unsaved)
 	{
 		// LATER ask if user wants to save
 	}
-	static const int num_filters = 1;
-	static const char* const filters[num_filters] = { "*.qua" };
-	const char* openfile = tinyfd_openFileDialog("Open file", "", num_filters, filters, "", false);
+	const char* openfile = prompt_open_quasar_file("Open file");
 	if (!openfile) return false;
 	current_filepath = openfile;
 	mark();
@@ -138,35 +147,59 @@ bool MachineImpl::open_file()
 	return true;
 }
 
+static const char* prompt_open_image_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
+{
+	static const char* const filters[6] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
+	const char* filepath = tinyfd_openFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "", allow_multiple_selects);
+	static const char* const fexts[6] = { "png", "gif", "jpg", "bmp", "tga", "hdr" };
+	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+		return filepath;
+	return nullptr;
+}
+
 bool MachineImpl::import_file()
 {
-	static const int num_filters = 4;
-	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp" };
-	const char* importfile = tinyfd_openFileDialog("Import file", "", num_filters, filters, "", false);
+	const char* importfile = prompt_open_image_file("Import file");
 	if (!importfile) return false;
 	mark();
 	import_file(importfile);
 	return true;
 }
 
+static const char* prompt_save_image_file(const char* message, const char* default_path = "")
+{
+	static const char* const filters[6] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
+	const char* filepath = tinyfd_saveFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "");
+	static const char* const fexts[6] = { "png", "gif", "jpg", "bmp", "tga", "hdr" };
+	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+		return filepath;
+	return nullptr;
+}
+
 bool MachineImpl::export_file() const
 {
-	static const int num_filters = 4;
-	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp" };
 	// LATER open custom dialog for export settings first
-	const char* exportfile = tinyfd_saveFileDialog("Export file", "", num_filters, filters, "");
+	const char* exportfile = prompt_save_image_file("Export file");
 	if (!exportfile) return false;
 	// LATER actually export file
 	return true;
 }
 
+static const char* prompt_save_quasar_file(const char* message, const char* default_path = "")
+{
+	static const char* const filters[1] = { "*.qua" };
+	const char* filepath = tinyfd_saveFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "");
+	static const char* const fexts[1] = { "qua" };
+	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+		return filepath;
+	return nullptr;
+}
+
 bool MachineImpl::save_file()
 {
-	static const int num_filters = 1;
-	static const char* const filters[num_filters] = { "*.qua" };
 	if (current_filepath.empty())
 	{
-		const char* savefile = tinyfd_saveFileDialog("Save file", "", num_filters, filters, "");
+		const char* savefile = prompt_save_quasar_file("Save file");
 		if (!savefile) return false;
 		// LATER create new file
 		current_filepath = savefile;
@@ -178,9 +211,7 @@ bool MachineImpl::save_file()
 
 bool MachineImpl::save_file_as()
 {
-	static const int num_filters = 1;
-	static const char* const filters[num_filters] = { "*.qua" };
-	const char* savefile = tinyfd_saveFileDialog("Save file as", "", num_filters, filters, "");
+	const char* savefile = prompt_save_quasar_file("Save file as");
 	if (!savefile) return false;
 	// LATER create new file
 	current_filepath = savefile;
@@ -191,9 +222,7 @@ bool MachineImpl::save_file_as()
 
 bool MachineImpl::save_file_copy()
 {
-	static const int num_filters = 1;
-	static const char* const filters[num_filters] = { "*.qua" };
-	const char* savefile = tinyfd_saveFileDialog("Save file copy", "", num_filters, filters, "");
+	const char* savefile = prompt_save_quasar_file("Save file copy");
 	if (!savefile) return false;
 	// LATER create new file
 	save_file(savefile);
@@ -207,7 +236,7 @@ void MachineImpl::open_file(const char* filepath)
 }
 
 void MachineImpl::import_file(const char* filepath)
-{
+{	
 	// LATER register instead to ensure unique? or use secondary registry specifically for canvas_image
 	auto img = Images.construct(ImageConstructor(filepath));
 	easel->set_canvas_image(img);

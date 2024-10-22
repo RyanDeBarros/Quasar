@@ -1,6 +1,7 @@
 #include "UserInput.h"
 
 #include "Machine.h"
+#include "variety/Utils.h"
 
 void attach_canvas_controls()
 {
@@ -101,9 +102,17 @@ void attach_global_user_controls()
 		}
 		});
 	Machine.main_window->clbk_path_drop.push_back([](const Callback::PathDrop& pd) {
-		// LATER if file extension is qua use open(), else if image format that's supported use import(), else do nothing.
 		if (pd.num_paths >= 1 && Machine.cursor_in_easel())
-			Machine.import_file(pd.paths[0]);
+		{
+			const char* filepath = pd.paths[0];
+			static const char* image_formats[6] = { "png", "jpg", "gif", "bmp", "tga", "hdr" };
+			static const char* quasar_formats[1] = { "qua" };
+			if (file_extension_is_in(filepath, strlen(filepath), image_formats, sizeof(image_formats) / sizeof(*image_formats)))
+				Machine.import_file(filepath);
+			else if (file_extension_is_in(filepath, strlen(filepath), quasar_formats, sizeof(quasar_formats) / sizeof(*quasar_formats)))
+				Machine.open_file(filepath);
+			// LATER note no error popup otherwise?
+		}
 		Machine.main_window->focus();
 		});
 }

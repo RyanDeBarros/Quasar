@@ -175,6 +175,7 @@
     <ClCompile Include="src\pipeline\Shader.cpp" />
     <ClCompile Include="src\user\Platform.cpp" />
     <ClCompile Include="src\user\UserInput.cpp" />
+    <ClCompile Include="src\variety\Utils.cpp" />
     <ClCompile Include="vendor\glm\detail\glm.cpp" />
     <ClCompile Include="vendor\glm\glm.cppm" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />

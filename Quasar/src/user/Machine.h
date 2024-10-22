@@ -31,7 +31,7 @@ struct MachineImpl
 	} panning_info;
 	struct
 	{
-		// LATER put these zoom constants somewhere else? In settings? They would be variable in that case.
+		// SETTINGS (only some of them?)
 		constexpr static float initial = 0.5f;
 		constexpr static float in_min = 0.01f;
 		constexpr static float in_max = 100.0f;
