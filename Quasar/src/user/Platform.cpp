@@ -59,6 +59,14 @@ static void scroll_callback(GLFWwindow* window, double xoff, double yoff)
 		f(args);
 }
 
+static void window_maximize_callback(GLFWwindow* window, int maximized)
+{
+	auto win = Windows[window];
+	Callback::WindowMaximize args(maximized);
+	for (const auto& f : win->clbk_window_maximize)
+		f(args);
+}
+
 Window::Window(const char* title, int width, int height, bool enable_gui, ImFontAtlas* gui_font_atlas, GLFWcursor* cursor)
 {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -87,7 +95,7 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetScrollCallback(window, scroll_callback);
-	// TODO add callbacks for maximized and fullscreen, and remove respective boolean variables.
+	glfwSetWindowMaximizeCallback(window, window_maximize_callback);
 
 	if (cursor)
 		glfwSetCursor(window, cursor);
@@ -99,6 +107,9 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 		ImGui_ImplOpenGL3_Init();
 	}
 
+	clbk_window_maximize.push_back([this](const Callback::WindowMaximize& wm) {
+		maximized = wm.maximized;
+	});
 	clbk_key.push_back([this](const Callback::Key& k) {
 		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mod::SHIFT))
 		{
