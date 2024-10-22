@@ -315,30 +315,30 @@ void MachineImpl::canvas_reset_camera()
 
 bool MachineImpl::minor_gridlines_visible()
 {
-	return easel->minor_gridlines_visible;
+	return easel->minor_gridlines_are_visible();
 }
 
 void MachineImpl::show_minor_gridlines()
 {
-	easel->minor_gridlines_visible = true;
+	easel->set_minor_gridlines_visibility(true);
 }
 
 void MachineImpl::hide_minor_gridlines()
 {
-	easel->minor_gridlines_visible = false;
+	easel->set_minor_gridlines_visibility(false);
 }
 
 bool MachineImpl::major_gridlines_visible()
 {
-	return easel->major_gridlines_visible;
+	return easel->major_gridlines_are_visible();
 }
 
 void MachineImpl::show_major_gridlines()
 {
-	easel->major_gridlines_visible = true;
+	easel->set_major_gridlines_visibility(true);
 }
 
 void MachineImpl::hide_major_gridlines()
 {
-	easel->major_gridlines_visible = false;
+	easel->set_major_gridlines_visibility(false);
 }

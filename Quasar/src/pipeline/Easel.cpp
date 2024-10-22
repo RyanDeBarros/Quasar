@@ -17,7 +17,7 @@ Gridlines::~Gridlines()
 	delete[] arrays_counts;
 }
 
-void Gridlines::resize_grid(const Scale& scale)
+void Gridlines::resize_grid(Scale scale)
 {
 	delete[] varr;
 	varr = new GLfloat[num_vertices() * shader.stride];
@@ -36,7 +36,7 @@ void Gridlines::resize_grid(const Scale& scale)
 #pragma warning(pop)
 }
 
-void Gridlines::update_scale(const Scale& scale) const
+void Gridlines::update_scale(Scale scale) const
 {
 	if (!varr) return;
 	GLfloat* setter = varr;
@@ -322,7 +322,7 @@ void Easel::render() const
 void Easel::subsend_background_vao() const
 {
 	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), background.varr)); // TODO only buffersubdata when modifying varr, not every draw call.
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), background.varr));
 	unbind_vao_buffers();
 }
 
@@ -340,17 +340,10 @@ void Easel::subsend_canvas_sprite_vao() const
 	unbind_vao_buffers();
 }
 
-void Easel::send_minor_gridlines_vao() const
+void Easel::send_gridlines_vao(const Gridlines& gridlines) const
 {
-	bind_vao_buffers(minor_gridlines.vao, minor_gridlines.vb);
-	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, minor_gridlines.num_vertices() * minor_gridlines.shader.stride * sizeof(GLfloat), minor_gridlines.varr, GL_DYNAMIC_DRAW));
-	unbind_vao_buffers();
-}
-
-void Easel::send_major_gridlines_vao() const
-{
-	bind_vao_buffers(major_gridlines.vao, major_gridlines.vb);
-	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, major_gridlines.num_vertices() * major_gridlines.shader.stride * sizeof(GLfloat), major_gridlines.varr, GL_DYNAMIC_DRAW));
+	bind_vao_buffers(gridlines.vao, gridlines.vb);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, gridlines.num_vertices() * gridlines.shader.stride * sizeof(GLfloat), gridlines.varr, GL_DYNAMIC_DRAW));
 	unbind_vao_buffers();
 }
 
@@ -377,52 +370,91 @@ void Easel::sync_canvas_transform()
 	canvas.sync_transform();
 	subsend_canvas_sprite_vao();
 	subsend_checkerboard_vao();
-	bind_shader(minor_gridlines.shader.rid);
-	QUASAR_GL(glUniform4fv(minor_gridlines.shader.uniform_locations["u_FlatTransform"], 1, &canvas.transform().packed()[0]));
-	update_minor_gridlines();
-	bind_shader(major_gridlines.shader.rid);
-	QUASAR_GL(glUniform4fv(major_gridlines.shader.uniform_locations["u_FlatTransform"], 1, &canvas.transform().packed()[0]));
-	update_major_gridlines();
+	if (minor_gridlines_visible)
+		gridlines_send_flat_transform(minor_gridlines);
+	else
+		_buffer_minor_gridlines_send_flat_transform = true;
+	if (major_gridlines_visible)
+		gridlines_send_flat_transform(major_gridlines);
+	else
+		_buffer_major_gridlines_send_flat_transform = true;
 	unbind_shader();
 }
 
-// TODO set line width in some way relative to zoom. As you zoom out, line width should approach 1.0 and at some limit drop straight to 0.0 (when line_spacing ~ line_width).
-void Easel::resize_minor_gridlines()
+void Easel::gridlines_send_flat_transform(Gridlines& gridlines) const
 {
-	minor_gridlines.resize_grid({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });
-	send_minor_gridlines_vao();
+	bind_shader(gridlines.shader.rid);
+	QUASAR_GL(glUniform4fv(gridlines.shader.uniform_locations["u_FlatTransform"], 1, &canvas.transform().packed()[0]));
+	update_gridlines_scale(gridlines);
 }
 
-void Easel::update_minor_gridlines() const
+// TODO set line width in some way relative to zoom. As you zoom out, line width should approach 1.0 and at some limit drop straight to 0.0 (when line_width = scale * line_spacing + delta).
+void Easel::resize_gridlines(Gridlines& gridlines) const
 {
-	minor_gridlines.update_scale({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });
-	send_minor_gridlines_vao();
+	gridlines.resize_grid(canvas.scale());
+	send_gridlines_vao(gridlines);
 }
 
-void Easel::resize_major_gridlines()
+void Easel::update_gridlines_scale(const Gridlines& gridlines) const
 {
-	major_gridlines.resize_grid({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });
-	send_major_gridlines_vao();
+	gridlines.update_scale(canvas.scale());
+	send_gridlines_vao(gridlines);
 }
 
-void Easel::update_major_gridlines() const
+void Easel::gridlines_sync_with_image(Gridlines& gridlines) const
 {
-	major_gridlines.update_scale({ canvas.sprite.transform.scale.x, canvas.sprite.transform.scale.y });
-	send_major_gridlines_vao();
+	gridlines.width = canvas.image->width;
+	gridlines.height = canvas.image->height;
+	resize_gridlines(gridlines);
+	send_gridlines_vao(gridlines);
 }
 
 void Easel::set_canvas_image(ImageHandle img)
 {
 	canvas.set_image(img);
 	canvas_visible = true;
-	minor_gridlines.width = canvas.image->width;
-	minor_gridlines.height = canvas.image->height;
-	resize_minor_gridlines();
-	send_minor_gridlines_vao();
-	major_gridlines.width = canvas.image->width;
-	major_gridlines.height = canvas.image->height;
-	resize_major_gridlines();
-	send_major_gridlines_vao();
+	if (minor_gridlines_visible)
+		gridlines_sync_with_image(minor_gridlines);
+	else
+		_buffer_minor_gridlines_sync_with_image = true;
+	if (major_gridlines_visible)
+		gridlines_sync_with_image(major_gridlines);
+	else
+		_buffer_major_gridlines_sync_with_image = true;
+}
+
+void Easel::set_minor_gridlines_visibility(bool visible)
+{
+	if (!minor_gridlines_visible && visible)
+	{
+		if (_buffer_minor_gridlines_send_flat_transform)
+			gridlines_send_flat_transform(minor_gridlines);
+		if (_buffer_minor_gridlines_sync_with_image)
+			gridlines_sync_with_image(minor_gridlines);
+	}
+	else if (minor_gridlines_visible && !visible)
+	{
+		_buffer_minor_gridlines_send_flat_transform = false;
+		_buffer_minor_gridlines_sync_with_image = false;
+	}
+	minor_gridlines_visible = visible;
+}
+
+void Easel::set_major_gridlines_visibility(bool visible)
+{
+	if (!major_gridlines_visible && visible)
+	{
+		if (_buffer_major_gridlines_send_flat_transform)
+			gridlines_send_flat_transform(major_gridlines);
+		if (_buffer_major_gridlines_sync_with_image)
+			gridlines_sync_with_image(major_gridlines);
+	}
+	else if (major_gridlines_visible && !visible)
+	{
+		_buffer_major_gridlines_send_flat_transform = false;
+		_buffer_major_gridlines_sync_with_image = false;
+	}
+	major_gridlines_visible = visible;
 }
 
 glm::vec2 Easel::to_world_coordinates(const glm::vec2& screen_coordinates) const

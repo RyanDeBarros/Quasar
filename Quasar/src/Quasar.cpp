@@ -5,7 +5,6 @@
 
 #include "Macros.h"
 #include "pipeline/Shader.h"
-#include "pipeline/Sprite.h"
 #include "variety/Geometry.h"
 #include "user/Platform.h"
 #include "edit/Color.h"

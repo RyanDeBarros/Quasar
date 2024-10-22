@@ -20,8 +20,8 @@ struct Gridlines
 	Gridlines(Gridlines&&) noexcept = delete;
 	~Gridlines();
 
-	void resize_grid(const Scale& scale);
-	void update_scale(const Scale& scale) const;
+	void resize_grid(Scale scale);
+	void update_scale(Scale scale) const;
 	void draw() const;
 
 	unsigned short num_cols() const;
@@ -47,8 +47,11 @@ public:
 	void set_image(ImageHandle img);
 
 	FlatTransform& transform() { return sprite.transform; }
+	const FlatTransform& transform() const { return sprite.transform; }
 	Position& position() { return sprite.transform.position; }
+	const Position& position() const { return sprite.transform.position; }
 	Scale& scale() { return sprite.transform.scale; }
+	const Scale& scale() const { return sprite.transform.scale; }
 
 	void sync_transform();
 
@@ -76,9 +79,15 @@ struct Easel
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
 
+private:
 	bool minor_gridlines_visible = false;
+	bool _buffer_minor_gridlines_send_flat_transform = false;
+	bool _buffer_minor_gridlines_sync_with_image = false;
 	bool major_gridlines_visible = false;
-	
+	bool _buffer_major_gridlines_send_flat_transform = false;
+	bool _buffer_major_gridlines_sync_with_image = false;
+public:
+
 	// View
 	glm::mat3 projection{};
 	FlatTransform view{};
@@ -101,20 +110,24 @@ public:
 	void subsend_background_vao() const;
 	void subsend_checkerboard_vao() const;
 	void subsend_canvas_sprite_vao() const;
-	void send_minor_gridlines_vao() const;
-	void send_major_gridlines_vao() const;
-
+	void send_gridlines_vao(const Gridlines& gridlines) const;
+	
 	void send_view();
 	glm::mat3 vp_matrix() const;
 	
 	void sync_canvas_transform();
 	
-	void resize_minor_gridlines();
-	void update_minor_gridlines() const;
-	void resize_major_gridlines();
-	void update_major_gridlines() const;
-
+	void resize_gridlines(Gridlines& gridlines) const;
+	void update_gridlines_scale(const Gridlines& gridlines) const;
+	void gridlines_send_flat_transform(Gridlines& gridlines) const;
+	void gridlines_sync_with_image(Gridlines& gridlines) const;
+	
 	void set_canvas_image(ImageHandle img);
+
+	bool minor_gridlines_are_visible() const { return minor_gridlines_visible; }
+	void set_minor_gridlines_visibility(bool visible);
+	bool major_gridlines_are_visible() const { return major_gridlines_visible; }
+	void set_major_gridlines_visibility(bool visible);
 
 	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
 	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
