@@ -19,18 +19,20 @@
 
 * Toggle minor gridlines with G.
 * Toggle major gridlines with SHIFT+G.
+* Note that you may not see gridlines if you are too far zoomed out. That is because if they were visible, they would cover the entire image.
 
 # Navigation
 
 ## Panning
 
 * Move mouse while holding MMB or SPACE+LMB.
+* Press ESCAPE to cancel panning.
 
 ## Zooming
 
 * Scroll with mouse wheel or trackpad.
 * Scroll slower by holding SHIFT.
-* Scroll relative to center of canvas (not mouse cursor) by holding CTRL.
+* Scroll relative to center of canvas (not mouse cursor) by holding ALT.
 
 ## Fullscreen/Maximize
 

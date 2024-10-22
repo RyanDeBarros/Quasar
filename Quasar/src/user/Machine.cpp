@@ -6,6 +6,7 @@
 #include "GUI.h"
 #include "pipeline/Easel.h"
 #include "variety/GLutility.h"
+#include "variety/Utils.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
@@ -17,7 +18,7 @@ bool MachineImpl::create_main_window()
 	main_window = new Window("Quasar", 2160, 1440, true);
 	if (main_window)
 	{
-		main_window->set_raw_mouse_motion(true); // LATER settable from user settings
+		main_window->set_raw_mouse_motion(true); // SETTINGS
 		return true;
 	}
 	return false;
@@ -25,7 +26,7 @@ bool MachineImpl::create_main_window()
 
 void MachineImpl::init_renderer()
 {
-	glfwSwapInterval(GLFW_FALSE); // LATER off by default, but add to user settings.
+	glfwSwapInterval(GLFW_FALSE); // SETTINGS (off by default)
 	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
 	QUASAR_GL(glEnable(GL_SCISSOR_TEST));
 	QUASAR_GL(glEnable(GL_BLEND));
@@ -44,11 +45,11 @@ void MachineImpl::init_renderer()
 	easel->clip.update_window_size(main_window->width(), main_window->height());
 
 	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 255_UC)));
-	easel->minor_gridlines.line_width = 1.5f; // cannot be < 1.0
+	easel->minor_gridlines.line_width = 1.0f; // cannot be < 1.0
 	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC)));
-	easel->major_gridlines.line_width = 3.0f; // cannot be < 1.0
+	easel->major_gridlines.line_width = 4.0f; // cannot be < 1.0
 
-	set_easel_scale(1.5f, 1.5f); // TODO 1-dimensional app scale
+	set_easel_app_scale(1.5f);
 	//import_file("ex/oddtux.png");
 	//show_major_gridlines();
 }
@@ -70,7 +71,6 @@ void MachineImpl::on_render() const
 	canvas_update_panning();
 	main_window->new_frame();
 	easel->render();
-	// TODO draw gridlines
 	render_gui();
 	update_currently_bound_shader();
 	main_window->end_frame();
@@ -88,7 +88,7 @@ void MachineImpl::unmark()
 	// LATER remove (*) from title if it exists
 }
 
-Transform& MachineImpl::canvas_transform() const
+FlatTransform& MachineImpl::canvas_transform() const
 {
 	return easel->canvas.transform();
 }
@@ -98,24 +98,14 @@ void MachineImpl::sync_canvas_transform() const
 	easel->sync_canvas_transform();
 }
 
-void MachineImpl::sync_canvas_transform_p() const
-{
-	easel->sync_canvas_transform_p();
-}
-
-void MachineImpl::sync_canvas_transform_rs() const
-{
-	easel->sync_canvas_transform_rs();
-}
-
 bool MachineImpl::cursor_in_easel() const
 {
 	return easel->cursor_in_clipping();
 }
 
-void MachineImpl::set_easel_scale(float sx, float sy) const
+void MachineImpl::set_easel_app_scale(float sc) const
 {
-	easel->set_app_scale(sx, sy);
+	easel->set_app_scale(sc);
 }
 
 bool MachineImpl::new_file()
@@ -133,15 +123,23 @@ bool MachineImpl::new_file()
 	return true;
 }
 
+static const char* prompt_open_quasar_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
+{
+	static const char* const filters[1] = { "*.qua" };
+	const char* filepath = tinyfd_openFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "", allow_multiple_selects);
+	static const char* const fexts[1] = { "qua" };
+	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+		return filepath;
+	return nullptr;
+}
+
 bool MachineImpl::open_file()
 {
 	if (unsaved)
 	{
 		// LATER ask if user wants to save
 	}
-	static const int num_filters = 1;
-	static const char* const filters[num_filters] = { "*.qua" };
-	const char* openfile = tinyfd_openFileDialog("Open file", "", num_filters, filters, "", false);
+	const char* openfile = prompt_open_quasar_file("Open file");
 	if (!openfile) return false;
 	current_filepath = openfile;
 	mark();
@@ -149,35 +147,59 @@ bool MachineImpl::open_file()
 	return true;
 }
 
+static const char* prompt_open_image_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
+{
+	static const char* const filters[6] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
+	const char* filepath = tinyfd_openFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "", allow_multiple_selects);
+	static const char* const fexts[6] = { "png", "gif", "jpg", "bmp", "tga", "hdr" };
+	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+		return filepath;
+	return nullptr;
+}
+
 bool MachineImpl::import_file()
 {
-	static const int num_filters = 4;
-	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp" };
-	const char* importfile = tinyfd_openFileDialog("Import file", "", num_filters, filters, "", false);
+	const char* importfile = prompt_open_image_file("Import file");
 	if (!importfile) return false;
 	mark();
 	import_file(importfile);
 	return true;
 }
 
+static const char* prompt_save_image_file(const char* message, const char* default_path = "")
+{
+	static const char* const filters[6] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
+	const char* filepath = tinyfd_saveFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "");
+	static const char* const fexts[6] = { "png", "gif", "jpg", "bmp", "tga", "hdr" };
+	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+		return filepath;
+	return nullptr;
+}
+
 bool MachineImpl::export_file() const
 {
-	static const int num_filters = 4;
-	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp" };
 	// LATER open custom dialog for export settings first
-	const char* exportfile = tinyfd_saveFileDialog("Export file", "", num_filters, filters, "");
+	const char* exportfile = prompt_save_image_file("Export file");
 	if (!exportfile) return false;
 	// LATER actually export file
 	return true;
 }
 
+static const char* prompt_save_quasar_file(const char* message, const char* default_path = "")
+{
+	static const char* const filters[1] = { "*.qua" };
+	const char* filepath = tinyfd_saveFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "");
+	static const char* const fexts[1] = { "qua" };
+	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+		return filepath;
+	return nullptr;
+}
+
 bool MachineImpl::save_file()
 {
-	static const int num_filters = 1;
-	static const char* const filters[num_filters] = { "*.qua" };
 	if (current_filepath.empty())
 	{
-		const char* savefile = tinyfd_saveFileDialog("Save file", "", num_filters, filters, "");
+		const char* savefile = prompt_save_quasar_file("Save file");
 		if (!savefile) return false;
 		// LATER create new file
 		current_filepath = savefile;
@@ -189,9 +211,7 @@ bool MachineImpl::save_file()
 
 bool MachineImpl::save_file_as()
 {
-	static const int num_filters = 1;
-	static const char* const filters[num_filters] = { "*.qua" };
-	const char* savefile = tinyfd_saveFileDialog("Save file as", "", num_filters, filters, "");
+	const char* savefile = prompt_save_quasar_file("Save file as");
 	if (!savefile) return false;
 	// LATER create new file
 	current_filepath = savefile;
@@ -202,9 +222,7 @@ bool MachineImpl::save_file_as()
 
 bool MachineImpl::save_file_copy()
 {
-	static const int num_filters = 1;
-	static const char* const filters[num_filters] = { "*.qua" };
-	const char* savefile = tinyfd_saveFileDialog("Save file copy", "", num_filters, filters, "");
+	const char* savefile = prompt_save_quasar_file("Save file copy");
 	if (!savefile) return false;
 	// LATER create new file
 	save_file(savefile);
@@ -218,7 +236,7 @@ void MachineImpl::open_file(const char* filepath)
 }
 
 void MachineImpl::import_file(const char* filepath)
-{
+{	
 	// LATER register instead to ensure unique? or use secondary registry specifically for canvas_image
 	auto img = Images.construct(ImageConstructor(filepath));
 	easel->set_canvas_image(img);
@@ -232,11 +250,11 @@ void MachineImpl::save_file(const char* filepath)
 
 void MachineImpl::canvas_begin_panning()
 {
-	if (!panning)
+	if (!panning_info.panning)
 	{
-		pan_initial_view_pos = canvas_position();
-		pan_initial_cursor_pos = easel->get_app_cursor_pos();
-		panning = true;
+		panning_info.initial_canvas_pos = canvas_position();
+		panning_info.initial_cursor_pos = easel->get_app_cursor_pos();
+		panning_info.panning = true;
 		main_window->override_gui_cursor_change(true);
 		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
 	}
@@ -244,51 +262,64 @@ void MachineImpl::canvas_begin_panning()
 
 void MachineImpl::canvas_end_panning()
 {
-	if (panning)
+	if (panning_info.panning)
 	{
-		panning = false;
+		panning_info.panning = false;
 		main_window->override_gui_cursor_change(false);
 		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
 		main_window->set_mouse_mode(MouseMode::VISIBLE);
 	}
 }
 
+void MachineImpl::canvas_cancel_panning()
+{
+	if (panning_info.panning)
+	{
+		panning_info.panning = false;
+		canvas_position() = panning_info.initial_canvas_pos;
+		sync_canvas_transform();
+		main_window->override_gui_cursor_change(false);
+		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
+		main_window->set_mouse_mode(MouseMode::VISIBLE);
+	}
+}
+
+void MachineImpl::canvas_update_panning() const
+{
+	if (panning_info.panning)
+	{
+		Position pan_delta = easel->get_app_cursor_pos() - panning_info.initial_cursor_pos;
+		Position pos = pan_delta + panning_info.initial_canvas_pos;
+		if (main_window->is_shift_pressed())
+		{
+			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
+				pos.x = panning_info.initial_canvas_pos.x;
+			else
+				pos.y = panning_info.initial_canvas_pos.y;
+		}
+		canvas_position() = pos;
+		sync_canvas_transform();
+
+		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel->cursor_in_clipping())
+			main_window->set_mouse_mode(MouseMode::VIRTUAL);
+	}
+}
+
 void MachineImpl::canvas_zoom_by(float z)
 {
 	Position cursor_world;
-	if (!main_window->is_ctrl_pressed())
+	if (!main_window->is_alt_pressed())
 		cursor_world = easel->to_world_coordinates(main_window->cursor_pos());
 
-	float factor = main_window->is_shift_pressed() ? zoom_factor_shift : zoom_factor;
-	float new_zoom = std::clamp(zoom * glm::pow(factor, z), zoom_in_min, zoom_in_max);
-	float zoom_change = new_zoom / zoom;
+	float factor = main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
+	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, z), zoom_info.in_min, zoom_info.in_max);
+	float zoom_change = new_zoom / zoom_info.zoom;
 	canvas_scale() *= zoom_change;
 	Position delta_position = (canvas_position() - cursor_world) * zoom_change;
 	canvas_position() = cursor_world + delta_position;
 
 	sync_canvas_transform();
-	zoom = new_zoom;
-}
-
-void MachineImpl::canvas_update_panning() const
-{
-	if (panning)
-	{
-		Position pan_delta = easel->get_app_cursor_pos() - pan_initial_cursor_pos;
-		Position pos = pan_delta + pan_initial_view_pos;
-		if (main_window->is_shift_pressed())
-		{
-			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
-				pos.x = pan_initial_view_pos.x;
-			else
-				pos.y = pan_initial_view_pos.y;
-		}
-		canvas_position() = pos;
-		sync_canvas_transform_p();
-
-		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel->cursor_in_clipping())
-			main_window->set_mouse_mode(MouseMode::VIRTUAL);
-	}
+	zoom_info.zoom = new_zoom;
 }
 
 void MachineImpl::flip_horizontally()
@@ -311,44 +342,55 @@ void MachineImpl::rotate_180()
 
 void MachineImpl::canvas_reset_camera()
 {
-	zoom = zoom_initial;
+	zoom_info.zoom = zoom_info.initial;
 	canvas_transform() = {};
 	if (easel->canvas.image)
 	{
 		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->width, easel->get_app_height() / easel->canvas.image->height);
 		if (fit_scale < 1.0f)
+		{
 			canvas_scale() *= fit_scale;
-		zoom *= fit_scale;
+			zoom_info.zoom *= fit_scale;
+		}
+		else
+		{
+			fit_scale /= min_initial_image_window_proportion;
+			if (fit_scale > 1.0f)
+			{
+				canvas_scale() *= fit_scale;
+				zoom_info.zoom *= fit_scale;
+			}
+		}
 	}
 	sync_canvas_transform();
 }
 
 bool MachineImpl::minor_gridlines_visible()
 {
-	return easel->minor_gridlines_visible;
+	return easel->minor_gridlines_are_visible();
 }
 
 void MachineImpl::show_minor_gridlines()
 {
-	easel->minor_gridlines_visible = true;
+	easel->set_minor_gridlines_visibility(true);
 }
 
 void MachineImpl::hide_minor_gridlines()
 {
-	easel->minor_gridlines_visible = false;
+	easel->set_minor_gridlines_visibility(false);
 }
 
 bool MachineImpl::major_gridlines_visible()
 {
-	return easel->major_gridlines_visible;
+	return easel->major_gridlines_are_visible();
 }
 
 void MachineImpl::show_major_gridlines()
 {
-	easel->major_gridlines_visible = true;
+	easel->set_major_gridlines_visibility(true);
 }
 
 void MachineImpl::hide_major_gridlines()
 {
-	easel->major_gridlines_visible = false;
+	easel->set_major_gridlines_visibility(false);
 }

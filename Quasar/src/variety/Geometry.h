@@ -51,6 +51,26 @@ struct Transform
 	glm::vec4 packed_rs() const { return { scale.x * glm::cos(rotation), scale.x * glm::sin(rotation), -scale.y * glm::sin(rotation), scale.y * glm::cos(rotation) }; }
 };
 
+struct FlatTransform
+{
+	Position position;
+	Scale scale;
+
+	glm::mat3 camera() const { return inverse().matrix(); }
+	
+	FlatTransform inverse() const
+	{
+		return { -position, 1.0f / scale };
+	}
+
+	glm::mat3 matrix() const
+	{
+		return glm::mat3({ scale.x, 0.0f, 0.0f }, { 0.0f, scale.y, 0.0f }, { position.x, position.y, 1.0f });
+	}
+
+	glm::vec4 packed() const { return { position.x, position.y, scale.x, scale.y }; }
+};
+
 struct ClippingRect
 {
 	GLint x, y;

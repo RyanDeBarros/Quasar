@@ -166,15 +166,16 @@
   <ItemGroup>
     <ClCompile Include="src\edit\Image.cpp" />
     <ClCompile Include="src\pipeline\Easel.cpp" />
+    <ClCompile Include="src\pipeline\FlatSprite.cpp" />
     <ClCompile Include="src\user\GUI.cpp" />
     <ClCompile Include="src\user\Machine.cpp" />
     <ClCompile Include="src\variety\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />
     <ClCompile Include="src\Quasar.cpp" />
     <ClCompile Include="src\pipeline\Shader.cpp" />
-    <ClCompile Include="src\pipeline\Sprite.cpp" />
     <ClCompile Include="src\user\Platform.cpp" />
     <ClCompile Include="src\user\UserInput.cpp" />
+    <ClCompile Include="src\variety\Utils.cpp" />
     <ClCompile Include="vendor\glm\detail\glm.cpp" />
     <ClCompile Include="vendor\glm\glm.cppm" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
@@ -190,6 +191,7 @@
   <ItemGroup>
     <ClInclude Include="src\edit\Color.h" />
     <ClInclude Include="src\pipeline\Easel.h" />
+    <ClInclude Include="src\pipeline\FlatSprite.h" />
     <ClInclude Include="src\pipeline\Resources.h" />
     <ClInclude Include="src\user\GUI.h" />
     <ClInclude Include="src\user\Machine.h" />
@@ -202,7 +204,6 @@
     <ClInclude Include="src\Macros.h" />
     <ClInclude Include="src\variety\Registry.h" />
     <ClInclude Include="src\pipeline\Shader.h" />
-    <ClInclude Include="src\pipeline\Sprite.h" />
     <ClInclude Include="src\user\UserInput.h" />
     <ClInclude Include="src\variety\Utils.h" />
     <ClInclude Include="src\user\Platform.h" />

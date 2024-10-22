@@ -117,6 +117,11 @@ namespace Callback
 		float yoff;
 		Scroll(double xoff, double yoff) : xoff(float(xoff)), yoff(float(yoff)) {}
 	};
+	struct WindowMaximize
+	{
+		bool maximized;
+		WindowMaximize(bool maximized) : maximized(maximized) {}
+	};
 }
 
 struct Window
@@ -129,6 +134,7 @@ struct Window
 	std::vector<std::function<void(const Callback::Key&)>> clbk_key;
 	std::vector<std::function<void(const Callback::MouseButton&)>> clbk_mouse_button;
 	std::vector<std::function<void(const Callback::Scroll&)>> clbk_scroll;
+	std::vector<std::function<void(const Callback::WindowMaximize&)>> clbk_window_maximize;
 
 	Window(const char* title, int width, int height, bool enable_gui = true, ImFontAtlas* gui_font_atlas = nullptr, GLFWcursor* cursor = nullptr);
 	Window(const Window&) = delete;

@@ -60,8 +60,9 @@ inline static void delete_texture(Image& image)
 Image::Image(const ImageConstructor& args)
 {
 	stbi_set_flip_vertically_on_load(true);
+	// LATER handle gif file from memory
 	pixels = stbi_load(args.filepath.c_str(), &width, &height, &chpp, 0);
-	if (args.gen_texture)
+	if (pixels && args.gen_texture)
 		gen_texture();
 }
 
