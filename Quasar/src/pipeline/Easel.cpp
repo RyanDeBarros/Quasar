@@ -43,8 +43,20 @@ void Gridlines::update_scale(Scale scale) const
 
 #pragma warning(push)
 #pragma warning(disable : 6386)
-	float lwx = 0.5f * line_width / scale.x;
-	float lwy = 0.5f * line_width / scale.y;
+	float lwx = 0.5f * line_width;
+	if (scale.x > 1.0f)
+		lwx /= scale.x;
+	float lwy = 0.5f * line_width;
+	if (scale.y > 1.0f)
+		lwy /= scale.y;
+	if (2.0f * lwx >= scale.x * line_spacing - self_intersection_threshold || 2.0f * lwy >= scale.y * line_spacing - self_intersection_threshold)
+	{
+		_visible = false;
+		return;
+	}
+	else
+		_visible = true;
+
 	float x1 = -width * 0.5f - lwx;
 	float y1 = -height * 0.5f - lwy;
 	float x2 = -width * 0.5f + lwx;
@@ -122,9 +134,12 @@ void Gridlines::update_scale(Scale scale) const
 
 void Gridlines::draw() const
 {
-	bind_shader(shader.rid);
-	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glMultiDrawArrays(GL_TRIANGLE_STRIP, arrays_firsts, arrays_counts, num_quads()));
+	if (_visible)
+	{
+		bind_shader(shader.rid);
+		bind_vao_buffers(vao, vb);
+		QUASAR_GL(glMultiDrawArrays(GL_TRIANGLE_STRIP, arrays_firsts, arrays_counts, num_quads()));
+	}
 }
 
 unsigned short Gridlines::num_cols() const
@@ -364,7 +379,6 @@ glm::mat3 Easel::vp_matrix() const
 	return projection * view.camera();
 }
 
-// TODO buffer updates to gridlines when not they aren't visible
 void Easel::sync_canvas_transform()
 {
 	canvas.sync_transform();
@@ -388,7 +402,6 @@ void Easel::gridlines_send_flat_transform(Gridlines& gridlines) const
 	update_gridlines_scale(gridlines);
 }
 
-// TODO set line width in some way relative to zoom. As you zoom out, line width should approach 1.0 and at some limit drop straight to 0.0 (when line_width = scale * line_spacing + delta).
 void Easel::resize_gridlines(Gridlines& gridlines) const
 {
 	gridlines.resize_grid(canvas.scale());

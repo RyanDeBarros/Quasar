@@ -11,9 +11,14 @@ struct Gridlines
 	GLfloat* varr = nullptr;
 	float line_spacing = 1.0f;
 	float line_width = 1.0f;
+	float self_intersection_threshold = 1.0f;
 
 	GLint* arrays_firsts = nullptr;
 	GLsizei* arrays_counts = nullptr;
+
+private:
+	mutable bool _visible = true;
+public:
 
 	Gridlines();
 	Gridlines(const Gridlines&) = delete;

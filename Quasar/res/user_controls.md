@@ -19,6 +19,7 @@
 
 * Toggle minor gridlines with G.
 * Toggle major gridlines with SHIFT+G.
+* Note that you may not see gridlines if you are too far zoomed out. That is because if they were visible, they would cover the entire image.
 
 # Navigation
 

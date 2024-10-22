@@ -104,5 +104,6 @@ void attach_global_user_controls()
 		// LATER if file extension is qua use open(), else if image format that's supported use import(), else do nothing.
 		if (pd.num_paths >= 1 && Machine.cursor_in_easel())
 			Machine.import_file(pd.paths[0]);
+		Machine.main_window->focus();
 		});
 }
