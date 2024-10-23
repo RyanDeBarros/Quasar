@@ -48,6 +48,8 @@ void IO_impl::load_quasar_settings()
 	toml::v3::parse_result _TOML;
 	if (!parse_toml("./Quasar.toml", "settings", _TOML))
 	{
+		std::cerr << "Quasar settings could not be loaded. Press any key to quit..." << std::endl;
+		std::cin.get();
 		QUASAR_ASSERT(false);
 	}
 
