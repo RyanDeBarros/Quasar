@@ -4,8 +4,9 @@
 #include <memory>
 
 #include "variety/GLutility.h"
+#include "PixelBufferPaths.h"
 
-inline static GLenum chpp_format(Image::CHPP chpp)
+inline static GLenum chpp_format(CHPP chpp)
 {
 	if (chpp == 4)
 		return GL_RGBA;
@@ -19,7 +20,7 @@ inline static GLenum chpp_format(Image::CHPP chpp)
 		return 0;
 }
 
-inline static GLint chpp_alignment(Image::CHPP chpp)
+inline static GLint chpp_alignment(CHPP chpp)
 {
 	if (chpp == 4)
 		return 4;
@@ -33,7 +34,7 @@ inline static GLint chpp_alignment(Image::CHPP chpp)
 		return 0;
 }
 
-inline static GLint chpp_internal_format(Image::CHPP chpp)
+inline static GLint chpp_internal_format(CHPP chpp)
 {
 	if (chpp == 4)
 		return GL_RGBA8;
@@ -49,7 +50,7 @@ inline static GLint chpp_internal_format(Image::CHPP chpp)
 
 inline static void delete_buffer(Image& image)
 {
-	stbi_image_free(image.pixels); // equivalent to delete[] image.pixels
+	stbi_image_free(image.buf.pixels); // equivalent to delete[] image.pixels
 }
 
 inline static void delete_texture(Image& image)
@@ -61,24 +62,21 @@ Image::Image(const ImageConstructor& args)
 {
 	stbi_set_flip_vertically_on_load(true);
 	// LATER handle gif file from memory
-	pixels = stbi_load(args.filepath.c_str(), &width, &height, &chpp, 0);
-	if (pixels && args.gen_texture)
+	buf.pixels = stbi_load(args.filepath.c_str(), &buf.width, &buf.height, &buf.chpp, 0);
+	if (buf.pixels && args.gen_texture)
 		gen_texture();
 }
 
 Image::Image(const Image& other)
-	: width(other.width), height(other.height), chpp(other.chpp)
+	: buf(other.buf)
 {
-	pixels = new Byte[area()];
-	memcpy(pixels, other.pixels, area());
 	if (other.tid != 0)
 		gen_texture();
 }
 
 Image::Image(Image&& other) noexcept
-	: width(other.width), height(other.height), chpp(other.chpp), pixels(other.pixels), tid(other.tid)
+	: buf(std::move(other.buf)), tid(other.tid)
 {
-	other.pixels = nullptr;
 	other.tid = 0;
 }
 
@@ -88,11 +86,7 @@ Image& Image::operator=(const Image& other)
 	{
 		delete_buffer(*this);
 		delete_texture(*this);
-		width = other.width;
-		height = other.height;
-		chpp = other.chpp;
-		pixels = new Byte[area()];
-		memcpy(pixels, other.pixels, area());
+		buf = other.buf;
 		if (other.tid != 0)
 			gen_texture();
 	}
@@ -105,12 +99,8 @@ Image& Image::operator=(Image&& other) noexcept
 	{
 		delete_buffer(*this);
 		delete_texture(*this);
-		width = other.width;
-		height = other.height;
-		chpp = other.chpp;
-		pixels = other.pixels;
+		buf = std::move(other.buf);
 		tid = other.tid;
-		other.pixels = nullptr;
 		other.tid = 0;
 	}
 	return *this;
@@ -146,7 +136,7 @@ void Image::update_texture() const
 	if (tid)
 	{
 		bind_texture(tid);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, chpp_format(chpp), GL_UNSIGNED_BYTE, pixels);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buf.width, buf.height, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels);
 	}
 }
 
@@ -155,24 +145,24 @@ void Image::resend_texture() const
 	if (tid)
 	{
 		bind_texture(tid);
-		QUASAR_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, chpp_alignment(chpp)));
-		QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, chpp_internal_format(chpp), width, height, 0, chpp_format(chpp), GL_UNSIGNED_BYTE, pixels));
+		QUASAR_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, chpp_alignment(buf.chpp)));
+		QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, chpp_internal_format(buf.chpp), buf.width, buf.height, 0, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
 	}
 }
 
 void Image::send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const
 {
 	bind_texture(tid);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, chpp_format(chpp), GL_UNSIGNED_BYTE, pixels);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels);
 }
 
 void Image::_flip_vertically() const
 {
-	Dim stride = width * chpp;
+	Dim stride = buf.stride();
 	Byte* temp = new Byte[stride];
-	Byte* bottom = pixels;
-	Byte* top = pixels + (height - 1) * stride;
-	for (Dim _ = 0; _ < height >> 1; ++_)
+	Byte* bottom = buf.pixels;
+	Byte* top = buf.pixels + (buf.height - 1) * stride;
+	for (Dim _ = 0; _ < buf.height >> 1; ++_)
 	{
 		memcpy(temp, bottom, stride);
 		memcpy(bottom, top, stride);
@@ -185,22 +175,22 @@ void Image::_flip_vertically() const
 
 void Image::_flip_horizontally() const
 {
-	Dim stride = width * chpp;
-	Byte* temp = new Byte[chpp];
-	Byte* row = pixels;
+	Dim stride = buf.stride();
+	Byte* temp = new Byte[buf.chpp];
+	Byte* row = buf.pixels;
 	Byte* left = nullptr;
 	Byte* right = nullptr;
-	for (Dim _ = 0; _ < height; ++_)
+	for (Dim _ = 0; _ < buf.height; ++_)
 	{
 		left = row;
-		right = row + (width - 1) * chpp;
-		for (Dim i = 0; i < width >> 1; ++i)
+		right = row + (buf.width - 1) * buf.chpp;
+		for (Dim i = 0; i < buf.width >> 1; ++i)
 		{
-			memcpy(temp, left, chpp);
-			memcpy(left, right, chpp);
-			memcpy(right, temp, chpp);
-			left += chpp;
-			right -= chpp;
+			memcpy(temp, left, buf.chpp);
+			memcpy(left, right, buf.chpp);
+			memcpy(right, temp, buf.chpp);
+			left += buf.chpp;
+			right -= buf.chpp;
 		}
 		row += stride;
 	}
@@ -210,48 +200,20 @@ void Image::_flip_horizontally() const
 void Image::_rotate_180() const
 {
 	UprightRect full;
-	full.x1 = width - 1;
-	full.y1 = height / 2 - 1;
-	Dim* temp = new Dim[chpp];
+	full.x1 = buf.width - 1;
+	full.y1 = buf.height / 2 - 1;
+	Dim* temp = new Dim[buf.chpp];
 	iterate_path(full, [this, temp](PathIterator& pit) {
-		Byte* p1 = pixels + bufoffset(pit.x, pit.y, width, chpp);
-		Byte* p2 = pixels + bufoffset(width - 1 - pit.x, height - 1 - pit.y, width, chpp);
-		memcpy(temp, p1, chpp);
-		memcpy(p1, p2, chpp);
-		memcpy(p2, temp, chpp);
+		Byte* p1 = pit.pos(buf);
+		Byte* p2 = PathIterator{ buf.width - 1 - pit.x, buf.height - 1 - pit.y }.pos(buf);
+		memcpy(temp, p1, buf.chpp);
+		memcpy(p1, p2, buf.chpp);
+		memcpy(p2, temp, buf.chpp);
 		});
 	delete[] temp;
 }
 
-void Image::iterate_path(const Path& path, const std::function<void(PathIterator&)>& func) const
-{
-	PathIterator pit = path.first();
-	const PathIterator plast = path.last();
-	while (true)
-	{
-		func(pit);
-		if (pit == plast)
-			break;
-		else
-			path.next(pit);
-	}
-}
-
-void Image::riterate_path(const Path& path, const std::function<void(PathIterator&)>& func) const
-{
-	PathIterator pit = path.last();
-	const PathIterator pfirst = path.first();
-	while (true)
-	{
-		func(pit);
-		if (pit == pfirst)
-			break;
-		else
-			path.prev(pit);
-	}
-}
-
 void Image::_set(Byte* pixel, const Path& path) const
 {
-	iterate_path(path, [this, pixel](PathIterator& pit) { memcpy(pixels + bufoffset(pit.x, pit.y, width, chpp), pixel, chpp); });
+	iterate_path(path, [this, pixel](PathIterator& pit) { memcpy(pit.pos(buf), pixel, buf.chpp); });
 }

@@ -31,8 +31,8 @@ struct FlatSprite
 
 	void sync_transform() const;
 
-	void set_image(ImageHandle img, Image::Dim v_width = -1, Image::Dim v_height = -1) { image = img; sync_image_dimensions(v_width, v_height); }
-	void sync_image_dimensions(Image::Dim v_width = -1, Image::Dim v_height = -1) const;
+	void set_image(ImageHandle img, Dim v_width = -1, Dim v_height = -1) { image = img; sync_image_dimensions(v_width, v_height); }
+	void sync_image_dimensions(Dim v_width = -1, Dim v_height = -1) const;
 	void sync_texture_slot(float texture_slot) const;
 
 	glm::vec4 modulation() const;
@@ -69,8 +69,8 @@ struct SharedFlatSprite
 	void initialize_varr() const;
 	void sync_transform() const;
 
-	void set_image(ImageHandle img, Image::Dim v_width = -1, Image::Dim v_height = -1) { image = img; sync_image_dimensions(v_width, v_height); }
-	void sync_image_dimensions(Image::Dim v_width = -1, Image::Dim v_height = -1) const;
+	void set_image(ImageHandle img, Dim v_width = -1, Dim v_height = -1) { image = img; sync_image_dimensions(v_width, v_height); }
+	void sync_image_dimensions(Dim v_width = -1, Dim v_height = -1) const;
 	void sync_texture_slot(float texture_slot) const;
 
 	glm::vec4 modulation() const;

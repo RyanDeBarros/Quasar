@@ -50,7 +50,7 @@ void MachineImpl::init_renderer()
 	easel->major_gridlines.line_width = 4.0f; // cannot be < 1.0
 
 	set_easel_app_scale(1.5f); // SETTINGS
-	//import_file(FileSystem::workspace_path("oddtux.png"));
+	import_file(FileSystem::workspace_path("ex/einstein.png"));
 	//show_major_gridlines();
 }
 
@@ -350,7 +350,7 @@ void MachineImpl::canvas_reset_camera()
 	canvas_transform() = {};
 	if (easel->canvas.image)
 	{
-		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->width, easel->get_app_height() / easel->canvas.image->height);
+		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->buf.width, easel->get_app_height() / easel->canvas.image->buf.height);
 		if (fit_scale < 1.0f)
 		{
 			canvas_scale() *= fit_scale;

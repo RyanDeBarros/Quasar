@@ -84,6 +84,9 @@
     <ClCompile Include="src\variety\FileSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\edit\PixelBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\variety\IO.h">
@@ -1050,6 +1053,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\user\Preferences.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\edit\PixelBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\edit\PixelBufferPaths.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

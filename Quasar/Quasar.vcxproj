@@ -165,6 +165,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\edit\Image.cpp" />
+    <ClCompile Include="src\edit\PixelBuffer.cpp" />
     <ClCompile Include="src\pipeline\Easel.cpp" />
     <ClCompile Include="src\pipeline\FlatSprite.cpp" />
     <ClCompile Include="src\user\GUI.cpp" />
@@ -190,6 +191,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\edit\Color.h" />
+    <ClInclude Include="src\edit\PixelBuffer.h" />
+    <ClInclude Include="src\edit\PixelBufferPaths.h" />
     <ClInclude Include="src\pipeline\Easel.h" />
     <ClInclude Include="src\pipeline\FlatSprite.h" />
     <ClInclude Include="src\pipeline\Resources.h" />

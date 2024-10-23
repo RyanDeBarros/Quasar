@@ -5,6 +5,7 @@
 
 #include "Macros.h"
 #include "variety/FileSystem.h"
+#include "PixelBuffer.h"
 
 enum class MinFilter : GLint
 {
@@ -99,14 +100,8 @@ struct Path;
 
 struct Image
 {
-	typedef unsigned char Byte;
-	typedef int Dim;
-	typedef int CHPP;
-
-	Byte* pixels = nullptr;
+	Buffer buf;
 	GLuint tid = 0;
-	Dim width = 0, height = 0;
-	CHPP chpp = 0;
 
 	Image() = default;
 	Image(const ImageConstructor& args);
@@ -116,7 +111,7 @@ struct Image
 	Image& operator=(Image&&) noexcept;
 	~Image();
 
-	operator bool() const { return pixels != nullptr; }
+	operator bool() const { return buf.pixels != nullptr; }
 
 	// texture operations
 
@@ -127,11 +122,6 @@ struct Image
 	void send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const;
 
 	// buffer operations
-
-	static Dim bufoffset(Dim x, Dim y, Dim width, Dim chpp) { return (y * width + x) * chpp; }
-	Dim stride() const { return width * chpp; }
-	Dim area() const { return width * height * chpp; }
-
 	void _flip_vertically() const;
 	void _flip_horizontally() const;
 	void flip_vertically() const { _flip_vertically(); update_texture(); }
@@ -145,58 +135,6 @@ struct Image
 	// crop width / height --> create new image and return it, so old image isn't lost?
 	// This reminds me, implement a undo/redo action history stack.
 
-	void iterate_path(const Path& path_, const std::function<void(PathIterator&)>& func) const;
-	void riterate_path(const Path& path_, const std::function<void(PathIterator&)>& func) const;
 	void _set(Byte* pixel, const Path& path_) const;
 	void set(Byte* pixel, const Path& path_) const { _set(pixel, path_); update_texture(); }
-};
-
-struct PathIterator
-{
-	Image::Dim x = 0;
-	Image::Dim y = 0;
-
-	bool operator==(const PathIterator& other) const = default;
-};
-
-struct Path
-{
-	virtual void first(PathIterator&) const = 0;
-	virtual void last(PathIterator&) const = 0;
-	virtual void prev(PathIterator&) const = 0;
-	virtual void next(PathIterator&) const = 0;
-
-	PathIterator first() const { PathIterator pit; first(pit); return pit; }
-	PathIterator last() const { PathIterator pit; last(pit); return pit; }
-};
-
-struct HorizontalLine : public Path
-{
-	Image::Dim x0 = 0, x1 = 0, y = 0;
-	void first(PathIterator& pit) const override { pit.x = x0; pit.y = y; }
-	void last(PathIterator& pit) const override { pit.x = x1; pit.y = y; }
-	void prev(PathIterator& pit) const override { --pit.x; }
-	void next(PathIterator& pit) const override { ++pit.x; }
-};
-
-struct VerticalLine : public Path
-{
-	Image::Dim x = 0, y0 = 0, y1 = 0;
-	void first(PathIterator& pit) const override { pit.x = x; pit.y = y0; }
-	void last(PathIterator& pit) const override { pit.x = x; pit.y = y1; }
-	void prev(PathIterator& pit) const override { --pit.y; }
-	void next(PathIterator& pit) const override { ++pit.y; }
-};
-
-struct UprightRect : public Path
-{
-	Image::Dim x0 = 0, x1 = 0, y0 = 0, y1 = 0;
-
-	UprightRect() = default;
-	UprightRect(const Image& im) : x0(0), x1(im.width - 1), y0(0), y1(im.height - 1) {}
-
-	void first(PathIterator& pit) const override { pit.x = x0; pit.y = y0; }
-	void last(PathIterator& pit) const override { pit.x = x1; pit.y = y1; }
-	void prev(PathIterator& pit) const override { if (pit.x == x0) { pit.x = x1; --pit.y; } else { --pit.x; } }
-	void next(PathIterator& pit) const override { if (pit.x == x1) { pit.x = x0; ++pit.y; } else { ++pit.x; } }
 };

@@ -65,11 +65,11 @@ void FlatSprite::sync_transform() const
 	}
 }
 
-void FlatSprite::sync_image_dimensions(Image::Dim v_width, Image::Dim v_height) const
+void FlatSprite::sync_image_dimensions(Dim v_width, Dim v_height) const
 {
 	Image* img = Images.get(image);
-	Image::Dim w = v_width >= 0 ? v_width : (img ? img->width : 0);
-	Image::Dim h = v_height >= 0 ? v_height : (img ? img->height : 0);
+	Dim w = v_width >= 0 ? v_width : (img ? img->buf.width : 0);
+	Dim h = v_height >= 0 ? v_height : (img ? img->buf.height : 0);
 
 	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS] = -0.5f * w;
 	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;
@@ -149,11 +149,11 @@ void SharedFlatSprite::sync_transform() const
 	}
 }
 
-void SharedFlatSprite::sync_image_dimensions(Image::Dim v_width, Image::Dim v_height) const
+void SharedFlatSprite::sync_image_dimensions(Dim v_width, Dim v_height) const
 {
 	Image* img = Images.get(image);
-	Image::Dim w = v_width >= 0 ? v_width : (img ? img->width : 0);
-	Image::Dim h = v_height >= 0 ? v_height : (img ? img->height : 0);
+	Dim w = v_width >= 0 ? v_width : (img ? img->buf.width : 0);
+	Dim h = v_height >= 0 ? v_height : (img ? img->buf.height : 0);
 
 	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS] = -0.5f * w;
 	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;

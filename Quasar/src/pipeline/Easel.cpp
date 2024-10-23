@@ -163,10 +163,10 @@ void Gridlines::set_color(ColorFrame color)
 void Canvas::create_checkerboard_image()
 {
 	Image img;
-	img.width = 2;
-	img.height = 2;
-	img.chpp = 4;
-	img.pixels = new Image::Byte[img.area()];
+	img.buf.width = 2;
+	img.buf.height = 2;
+	img.buf.chpp = 4;
+	img.buf.pixels = new Byte[img.buf.area()];
 	img.gen_texture();
 	checkerboard.set_image(Images.add(std::move(img)));
 	set_checkerboard_uv_size(0, 0);
@@ -177,17 +177,17 @@ void Canvas::sync_checkerboard_colors() const
 	Image* img = Images.get(checkerboard.image);
 	for (size_t i = 0; i < 2; ++i)
 	{
-		img->pixels[0 + 12 * i] = checker1.rgb.r;
-		img->pixels[1 + 12 * i] = checker1.rgb.g;
-		img->pixels[2 + 12 * i] = checker1.rgb.b;
-		img->pixels[3 + 12 * i] = checker1.alpha;
+		img->buf.pixels[0 + 12 * i] = checker1.rgb.r;
+		img->buf.pixels[1 + 12 * i] = checker1.rgb.g;
+		img->buf.pixels[2 + 12 * i] = checker1.rgb.b;
+		img->buf.pixels[3 + 12 * i] = checker1.alpha;
 	}
 	for (size_t i = 0; i < 2; ++i)
 	{
-		img->pixels[4 + 4 * i] = checker2.rgb.r;
-		img->pixels[5 + 4 * i] = checker2.rgb.g;
-		img->pixels[6 + 4 * i] = checker2.rgb.b;
-		img->pixels[7 + 4 * i] = checker2.alpha;
+		img->buf.pixels[4 + 4 * i] = checker2.rgb.r;
+		img->buf.pixels[5 + 4 * i] = checker2.rgb.g;
+		img->buf.pixels[6 + 4 * i] = checker2.rgb.b;
+		img->buf.pixels[7 + 4 * i] = checker2.alpha;
 	}
 	sync_checkerboard_texture();
 }
@@ -214,7 +214,7 @@ void Canvas::set_image(ImageHandle img)
 	image = Images.get(img);
 	if (image)
 	{
-		set_checkerboard_uv_size(0.5f * image->width * checker_size_inv.x, 0.5f * image->height * checker_size_inv.y);
+		set_checkerboard_uv_size(0.5f * image->buf.width * checker_size_inv.x, 0.5f * image->buf.height * checker_size_inv.y);
 		checkerboard.set_modulation(ColorFrame());
 	}
 	else
@@ -226,7 +226,7 @@ void Canvas::sync_transform()
 	sprite.sync_transform();
 	checkerboard.transform = sprite.transform;
 	if (image)
-		checkerboard.transform.scale *= glm::vec2{ image->width * 0.5f, image->height * 0.5f };
+		checkerboard.transform.scale *= glm::vec2{ image->buf.width * 0.5f, image->buf.height * 0.5f };
 	checkerboard.sync_transform();
 }
 
@@ -419,8 +419,8 @@ void Easel::update_gridlines_scale(const Gridlines& gridlines) const
 
 void Easel::gridlines_sync_with_image(Gridlines& gridlines) const
 {
-	gridlines.width = canvas.image->width;
-	gridlines.height = canvas.image->height;
+	gridlines.width = canvas.image->buf.width;
+	gridlines.height = canvas.image->buf.height;
 	resize_gridlines(gridlines);
 	send_gridlines_vao(gridlines);
 }
