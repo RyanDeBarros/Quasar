@@ -48,8 +48,6 @@ struct MachineImpl
 		float zoom = initial;
 	} zoom_info;
 
-	float min_initial_image_window_proportion = 3.0f; // SETTINGS
-
 	bool create_main_window();
 	void init_renderer();
 	void destroy();

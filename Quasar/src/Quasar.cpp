@@ -10,7 +10,7 @@ static void glfw_error_callback(int error, const char* description)
 int main()
 {
 	IO.load_quasar_settings();
-	IO.load_workspace_preferences("D:/Projects/Visual Studio/Quasar/Quasar/ex/workspace1.toml", "workspace1");
+	//IO.load_workspace_preferences("D:/Projects/Visual Studio/Quasar/Quasar/ex/workspace1.toml", "workspace1"); // LATER workspace preferences GUI menu option
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);

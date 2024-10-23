@@ -1,8 +1,8 @@
 header = "preferences"
-workspace = "workspace1"
+workspace = "global"
 
 [FileSystem]
-workspace_root = "D:/Projects/Visual Studio/Quasar/Quasar/ex"
+workspace_root = "."
 
 [Easel.Canvas.Checkerboard]
 checker1 = [54, 77, 77, 127]

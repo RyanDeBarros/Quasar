@@ -1,8 +1,11 @@
 header = "settings"
 
 [FileSystem]
-resources_root = "D:/Projects/Visual Studio/Quasar/Quasar/res"
+resources_root = "D:/Projects/Visual Studio/Quasar/Quasar/.quasar/"
 
 [Renderer]
 vsync = 0
 raw_mouse_motion = true
+
+[Machine]
+global_workspace_respath = "global_workspace.toml"

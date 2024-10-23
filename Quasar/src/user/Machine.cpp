@@ -358,7 +358,7 @@ void MachineImpl::canvas_reset_camera()
 		}
 		else
 		{
-			fit_scale /= min_initial_image_window_proportion;
+			fit_scale /= preferences.min_initial_image_window_proportion;
 			if (fit_scale > 1.0f)
 			{
 				canvas_scale() *= fit_scale;

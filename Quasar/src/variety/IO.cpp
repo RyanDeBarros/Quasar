@@ -60,6 +60,10 @@ void IO_impl::load_quasar_settings()
 	QUASAR_ASSERT(_Renderer)
 	Machine.vsync = _Renderer["vsync"].value_or<int64_t>(0);
 	Machine.raw_mouse_motion = _Renderer["raw_mouse_motion"].value_or<bool>(true);
+
+	auto _Machine = _TOML["Machine"];
+	QUASAR_ASSERT(_Machine);
+	load_workspace_preferences(FileSystem::resources_path(_Machine["global_workspace"].value_or<std::string>("global_workspace.toml")), "global");
 }
 
 void IO_impl::load_workspace_preferences(const FilePath& filepath, const char* workspace)
@@ -86,7 +90,6 @@ void IO_impl::load_workspace_preferences(const FilePath& filepath, const char* w
 	auto _FileSystem = _TOML["FileSystem"];
 	QUASAR_ASSERT(_FileSystem);
 	auto _FileSystem_workspace_root = _FileSystem["workspace_root"];
-	// TODO workspace_root should be data member in WorkspacePreferences, not static data member of FileSystem
 	FileSystem::workspace_root = _FileSystem_workspace_root.value_or<std::string>(".").c_str();
 
 	if (auto _Easel = _TOML["Easel"])
