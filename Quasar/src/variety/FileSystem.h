@@ -22,6 +22,8 @@ public:
 		else
 			return path + "/" + relative.path;
 	}
+	FilePath& operator+=(const std::string& addon) { path += addon; }
+	FilePath operator+(const std::string& addon) const { FilePath temp = path.c_str(); temp += addon; return temp; }
 
 	bool is_absolute() const { return std::filesystem::path(path).is_absolute(); }
 	bool is_relative() const { return std::filesystem::path(path).is_relative(); }
@@ -30,6 +32,9 @@ public:
 	void clear() { path.clear(); }
 	bool empty() const { return path.empty(); }
 	const char* c_str() const { return path.c_str(); }
+	std::string string() const { return path; }
+	std::string& path_ref() { return path; }
+	const std::string& path_ref() const { return path; }
 	FilePath extension() const;
 	bool has_extension(const char* ext) const;
 	bool has_any_extension(const char* const* exts, size_t num_exts) const

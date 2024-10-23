@@ -70,6 +70,11 @@ static void render_main_menu()
 			}
 			ImGui::EndMenu();
 		}
+		if (ImGui::BeginMenu("Help"))
+		{
+			if (ImGui::MenuItem("Download user manual")) { Machine.download_user_manual(); }
+			ImGui::EndMenu();
+		}
 		ImGui::EndMainMenuBar();
 	}
 }

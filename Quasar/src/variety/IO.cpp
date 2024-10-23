@@ -58,12 +58,10 @@ void IO_impl::load_quasar_settings()
 
 	auto _Renderer = _TOML["Renderer"];
 	QUASAR_ASSERT(_Renderer)
-	Machine.vsync = _Renderer["vsync"].value_or<int64_t>(0);
+	Machine.vsync = (int)_Renderer["vsync"].value_or<int64_t>(0);
 	Machine.raw_mouse_motion = _Renderer["raw_mouse_motion"].value_or<bool>(true);
 
-	auto _Machine = _TOML["Machine"];
-	QUASAR_ASSERT(_Machine);
-	load_workspace_preferences(FileSystem::resources_path(_Machine["global_workspace"].value_or<std::string>("global_workspace.toml")), "global");
+	load_workspace_preferences(FileSystem::resources_path("global_workspace.toml"), "global");
 }
 
 void IO_impl::load_workspace_preferences(const FilePath& filepath, const char* workspace)
@@ -105,7 +103,7 @@ void IO_impl::load_workspace_preferences(const FilePath& filepath, const char* w
 					auto c3 = _Checkerboard_checker1->get_as<int64_t>(2);
 					auto c4 = _Checkerboard_checker1->get_as<int64_t>(3);
 					if (c1 && c2 && c3 && c4)
-						preferences.checker1 = RGBA(unsigned char (c1->get()), c2->get(), c3->get(), c4->get());
+						preferences.checker1 = RGBA((unsigned char)c1->get(), (unsigned char)c2->get(), (unsigned char)c3->get(), (unsigned char)c4->get());
 				}
 				if (auto _Checkerboard_checker2 = _Checkerboard["checker2"].as_array())
 				{
@@ -114,7 +112,7 @@ void IO_impl::load_workspace_preferences(const FilePath& filepath, const char* w
 					auto c3 = _Checkerboard_checker2->get_as<int64_t>(2);
 					auto c4 = _Checkerboard_checker2->get_as<int64_t>(3);
 					if (c1 && c2 && c3 && c4)
-						preferences.checker2 = RGBA(unsigned char(c1->get()), c2->get(), c3->get(), c4->get());
+						preferences.checker2 = RGBA((unsigned char)c1->get(), (unsigned char)c2->get(), (unsigned char)c3->get(), (unsigned char)c4->get());
 				}
 				if (auto _Checkerboard_checker_size = _Checkerboard["checker_size"].as_array())
 				{
@@ -128,7 +126,7 @@ void IO_impl::load_workspace_preferences(const FilePath& filepath, const char* w
 		if (auto _Gridlines = _Easel["Gridlines"])
 		{
 			if (auto _Gridlines_min_initial_image_window_proportion = _Gridlines["min_initial_image_window_proportion"].value<double>())
-				preferences.min_initial_image_window_proportion = _Gridlines_min_initial_image_window_proportion.value();
+				preferences.min_initial_image_window_proportion = (float)_Gridlines_min_initial_image_window_proportion.value();
 		}
 	}
 }

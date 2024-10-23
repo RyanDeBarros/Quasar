@@ -125,7 +125,7 @@ bool MachineImpl::new_file()
 
 static FilePath prompt_open_quasar_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
 {
-	static const size_t num_filters = 1;
+	static const int num_filters = 1;
 	static const char* const filters[num_filters] = { "*.qua" };
 	FilePath filepath = tinyfd_openFileDialog(message, default_path, num_filters, filters, "", allow_multiple_selects);
 	static const char* const fexts[num_filters] = { ".qua" };
@@ -150,7 +150,7 @@ bool MachineImpl::open_file()
 
 static FilePath prompt_open_image_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
 {
-	static const size_t num_filters = 6;
+	static const int num_filters = 6;
 	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
 	FilePath filepath = tinyfd_openFileDialog(message, default_path, num_filters, filters, "", allow_multiple_selects);
 	static const char* const fexts[num_filters] = { ".png", ".gif", ".jpg", ".bmp", ".tga", ".hdr" };
@@ -170,7 +170,7 @@ bool MachineImpl::import_file()
 
 static FilePath prompt_save_image_file(const char* message, const char* default_path = "")
 {
-	static const size_t num_filters = 6;
+	static const int num_filters = 6;
 	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
 	FilePath filepath = tinyfd_saveFileDialog(message, default_path, num_filters, filters, "");
 	static const char* const fexts[num_filters] = { ".png", ".gif", ".jpg", ".bmp", ".tga", ".hdr" };
@@ -190,7 +190,7 @@ bool MachineImpl::export_file() const
 
 static FilePath prompt_save_quasar_file(const char* message, const char* default_path = "")
 {
-	static const size_t num_filters = 1;
+	static const int num_filters = 1;
 	static const char* const filters[num_filters] = { "*.qua" };
 	FilePath filepath = tinyfd_saveFileDialog(message, default_path, num_filters, filters, "");
 	static const char* const fexts[num_filters] = { ".qua" };
@@ -397,4 +397,14 @@ void MachineImpl::show_major_gridlines()
 void MachineImpl::hide_major_gridlines()
 {
 	easel->set_major_gridlines_visibility(false);
+}
+
+void MachineImpl::download_user_manual()
+{
+	static const int num_filters = 1;
+	static const char* filters[num_filters] = { "md" };
+	FilePath default_filepath = FileSystem::workspace_path("quasar_user_manual.md");
+	FilePath filepath = tinyfd_saveFileDialog("Save user manual as ", default_filepath.c_str(), num_filters, filters, "Markdown (*.md)");
+	if (filepath.empty()) return;
+	std::filesystem::copy_file(FileSystem::resources_path("user_manual.md").c_str(), filepath.c_str(), std::filesystem::copy_options::overwrite_existing);
 }

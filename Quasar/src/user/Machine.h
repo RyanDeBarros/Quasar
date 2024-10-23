@@ -105,6 +105,9 @@ struct MachineImpl
 	bool major_gridlines_visible();
 	void show_major_gridlines();
 	void hide_major_gridlines();
+
+	// Help menu
+	void download_user_manual();
 };
 
 inline MachineImpl Machine;
