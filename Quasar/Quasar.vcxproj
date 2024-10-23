@@ -509,6 +509,7 @@
     <ClInclude Include="vendor\stb\stb_image_write.h" />
     <ClInclude Include="vendor\tinyfd\more_dialogs\tinyfd_moredialogs.h" />
     <ClInclude Include="vendor\tinyfd\tinyfiledialogs.h" />
+    <ClInclude Include="vendor\toml\toml.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="vendor\glm\detail\func_common.inl" />
