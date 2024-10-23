@@ -10,8 +10,8 @@ struct Gridlines
 	Shader shader;
 	GLfloat* varr = nullptr;
 	float line_spacing = 1.0f;
-	float line_width = 1.0f;
-	float self_intersection_threshold = 1.0f;
+	float line_width = 1.0f; // SETTINGS
+	float self_intersection_threshold = 1.0f; // SETTINGS
 
 	GLint* arrays_firsts = nullptr;
 	GLsizei* arrays_counts = nullptr;
@@ -44,10 +44,10 @@ struct Canvas
 	SharedFlatSprite checkerboard;
 	RGBA checker1, checker2;
 private:
-	float checker_size_inv = 1.0f / 16.0f; // SETTINGS
+	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
 public:
-	unsigned short get_checker_size() const { return static_cast<unsigned short>(roundf(1.0f / checker_size_inv)); }
-	void set_checker_size(unsigned short checker_size) { checker_size_inv = 1.0f / checker_size; }
+	glm::ivec2 get_checker_size() const { return { roundf(1.0f / checker_size_inv.x), roundf(1.0f / checker_size_inv.y) }; }
+	void set_checker_size(glm::ivec2 checker_size) { checker_size_inv = { 1.0f / checker_size.x, 1.0f / checker_size.y }; }
 
 	void set_image(ImageHandle img);
 

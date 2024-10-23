@@ -6,6 +6,7 @@
 #include "variety/History.h"
 #include "variety/FileSystem.h"
 #include "Platform.h"
+#include "Preferences.h"
 
 struct MachineImpl
 {
@@ -19,9 +20,15 @@ struct MachineImpl
 
 	FilePath current_filepath = "";
 	bool unsaved = true;
+	WorkspacePreferences preferences;
 
 	std::vector<std::string> recent_files;
 	std::vector<std::string> recent_image_files;
+
+	int vsync = 0;
+	void update_vsync() const { glfwSwapInterval(vsync); }
+	bool raw_mouse_motion = true;
+	void update_raw_mouse_motion() const { main_window->set_raw_mouse_motion(raw_mouse_motion); }
 
 	// Canvas camera
 	struct

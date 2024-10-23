@@ -18,7 +18,8 @@ bool MachineImpl::create_main_window()
 	main_window = new Window("Quasar", 2160, 1440, true);
 	if (main_window)
 	{
-		main_window->set_raw_mouse_motion(true); // SETTINGS
+		update_raw_mouse_motion();
+		update_vsync();
 		return true;
 	}
 	return false;
@@ -26,8 +27,7 @@ bool MachineImpl::create_main_window()
 
 void MachineImpl::init_renderer()
 {
-	glfwSwapInterval(GLFW_FALSE); // SETTINGS (off by default)
-	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f));
+	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f)); // SETTINGS
 	QUASAR_GL(glEnable(GL_SCISSOR_TEST));
 	QUASAR_GL(glEnable(GL_BLEND));
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
@@ -44,12 +44,12 @@ void MachineImpl::init_renderer()
 	}; };
 	easel->clip.update_window_size(main_window->width(), main_window->height());
 
-	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 255_UC)));
+	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 255_UC))); // SETTINGS
 	easel->minor_gridlines.line_width = 1.0f; // cannot be < 1.0
-	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC)));
+	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC))); // SETTINGS
 	easel->major_gridlines.line_width = 4.0f; // cannot be < 1.0
 
-	set_easel_app_scale(1.5f);
+	set_easel_app_scale(1.5f); // SETTINGS
 	//import_file(FileSystem::workspace_path("oddtux.png"));
 	//show_major_gridlines();
 }

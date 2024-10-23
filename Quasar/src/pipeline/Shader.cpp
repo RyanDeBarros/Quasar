@@ -29,10 +29,10 @@ static GLuint compile_shader(GLenum type, const char* shader)
 static GLuint load_program(const FilePath& vert, const FilePath& frag)
 {
 	std::string vertex_shader;
-	if (!IO::read_file(vert, vertex_shader))
+	if (!IO.read_file(vert, vertex_shader))
 		QUASAR_ASSERT(false);
 	std::string fragment_shader;
-	if (!IO::read_file(frag, fragment_shader))
+	if (!IO.read_file(frag, fragment_shader))
 		QUASAR_ASSERT(false);
 
 	QUASAR_GL(GLuint shader = glCreateProgram());

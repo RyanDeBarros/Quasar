@@ -9,17 +9,18 @@ class FilePath
 
 public:
 	FilePath() = default;
-	FilePath(const char* path) : path(path) { to_unix_format(); }
+	FilePath(const char* path) : path(path ? path : "") { to_unix_format(); }
 	FilePath(std::string&& path) : path(std::move(path)) { to_unix_format(); }
-	FilePath& operator=(const char* path_) { path = path_; return *this; }
-	FilePath& operator=(std::string&& path_) { path = std::move(path_); return *this; }
+	FilePath& operator=(const char* path_) { path = path_ ? path_ : ""; to_unix_format(); return *this; }
+	FilePath& operator=(std::string&& path_) { path = std::move(path_); to_unix_format(); return *this; }
 
 	bool operator==(const FilePath& other) const { return path == other.path; }
 	FilePath operator/(const FilePath& relative) const
 	{
-		if (relative.is_relative())
+		if (path.ends_with("/"))
+			return path + relative.path;
+		else
 			return path + "/" + relative.path;
-		return *this;
 	}
 
 	bool is_absolute() const { return std::filesystem::path(path).is_absolute(); }
@@ -27,10 +28,10 @@ public:
 	std::string native_path() const;
 
 	void clear() { path.clear(); }
-	bool empty() { return path.empty(); }
+	bool empty() const { return path.empty(); }
 	const char* c_str() const { return path.c_str(); }
 	FilePath extension() const;
-	bool has_extension(const char* ext) const { return extension() == ext; }
+	bool has_extension(const char* ext) const;
 	bool has_any_extension(const char* const* exts, size_t num_exts) const
 	{
 		for (size_t i = 0; i < num_exts; ++i)
@@ -49,13 +50,12 @@ struct std::hash<FilePath>
 
 struct FileSystem
 {
-	static FilePath app_root;
 	static FilePath resources_root;
 	static FilePath workspace_root;
 
 	static FilePath app_path(const FilePath& relative)
 	{
-		return relative.is_relative() ? app_root / relative : relative;
+		return relative.is_relative() ? FilePath(".") / relative : relative;
 	}
 
 	static FilePath resources_path(const FilePath& relative)
@@ -69,6 +69,5 @@ struct FileSystem
 	}
 };
 
-inline FilePath FileSystem::app_root;
 inline FilePath FileSystem::resources_root;
 inline FilePath FileSystem::workspace_root;

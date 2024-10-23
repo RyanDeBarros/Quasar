@@ -1,0 +1,13 @@
+header = "preferences"
+workspace = "workspace1"
+
+[FileSystem]
+workspace_root = "D:/Projects/Visual Studio/Quasar/Quasar/ex"
+
+[Easel.Canvas.Checkerboard]
+checker1 = [54, 77, 77, 127]
+checker2 = [41, 51, 51, 127]
+checker_size = [16, 16]
+
+[Easel.Gridlines]
+min_initial_image_window_proportion = 2.0

@@ -1,0 +1,8 @@
+header = "settings"
+
+[FileSystem]
+resources_root = "D:/Projects/Visual Studio/Quasar/Quasar/res"
+
+[Renderer]
+vsync = 0
+raw_mouse_motion = true

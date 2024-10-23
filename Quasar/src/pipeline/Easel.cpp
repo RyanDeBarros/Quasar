@@ -214,7 +214,7 @@ void Canvas::set_image(ImageHandle img)
 	image = Images.get(img);
 	if (image)
 	{
-		set_checkerboard_uv_size(0.5f * image->width * checker_size_inv, 0.5f * image->height * checker_size_inv);
+		set_checkerboard_uv_size(0.5f * image->width * checker_size_inv.x, 0.5f * image->height * checker_size_inv.y);
 		checkerboard.set_modulation(ColorFrame());
 	}
 	else
@@ -244,8 +244,9 @@ Easel::Easel(Window* w)
 	canvas.create_checkerboard_image();
 	canvas.set_image(ImageHandle(0));
 
-	canvas.checker1 = RGBA(HSV(0.5f, 0.2f, 0.2f).to_rgb(), 0.5f); // SETTINGS
-	canvas.checker2 = RGBA(HSV(0.5f, 0.3f, 0.3f).to_rgb(), 0.5f);
+	canvas.checker1 = Machine.preferences.checker1;
+	canvas.checker2 = Machine.preferences.checker2;
+	canvas.set_checker_size(Machine.preferences.checker_size);
 	canvas.sync_checkerboard_colors();
 
 	GLuint IARR[3*6]{

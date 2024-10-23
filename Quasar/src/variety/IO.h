@@ -1,28 +1,20 @@
 #pragma once
 
-#include <fstream>
-#include <string>
-#include <variant>
-#include <vector>
-#include <unordered_map>
-#include <functional>
+#include <toml/toml.hpp>
 
 #include "variety/FileSystem.h"
 
-class IO
+struct IO_impl
 {
-	IO() = default;
-	IO(const IO&) = delete;
-	IO(IO&&) = delete;
-	~IO() = default;
+	IO_impl() = default;
+	IO_impl(const IO_impl&) = delete;
+	IO_impl(IO_impl&&) = delete;
+	~IO_impl() = default;
 
-	static IO io;
-
-	bool _read_file(const FilePath& filepath, std::string& content, std::ios_base::openmode mode = std::ios_base::in);
-
-public:
-	static bool read_file(const FilePath& filepath, std::string& content, std::ios_base::openmode mode = std::ios_base::in)
-	{
-		return io._read_file(filepath, content, mode);
-	}
+	bool read_file(const FilePath& filepath, std::string& content, std::ios_base::openmode mode = std::ios_base::in);
+	bool parse_toml(const FilePath& filepath, const char* header, toml::v3::parse_result& parse_result);
+	void load_quasar_settings();
+	void load_workspace_preferences(const FilePath& filepath, const char* workspace);
 };
+
+inline IO_impl IO;

@@ -1,4 +1,5 @@
 #include "user/Machine.h"
+#include "variety/IO.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -8,10 +9,8 @@ static void glfw_error_callback(int error, const char* description)
 
 int main()
 {
-	// SETTINGS
-	FileSystem::app_root = "D:/Projects/Visual Studio/Quasar/bin/Debug - x64";
-	FileSystem::resources_root = "D:/Projects/Visual Studio/Quasar/Quasar/res";
-	FileSystem::workspace_root = "D:/Projects/Visual Studio/Quasar/Quasar/ex";
+	IO.load_quasar_settings();
+	IO.load_workspace_preferences("D:/Projects/Visual Studio/Quasar/Quasar/ex/workspace1.toml", "workspace1");
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);
