@@ -4,7 +4,8 @@
 #include "user/Machine.h"
 
 Gridlines::Gridlines()
-	: shader("res/gridlines.vert", "res/gridlines.frag", { 2 }, { "u_VP", "u_FlatTransform", "u_Color" })
+	: shader(FileSystem::resources_path("gridlines.vert"), FileSystem::resources_path("gridlines.frag"),
+		{ 2 }, { "u_VP", "u_FlatTransform", "u_Color" })
 {
 	gen_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
 }
@@ -230,7 +231,8 @@ void Canvas::sync_transform()
 }
 
 Easel::Easel(Window* w)
-	: window(w), sprite_shader("res/flatsprite.vert", "res/flatsprite.frag", { 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
+	: window(w), sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
+		{ 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
 {
 	varr = new GLfloat[3 * SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE];
 	background.varr = varr;

@@ -41,6 +41,3 @@ constexpr unsigned char hex_to_byte(unsigned int hex)
 	else
 		static_assert(false);
 }
-
-extern const char* query_file_extension(const char* filepath, size_t filepath_len);
-extern bool file_extension_is_in(const char* filepath, size_t filepath_len, const char* const* extensions, size_t num_extensions);

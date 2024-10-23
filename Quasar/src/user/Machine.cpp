@@ -50,7 +50,7 @@ void MachineImpl::init_renderer()
 	easel->major_gridlines.line_width = 4.0f; // cannot be < 1.0
 
 	set_easel_app_scale(1.5f);
-	//import_file("ex/oddtux.png");
+	//import_file(FileSystem::workspace_path("oddtux.png"));
 	//show_major_gridlines();
 }
 
@@ -123,14 +123,15 @@ bool MachineImpl::new_file()
 	return true;
 }
 
-static const char* prompt_open_quasar_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
+static FilePath prompt_open_quasar_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
 {
-	static const char* const filters[1] = { "*.qua" };
-	const char* filepath = tinyfd_openFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "", allow_multiple_selects);
-	static const char* const fexts[1] = { "qua" };
-	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+	static const size_t num_filters = 1;
+	static const char* const filters[num_filters] = { "*.qua" };
+	FilePath filepath = tinyfd_openFileDialog(message, default_path, num_filters, filters, "", allow_multiple_selects);
+	static const char* const fexts[num_filters] = { ".qua" };
+	if (filepath.has_any_extension(fexts, num_filters))
 		return filepath;
-	return nullptr;
+	return "";
 }
 
 bool MachineImpl::open_file()
@@ -139,80 +140,83 @@ bool MachineImpl::open_file()
 	{
 		// LATER ask if user wants to save
 	}
-	const char* openfile = prompt_open_quasar_file("Open file");
-	if (!openfile) return false;
+	FilePath openfile = prompt_open_quasar_file("Open file");
+	if (openfile.empty()) return false;
 	current_filepath = openfile;
 	mark();
 	open_file(openfile);
 	return true;
 }
 
-static const char* prompt_open_image_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
+static FilePath prompt_open_image_file(const char* message, const char* default_path = "", bool allow_multiple_selects = false)
 {
-	static const char* const filters[6] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
-	const char* filepath = tinyfd_openFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "", allow_multiple_selects);
-	static const char* const fexts[6] = { "png", "gif", "jpg", "bmp", "tga", "hdr" };
-	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+	static const size_t num_filters = 6;
+	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
+	FilePath filepath = tinyfd_openFileDialog(message, default_path, num_filters, filters, "", allow_multiple_selects);
+	static const char* const fexts[num_filters] = { ".png", ".gif", ".jpg", ".bmp", ".tga", ".hdr" };
+	if (filepath.has_any_extension(fexts, num_filters))
 		return filepath;
-	return nullptr;
+	return "";
 }
 
 bool MachineImpl::import_file()
 {
-	const char* importfile = prompt_open_image_file("Import file");
-	if (!importfile) return false;
+	FilePath importfile = prompt_open_image_file("Import file");
+	if (importfile.empty()) return false;
 	mark();
 	import_file(importfile);
 	return true;
 }
 
-static const char* prompt_save_image_file(const char* message, const char* default_path = "")
+static FilePath prompt_save_image_file(const char* message, const char* default_path = "")
 {
-	static const char* const filters[6] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
-	const char* filepath = tinyfd_saveFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "");
-	static const char* const fexts[6] = { "png", "gif", "jpg", "bmp", "tga", "hdr" };
-	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+	static const size_t num_filters = 6;
+	static const char* const filters[num_filters] = { "*.png", "*.gif", "*.jpg", "*.bmp", "*.tga", "*.hdr" };
+	FilePath filepath = tinyfd_saveFileDialog(message, default_path, num_filters, filters, "");
+	static const char* const fexts[num_filters] = { ".png", ".gif", ".jpg", ".bmp", ".tga", ".hdr" };
+	if (filepath.has_any_extension(fexts, num_filters))
 		return filepath;
-	return nullptr;
+	return "";
 }
 
 bool MachineImpl::export_file() const
 {
 	// LATER open custom dialog for export settings first
-	const char* exportfile = prompt_save_image_file("Export file");
-	if (!exportfile) return false;
+	FilePath exportfile = prompt_save_image_file("Export file");
+	if (exportfile.empty()) return false;
 	// LATER actually export file
 	return true;
 }
 
-static const char* prompt_save_quasar_file(const char* message, const char* default_path = "")
+static FilePath prompt_save_quasar_file(const char* message, const char* default_path = "")
 {
-	static const char* const filters[1] = { "*.qua" };
-	const char* filepath = tinyfd_saveFileDialog(message, default_path, sizeof(filters) / sizeof(*filters), filters, "");
-	static const char* const fexts[1] = { "qua" };
-	if (filepath && file_extension_is_in(filepath, strlen(filepath), fexts, sizeof(fexts) / sizeof(*fexts)))
+	static const size_t num_filters = 1;
+	static const char* const filters[num_filters] = { "*.qua" };
+	FilePath filepath = tinyfd_saveFileDialog(message, default_path, num_filters, filters, "");
+	static const char* const fexts[num_filters] = { ".qua" };
+	if (filepath.has_any_extension(fexts, num_filters))
 		return filepath;
-	return nullptr;
+	return "";
 }
 
 bool MachineImpl::save_file()
 {
 	if (current_filepath.empty())
 	{
-		const char* savefile = prompt_save_quasar_file("Save file");
-		if (!savefile) return false;
+		FilePath savefile = prompt_save_quasar_file("Save file");
+		if (savefile.empty()) return false;
 		// LATER create new file
 		current_filepath = savefile;
 	}
-	save_file(current_filepath.c_str());
+	save_file(current_filepath);
 	unmark();
 	return true;
 }
 
 bool MachineImpl::save_file_as()
 {
-	const char* savefile = prompt_save_quasar_file("Save file as");
-	if (!savefile) return false;
+	FilePath savefile = prompt_save_quasar_file("Save file as");
+	if (savefile.empty()) return false;
 	// LATER create new file
 	current_filepath = savefile;
 	save_file(savefile);
@@ -222,20 +226,20 @@ bool MachineImpl::save_file_as()
 
 bool MachineImpl::save_file_copy()
 {
-	const char* savefile = prompt_save_quasar_file("Save file copy");
-	if (!savefile) return false;
+	FilePath savefile = prompt_save_quasar_file("Save file copy");
+	if (savefile.empty()) return false;
 	// LATER create new file
 	save_file(savefile);
 	unmark();
 	return true;
 }
 
-void MachineImpl::open_file(const char* filepath)
+void MachineImpl::open_file(const FilePath& filepath)
 {
 	// LATER actually open quasar file
 }
 
-void MachineImpl::import_file(const char* filepath)
+void MachineImpl::import_file(const FilePath& filepath)
 {	
 	// LATER register instead to ensure unique? or use secondary registry specifically for canvas_image
 	auto img = Images.construct(ImageConstructor(filepath));
@@ -243,7 +247,7 @@ void MachineImpl::import_file(const char* filepath)
 	canvas_reset_camera();
 }
 
-void MachineImpl::save_file(const char* filepath)
+void MachineImpl::save_file(const FilePath& filepath)
 {
 	// LATER actually save changes to filepath
 }

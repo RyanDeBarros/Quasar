@@ -5,6 +5,7 @@
 #include <string>
 
 #include "Macros.h"
+#include "variety/FileSystem.h"
 
 struct Shader
 {
@@ -13,7 +14,7 @@ struct Shader
 	std::unordered_map<std::string, GLint> uniform_locations;
 	std::vector<unsigned short> attributes;
 
-	Shader(const char* vertex_shader, const char* fragment_shader, std::vector<unsigned short>&& attributes, std::vector<std::string>&& uniforms);
+	Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, std::vector<unsigned short>&& attributes, std::vector<std::string>&& uniforms);
 	Shader(const Shader&) = delete;
 	Shader(Shader&&) noexcept;
 	Shader& operator()(Shader&&) noexcept = delete;

@@ -4,6 +4,7 @@
 #include <functional>
 
 #include "Macros.h"
+#include "variety/FileSystem.h"
 
 enum class MinFilter : GLint
 {
@@ -81,7 +82,7 @@ inline void bind_texture_params(const TextureParams& params)
 
 struct ImageConstructor
 {
-	std::string filepath;
+	FilePath filepath;
 	bool gen_texture = true;
 
 	bool operator==(const ImageConstructor&) const = default;
@@ -90,7 +91,7 @@ struct ImageConstructor
 template<>
 struct std::hash<ImageConstructor>
 {
-	size_t operator()(const ImageConstructor& ic) const { return std::hash<std::string>{}(ic.filepath); }
+	size_t operator()(const ImageConstructor& ic) const { return std::hash<FilePath>{}(ic.filepath); }
 };
 
 struct PathIterator;

@@ -1,16 +1,4 @@
-#include <array>
-
-#include <stb/stb_image.h>
-#include <imgui/imgui.h>
-
-#include "Macros.h"
-#include "pipeline/Shader.h"
-#include "variety/Geometry.h"
-#include "user/Platform.h"
-#include "edit/Color.h"
-#include "variety/Debug.h"
 #include "user/Machine.h"
-#include "user/GUI.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -20,7 +8,10 @@ static void glfw_error_callback(int error, const char* description)
 
 int main()
 {
-	//QuasarSettings::load_settings();
+	// SETTINGS
+	FileSystem::app_root = "D:/Projects/Visual Studio/Quasar/bin/Debug - x64";
+	FileSystem::resources_root = "D:/Projects/Visual Studio/Quasar/Quasar/res";
+	FileSystem::workspace_root = "D:/Projects/Visual Studio/Quasar/Quasar/ex";
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
 	glfwSetErrorCallback(glfw_error_callback);
@@ -52,4 +43,5 @@ int main()
 	Machine.destroy();
 	glfwTerminate();
 	return 0;
+	// LATER when terminating in error, write log.
 }

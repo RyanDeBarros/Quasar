@@ -4,9 +4,9 @@
 
 IO IO::io;
 
-bool IO::_read_file(const char* filepath, std::string& content, std::ios_base::openmode mode)
+bool IO::_read_file(const FilePath& filepath, std::string& content, std::ios_base::openmode mode)
 {
-	std::ifstream file(filepath, mode);
+	std::ifstream file(filepath.c_str(), mode);
 	if (file)
 	{
 		std::ostringstream oss;

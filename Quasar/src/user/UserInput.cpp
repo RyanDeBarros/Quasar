@@ -104,12 +104,14 @@ void attach_global_user_controls()
 	Machine.main_window->clbk_path_drop.push_back([](const Callback::PathDrop& pd) {
 		if (pd.num_paths >= 1 && Machine.cursor_in_easel())
 		{
-			const char* filepath = pd.paths[0];
-			static const char* image_formats[6] = { "png", "jpg", "gif", "bmp", "tga", "hdr" };
-			static const char* quasar_formats[1] = { "qua" };
-			if (file_extension_is_in(filepath, strlen(filepath), image_formats, sizeof(image_formats) / sizeof(*image_formats)))
+			FilePath filepath = pd.paths[0];
+			static const size_t num_image_formats = 6;
+			static const char* image_formats[num_image_formats] = { ".png", ".jpg", ".gif", ".bmp", ".tga", ".hdr" };
+			static const size_t num_quasar_formats = 1;
+			static const char* quasar_formats[num_quasar_formats] = { ".qua" };
+			if (filepath.has_any_extension(image_formats, num_image_formats))
 				Machine.import_file(filepath);
-			else if (file_extension_is_in(filepath, strlen(filepath), quasar_formats, sizeof(quasar_formats) / sizeof(*quasar_formats)))
+			else if (filepath.has_any_extension(quasar_formats, num_quasar_formats))
 				Machine.open_file(filepath);
 			// LATER note no error popup otherwise?
 		}

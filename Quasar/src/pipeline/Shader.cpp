@@ -26,7 +26,7 @@ static GLuint compile_shader(GLenum type, const char* shader)
 	return id;
 }
 
-static GLuint load_program(const char* vert, const char* frag)
+static GLuint load_program(const FilePath& vert, const FilePath& frag)
 {
 	std::string vertex_shader;
 	if (!IO::read_file(vert, vertex_shader))
@@ -88,7 +88,7 @@ static unsigned short stride_of(const std::vector<unsigned short>& attributes)
 	return sum;
 }
 
-Shader::Shader(const char* vertex_shader, const char* fragment_shader, std::vector<unsigned short>&& attribs, std::vector<std::string>&& uniforms)
+Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, std::vector<unsigned short>&& attribs, std::vector<std::string>&& uniforms)
 	: attributes(std::move(attribs))
 {
 	stride = stride_of(attributes);

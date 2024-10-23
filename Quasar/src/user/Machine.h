@@ -4,6 +4,7 @@
 
 #include "variety/Geometry.h"
 #include "variety/History.h"
+#include "variety/FileSystem.h"
 #include "Platform.h"
 
 struct MachineImpl
@@ -16,7 +17,7 @@ struct MachineImpl
 	ActionHistory history;
 	Window* main_window = nullptr;
 
-	std::string current_filepath = "";
+	FilePath current_filepath = "";
 	bool unsaved = true;
 
 	std::vector<std::string> recent_files;
@@ -70,9 +71,9 @@ struct MachineImpl
 	bool save_file_as();
 	bool save_file_copy();
 
-	void open_file(const char* filepath);
-	void import_file(const char* filepath);
-	void save_file(const char* filepath);
+	void open_file(const FilePath& filepath);
+	void import_file(const FilePath& filepath);
+	void save_file(const FilePath& filepath);
 
 	void undo() { history.undo(); }
 	bool undo_enabled() const { return history.undo_size() != 0; }
