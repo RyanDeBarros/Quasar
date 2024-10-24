@@ -10,13 +10,13 @@ static void render_main_menu()
 		ImGui::PopStyleVar();
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("New file", "CTRL+N")) { Machine.new_file(); }
-			if (ImGui::MenuItem("Open file", "CTRL+O")) { Machine.open_file(); }
-			if (ImGui::MenuItem("Import file", "CTRL+I")) { Machine.import_file(); }
-			if (ImGui::MenuItem("Export file", "CTRL+E", false, Machine.canvas_image_ready())) { Machine.export_file(); }
+			if (ImGui::MenuItem("New Quasar file", "CTRL+N")) { Machine.new_file(); }
+			if (ImGui::MenuItem("Open Quasar file", "CTRL+O")) { Machine.open_file(); }
+			if (ImGui::MenuItem("Import image file", "CTRL+I")) { Machine.import_file(); }
+			if (ImGui::MenuItem("Export image file", "CTRL+E", false, Machine.canvas_image_ready())) { Machine.export_file(); }
 			ImGui::Separator();
 			if (ImGui::MenuItem("Save", "CTRL+S")) { Machine.save_file(); }
-			if (ImGui::BeginMenu("Open recent", !Machine.recent_files.empty()))
+			if (ImGui::BeginMenu("Open recent Quasar file", !Machine.recent_files.empty()))
 			{
 				for (const auto& recent_file : Machine.recent_files)
 				{
@@ -24,7 +24,7 @@ static void render_main_menu()
 				}
 				ImGui::EndMenu();
 			}
-			if (ImGui::BeginMenu("Import recent", !Machine.recent_files.empty()))
+			if (ImGui::BeginMenu("Import recent image file", !Machine.recent_files.empty()))
 			{
 				for (const auto& recent_file : Machine.recent_image_files)
 				{
