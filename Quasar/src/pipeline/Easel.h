@@ -128,6 +128,7 @@ public:
 	void gridlines_sync_with_image(Gridlines& gridlines) const;
 	
 	void set_canvas_image(ImageHandle img);
+	void update_canvas_image() { set_canvas_image(canvas.sprite.image); sync_canvas_transform(); }
 
 	bool minor_gridlines_are_visible() const { return minor_gridlines_visible; }
 	void set_minor_gridlines_visibility(bool visible);

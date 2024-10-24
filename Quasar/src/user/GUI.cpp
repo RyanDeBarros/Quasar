@@ -13,7 +13,7 @@ static void render_main_menu()
 			if (ImGui::MenuItem("New file", "CTRL+N")) { Machine.new_file(); }
 			if (ImGui::MenuItem("Open file", "CTRL+O")) { Machine.open_file(); }
 			if (ImGui::MenuItem("Import file", "CTRL+I")) { Machine.import_file(); }
-			if (ImGui::MenuItem("Export file", "CTRL+E")) { Machine.export_file(); }
+			if (ImGui::MenuItem("Export file", "CTRL+E", false, Machine.canvas_image_ready())) { Machine.export_file(); }
 			ImGui::Separator();
 			if (ImGui::MenuItem("Save", "CTRL+S")) { Machine.save_file(); }
 			if (ImGui::BeginMenu("Open recent", !Machine.recent_files.empty()))
@@ -44,29 +44,31 @@ static void render_main_menu()
 			if (ImGui::MenuItem("Undo", "CTRL+Z", false, Machine.undo_enabled())) { Machine.undo(); }
 			if (ImGui::MenuItem("Redo", "CTRL+SHIFT+Z", false, Machine.redo_enabled())) { Machine.redo(); }
 			ImGui::Separator();
-			if (ImGui::MenuItem("Flip horizontally")) { Machine.flip_horizontally(); }
-			if (ImGui::MenuItem("Flip vertically")) { Machine.flip_vertically(); }
-			if (ImGui::MenuItem("Rotate 180")) { Machine.rotate_180(); }
+			if (ImGui::MenuItem("Flip horizontally", "", false, Machine.canvas_image_ready())) { Machine.flip_horizontally(); }
+			if (ImGui::MenuItem("Flip vertically", "", false, Machine.canvas_image_ready())) { Machine.flip_vertically(); }
+			if (ImGui::MenuItem("Rotate 90", "", false, Machine.canvas_image_ready())) { Machine.rotate_90(); }
+			if (ImGui::MenuItem("Rotate 180", "", false, Machine.canvas_image_ready())) { Machine.rotate_180(); }
+			if (ImGui::MenuItem("Rotate 270", "", false, Machine.canvas_image_ready())) { Machine.rotate_270(); }
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("View"))
 		{
-			if (ImGui::MenuItem("Reset canvas view", "0 (Row)")) { Machine.canvas_reset_camera(); }
+			if (ImGui::MenuItem("Reset canvas view", "0 (Row)", false, Machine.canvas_image_ready())) { Machine.canvas_reset_camera(); }
 			if (Machine.minor_gridlines_visible())
 			{
-				if (ImGui::MenuItem("Hide minor gridlines", "G")) { Machine.hide_minor_gridlines(); }
+				if (ImGui::MenuItem("Hide minor gridlines", "G", false, Machine.canvas_image_ready())) { Machine.hide_minor_gridlines(); }
 			}
 			else
 			{
-				if (ImGui::MenuItem("Show minor gridlines", "G")) { Machine.show_minor_gridlines(); }
+				if (ImGui::MenuItem("Show minor gridlines", "G", false, Machine.canvas_image_ready())) { Machine.show_minor_gridlines(); }
 			}
 			if (Machine.major_gridlines_visible())
 			{
-				if (ImGui::MenuItem("Hide major gridlines", "SHIFT+G")) { Machine.hide_major_gridlines(); }
+				if (ImGui::MenuItem("Hide major gridlines", "SHIFT+G", false, Machine.canvas_image_ready())) { Machine.hide_major_gridlines(); }
 			}
 			else
 			{
-				if (ImGui::MenuItem("Show major gridlines", "SHIFT+G")) { Machine.show_major_gridlines(); }
+				if (ImGui::MenuItem("Show major gridlines", "SHIFT+G", false, Machine.canvas_image_ready())) { Machine.show_major_gridlines(); }
 			}
 			ImGui::EndMenu();
 		}

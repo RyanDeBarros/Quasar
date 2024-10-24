@@ -66,6 +66,7 @@ struct MachineImpl
 	Position& canvas_position() const { return canvas_transform().position; }
 	Scale& canvas_scale() const { return canvas_transform().scale; }
 	void sync_canvas_transform() const;
+	bool canvas_image_ready() const;
 
 	// File menu
 	bool new_file();
@@ -80,9 +81,9 @@ struct MachineImpl
 	void import_file(const FilePath& filepath);
 	void save_file(const FilePath& filepath);
 
-	void undo() { history.undo(); }
+	void undo() { history.undo(); mark(); }
 	bool undo_enabled() const { return history.undo_size() != 0; }
-	void redo() { history.redo(); }
+	void redo() { history.redo(); mark(); }
 	bool redo_enabled() const { return history.redo_size() != 0; }
 
 	// User controls
@@ -95,7 +96,9 @@ struct MachineImpl
 	// Edit menu
 	void flip_horizontally();
 	void flip_vertically();
+	void rotate_90();
 	void rotate_180();
+	void rotate_270();
 
 	// View menu
 	void canvas_reset_camera();

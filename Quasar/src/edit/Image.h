@@ -127,13 +127,15 @@ struct Image
 	void flip_vertically() const { _flip_vertically(); update_texture(); }
 	void flip_horizontally() const { _flip_horizontally(); update_texture(); }
 
-	//void _rotate_90();
+	void _rotate_90();
+	void rotate_90() { _rotate_90(); resend_texture(); }
 	void _rotate_180() const;
 	void rotate_180() const { _rotate_180(); update_texture(); }
-	//void _rotate_270();
-	// change bpp
-	// crop width / height --> create new image and return it, so old image isn't lost?
-	// This reminds me, implement a undo/redo action history stack.
+	void _rotate_270();
+	void rotate_270() { _rotate_270(); resend_texture(); }
+
+	// LATER change bpp
+	// LATER crop width / height --> create new image and return it, so old image isn't lost?
 
 	void _set(Byte* pixel, const Path& path_) const;
 	void set(Byte* pixel, const Path& path_) const { _set(pixel, path_); update_texture(); }
