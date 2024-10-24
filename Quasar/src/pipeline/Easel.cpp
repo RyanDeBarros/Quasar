@@ -50,7 +50,7 @@ void Gridlines::update_scale(Scale scale) const
 	float lwy = 0.5f * line_width;
 	if (scale.y > 1.0f)
 		lwy /= scale.y;
-	if (2.0f * lwx >= scale.x * line_spacing - self_intersection_threshold || 2.0f * lwy >= scale.y * line_spacing - self_intersection_threshold)
+	if (2.0f * lwx >= scale.x * line_spacing.x - self_intersection_threshold || 2.0f * lwy >= scale.y * line_spacing.y - self_intersection_threshold)
 	{
 		_visible = false;
 		return;
@@ -65,7 +65,7 @@ void Gridlines::update_scale(Scale scale) const
 
 	for (unsigned short i = 0; i < num_cols() - 1; ++i)
 	{
-		float delta = i * line_spacing;
+		float delta = i * line_spacing.x;
 		setter[0] = x1 + delta;
 		setter[1] = y1;
 		setter += shader.stride;
@@ -101,7 +101,7 @@ void Gridlines::update_scale(Scale scale) const
 	y2 = -height * 0.5f + lwy;
 	for (unsigned short i = 0; i < num_rows() - 1; ++i)
 	{
-		float delta = i * line_spacing;
+		float delta = i * line_spacing.y;
 		setter[0] = x1;
 		setter[1] = y1 + delta;
 		setter += shader.stride;
@@ -145,12 +145,12 @@ void Gridlines::draw() const
 
 unsigned short Gridlines::num_cols() const
 {
-	return unsigned short(std::ceil(width / line_spacing)) + 1_US;
+	return unsigned short(std::ceil(width / line_spacing.x)) + 1_US;
 }
 
 unsigned short Gridlines::num_rows() const
 {
-	return unsigned short(std::ceil(height / line_spacing)) + 1_US;
+	return unsigned short(std::ceil(height / line_spacing.y)) + 1_US;
 }
 
 void Gridlines::set_color(ColorFrame color)
@@ -209,6 +209,12 @@ void Canvas::sync_checkerboard_texture() const
 void Canvas::set_checkerboard_uv_size(float width, float height) const
 {
 	checkerboard.set_uvs(Bounds{ 0.0f, width, 0.0f, height });
+}
+
+void Canvas::set_checker_size(glm::ivec2 checker_size)
+{
+	checker_size_inv = { 1.0f / checker_size.x, 1.0f / checker_size.y };
+	major_gridlines.line_spacing = checker_size;
 }
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
@@ -290,8 +296,6 @@ Easel::Easel(Window* w)
 		send_view();
 		Machine.on_render();
 		});
-
-	major_gridlines.line_spacing = 16.0f;
 }
 
 Easel::~Easel()
@@ -338,10 +342,10 @@ void Easel::render() const
 		}
 		// minor gridlines
 		if (minor_gridlines_visible)
-			minor_gridlines.draw();
+			canvas.minor_gridlines.draw();
 		// major gridlines
 		if (major_gridlines_visible)
-			major_gridlines.draw();
+			canvas.major_gridlines.draw();
 	}
 	// unbind
 	unbind_vao_buffers();
@@ -382,10 +386,10 @@ void Easel::send_view()
 	glm::mat3 cameraVP = vp_matrix();
 	bind_shader(sprite_shader.rid);
 	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
-	bind_shader(minor_gridlines.shader.rid);
-	QUASAR_GL(glUniformMatrix3fv(minor_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
-	bind_shader(major_gridlines.shader.rid);
-	QUASAR_GL(glUniformMatrix3fv(major_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+	bind_shader(canvas.minor_gridlines.shader.rid);
+	QUASAR_GL(glUniformMatrix3fv(canvas.minor_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+	bind_shader(canvas.major_gridlines.shader.rid);
+	QUASAR_GL(glUniformMatrix3fv(canvas.major_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 	unbind_shader();
 }
 
@@ -400,11 +404,11 @@ void Easel::sync_canvas_transform()
 	subsend_canvas_sprite_vao();
 	subsend_checkerboard_vao();
 	if (minor_gridlines_visible)
-		gridlines_send_flat_transform(minor_gridlines);
+		gridlines_send_flat_transform(canvas.minor_gridlines);
 	else
 		_buffer_minor_gridlines_send_flat_transform = true;
 	if (major_gridlines_visible)
-		gridlines_send_flat_transform(major_gridlines);
+		gridlines_send_flat_transform(canvas.major_gridlines);
 	else
 		_buffer_major_gridlines_send_flat_transform = true;
 	unbind_shader();
@@ -442,11 +446,11 @@ void Easel::set_canvas_image(const std::shared_ptr<Image>& img)
 	canvas.set_image(img);
 	canvas_visible = true;
 	if (minor_gridlines_visible)
-		gridlines_sync_with_image(minor_gridlines);
+		gridlines_sync_with_image(canvas.minor_gridlines);
 	else
 		_buffer_minor_gridlines_sync_with_image = true;
 	if (major_gridlines_visible)
-		gridlines_sync_with_image(major_gridlines);
+		gridlines_sync_with_image(canvas.major_gridlines);
 	else
 		_buffer_major_gridlines_sync_with_image = true;
 }
@@ -456,11 +460,11 @@ void Easel::set_canvas_image(std::shared_ptr<Image>&& img)
 	canvas.set_image(std::move(img));
 	canvas_visible = true;
 	if (minor_gridlines_visible)
-		gridlines_sync_with_image(minor_gridlines);
+		gridlines_sync_with_image(canvas.minor_gridlines);
 	else
 		_buffer_minor_gridlines_sync_with_image = true;
 	if (major_gridlines_visible)
-		gridlines_sync_with_image(major_gridlines);
+		gridlines_sync_with_image(canvas.major_gridlines);
 	else
 		_buffer_major_gridlines_sync_with_image = true;
 }
@@ -470,9 +474,9 @@ void Easel::set_minor_gridlines_visibility(bool visible)
 	if (!minor_gridlines_visible && visible)
 	{
 		if (_buffer_minor_gridlines_send_flat_transform)
-			gridlines_send_flat_transform(minor_gridlines);
+			gridlines_send_flat_transform(canvas.minor_gridlines);
 		if (_buffer_minor_gridlines_sync_with_image)
-			gridlines_sync_with_image(minor_gridlines);
+			gridlines_sync_with_image(canvas.minor_gridlines);
 	}
 	else if (minor_gridlines_visible && !visible)
 	{
@@ -487,9 +491,9 @@ void Easel::set_major_gridlines_visibility(bool visible)
 	if (!major_gridlines_visible && visible)
 	{
 		if (_buffer_major_gridlines_send_flat_transform)
-			gridlines_send_flat_transform(major_gridlines);
+			gridlines_send_flat_transform(canvas.major_gridlines);
 		if (_buffer_major_gridlines_sync_with_image)
-			gridlines_sync_with_image(major_gridlines);
+			gridlines_sync_with_image(canvas.major_gridlines);
 	}
 	else if (major_gridlines_visible && !visible)
 	{

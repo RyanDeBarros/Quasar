@@ -10,7 +10,7 @@ struct Gridlines
 	GLuint vao = 0, vb = 0;
 	Shader shader;
 	GLfloat* varr = nullptr;
-	float line_spacing = 1.0f;
+	glm::vec2 line_spacing = { 1.0f, 1.0f };
 	float line_width = 1.0f; // SETTINGS
 	float self_intersection_threshold = 1.0f; // SETTINGS
 
@@ -43,11 +43,14 @@ struct Canvas
 	SharedFlatSprite sprite;
 	SharedFlatSprite checkerboard;
 	RGBA checker1, checker2;
+
+	Gridlines minor_gridlines; // TODO move gridlines to Canvas
+	Gridlines major_gridlines;
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
 public:
 	glm::ivec2 get_checker_size() const { return { roundf(1.0f / checker_size_inv.x), roundf(1.0f / checker_size_inv.y) }; }
-	void set_checker_size(glm::ivec2 checker_size) { checker_size_inv = { 1.0f / checker_size.x, 1.0f / checker_size.y }; }
+	void set_checker_size(glm::ivec2 checker_size);
 
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
@@ -81,9 +84,6 @@ struct Easel
 	Shader sprite_shader;
 
 	bool canvas_visible = false;
-	
-	Gridlines minor_gridlines;
-	Gridlines major_gridlines;
 
 private:
 	bool minor_gridlines_visible = false;
@@ -131,6 +131,8 @@ public:
 	void set_canvas_image(const std::shared_ptr<Image>& image);
 	void set_canvas_image(std::shared_ptr<Image>&& image);
 	void update_canvas_image() { set_canvas_image(canvas.sprite.image); sync_canvas_transform(); }
+	Image* canvas_image() const { return canvas.sprite.image.get(); }
+	std::shared_ptr<Image> canvas_image_ref() const { return canvas.sprite.image; }
 
 	bool minor_gridlines_are_visible() const { return minor_gridlines_visible; }
 	void set_minor_gridlines_visibility(bool visible);

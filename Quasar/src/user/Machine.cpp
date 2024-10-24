@@ -44,10 +44,10 @@ void MachineImpl::init_renderer()
 	}; };
 	easel->clip.update_window_size(main_window->width(), main_window->height());
 
-	easel->minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 127_UC, 255_UC))); // SETTINGS
-	easel->minor_gridlines.line_width = 1.0f; // cannot be < 1.0
-	easel->major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 144_UC, 255_UC))); // SETTINGS
-	easel->major_gridlines.line_width = 4.0f; // cannot be < 1.0
+	easel->canvas.minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 107_UC, 255_UC))); // SETTINGS
+	easel->canvas.minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
+	easel->canvas.major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 127_UC, 255_UC))); // SETTINGS
+	easel->canvas.major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
 
 	set_easel_app_scale(1.5f); // SETTINGS
 	import_file(FileSystem::workspace_path("ex/flag.png"));
@@ -100,7 +100,7 @@ void MachineImpl::sync_canvas_transform() const
 
 bool MachineImpl::canvas_image_ready() const
 {
-	return easel->canvas.sprite.image != nullptr;
+	return easel->canvas_image();
 }
 
 bool MachineImpl::cursor_in_easel() const
@@ -331,33 +331,33 @@ void MachineImpl::canvas_zoom_by(float z)
 
 void MachineImpl::flip_horizontally()
 {
-	static Action a([this]() { easel->canvas.sprite.image->flip_horizontally(); }, [this]() { easel->canvas.sprite.image->flip_horizontally(); });
+	static Action a([this]() { easel->canvas_image()->flip_horizontally(); }, [this]() { easel->canvas_image()->flip_horizontally(); });
 	history.execute(a);
 }
 
 void MachineImpl::flip_vertically()
 {
-	static Action a([this]() { easel->canvas.sprite.image->flip_vertically(); }, [this]() { easel->canvas.sprite.image->flip_vertically(); });
+	static Action a([this]() { easel->canvas_image()->flip_vertically(); }, [this]() { easel->canvas_image()->flip_vertically(); });
 	history.execute(a);
 }
 
 void MachineImpl::rotate_90()
 {
-	static Action a([this]() { easel->canvas.sprite.image->rotate_90(); easel->update_canvas_image(); },
-		[this]() { easel->canvas.sprite.image->rotate_270(); easel->update_canvas_image(); });
+	static Action a([this]() { easel->canvas_image()->rotate_90(); easel->update_canvas_image(); },
+		[this]() { easel->canvas_image()->rotate_270(); easel->update_canvas_image(); });
 	history.execute(a);
 }
 
 void MachineImpl::rotate_180()
 {
-	static Action a([this]() { easel->canvas.sprite.image->rotate_180(); }, [this]() { easel->canvas.sprite.image->rotate_180(); });
+	static Action a([this]() { easel->canvas_image()->rotate_180(); }, [this]() { easel->canvas_image()->rotate_180(); });
 	history.execute(a);
 }
 
 void MachineImpl::rotate_270()
 {
-	static Action a([this]() { easel->canvas.sprite.image->rotate_270(); easel->update_canvas_image(); },
-		[this]() { easel->canvas.sprite.image->rotate_90(); easel->update_canvas_image(); });
+	static Action a([this]() { easel->canvas_image()->rotate_270(); easel->update_canvas_image(); },
+		[this]() { easel->canvas_image()->rotate_90(); easel->update_canvas_image(); });
 	history.execute(a);
 }
 
@@ -365,9 +365,9 @@ void MachineImpl::canvas_reset_camera()
 {
 	zoom_info.zoom = zoom_info.initial;
 	canvas_transform() = {};
-	if (easel->canvas.sprite.image)
+	if (easel->canvas_image())
 	{
-		float fit_scale = std::min(easel->get_app_width() / easel->canvas.sprite.image->buf.width, easel->get_app_height() / easel->canvas.sprite.image->buf.height);
+		float fit_scale = std::min(easel->get_app_width() / easel->canvas_image()->buf.width, easel->get_app_height() / easel->canvas_image()->buf.height);
 		if (fit_scale < 1.0f)
 		{
 			canvas_scale() *= fit_scale;
