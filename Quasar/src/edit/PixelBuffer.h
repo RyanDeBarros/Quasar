@@ -19,6 +19,8 @@ struct Buffer
 	Dim stride() const { return width * chpp; }
 	Dim bytes() const { return width * chpp * height; }
 	Dim area() const { return width * height; }
+
+	void pxnew() { pixels = new Byte[bytes() * sizeof(Byte)]; }
 };
 
 struct CHPPMismatchError : public std::runtime_error
@@ -44,6 +46,7 @@ struct Path
 
 	PathIterator first_iter() const { PathIterator pit; first(pit); return pit; }
 	PathIterator last_iter() const { PathIterator pit; last(pit); return pit; }
+	void move_iter(PathIterator& pit, long long offset) const;
 };
 
 struct ReversePath : public Path

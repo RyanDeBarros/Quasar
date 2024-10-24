@@ -70,7 +70,7 @@ Image::Image(const ImageConstructor& args)
 Image::Image(const Image& other)
 	: buf(other.buf)
 {
-	buf.pixels = new Byte[buf.bytes()];
+	buf.pxnew();
 	subbuffer_copy(buf, other.buf);
 	if (other.tid != 0)
 		gen_texture();
@@ -90,7 +90,7 @@ Image& Image::operator=(const Image& other)
 		delete_buffer(*this);
 		delete_texture(*this);
 		buf = other.buf;
-		buf.pixels = new Byte[buf.bytes()];
+		buf.pxnew();
 		subbuffer_copy(buf, other.buf);
 		buf = other.buf;
 		if (other.tid != 0)
@@ -212,7 +212,7 @@ void Image::_rotate_90()
 	new_buffer.width = buf.height;
 	new_buffer.height = buf.width;
 	new_buffer.chpp = buf.chpp;
-	new_buffer.pixels = new Byte[new_buffer.bytes()]; // TODO new_buffer.pxnew()
+	new_buffer.pxnew();
 
 	Dim x0 = 0, x1 = buf.width - 1, y0 = 0, y1 = buf.height - 1;
 	Subbuffer ring_subbuffer_old, ring_subbuffer_new;
@@ -269,38 +269,6 @@ void Image::_rotate_180() const
 		}
 	}
 	delete[] temp;
-
-	// SLOWER, although still accurate:
-	//UprightRect lower;
-	//lower.x1 = buf.width - 1;
-	//lower.y1 = buf.height / 2;
-	//Subbuffer lower_sub{ buf, &lower };
-	//
-	//ReversePath reverse_lower;
-	//reverse_lower.forward = &lower;
-	//Subbuffer reverse_lower_sub{ buf, &reverse_lower };
-	//
-	//Buffer temp;
-	//temp.width = buf.width;
-	//temp.chpp = buf.chpp;
-	//temp.height = buf.height / 2 + 1;
-	//temp.pixels = new Byte[temp.bytes()];
-	//
-	//UprightRect upper;
-	//upper.x1 = buf.width - 1;
-	//upper.y0 = buf.height / 2 + 1;
-	//upper.y1 = buf.height - 1;
-	//Subbuffer upper_sub{ buf, &upper };
-	//
-	//ReversePath reverse_upper;
-	//reverse_upper.forward = &upper;
-	//Subbuffer reverse_upper_sub{ buf, &reverse_upper };
-	//
-	//subbuffer_copy(temp, reverse_lower_sub);
-	//subbuffer_copy(buf, reverse_upper_sub);
-	//subbuffer_copy(buf, temp, buf.width * (buf.height / 2 - 1));
-	//
-	//delete[] temp.pixels;
 }
 
 void Image::_rotate_270()
@@ -311,7 +279,7 @@ void Image::_rotate_270()
 	new_buffer.width = buf.height;
 	new_buffer.height = buf.width;
 	new_buffer.chpp = buf.chpp;
-	new_buffer.pixels = new Byte[new_buffer.bytes()]; // TODO new_buffer.pxnew()
+	new_buffer.pxnew();
 
 	Dim x0 = 0, x1 = buf.width - 1, y0 = 0, y1 = buf.height - 1;
 	Subbuffer ring_subbuffer_old, ring_subbuffer_new;

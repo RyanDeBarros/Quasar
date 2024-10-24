@@ -2,18 +2,17 @@
 
 #include <memory>
 
-// TODO put somewhere else
-static void advance_pit(PathIterator& pit, const Path& path, long long offset)
+void Path::move_iter(PathIterator& pit, long long offset) const
 {
 	if (offset > 0)
 	{
 		while (offset-- > 0)
-			path.next(pit);
+			next(pit);
 	}
 	else if (offset < 0)
 	{
 		while (offset++ < 0)
-			path.prev(pit);
+			prev(pit);
 	}
 }
 
@@ -21,9 +20,9 @@ void subbuffer_copy(const Subbuffer& dest, const Subbuffer& src, long long dest_
 {
 	assert_same_chpp(dest.buf, src.buf);
 	PathIterator dest_pit = dest.path->first_iter();
-	advance_pit(dest_pit, *dest.path, dest_offset);
+	dest.path->move_iter(dest_pit, dest_offset);
 	PathIterator src_pit = src.path->first_iter();
-	advance_pit(src_pit, *src.path, src_offset);
+	src.path->move_iter(src_pit, src_offset);
 	if (length == -1)
 	{
 		auto dest_last = dest.path->last_iter();
@@ -53,7 +52,7 @@ void subbuffer_copy(const Buffer& dest, const Subbuffer& src, long long dest_off
 	assert_same_chpp(dest, src.buf);
 	Byte* dest_pixels = dest.pixels + dest_offset;
 	PathIterator src_pit = src.path->first_iter();
-	advance_pit(src_pit, *src.path, src_offset);
+	src.path->move_iter(src_pit, src_offset);
 	if (length == -1)
 	{
 		auto src_last = src.path->last_iter();
@@ -81,7 +80,7 @@ void subbuffer_copy(const Subbuffer& dest, const Buffer& src, long long dest_off
 {
 	assert_same_chpp(dest.buf, src);
 	PathIterator dest_pit = dest.path->first_iter();
-	advance_pit(dest_pit, *dest.path, dest_offset);
+	dest.path->move_iter(dest_pit, dest_offset);
 	Byte* src_pixels = src.pixels + src_offset;
 	if (length == -1)
 	{

@@ -166,7 +166,7 @@ void Canvas::create_checkerboard_image()
 	img.buf.width = 2;
 	img.buf.height = 2;
 	img.buf.chpp = 4;
-	img.buf.pixels = new Byte[img.buf.bytes()];
+	img.buf.pxnew();
 	img.gen_texture();
 	checkerboard.set_image(Images.add(std::move(img)));
 	set_checkerboard_uv_size(0, 0);
