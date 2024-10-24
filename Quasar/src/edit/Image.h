@@ -81,6 +81,26 @@ inline void bind_texture_params(const TextureParams& params)
 	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(params.wrap_t)));
 }
 
+enum class ImageFormat
+{
+	PNG,
+	JPG,
+	BMP,
+	HDR,
+	TGA
+};
+
+enum class JPGQuality
+{
+	HIGHEST = 100,
+	VERY_HIGH = 90,
+	HIGH = 75,
+	MEDIUM = 50,
+	LOW = 25,
+	VERY_LOW = 10,
+	LOWEST = 1
+};
+
 struct Image
 {
 	Buffer buf;
@@ -103,6 +123,8 @@ struct Image
 	void update_texture() const;
 	void resend_texture() const;
 	void send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const;
+
+	bool write_to_file(const FilePath& filepath, ImageFormat format, JPGQuality jpg_quality = JPGQuality::HIGHEST) const;
 
 	// buffer operations
 	void _flip_vertically() const;

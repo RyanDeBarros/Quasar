@@ -1,6 +1,7 @@
 #include "Image.h"
 
 #include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
 #include <memory>
 
 #include "variety/GLutility.h"
@@ -161,6 +162,34 @@ void Image::send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const
 {
 	bind_texture(tid);
 	QUASAR_GL(glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
+}
+
+bool Image::write_to_file(const FilePath& filepath, ImageFormat format, JPGQuality jpg_quality) const
+{
+	switch (format)
+	{
+	case ImageFormat::PNG:
+		return stbi_write_png(filepath.c_str(), buf.width, buf.height, buf.chpp, buf.pixels, buf.stride() * sizeof(Byte));
+	case ImageFormat::JPG:
+		return stbi_write_jpg(filepath.c_str(), buf.width, buf.height, buf.chpp, buf.pixels, int(jpg_quality));
+	case ImageFormat::BMP:
+		return stbi_write_bmp(filepath.c_str(), buf.width, buf.height, buf.chpp, buf.pixels);
+	case ImageFormat::HDR:
+	{
+#pragma warning(push)
+#pragma warning(disable : 6386)
+		float* hdr_buf = new float[buf.bytes()];
+		for (size_t i = 0; i < buf.bytes(); ++i)
+			hdr_buf[i] = buf.pixels[i] / 255.0f;
+#pragma warning(pop)
+		bool success = stbi_write_hdr(filepath.c_str(), buf.width, buf.height, buf.chpp, hdr_buf); // NOTE HDR cannot be internally stored in Image.
+		delete[] hdr_buf;
+		return success;
+	}
+	case ImageFormat::TGA:
+		return stbi_write_tga(filepath.c_str(), buf.width, buf.height, buf.chpp, buf.pixels);
+	}
+	return false;
 }
 
 void Image::_flip_vertically() const

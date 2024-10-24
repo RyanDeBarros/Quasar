@@ -7,7 +7,7 @@ workspace_root = "."
 [Easel.Canvas.Checkerboard]
 checker1 = [54, 77, 77, 127]
 checker2 = [41, 51, 51, 127]
-checker_size = [12, 14]
+checker_size = [16, 16]
 
 [Easel.Gridlines]
 min_initial_image_window_proportion = 3.0

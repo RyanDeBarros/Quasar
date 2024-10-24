@@ -186,11 +186,14 @@ static FilePath prompt_save_image_file(const char* message, const char* default_
 
 bool MachineImpl::export_file() const
 {
-	// LATER open custom dialog for export settings first
+	if (!easel->canvas_image())
+		return false;
+	// LATER open custom dialog first (or only) for export settings first, including file format, upscale/downscale, frame/layer options, etc.
+	// If tinyfd is still used for file selection, make sure to use the proper filter corresponding to the image format, as well as possibly a default path.
+	// Also make sure that the selected file's extension matches the image format.
 	FilePath exportfile = prompt_save_image_file("Export file");
 	if (exportfile.empty()) return false;
-	// LATER actually export file
-	return true;
+	return easel->canvas_image()->write_to_file(exportfile, ImageFormat::PNG);
 }
 
 static FilePath prompt_save_quasar_file(const char* message, const char* default_path = "")

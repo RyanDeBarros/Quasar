@@ -20,7 +20,7 @@ struct Buffer
 	Dim bytes() const { return width * chpp * height; }
 	Dim area() const { return width * height; }
 
-	void pxnew() { pixels = new Byte[bytes() * sizeof(Byte)]; }
+	void pxnew() { pixels = new Byte[bytes()]; }
 };
 
 struct CHPPMismatchError : public std::runtime_error
