@@ -162,44 +162,48 @@ void Gridlines::set_color(ColorFrame color)
 
 void Canvas::create_checkerboard_image()
 {
-	Image img;
-	img.buf.width = 2;
-	img.buf.height = 2;
-	img.buf.chpp = 4;
-	img.buf.pxnew();
-	img.gen_texture();
-	checkerboard.set_image(Images.add(std::move(img)));
+	Image* img = new Image();
+	img->buf.width = 2;
+	img->buf.height = 2;
+	img->buf.chpp = 4;
+	img->buf.pxnew();
+	img->gen_texture();
+	checkerboard.set_image(std::shared_ptr<Image>(img));
 	set_checkerboard_uv_size(0, 0);
 }
 
 void Canvas::sync_checkerboard_colors() const
 {
-	Image* img = Images.get(checkerboard.image);
-	for (size_t i = 0; i < 2; ++i)
+	if (checkerboard.image)
 	{
-		img->buf.pixels[0 + 12 * i] = checker1.rgb.r;
-		img->buf.pixels[1 + 12 * i] = checker1.rgb.g;
-		img->buf.pixels[2 + 12 * i] = checker1.rgb.b;
-		img->buf.pixels[3 + 12 * i] = checker1.alpha;
-	}
-	for (size_t i = 0; i < 2; ++i)
-	{
-		img->buf.pixels[4 + 4 * i] = checker2.rgb.r;
-		img->buf.pixels[5 + 4 * i] = checker2.rgb.g;
-		img->buf.pixels[6 + 4 * i] = checker2.rgb.b;
-		img->buf.pixels[7 + 4 * i] = checker2.alpha;
+		for (size_t i = 0; i < 2; ++i)
+		{
+			checkerboard.image->buf.pixels[0 + 12 * i] = checker1.rgb.r;
+			checkerboard.image->buf.pixels[1 + 12 * i] = checker1.rgb.g;
+			checkerboard.image->buf.pixels[2 + 12 * i] = checker1.rgb.b;
+			checkerboard.image->buf.pixels[3 + 12 * i] = checker1.alpha;
+		}
+		for (size_t i = 0; i < 2; ++i)
+		{
+			checkerboard.image->buf.pixels[4 + 4 * i] = checker2.rgb.r;
+			checkerboard.image->buf.pixels[5 + 4 * i] = checker2.rgb.g;
+			checkerboard.image->buf.pixels[6 + 4 * i] = checker2.rgb.b;
+			checkerboard.image->buf.pixels[7 + 4 * i] = checker2.alpha;
+		}
 	}
 	sync_checkerboard_texture();
 }
 
 void Canvas::sync_checkerboard_texture() const
 {
-	Image* img = Images.get(checkerboard.image);
-	img->resend_texture();
-	TextureParams tparams;
-	tparams.wrap_s = TextureWrap::Repeat;
-	tparams.wrap_t = TextureWrap::Repeat;
-	img->update_texture_params(tparams);
+	if (checkerboard.image)
+	{
+		checkerboard.image->resend_texture();
+		TextureParams tparams;
+		tparams.wrap_s = TextureWrap::Repeat;
+		tparams.wrap_t = TextureWrap::Repeat;
+		checkerboard.image->update_texture_params(tparams);
+	}
 }
 
 void Canvas::set_checkerboard_uv_size(float width, float height) const
@@ -207,13 +211,24 @@ void Canvas::set_checkerboard_uv_size(float width, float height) const
 	checkerboard.set_uvs(Bounds{ 0.0f, width, 0.0f, height });
 }
 
-void Canvas::set_image(ImageHandle img)
+void Canvas::set_image(const std::shared_ptr<Image>& img)
 {
 	sprite.set_image(img);
-	image = Images.get(img);
-	if (image)
+	if (sprite.image)
 	{
-		set_checkerboard_uv_size(0.5f * image->buf.width * checker_size_inv.x, 0.5f * image->buf.height * checker_size_inv.y);
+		set_checkerboard_uv_size(0.5f * sprite.image->buf.width * checker_size_inv.x, 0.5f * sprite.image->buf.height * checker_size_inv.y);
+		checkerboard.set_modulation(ColorFrame());
+	}
+	else
+		checkerboard.set_modulation(ColorFrame(0));
+}
+
+void Canvas::set_image(std::shared_ptr<Image>&& img)
+{
+	sprite.set_image(std::move(img));
+	if (sprite.image)
+	{
+		set_checkerboard_uv_size(0.5f * sprite.image->buf.width * checker_size_inv.x, 0.5f * sprite.image->buf.height * checker_size_inv.y);
 		checkerboard.set_modulation(ColorFrame());
 	}
 	else
@@ -224,8 +239,8 @@ void Canvas::sync_transform()
 {
 	sprite.sync_transform();
 	checkerboard.transform = sprite.transform;
-	if (image)
-		checkerboard.transform.scale *= glm::vec2{ image->buf.width * 0.5f, image->buf.height * 0.5f };
+	if (sprite.image)
+		checkerboard.transform.scale *= glm::vec2{ sprite.image->buf.width * 0.5f, sprite.image->buf.height * 0.5f };
 	checkerboard.sync_transform();
 }
 
@@ -233,15 +248,15 @@ Easel::Easel(Window* w)
 	: window(w), sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
 		{ 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
 {
-	varr = new GLfloat[3 * SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE];
+	varr = new GLfloat[3 * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
 	background.varr = varr;
-	canvas.checkerboard.varr = background.varr + SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE;
-	canvas.sprite.varr = canvas.checkerboard.varr + SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE;
+	canvas.checkerboard.varr = background.varr + FlatSprite::NUM_VERTICES * FlatSprite::STRIDE;
+	canvas.sprite.varr = canvas.checkerboard.varr + FlatSprite::NUM_VERTICES * FlatSprite::STRIDE;
 	background.initialize_varr();
 	canvas.checkerboard.initialize_varr();
 	canvas.sprite.initialize_varr();
 	canvas.create_checkerboard_image();
-	canvas.set_image(ImageHandle(0));
+	canvas.set_image(nullptr);
 
 	canvas.checker1 = Machine.preferences.checker1;
 	canvas.checker2 = Machine.preferences.checker2;
@@ -253,7 +268,7 @@ Easel::Easel(Window* w)
 		4, 5, 6, 6, 7, 4,
 		8, 9, 10, 10, 11, 8
 	};
-	gen_dynamic_vao(vao, vb, ib, size_t(3) * SharedFlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
+	gen_dynamic_vao(vao, vb, ib, size_t(3) * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 
 	set_projection();
 	send_view();
@@ -263,7 +278,7 @@ Easel::Easel(Window* w)
 	canvas.checkerboard.sync_texture_slot(CHECKERBOARD_TSLOT);
 	canvas.sprite.sync_texture_slot(CANVAS_SPRITE_TSLOT);
 
-	background.set_image(ImageHandle(0), 1, 1);
+	background.set_image(nullptr, 1, 1);
 	background.set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
 	background.transform.scale = { float(window->width()), float(window->height()) };
 	background.sync_transform();
@@ -310,8 +325,7 @@ void Easel::render() const
 	else
 	{
 		// checkerboard
-		Image* img = Images.get(canvas.checkerboard.image); // LATER honestly, since there aren't many images/shaders, not much point in registries. This isn't a game engine.
-		bind_texture(img->tid, GLuint(CHECKERBOARD_TSLOT));
+		bind_texture(canvas.checkerboard.image->tid, GLuint(CHECKERBOARD_TSLOT));
 		if (!canvas.sprite.image)
 		{
 			QUASAR_GL(glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0));
@@ -319,8 +333,7 @@ void Easel::render() const
 		else
 		{
 			// canvas sprite
-			img = Images.get(canvas.sprite.image);
-			bind_texture(img->tid, GLuint(CANVAS_SPRITE_TSLOT));
+			bind_texture(canvas.sprite.image->tid, GLuint(CANVAS_SPRITE_TSLOT));
 			QUASAR_GL(glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0));
 		}
 		// minor gridlines
@@ -346,14 +359,14 @@ void Easel::subsend_background_vao() const
 void Easel::subsend_checkerboard_vao() const
 {
 	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE * sizeof(GLfloat), 4 * sprite_shader.stride * sizeof(GLfloat), canvas.checkerboard.varr));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, FlatSprite::NUM_VERTICES * FlatSprite::STRIDE * sizeof(GLfloat), 4 * sprite_shader.stride * sizeof(GLfloat), canvas.checkerboard.varr));
 	unbind_vao_buffers();
 }
 
 void Easel::subsend_canvas_sprite_vao() const
 {
 	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 2 * SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE * sizeof(GLfloat), 4 * sprite_shader.stride * sizeof(GLfloat), canvas.sprite.varr));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 2 * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE * sizeof(GLfloat), 4 * sprite_shader.stride * sizeof(GLfloat), canvas.sprite.varr));
 	unbind_vao_buffers();
 }
 
@@ -418,15 +431,29 @@ void Easel::update_gridlines_scale(const Gridlines& gridlines) const
 
 void Easel::gridlines_sync_with_image(Gridlines& gridlines) const
 {
-	gridlines.width = canvas.image->buf.width;
-	gridlines.height = canvas.image->buf.height;
+	gridlines.width = canvas.sprite.image->buf.width;
+	gridlines.height = canvas.sprite.image->buf.height;
 	resize_gridlines(gridlines);
 	send_gridlines_vao(gridlines);
 }
 
-void Easel::set_canvas_image(ImageHandle img)
+void Easel::set_canvas_image(const std::shared_ptr<Image>& img)
 {
 	canvas.set_image(img);
+	canvas_visible = true;
+	if (minor_gridlines_visible)
+		gridlines_sync_with_image(minor_gridlines);
+	else
+		_buffer_minor_gridlines_sync_with_image = true;
+	if (major_gridlines_visible)
+		gridlines_sync_with_image(major_gridlines);
+	else
+		_buffer_major_gridlines_sync_with_image = true;
+}
+
+void Easel::set_canvas_image(std::shared_ptr<Image>&& img)
+{
+	canvas.set_image(std::move(img));
 	canvas_visible = true;
 	if (minor_gridlines_visible)
 		gridlines_sync_with_image(minor_gridlines);

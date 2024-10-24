@@ -56,7 +56,7 @@ void MachineImpl::init_renderer()
 
 void MachineImpl::destroy()
 {
-	Images.clear();
+	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(easel);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
@@ -100,7 +100,7 @@ void MachineImpl::sync_canvas_transform() const
 
 bool MachineImpl::canvas_image_ready() const
 {
-	return easel->canvas.image;
+	return easel->canvas.sprite.image != nullptr;
 }
 
 bool MachineImpl::cursor_in_easel() const
@@ -246,9 +246,7 @@ void MachineImpl::open_file(const FilePath& filepath)
 
 void MachineImpl::import_file(const FilePath& filepath)
 {	
-	// TODO do not use registry, as old edits with an image of the same filepath will remain.
-	//auto img = Images.construct(ImageConstructor(filepath));
-	easel->set_canvas_image(Images.add(Image(ImageConstructor(filepath))));
+	easel->set_canvas_image(std::make_shared<Image>(filepath));
 	canvas_reset_camera();
 }
 
@@ -310,7 +308,7 @@ void MachineImpl::canvas_update_panning() const
 		sync_canvas_transform();
 
 		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel->cursor_in_clipping())
-			main_window->set_mouse_mode(MouseMode::VIRTUAL);
+			main_window->set_mouse_mode(MouseMode::VIRTUAL); // LATER this may annoyingly reduce cursor speed, although that might just be for trackpad.
 	}
 }
 
@@ -333,33 +331,33 @@ void MachineImpl::canvas_zoom_by(float z)
 
 void MachineImpl::flip_horizontally()
 {
-	static Action a([this]() { easel->canvas.image->flip_horizontally(); }, [this]() { easel->canvas.image->flip_horizontally(); });
+	static Action a([this]() { easel->canvas.sprite.image->flip_horizontally(); }, [this]() { easel->canvas.sprite.image->flip_horizontally(); });
 	history.execute(a);
 }
 
 void MachineImpl::flip_vertically()
 {
-	static Action a([this]() { easel->canvas.image->flip_vertically(); }, [this]() { easel->canvas.image->flip_vertically(); });
+	static Action a([this]() { easel->canvas.sprite.image->flip_vertically(); }, [this]() { easel->canvas.sprite.image->flip_vertically(); });
 	history.execute(a);
 }
 
 void MachineImpl::rotate_90()
 {
-	static Action a([this]() { easel->canvas.image->rotate_90(); easel->update_canvas_image(); },
-		[this]() { easel->canvas.image->rotate_270(); easel->update_canvas_image(); });
+	static Action a([this]() { easel->canvas.sprite.image->rotate_90(); easel->update_canvas_image(); },
+		[this]() { easel->canvas.sprite.image->rotate_270(); easel->update_canvas_image(); });
 	history.execute(a);
 }
 
 void MachineImpl::rotate_180()
 {
-	static Action a([this]() { easel->canvas.image->rotate_180(); }, [this]() { easel->canvas.image->rotate_180(); });
+	static Action a([this]() { easel->canvas.sprite.image->rotate_180(); }, [this]() { easel->canvas.sprite.image->rotate_180(); });
 	history.execute(a);
 }
 
 void MachineImpl::rotate_270()
 {
-	static Action a([this]() { easel->canvas.image->rotate_270(); easel->update_canvas_image(); },
-		[this]() { easel->canvas.image->rotate_90(); easel->update_canvas_image(); });
+	static Action a([this]() { easel->canvas.sprite.image->rotate_270(); easel->update_canvas_image(); },
+		[this]() { easel->canvas.sprite.image->rotate_90(); easel->update_canvas_image(); });
 	history.execute(a);
 }
 
@@ -367,9 +365,9 @@ void MachineImpl::canvas_reset_camera()
 {
 	zoom_info.zoom = zoom_info.initial;
 	canvas_transform() = {};
-	if (easel->canvas.image)
+	if (easel->canvas.sprite.image)
 	{
-		float fit_scale = std::min(easel->get_app_width() / easel->canvas.image->buf.width, easel->get_app_height() / easel->canvas.image->buf.height);
+		float fit_scale = std::min(easel->get_app_width() / easel->canvas.sprite.image->buf.width, easel->get_app_height() / easel->canvas.sprite.image->buf.height);
 		if (fit_scale < 1.0f)
 		{
 			canvas_scale() *= fit_scale;

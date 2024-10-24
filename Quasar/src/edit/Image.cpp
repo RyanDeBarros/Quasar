@@ -58,12 +58,12 @@ inline static void delete_texture(Image& image)
 	QUASAR_GL(glDeleteTextures(1, &image.tid));
 }
 
-Image::Image(const ImageConstructor& args)
+Image::Image(const FilePath& filepath, bool _gen_texture)
 {
 	stbi_set_flip_vertically_on_load(true);
 	// LATER handle gif file from memory
-	buf.pixels = stbi_load(args.filepath.c_str(), &buf.width, &buf.height, &buf.chpp, 0);
-	if (buf.pixels && args.gen_texture)
+	buf.pixels = stbi_load(filepath.c_str(), &buf.width, &buf.height, &buf.chpp, 0);
+	if (buf.pixels && _gen_texture)
 		gen_texture();
 }
 

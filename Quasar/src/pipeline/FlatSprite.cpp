@@ -20,7 +20,7 @@ FlatSprite::FlatSprite(const FlatSprite& other)
 }
 
 FlatSprite::FlatSprite(FlatSprite&& other) noexcept
-	: image(other.image), transform(other.transform), varr(other.varr)
+	: image(std::move(other.image)), transform(other.transform), varr(other.varr)
 {
 	other.varr = nullptr;
 }
@@ -43,7 +43,7 @@ FlatSprite& FlatSprite::operator=(FlatSprite&& other) noexcept
 		delete[] varr;
 		varr = other.varr;
 		other.varr = nullptr;
-		image = other.image;
+		image = std::move(other.image);
 		transform = other.transform;
 	}
 	return *this;
@@ -67,9 +67,8 @@ void FlatSprite::sync_transform() const
 
 void FlatSprite::sync_image_dimensions(Dim v_width, Dim v_height) const
 {
-	Image* img = Images.get(image);
-	Dim w = v_width >= 0 ? v_width : (img ? img->buf.width : 0);
-	Dim h = v_height >= 0 ? v_height : (img ? img->buf.height : 0);
+	Dim w = v_width >= 0 ? v_width : (image ? image->buf.width : 0);
+	Dim h = v_height >= 0 ? v_height : (image ? image->buf.height : 0);
 
 	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS] = -0.5f * w;
 	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;
@@ -129,7 +128,7 @@ void FlatSprite::set_uvs(const Bounds& bounds) const
 
 void SharedFlatSprite::initialize_varr() const
 {
-	static GLfloat initial[SharedFlatSprite::NUM_VERTICES * SharedFlatSprite::STRIDE]{
+	static GLfloat initial[FlatSprite::NUM_VERTICES * FlatSprite::STRIDE]{
 		-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 		-1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 		-1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
@@ -142,71 +141,72 @@ void SharedFlatSprite::sync_transform() const
 {
 	auto p = transform.packed();
 	GLfloat* row = varr;
-	for (size_t i = 0; i < NUM_VERTICES; ++i)
+	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
 	{
-		memcpy(row + SHADER_POS_PACKED, &p[0], sizeof(p));
-		row += STRIDE;
+		memcpy(row + FlatSprite::SHADER_POS_PACKED, &p[0], sizeof(p));
+		row += FlatSprite::STRIDE;
 	}
 }
 
 void SharedFlatSprite::sync_image_dimensions(Dim v_width, Dim v_height) const
 {
-	Image* img = Images.get(image);
-	Dim w = v_width >= 0 ? v_width : (img ? img->buf.width : 0);
-	Dim h = v_height >= 0 ? v_height : (img ? img->buf.height : 0);
+	Dim w = v_width >= 0 ? v_width : (image ? image->buf.width : 0);
+	Dim h = v_height >= 0 ? v_height : (image ? image->buf.height : 0);
 
-	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS] = -0.5f * w;
-	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;
-	varr[size_t(1) * STRIDE + SHADER_POS_VERT_POS] = 0.5f * w;
-	varr[size_t(1) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;
-	varr[size_t(2) * STRIDE + SHADER_POS_VERT_POS] = 0.5f * w;
-	varr[size_t(2) * STRIDE + SHADER_POS_VERT_POS + 1] = 0.5f * h;
-	varr[size_t(3) * STRIDE + SHADER_POS_VERT_POS] = -0.5f * w;
-	varr[size_t(3) * STRIDE + SHADER_POS_VERT_POS + 1] = 0.5f * h;
+	varr[size_t(0) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS] = -0.5f * w;
+	varr[size_t(0) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS + 1] = -0.5f * h;
+	varr[size_t(1) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS] = 0.5f * w;
+	varr[size_t(1) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS + 1] = -0.5f * h;
+	varr[size_t(2) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS] = 0.5f * w;
+	varr[size_t(2) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS + 1] = 0.5f * h;
+	varr[size_t(3) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS] = -0.5f * w;
+	varr[size_t(3) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS + 1] = 0.5f * h;
 }
 
 void SharedFlatSprite::sync_texture_slot(float texture_slot) const
 {
 	GLfloat* row = varr;
-	for (size_t i = 0; i < NUM_VERTICES; ++i)
+	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
 	{
-		row[SHADER_POS_TEXTURE] = texture_slot;
-		row += STRIDE;
+		row[FlatSprite::SHADER_POS_TEXTURE] = texture_slot;
+		row += FlatSprite::STRIDE;
 	}
 }
 
 glm::vec4 SharedFlatSprite::modulation() const
 {
-	return glm::vec4{ varr[SHADER_POS_MODULATE], varr[SHADER_POS_MODULATE + 1], varr[SHADER_POS_MODULATE + 2], varr[SHADER_POS_MODULATE + 3] };
+	return glm::vec4{ varr[FlatSprite::SHADER_POS_MODULATE], varr[FlatSprite::SHADER_POS_MODULATE + 1],
+		varr[FlatSprite::SHADER_POS_MODULATE + 2], varr[FlatSprite::SHADER_POS_MODULATE + 3] };
 }
 
 void SharedFlatSprite::set_modulation(const glm::vec4& color) const
 {
 	GLfloat* row = varr;
-	for (size_t i = 0; i < NUM_VERTICES; ++i)
+	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
 	{
-		memcpy(row + SHADER_POS_MODULATE, &color[0], 4 * sizeof(GLfloat));
-		row += STRIDE;
+		memcpy(row + FlatSprite::SHADER_POS_MODULATE, &color[0], 4 * sizeof(GLfloat));
+		row += FlatSprite::STRIDE;
 	}
 }
 
 ColorFrame SharedFlatSprite::modulation_color_frame() const
 {
-	return ColorFrame(RGB(varr[SHADER_POS_MODULATE], varr[SHADER_POS_MODULATE + 1], varr[SHADER_POS_MODULATE + 2]), varr[SHADER_POS_MODULATE + 3]);
+	return ColorFrame(RGB(varr[FlatSprite::SHADER_POS_MODULATE], varr[FlatSprite::SHADER_POS_MODULATE + 1],
+		varr[FlatSprite::SHADER_POS_MODULATE + 2]), varr[FlatSprite::SHADER_POS_MODULATE + 3]);
 }
 
 void SharedFlatSprite::set_modulation(ColorFrame color) const
 {
 	GLfloat* row = varr;
 	glm::vec4 cvec = color.rgba_as_vec();
-	for (size_t i = 0; i < NUM_VERTICES; ++i)
+	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
 	{
-		memcpy(row + SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
-		row += STRIDE;
+		memcpy(row + FlatSprite::SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
+		row += FlatSprite::STRIDE;
 	}
 }
 
 void SharedFlatSprite::set_uvs(const Bounds& bounds) const
 {
-	bounds.pass_uvs(varr + SHADER_POS_UV, STRIDE);
+	bounds.pass_uvs(varr + FlatSprite::SHADER_POS_UV, FlatSprite::STRIDE);
 }

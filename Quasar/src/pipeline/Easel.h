@@ -2,6 +2,7 @@
 
 #include "user/Platform.h"
 #include "FlatSprite.h"
+#include "Shader.h"
 
 struct Gridlines
 {
@@ -39,7 +40,6 @@ public:
 
 struct Canvas
 {
-	Image* image = nullptr;
 	SharedFlatSprite sprite;
 	SharedFlatSprite checkerboard;
 	RGBA checker1, checker2;
@@ -49,7 +49,8 @@ public:
 	glm::ivec2 get_checker_size() const { return { roundf(1.0f / checker_size_inv.x), roundf(1.0f / checker_size_inv.y) }; }
 	void set_checker_size(glm::ivec2 checker_size) { checker_size_inv = { 1.0f / checker_size.x, 1.0f / checker_size.y }; }
 
-	void set_image(ImageHandle img);
+	void set_image(const std::shared_ptr<Image>& img);
+	void set_image(std::shared_ptr<Image>&& img);
 
 	FlatTransform& transform() { return sprite.transform; }
 	const FlatTransform& transform() const { return sprite.transform; }
@@ -127,7 +128,8 @@ public:
 	void gridlines_send_flat_transform(Gridlines& gridlines) const;
 	void gridlines_sync_with_image(Gridlines& gridlines) const;
 	
-	void set_canvas_image(ImageHandle img);
+	void set_canvas_image(const std::shared_ptr<Image>& image);
+	void set_canvas_image(std::shared_ptr<Image>&& image);
 	void update_canvas_image() { set_canvas_image(canvas.sprite.image); sync_canvas_transform(); }
 
 	bool minor_gridlines_are_visible() const { return minor_gridlines_visible; }

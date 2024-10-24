@@ -81,30 +81,13 @@ inline void bind_texture_params(const TextureParams& params)
 	QUASAR_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(params.wrap_t)));
 }
 
-struct ImageConstructor
-{
-	FilePath filepath;
-	bool gen_texture = true;
-
-	bool operator==(const ImageConstructor&) const = default;
-};
-
-template<>
-struct std::hash<ImageConstructor>
-{
-	size_t operator()(const ImageConstructor& ic) const { return std::hash<FilePath>{}(ic.filepath); }
-};
-
-struct PathIterator;
-struct Path;
-
 struct Image
 {
 	Buffer buf;
 	GLuint tid = 0;
 
 	Image() = default;
-	Image(const ImageConstructor& args);
+	Image(const FilePath& filepath, bool gen_texture = true);
 	Image(const Image&);
 	Image(Image&&) noexcept;
 	Image& operator=(const Image&);

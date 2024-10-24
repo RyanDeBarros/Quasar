@@ -1040,9 +1040,6 @@
     <ClInclude Include="src\user\GUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\Resources.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\pipeline\Easel.h">
       <Filter>Header Files</Filter>
     </ClInclude>

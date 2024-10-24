@@ -196,7 +196,6 @@
     <ClInclude Include="src\edit\PixelBufferPaths.h" />
     <ClInclude Include="src\pipeline\Easel.h" />
     <ClInclude Include="src\pipeline\FlatSprite.h" />
-    <ClInclude Include="src\pipeline\Resources.h" />
     <ClInclude Include="src\user\Preferences.h" />
     <ClInclude Include="src\variety\FileSystem.h" />
     <ClInclude Include="src\user\GUI.h" />
