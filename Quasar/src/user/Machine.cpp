@@ -4,12 +4,14 @@
 
 #include "UserInput.h"
 #include "GUI.h"
-#include "pipeline/Easel.h"
+#include "pipeline/panels/Easel.h"
 #include "variety/GLutility.h"
 #include "variety/Utils.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
+
+static MainWindowLayout* GUILayout = nullptr;
 
 static Easel* easel = nullptr;
 
@@ -20,6 +22,17 @@ bool MachineImpl::create_main_window()
 	{
 		update_raw_mouse_motion();
 		update_vsync();
+		GUILayout = new MainWindowLayout(main_window->width(), main_window->height(), 32, 432, 432, 288);
+		main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
+			GUILayout->set_size(ws.width, ws.height);
+			QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
+			QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+			main_window->swap_buffers();
+			Machine.on_render();
+			});
+		main_window->clbk_display_scale.push_back([](const Callback::DisplayScale& ds) {
+			Machine.set_app_scale(ds.scale);
+			});
 		return true;
 	}
 	return false;
@@ -39,17 +52,13 @@ void MachineImpl::init_renderer()
 	attach_canvas_controls();
 	attach_global_user_controls();
 
-	easel->clip.window_size_to_bounds = [](int w, int h) -> glm::ivec4 { return {
-		w / 10, h / 10, 8 * w / 10, 8 * h / 10
-	}; };
-	easel->clip.update_window_size(main_window->width(), main_window->height());
-
 	easel->canvas.minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 107_UC, 255_UC))); // SETTINGS
 	easel->canvas.minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
 	easel->canvas.major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 127_UC, 255_UC))); // SETTINGS
 	easel->canvas.major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
 
-	set_easel_app_scale(1.5f); // SETTINGS
+	set_app_scale(main_window->display_scale());
+	
 	import_file(FileSystem::workspace_path("ex/flag.png"));
 	//show_major_gridlines();
 }
@@ -58,6 +67,7 @@ void MachineImpl::destroy()
 {
 	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(easel);
+	QUASAR_INVALIDATE_PTR(GUILayout);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 
@@ -70,7 +80,7 @@ void MachineImpl::on_render() const
 {
 	canvas_update_panning();
 	main_window->new_frame();
-	easel->render();
+	easel->render(GUILayout->EaselPanel.clip());
 	render_gui();
 	update_currently_bound_shader();
 	main_window->end_frame();
@@ -103,14 +113,19 @@ bool MachineImpl::canvas_image_ready() const
 	return easel->canvas_image();
 }
 
+void MachineImpl::set_app_scale(glm::vec2 scale) const
+{
+	easel->set_app_scale(scale);
+	float scale1d = (scale.x + scale.y + std::max(scale.x, scale.y)) / 3.0f;
+	static const float gui_scale_factor = 1.25f; // SETTINGS
+	float gui_scale = scale1d * gui_scale_factor;
+	ImGui::GetStyle().ScaleAllSizes(gui_scale);
+	ImGui::GetIO().FontGlobalScale = gui_scale;
+}
+
 bool MachineImpl::cursor_in_easel() const
 {
 	return easel->cursor_in_clipping();
-}
-
-void MachineImpl::set_easel_app_scale(float sc) const
-{
-	easel->set_app_scale(sc);
 }
 
 bool MachineImpl::new_file()

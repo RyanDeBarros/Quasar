@@ -67,6 +67,14 @@ static void window_maximize_callback(GLFWwindow* window, int maximized)
 		f(args);
 }
 
+static void display_scale_callback(GLFWwindow* window, float x_scale, float y_scale)
+{
+	auto win = Windows[window];
+	Callback::DisplayScale args(x_scale, y_scale);
+	for (const auto& f : win->clbk_display_scale)
+		f(args);
+}
+
 Window::Window(const char* title, int width, int height, bool enable_gui, ImFontAtlas* gui_font_atlas, GLFWcursor* cursor)
 {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -96,6 +104,7 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetWindowMaximizeCallback(window, window_maximize_callback);
+	glfwSetWindowContentScaleCallback(window, display_scale_callback);
 
 	if (cursor)
 		glfwSetCursor(window, cursor);

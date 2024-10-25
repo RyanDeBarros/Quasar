@@ -278,7 +278,6 @@ Easel::Easel(Window* w)
 
 	set_projection();
 	send_view();
-	clip.window_size_to_bounds = [](int width, int height) -> glm::ivec4 { return { 0, 0, width, height }; };
 
 	background.sync_texture_slot(BACKGROUND_TSLOT);
 	canvas.checkerboard.sync_texture_slot(CHECKERBOARD_TSLOT);
@@ -290,11 +289,8 @@ Easel::Easel(Window* w)
 	background.sync_transform();
 	subsend_background_vao();
 	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
-		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
-		clip.update_window_size(ws.width, ws.height);
 		set_projection(float(ws.width), float(ws.height));
 		send_view();
-		Machine.on_render();
 		});
 }
 
@@ -306,16 +302,17 @@ Easel::~Easel()
 
 void Easel::set_projection(float width, float height)
 {
-	projection = glm::ortho<float>(0.0f, width * app_scale, 0.0f, height * app_scale);
+	projection = glm::ortho<float>(0.0f, width * app_scale.x, 0.0f, height * app_scale.y);
 }
 
 void Easel::set_projection()
 {
-	projection = glm::ortho<float>(0.0f, window->width() * app_scale, 0.0f, window->height() * app_scale);
+	projection = glm::ortho<float>(0.0f, window->width() * app_scale.x, 0.0f, window->height() * app_scale.y);
 }
 
-void Easel::render() const
+void Easel::render(const ClippingRect& clip_rect)
 {
+	clip = clip_rect; // update clip
 	// bind
 	bind_shader(sprite_shader.rid);
 	QUASAR_GL(glScissor(clip.x, clip.y, clip.screen_w, clip.screen_h));
@@ -529,7 +526,7 @@ glm::vec2 Easel::to_screen_coordinates(const glm::vec2& world_coordinates) const
 	return screen_coo;
 }
 
-void Easel::set_app_scale(float sc)
+void Easel::set_app_scale(Scale sc)
 {
 	app_scale = 1.0f / sc;
 	set_projection();
@@ -537,7 +534,7 @@ void Easel::set_app_scale(float sc)
 	// LATER scale cursor? Have different discrete cursor sizes (only works for custom cursors).
 }
 
-float Easel::get_app_scale() const
+Scale Easel::get_app_scale() const
 {
 	return 1.0f / app_scale;
 }

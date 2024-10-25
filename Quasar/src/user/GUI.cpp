@@ -2,6 +2,73 @@
 
 #include "Machine.h"
 
+MainWindowLayout::MainWindowLayout(int width, int height, int menu_panel_height, int brush_panel_width, int palette_panel_width, int views_panel_height)
+{
+	MenuPanel.x1 = 0;
+	MenuPanel.x2 = width;
+	MenuPanel.y1 = height - menu_panel_height;
+	MenuPanel.y2 = height;
+	BrushPanel.x1 = 0;
+	BrushPanel.x2 = brush_panel_width;
+	BrushPanel.y1 = views_panel_height;
+	BrushPanel.y2 = MenuPanel.y1;
+	EaselPanel.x1 = BrushPanel.x2;
+	EaselPanel.x2 = width - palette_panel_width;
+	EaselPanel.y1 = BrushPanel.y1;
+	EaselPanel.y2 = BrushPanel.y2;
+	PalettePanel.x1 = EaselPanel.x2;
+	PalettePanel.x2 = width;
+	PalettePanel.y1 = EaselPanel.y1;
+	PalettePanel.y2 = EaselPanel.y2;
+	ViewsPanel.x1 = 0;
+	ViewsPanel.x2 = width;
+	ViewsPanel.y1 = 0;
+	ViewsPanel.y2 = views_panel_height;
+}
+
+void MainWindowLayout::set_size(int width, int height)
+{
+	MenuPanel.x2 = width;
+	MenuPanel.y1 = height - (MenuPanel.y2 - MenuPanel.y1);
+	MenuPanel.y2 = height;
+	BrushPanel.y2 = MenuPanel.y1;
+	EaselPanel.x1 = BrushPanel.x2;
+	EaselPanel.x2 = width - (PalettePanel.x2 - PalettePanel.x1);
+	EaselPanel.y2 = BrushPanel.y2;
+	PalettePanel.x1 = EaselPanel.x2;
+	PalettePanel.x2 = width;
+	PalettePanel.y2 = EaselPanel.y2;
+	ViewsPanel.x2 = width;
+}
+
+void MainWindowLayout::set_menu_panel_height(int height)
+{
+	MenuPanel.y1 = MenuPanel.y2 - height;
+	BrushPanel.y2 = MenuPanel.y1;
+	EaselPanel.y2 = MenuPanel.y1;
+	PalettePanel.y2 = MenuPanel.y1;
+}
+
+void MainWindowLayout::set_brush_panel_width(int width)
+{
+	BrushPanel.x2 = width;
+	EaselPanel.x1 = BrushPanel.x2;
+}
+
+void MainWindowLayout::set_palette_panel_width(int width)
+{
+	PalettePanel.x1 = PalettePanel.x2 - width;
+	EaselPanel.x2 = PalettePanel.x1;
+}
+
+void MainWindowLayout::set_views_panel_width(int height)
+{
+	ViewsPanel.y2 = height;
+	BrushPanel.y1 = ViewsPanel.y2;
+	EaselPanel.y1 = ViewsPanel.y2;
+	PalettePanel.y1 = ViewsPanel.y2;
+}
+
 static void render_main_menu()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);

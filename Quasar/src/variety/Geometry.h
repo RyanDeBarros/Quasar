@@ -78,21 +78,9 @@ struct ClippingRect
 
 	ClippingRect(GLint x, GLint y, GLsizei screen_w, GLsizei screen_h) : x(x), y(y), screen_w(screen_w), screen_h(screen_h) {}
 
-	std::function<glm::ivec4(int, int)> window_size_to_bounds;
-
 	bool contains_point(const glm::vec2& point) const
 	{
 		return x <= point.x && point.x < x + screen_w && y <= point.y && point.y < y + screen_h;
-	}
-
-	void update_window_size(int width, int height)
-	{
-		if (!window_size_to_bounds) return;
-		glm::ivec4 bnds = window_size_to_bounds(width, height);
-		x = bnds[0];
-		y = bnds[1];
-		screen_w = bnds[2];
-		screen_h = bnds[3];
 	}
 
 	glm::vec2 center_point() const
@@ -119,5 +107,16 @@ struct Bounds
 		buffer_at_uvs += stride;
 		buffer_at_uvs[0] = x1;
 		buffer_at_uvs[1] = y2;
+	}
+};
+
+struct IntBounds
+{
+	int x1, x2;
+	int y1, y2;
+
+	ClippingRect clip() const
+	{
+		return ClippingRect(x1, y1, std::max(x2 - x1, 0), std::max(y2 - y1, 0));
 	}
 };

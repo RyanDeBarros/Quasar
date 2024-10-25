@@ -19,8 +19,6 @@ int main()
 		glfwTerminate();
 		return -1;
 	}
-	ImGui::GetStyle().ScaleAllSizes(2.0f);
-	ImGui::GetIO().FontGlobalScale = 2.0f;
 
 	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
 

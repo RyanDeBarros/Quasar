@@ -56,11 +56,11 @@ struct MachineImpl
 	void on_render() const;
 	void mark();
 	void unmark();
+	void set_app_scale(glm::vec2 sc) const;
 
 	// Easel
 	bool cursor_in_easel() const;
-	void set_easel_app_scale(float sc) const;
-
+	
 	// Canvas
 	FlatTransform& canvas_transform() const;
 	Position& canvas_position() const { return canvas_transform().position; }

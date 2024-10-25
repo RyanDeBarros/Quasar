@@ -1,8 +1,8 @@
 #pragma once
 
 #include "user/Platform.h"
-#include "FlatSprite.h"
-#include "Shader.h"
+#include "../FlatSprite.h"
+#include "../Shader.h"
 
 struct Gridlines
 {
@@ -99,7 +99,7 @@ public:
 	FlatTransform view{};
 	float view_scale = 1.0f;
 private:
-	float app_scale;
+	Scale app_scale;
 public:
 	ClippingRect clip;
 
@@ -111,7 +111,7 @@ public:
 	void set_projection(float width, float height);
 	void set_projection();
 
-	void render() const;
+	void render(const ClippingRect& clip_rect);
 
 	void subsend_background_vao() const;
 	void subsend_checkerboard_vao() const;
@@ -142,11 +142,11 @@ public:
 	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
 	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
 
-	void set_app_scale(float sc = 1.0f);
-	float get_app_scale() const;
+	void set_app_scale(Scale sc);
+	Scale get_app_scale() const;
 	
 	bool cursor_in_clipping() const { return clip.contains_point(window->cursor_pos()); }
-	float get_app_width() const { return clip.screen_w * app_scale; }
-	float get_app_height() const { return clip.screen_h * app_scale; }
+	float get_app_width() const { return clip.screen_w * app_scale.x; }
+	float get_app_height() const { return clip.screen_h * app_scale.y; }
 	glm::vec2 get_app_cursor_pos() const { return window->cursor_pos() * app_scale; }
 };

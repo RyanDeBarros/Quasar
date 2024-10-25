@@ -122,6 +122,12 @@ namespace Callback
 		bool maximized;
 		WindowMaximize(bool maximized) : maximized(maximized) {}
 	};
+	struct DisplayScale
+	{
+		glm::vec2 scale;
+
+		DisplayScale(float x_scale, float y_scale) : scale(x_scale, y_scale) {}
+	};
 }
 
 struct Window
@@ -135,6 +141,7 @@ struct Window
 	std::vector<std::function<void(const Callback::MouseButton&)>> clbk_mouse_button;
 	std::vector<std::function<void(const Callback::Scroll&)>> clbk_scroll;
 	std::vector<std::function<void(const Callback::WindowMaximize&)>> clbk_window_maximize;
+	std::vector<std::function<void(const Callback::DisplayScale&)>> clbk_display_scale;
 
 	Window(const char* title, int width, int height, bool enable_gui = true, ImFontAtlas* gui_font_atlas = nullptr, GLFWcursor* cursor = nullptr);
 	Window(const Window&) = delete;
@@ -178,6 +185,8 @@ struct Window
 	void toggle_maximized();
 	void set_maximized(bool maximized);
 	bool is_maximized() const { return maximized; }
+	glm::vec2 display_scale() const { glm::vec2 ds{}; glfwGetWindowContentScale(window, &ds.x, &ds.y); return ds; }
+
 	bool is_key_pressed(Key key) const { return glfwGetKey(window, int(key)) == int(IAction::PRESS); }
 	bool is_shift_pressed() const { return is_key_pressed(Key::LEFT_SHIFT) || is_key_pressed(Key::RIGHT_SHIFT); }
 	bool is_ctrl_pressed() const { return is_key_pressed(Key::LEFT_CTRL) || is_key_pressed(Key::RIGHT_CTRL); }
