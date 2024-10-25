@@ -72,6 +72,14 @@ struct MachineImpl
 	void unmark();
 	void set_app_scale(glm::vec2 sc) const;
 	void sync_window_panel_sizes() const;
+	void set_clear_color(ColorFrame color);
+
+	ClippingRect main_window_clip() const { return ClippingRect(0, 0, main_window->width(), main_window->height()); }
+	ClippingRect menu_clip() const;
+	ClippingRect brush_clip() const;
+	ClippingRect easel_clip() const;
+	ClippingRect palette_clip() const;
+	ClippingRect views_clip() const;
 
 	// Easel
 	bool cursor_in_easel() const;

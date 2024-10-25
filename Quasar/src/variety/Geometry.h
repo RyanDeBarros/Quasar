@@ -5,6 +5,8 @@
 
 #include <functional>
 
+#include "Macros.h"
+
 struct Position : glm::vec2
 {
 	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
@@ -73,9 +75,10 @@ struct FlatTransform
 
 struct ClippingRect
 {
-	GLint x, y;
-	GLsizei screen_w, screen_h;
+	GLint x = 0, y = 0;
+	GLsizei screen_w = 0, screen_h = 0;
 
+	ClippingRect() = default;
 	ClippingRect(GLint x, GLint y, GLsizei screen_w, GLsizei screen_h) : x(x), y(y), screen_w(screen_w), screen_h(screen_h) {}
 
 	bool contains_point(const glm::vec2& point) const
@@ -86,6 +89,11 @@ struct ClippingRect
 	glm::vec2 center_point() const
 	{
 		return { 0.5f * (x + screen_w), 0.5f * (y + screen_h) };
+	}
+
+	void scissor() const
+	{
+		QUASAR_GL(glScissor(x, y, screen_w, screen_h));
 	}
 };
 

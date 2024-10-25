@@ -1,6 +1,5 @@
 #pragma once
 
-#include "user/Platform.h"
 #include "../FlatSprite.h"
 #include "../Shader.h"
 
@@ -72,11 +71,9 @@ public:
 
 struct Easel
 {
-	constexpr static float BACKGROUND_TSLOT = -1.0f;
 	constexpr static float CHECKERBOARD_TSLOT = 0.0f;
 	constexpr static float CANVAS_SPRITE_TSLOT = 1.0f;
 
-	Window* window;
 	GLfloat* varr = nullptr;
 	Canvas canvas;
 	GLuint vao = 0, vb = 0, ib = 0;
@@ -101,9 +98,8 @@ public:
 private:
 	Scale app_scale;
 public:
-	ClippingRect clip;
 
-	Easel(Window* window);
+	Easel();
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
 	~Easel();
@@ -111,7 +107,7 @@ public:
 	void set_projection(float width, float height);
 	void set_projection();
 
-	void render(const ClippingRect& clip_rect);
+	void render() const;
 
 	void subsend_background_vao() const;
 	void subsend_checkerboard_vao() const;
@@ -145,8 +141,8 @@ public:
 	void set_app_scale(Scale sc);
 	Scale get_app_scale() const;
 	
-	bool cursor_in_clipping() const { return clip.contains_point(window->cursor_pos()); }
-	float get_app_width() const { return clip.screen_w * app_scale.x; }
-	float get_app_height() const { return clip.screen_h * app_scale.y; }
-	glm::vec2 get_app_cursor_pos() const { return window->cursor_pos() * app_scale; }
+	bool cursor_in_clipping() const;
+	float get_app_width() const;
+	float get_app_height() const;
+	glm::vec2 get_app_cursor_pos() const;
 };

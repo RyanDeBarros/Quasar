@@ -5,6 +5,7 @@
 #include "UserInput.h"
 #include "GUI.h"
 #include "pipeline/panels/Easel.h"
+#include "pipeline/panels/Palette.h"
 #include "variety/GLutility.h"
 #include "variety/Utils.h"
 
@@ -14,6 +15,7 @@
 static MainWindowLayout* GUILayout = nullptr;
 
 static Easel* easel = nullptr;
+static Palette* palette = nullptr;
 
 bool MachineImpl::create_main_window()
 {
@@ -41,13 +43,13 @@ bool MachineImpl::create_main_window()
 
 void MachineImpl::init_renderer()
 {
-	QUASAR_GL(glClearColor(0.1f, 0.1f, 0.1f, 0.1f)); // SETTINGS
 	QUASAR_GL(glEnable(GL_SCISSOR_TEST));
 	QUASAR_GL(glEnable(GL_BLEND));
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	main_window->focus_context();
+	set_clear_color(ColorFrame(RGB(0.1f, 0.1f, 0.1f), 0.1f)); // SETTINGS
 
-	easel = new Easel(main_window);
+	easel = new Easel();
 
 	canvas_reset_camera();
 	attach_canvas_controls();
@@ -57,6 +59,8 @@ void MachineImpl::init_renderer()
 	easel->canvas.minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
 	easel->canvas.major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 127_UC, 255_UC))); // SETTINGS
 	easel->canvas.major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
+
+	palette = new Palette();
 
 	set_app_scale(main_window->display_scale());
 	
@@ -68,6 +72,7 @@ void MachineImpl::destroy()
 {
 	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(easel);
+	QUASAR_INVALIDATE_PTR(palette);
 	QUASAR_INVALIDATE_PTR(GUILayout);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
@@ -81,7 +86,9 @@ void MachineImpl::on_render() const
 {
 	canvas_update_panning();
 	main_window->new_frame();
-	easel->render(GUILayout->EaselPanel.clip());
+	easel->render();
+	palette->render();
+	main_window_clip().scissor();
 	render_gui();
 	update_currently_bound_shader();
 	main_window->end_frame();
@@ -130,6 +137,37 @@ void MachineImpl::sync_window_panel_sizes() const
 	GUILayout->set_brush_panel_width(window_layout_info.brush_panel_width);
 	GUILayout->set_palette_panel_width(window_layout_info.palette_panel_width);
 	GUILayout->set_views_panel_width(window_layout_info.views_panel_height);
+}
+
+void MachineImpl::set_clear_color(ColorFrame color)
+{
+	auto vec = color.rgba_as_vec();
+	QUASAR_GL(glClearColor(vec[0], vec[1], vec[2], vec[3]));
+}
+
+ClippingRect MachineImpl::menu_clip() const
+{
+	return GUILayout->MenuPanel.clip();
+}
+
+ClippingRect MachineImpl::brush_clip() const
+{
+	return GUILayout->BrushPanel.clip();
+}
+
+ClippingRect MachineImpl::easel_clip() const
+{
+	return GUILayout->EaselPanel.clip();
+}
+
+ClippingRect MachineImpl::palette_clip() const
+{
+	return GUILayout->PalettePanel.clip();
+}
+
+ClippingRect MachineImpl::views_clip() const
+{
+	return GUILayout->ViewsPanel.clip();
 }
 
 bool MachineImpl::cursor_in_easel() const
@@ -337,7 +375,9 @@ void MachineImpl::canvas_update_panning() const
 		sync_canvas_transform();
 
 		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel->cursor_in_clipping())
-			main_window->set_mouse_mode(MouseMode::VIRTUAL); // LATER this may annoyingly reduce cursor speed, although that might just be for trackpad.
+			main_window->set_mouse_mode(MouseMode::VIRTUAL);
+		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
+		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
 	}
 }
 

@@ -75,9 +75,6 @@
     <ClCompile Include="src\user\GUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\Easel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\pipeline\FlatSprite.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -88,6 +85,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\edit\PixelBufferPaths.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\panels\Palette.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\panels\Easel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1037,9 +1040,6 @@
     <ClInclude Include="src\user\GUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\Easel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\pipeline\FlatSprite.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1056,6 +1056,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\edit\PixelBufferPaths.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\panels\Palette.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\panels\Easel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

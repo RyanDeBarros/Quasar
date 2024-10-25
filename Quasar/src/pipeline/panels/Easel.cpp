@@ -250,9 +250,9 @@ void Canvas::sync_transform()
 	checkerboard.sync_transform();
 }
 
-Easel::Easel(Window* w)
-	: window(w), sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
-		{ 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
+Easel::Easel()
+	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
+		{ 1, 2, 2, 4, 4 }, { "u_VP" })
 {
 	varr = new GLfloat[3 * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
 	background.varr = varr;
@@ -269,26 +269,27 @@ Easel::Easel(Window* w)
 	canvas.set_checker_size(Machine.preferences.checker_size);
 	canvas.sync_checkerboard_colors();
 
-	GLuint IARR[3*6]{
+	static constexpr size_t num_quads = 3;
+	GLuint IARR[num_quads * 6]{
 		0, 1, 2, 2, 3, 0,
 		4, 5, 6, 6, 7, 4,
 		8, 9, 10, 10, 11, 8
 	};
-	gen_dynamic_vao(vao, vb, ib, size_t(3) * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
+	gen_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 
 	set_projection();
 	send_view();
 
-	background.sync_texture_slot(BACKGROUND_TSLOT);
+	background.sync_texture_slot(-1.0f);
 	canvas.checkerboard.sync_texture_slot(CHECKERBOARD_TSLOT);
 	canvas.sprite.sync_texture_slot(CANVAS_SPRITE_TSLOT);
 
 	background.set_image(nullptr, 1, 1);
 	background.set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
-	background.transform.scale = { float(window->width()), float(window->height()) };
+	background.transform.scale = { float(Machine.main_window->width()), float(Machine.main_window->height()) };
 	background.sync_transform();
 	subsend_background_vao();
-	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
+	Machine.main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
 		set_projection(float(ws.width), float(ws.height));
 		send_view();
 		});
@@ -307,15 +308,14 @@ void Easel::set_projection(float width, float height)
 
 void Easel::set_projection()
 {
-	projection = glm::ortho<float>(0.0f, window->width() * app_scale.x, 0.0f, window->height() * app_scale.y);
+	projection = glm::ortho<float>(0.0f, Machine.main_window->width() * app_scale.x, 0.0f, Machine.main_window->height() * app_scale.y);
 }
 
-void Easel::render(const ClippingRect& clip_rect)
+void Easel::render() const
 {
-	clip = clip_rect; // update clip
+	Machine.easel_clip().scissor();
 	// bind
 	bind_shader(sprite_shader.rid);
-	QUASAR_GL(glScissor(clip.x, clip.y, clip.screen_w, clip.screen_h));
 	// background
 	bind_vao_buffers(vao, vb, ib);
 	// canvas
@@ -347,7 +347,6 @@ void Easel::render(const ClippingRect& clip_rect)
 	// unbind
 	unbind_vao_buffers();
 	unbind_shader();
-	QUASAR_GL(glScissor(0, 0, window->width(), window->height()));
 }
 
 void Easel::subsend_background_vao() const
@@ -503,8 +502,8 @@ void Easel::set_major_gridlines_visibility(bool visible)
 glm::vec2 Easel::to_world_coordinates(const glm::vec2& screen_coordinates) const
 {
 	glm::vec3 ndc{};
-	ndc.x = 1.0f - 2.0f * (screen_coordinates.x / window->width());
-	ndc.y = 1.0f - 2.0f * (screen_coordinates.y / window->height());
+	ndc.x = 1.0f - 2.0f * (screen_coordinates.x / Machine.main_window->width());
+	ndc.y = 1.0f - 2.0f * (screen_coordinates.y / Machine.main_window->height());
 	ndc.z = 1.0f;
 
 	glm::mat3 invVP = glm::inverse(vp_matrix());
@@ -521,8 +520,8 @@ glm::vec2 Easel::to_screen_coordinates(const glm::vec2& world_coordinates) const
 	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
 	glm::vec3 clip_space_pos = vp_matrix() * world_pos;
 	glm::vec2 screen_coo{};
-	screen_coo.x = (1.0f + clip_space_pos.x) * 0.5f * window->width();
-	screen_coo.y = (1.0f + clip_space_pos.y) * 0.5f * window->height();
+	screen_coo.x = (1.0f + clip_space_pos.x) * 0.5f * Machine.main_window->width();
+	screen_coo.y = (1.0f + clip_space_pos.y) * 0.5f * Machine.main_window->height();
 	return screen_coo;
 }
 
@@ -537,4 +536,24 @@ void Easel::set_app_scale(Scale sc)
 Scale Easel::get_app_scale() const
 {
 	return 1.0f / app_scale;
+}
+
+bool Easel::cursor_in_clipping() const
+{
+	return Machine.easel_clip().contains_point(Machine.main_window->cursor_pos());
+}
+
+float Easel::get_app_width() const
+{
+	return Machine.easel_clip().screen_w * app_scale.x;
+}
+
+float Easel::get_app_height() const
+{
+	return Machine.easel_clip().screen_h * app_scale.y;
+}
+
+glm::vec2 Easel::get_app_cursor_pos() const
+{
+	return Machine.main_window->cursor_pos() * app_scale;
 }
