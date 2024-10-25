@@ -41,6 +41,9 @@ struct RGB
 	constexpr HSV to_hsv() const;
 	constexpr HSL to_hsl() const;
 	constexpr glm::vec3 as_vec() const { return { r * inv255, g * inv255, b * inv255 }; }
+	
+	constexpr void precise_from_hsv(float h, float s, float v);
+	constexpr void precise_from_hsl(float h, float s, float l);
 };
 
 /// H[0,359] - S[0,127] - V[0,255]
@@ -158,6 +161,118 @@ constexpr HSL RGB::to_hsl() const
 		hsl.s = round_uchar(127 * (max_hex - min_hex) / (255.0f - std::abs(max_hex + min_hex - 255)));
 	}
 	return hsl;
+}
+
+inline constexpr void RGB::precise_from_hsv(float h, float s, float v)
+{
+	h = std::clamp(h, 0.0f, 1.0f);
+	s = std::clamp(s, 0.0f, 1.0f);
+	v = std::clamp(v, 0.0f, 1.0f);
+	r = g = b = 0_UC;
+	unsigned char nv = round_uchar(v * 255);
+	if (s < NEAR_ZERO)
+	{
+		r = nv;
+		g = nv;
+		b = nv;
+		return;
+	}
+	// Sextant index
+	unsigned char si = static_cast<unsigned char>(6 * h);
+	// Fractional part
+	float fr = 6 * h - si;
+	// Compute non-primary color characteristics
+	unsigned char min = round_uchar(nv * (1 - s));
+	unsigned char pre = round_uchar(nv * (1 - s * fr));
+	unsigned char post = round_uchar(nv * (1 - s * (1.0f - fr)));
+	// Switch on sextant
+	switch (si)
+	{
+	case 0:
+		r = nv;
+		g = post;
+		b = min;
+		break;
+	case 1:
+		r = pre;
+		g = nv;
+		b = min;
+		break;
+	case 2:
+		r = min;
+		g = nv;
+		b = post;
+		break;
+	case 3:
+		r = min;
+		g = pre;
+		b = nv;
+		break;
+	case 4:
+		r = post;
+		g = min;
+		b = nv;
+		break;
+	case 5:
+		r = nv;
+		g = min;
+		b = pre;
+		break;
+	}
+}
+
+inline constexpr void RGB::precise_from_hsl(float h, float s, float l)
+{
+	h = std::clamp(h, 0.0f, 1.0f);
+	s = std::clamp(s, 0.0f, 1.0f);
+	l = std::clamp(l, 0.0f, 1.0f);
+	r = g = b = 0_UC;
+	unsigned char nl = round_uchar(l * 255);
+
+	// Chroma
+	float chroma = (1.0f - absolute(2 * l - 1.0f)) * s;
+	float x = chroma * (1.0f - absolute(modulo((6 * h), 2.0f) - 1.0f));
+
+	// RGB channels (unordered)
+	unsigned char c1 = round_uchar(nl + 255 * chroma * 0.5f);
+	unsigned char c2 = round_uchar(nl - 255 * chroma * 0.5f + 255 * x);
+	unsigned char c3 = round_uchar(nl - 255 * chroma * 0.5f);
+
+	// Order RGB channels
+	unsigned char si = static_cast<unsigned char>(6 * h);
+	switch (si)
+	{
+	case 0:
+		r = c1;
+		g = c2;
+		b = c3;
+		break;
+	case 1:
+		r = c2;
+		g = c1;
+		b = c3;
+		break;
+	case 2:
+		r = c3;
+		g = c1;
+		b = c2;
+		break;
+	case 3:
+		r = c3;
+		g = c2;
+		b = c1;
+		break;
+	case 4:
+		r = c2;
+		g = c3;
+		b = c1;
+		break;
+	case 5:
+		r = c1;
+		g = c3;
+		b = c2;
+		break;
+	}
 }
 
 constexpr RGB HSV::to_rgb() const
@@ -320,6 +435,9 @@ public:
 	constexpr void set_rgb(RGB rgb) { _rgb = rgb; _hsv = rgb.to_hsv(); _hsl = rgb.to_hsl(); }
 	constexpr void set_hsv(HSV hsv) { _hsv = hsv; _rgb = hsv.to_rgb(); _hsl = hsv.to_hsl(); }
 	constexpr void set_hsl(HSL hsl) { _hsl = hsl; _rgb = hsl.to_rgb(); _hsv = hsl.to_hsv(); }
+	constexpr void set_rgb(float r, float g, float b) { _rgb = RGB(r, g, b); _hsv = _rgb.to_hsv(); _hsl = _rgb.to_hsl(); }
+	constexpr void set_hsv(float h, float s, float v) { _rgb.precise_from_hsv(h, s, v); _hsv = _rgb.to_hsv(); _hsl = _rgb.to_hsl(); }
+	constexpr void set_hsl(float h, float s, float l) { _rgb.precise_from_hsl(h, s, l); _hsv = _rgb.to_hsv(); _hsl = _rgb.to_hsl(); }
 
 	constexpr glm::vec4 rgba_as_vec() const { return { _rgb.r * inv255, _rgb.g * inv255, _rgb.b * inv255, alpha * inv255 }; }
 	constexpr glm::vec4 hsva_as_vec() const { return { _hsv.get_hue() * inv359, _hsv.sat_as_float(), _hsv.v * inv255, alpha * inv255 }; }
