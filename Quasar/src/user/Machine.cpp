@@ -17,12 +17,13 @@ static Easel* easel = nullptr;
 
 bool MachineImpl::create_main_window()
 {
-	main_window = new Window("Quasar", 2160, 1440, true);
+	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height, true);
 	if (main_window)
 	{
 		update_raw_mouse_motion();
 		update_vsync();
-		GUILayout = new MainWindowLayout(main_window->width(), main_window->height(), 32, 432, 432, 288);
+		GUILayout = new MainWindowLayout(main_window->width(), main_window->height(), window_layout_info.initial_menu_panel_height,
+			window_layout_info.initial_brush_panel_width, window_layout_info.initial_palette_panel_width, window_layout_info.initial_views_panel_height);
 		main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
 			GUILayout->set_size(ws.width, ws.height);
 			QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
@@ -121,6 +122,14 @@ void MachineImpl::set_app_scale(glm::vec2 scale) const
 	float gui_scale = scale1d * gui_scale_factor;
 	ImGui::GetStyle().ScaleAllSizes(gui_scale);
 	ImGui::GetIO().FontGlobalScale = gui_scale;
+}
+
+void MachineImpl::sync_window_panel_sizes() const
+{
+	GUILayout->set_menu_panel_height(window_layout_info.menu_panel_height);
+	GUILayout->set_brush_panel_width(window_layout_info.brush_panel_width);
+	GUILayout->set_palette_panel_width(window_layout_info.palette_panel_width);
+	GUILayout->set_views_panel_width(window_layout_info.views_panel_height);
 }
 
 bool MachineImpl::cursor_in_easel() const
@@ -392,6 +401,51 @@ void MachineImpl::rotate_270()
 		[this]() { easel->canvas_image()->rotate_90(); easel->update_canvas_image(); }
 	));
 	history.execute(a);
+}
+
+bool MachineImpl::brush_panel_visible() const
+{
+	return GUILayout->BrushPanel.x1 != GUILayout->BrushPanel.x2;
+}
+
+void MachineImpl::open_brush_panel() const
+{
+	GUILayout->set_brush_panel_width(window_layout_info.brush_panel_width);
+}
+
+void MachineImpl::close_brush_panel() const
+{
+	GUILayout->set_brush_panel_width(0);
+}
+
+bool MachineImpl::palette_panel_visible() const
+{
+	return GUILayout->PalettePanel.x1 != GUILayout->PalettePanel.x2;
+}
+
+void MachineImpl::open_palette_panel() const
+{
+	GUILayout->set_palette_panel_width(window_layout_info.palette_panel_width);
+}
+
+void MachineImpl::close_palette_panel() const
+{
+	GUILayout->set_palette_panel_width(0);
+}
+
+bool MachineImpl::views_panel_visible() const
+{
+	return GUILayout->ViewsPanel.y1 != GUILayout->ViewsPanel.y2;
+}
+
+void MachineImpl::open_views_panel() const
+{
+	GUILayout->set_views_panel_width(window_layout_info.views_panel_height);
+}
+
+void MachineImpl::close_views_panel() const
+{
+	GUILayout->set_views_panel_width(0);
 }
 
 void MachineImpl::canvas_reset_camera()

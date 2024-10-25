@@ -120,6 +120,31 @@ static void render_main_menu()
 		}
 		if (ImGui::BeginMenu("View"))
 		{
+			if (Machine.brush_panel_visible())
+			{
+				if (ImGui::MenuItem("Close brush panel")) { Machine.close_brush_panel(); }
+			}
+			else
+			{
+				if (ImGui::MenuItem("Open brush panel")) { Machine.open_brush_panel(); }
+			}
+			if (Machine.palette_panel_visible())
+			{
+				if (ImGui::MenuItem("Close palette panel")) { Machine.close_palette_panel(); }
+			}
+			else
+			{
+				if (ImGui::MenuItem("Open palette panel")) { Machine.open_palette_panel(); }
+			}
+			if (Machine.views_panel_visible())
+			{
+				if (ImGui::MenuItem("Close views panel")) { Machine.close_views_panel(); }
+			}
+			else
+			{
+				if (ImGui::MenuItem("Open views panel")) { Machine.open_views_panel(); }
+			}
+			ImGui::Separator();
 			if (ImGui::MenuItem("Reset canvas view", "0 (Row)", false, Machine.canvas_image_ready())) { Machine.canvas_reset_camera(); }
 			if (Machine.minor_gridlines_visible())
 			{
