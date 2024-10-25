@@ -980,9 +980,6 @@
     <ClInclude Include="src\variety\GLutility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\variety\Registry.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\variety\History.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -250,6 +250,8 @@ void MachineImpl::open_file(const FilePath& filepath)
 void MachineImpl::import_file(const FilePath& filepath)
 {	
 	easel->set_canvas_image(std::make_shared<Image>(filepath));
+	auto title = "Quasar - " + filepath.filename();
+	main_window->set_title(title.c_str());
 	canvas_reset_camera();
 }
 
@@ -334,33 +336,46 @@ void MachineImpl::canvas_zoom_by(float z)
 
 void MachineImpl::flip_horizontally()
 {
-	static Action a([this]() { easel->canvas_image()->flip_horizontally(); }, [this]() { easel->canvas_image()->flip_horizontally(); });
+	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
+		[this]() { easel->canvas_image()->flip_horizontally(); },
+		[this]() { easel->canvas_image()->flip_horizontally(); }
+	));
 	history.execute(a);
 }
 
 void MachineImpl::flip_vertically()
 {
-	static Action a([this]() { easel->canvas_image()->flip_vertically(); }, [this]() { easel->canvas_image()->flip_vertically(); });
+	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
+		[this]() { easel->canvas_image()->flip_vertically(); },
+		[this]() { easel->canvas_image()->flip_vertically(); }
+	));
 	history.execute(a);
 }
 
 void MachineImpl::rotate_90()
 {
-	static Action a([this]() { easel->canvas_image()->rotate_90(); easel->update_canvas_image(); },
-		[this]() { easel->canvas_image()->rotate_270(); easel->update_canvas_image(); });
+	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
+		[this]() { easel->canvas_image()->rotate_90(); easel->update_canvas_image(); },
+		[this]() { easel->canvas_image()->rotate_270(); easel->update_canvas_image(); })
+	);
 	history.execute(a);
 }
 
 void MachineImpl::rotate_180()
 {
-	static Action a([this]() { easel->canvas_image()->rotate_180(); }, [this]() { easel->canvas_image()->rotate_180(); });
+	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
+		[this]() { easel->canvas_image()->rotate_180(); },
+		[this]() { easel->canvas_image()->rotate_180(); }
+	));
 	history.execute(a);
 }
 
 void MachineImpl::rotate_270()
 {
-	static Action a([this]() { easel->canvas_image()->rotate_270(); easel->update_canvas_image(); },
-		[this]() { easel->canvas_image()->rotate_90(); easel->update_canvas_image(); });
+	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
+		[this]() { easel->canvas_image()->rotate_270(); easel->update_canvas_image(); },
+		[this]() { easel->canvas_image()->rotate_90(); easel->update_canvas_image(); }
+	));
 	history.execute(a);
 }
 

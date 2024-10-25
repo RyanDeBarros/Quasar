@@ -35,6 +35,7 @@ public:
 	std::string string() const { return path; }
 	std::string& path_ref() { return path; }
 	const std::string& path_ref() const { return path; }
+	std::string filename() const { return std::filesystem::path(path).filename().string(); }
 	FilePath extension() const;
 	bool has_extension(const char* ext) const;
 	bool has_any_extension(const char* const* exts, size_t num_exts) const
