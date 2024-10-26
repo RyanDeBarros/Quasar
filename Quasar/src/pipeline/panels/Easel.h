@@ -94,7 +94,6 @@ public:
 	// View
 	glm::mat3 projection{};
 	FlatTransform view{};
-	float view_scale = 1.0f;
 private:
 	Scale app_scale;
 public:
@@ -104,7 +103,6 @@ public:
 	Easel(Easel&&) noexcept = delete;
 	~Easel();
 
-	void set_projection(float width, float height);
 	void set_projection();
 
 	void render() const;

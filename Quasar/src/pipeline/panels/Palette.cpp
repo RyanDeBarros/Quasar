@@ -7,11 +7,12 @@ Palette::Palette()
 	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
 		{ 1, 2, 2, 4, 4 }, { "u_VP" })
 {
-	varr = new GLfloat[3 * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
+	static constexpr size_t num_quads = 1;
+
+	varr = new GLfloat[num_quads * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
 	background.varr = varr;
 	background.initialize_varr();
 
-	static constexpr size_t num_quads = 1;
 	GLuint IARR[num_quads * 6]{
 		0, 1, 2, 2, 3, 0
 	};
@@ -28,7 +29,7 @@ Palette::Palette()
 	background.sync_transform();
 	subsend_background_vao();
 	Machine.main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
-		set_projection(float(ws.width), float(ws.height));
+		set_projection();
 		send_view();
 		});
 }
@@ -37,11 +38,6 @@ Palette::~Palette()
 {
 	delete_vao_buffers(vao, vb, ib);
 	delete[] varr;
-}
-
-void Palette::set_projection(float width, float height)
-{
-	projection = glm::ortho<float>(0.0f, width * app_scale.x, 0.0f, height * app_scale.y);
 }
 
 void Palette::set_projection()

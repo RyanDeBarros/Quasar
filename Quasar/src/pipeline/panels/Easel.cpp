@@ -254,7 +254,9 @@ Easel::Easel()
 	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
 		{ 1, 2, 2, 4, 4 }, { "u_VP" })
 {
-	varr = new GLfloat[3 * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
+	static constexpr size_t num_quads = 3;
+
+	varr = new GLfloat[num_quads * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
 	background.varr = varr;
 	canvas.checkerboard.varr = background.varr + FlatSprite::NUM_VERTICES * FlatSprite::STRIDE;
 	canvas.sprite.varr = canvas.checkerboard.varr + FlatSprite::NUM_VERTICES * FlatSprite::STRIDE;
@@ -269,7 +271,6 @@ Easel::Easel()
 	canvas.set_checker_size(Machine.preferences.checker_size);
 	canvas.sync_checkerboard_colors();
 
-	static constexpr size_t num_quads = 3;
 	GLuint IARR[num_quads * 6]{
 		0, 1, 2, 2, 3, 0,
 		4, 5, 6, 6, 7, 4,
@@ -290,7 +291,7 @@ Easel::Easel()
 	background.sync_transform();
 	subsend_background_vao();
 	Machine.main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
-		set_projection(float(ws.width), float(ws.height));
+		set_projection();
 		send_view();
 		});
 }
@@ -299,11 +300,6 @@ Easel::~Easel()
 {
 	delete_vao_buffers(vao, vb, ib);
 	delete[] varr;
-}
-
-void Easel::set_projection(float width, float height)
-{
-	projection = glm::ortho<float>(0.0f, width * app_scale.x, 0.0f, height * app_scale.y);
 }
 
 void Easel::set_projection()

@@ -89,16 +89,24 @@ static unsigned short stride_of(const std::vector<unsigned short>& attributes)
 }
 
 Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, std::vector<unsigned short>&& attribs, std::vector<std::string>&& uniforms)
-	: attributes(std::move(attribs))
+	: attributes(std::move(attribs)) // TODO query attributes programatically so it isn't necessary to pass. same with uniforms.
 {
 	stride = stride_of(attributes);
 	rid = load_program(vertex_shader, fragment_shader);
 	for (auto&& uniform : uniforms)
 		query_location(std::move(uniform));
+
+	unsigned short offset = 0;
+	for (unsigned short a : attributes)
+	{
+		attribute_offsets.push_back(offset);
+		offset += a;
+	}
 }
 
 Shader::Shader(Shader&& other) noexcept
-	: rid(other.rid), stride(other.stride), uniform_locations(std::move(other.uniform_locations)), attributes(std::move(other.attributes))
+	: rid(other.rid), stride(other.stride), uniform_locations(std::move(other.uniform_locations)),
+	attributes(std::move(other.attributes)), attribute_offsets(std::move(other.attribute_offsets))
 {
 	other.rid = 0;
 }

@@ -2,6 +2,7 @@
 
 #include "../FlatSprite.h"
 #include "../Shader.h"
+#include "../ColorPicker.h"
 
 // TODO put common methods of Easel and Palette into (abstract?) Renderer class.
 struct Palette
@@ -11,10 +12,11 @@ struct Palette
 	GLuint vao = 0, vb = 0, ib = 0;
 	Shader sprite_shader;
 
+	ColorPicker color_picker; // use internal vao
+
 	// View
 	glm::mat3 projection{};
 	FlatTransform view{};
-	float view_scale = 1.0f;
 private:
 	Scale app_scale;
 public:
@@ -24,7 +26,6 @@ public:
 	Palette(Palette&&) noexcept = delete;
 	~Palette();
 
-	void set_projection(float width, float height);
 	void set_projection();
 
 	void subsend_background_vao() const;
@@ -33,4 +34,12 @@ public:
 	glm::mat3 vp_matrix() const;
 
 	void render() const;
+
+	void set_app_scale(Scale sc);
+	Scale get_app_scale() const;
+
+	bool cursor_in_clipping() const;
+	float get_app_width() const;
+	float get_app_height() const;
+	glm::vec2 get_app_cursor_pos() const;
 };
