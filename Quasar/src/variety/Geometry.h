@@ -128,3 +128,11 @@ struct IntBounds
 		return ClippingRect(x1, y1, std::max(x2 - x1, 0), std::max(y2 - y1, 0));
 	}
 };
+
+enum class Cardinal
+{
+	RIGHT,
+	UP,
+	LEFT,
+	DOWN
+};

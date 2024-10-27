@@ -7,9 +7,9 @@ in float t_HueProgress;
 void main() {
 	o_Color.a = 1.0;
 	// Sextant index
-	uint si = uint(floor(t_HueProgress / 60.0));
+	uint si = uint(floor(t_HueProgress * 6));
 	// Fractional part
-	float fr = t_HueProgress / 60.0 - si;
+	float fr = t_HueProgress * 6 - si;
 	// Compute non-primary color characteristics
 	float pre = 1.0 - fr;
 	float post = fr;
