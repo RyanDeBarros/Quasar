@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Panel.h"
 #include "../FlatSprite.h"
 #include "../Shader.h"
 
@@ -69,7 +70,7 @@ public:
 	void set_checkerboard_uv_size(float width, float height) const;
 };
 
-struct Easel
+struct Easel : public Panel
 {
 	constexpr static float CHECKERBOARD_TSLOT = 0.0f;
 	constexpr static float CANVAS_SPRITE_TSLOT = 1.0f;
@@ -91,29 +92,19 @@ private:
 	bool _buffer_major_gridlines_sync_with_image = false;
 public:
 
-	// View
-	glm::mat3 projection{};
-	FlatTransform view{};
-private:
-	Scale app_scale;
-public:
-
 	Easel();
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
 	~Easel();
 
-	void set_projection();
-
-	void render() const;
+	void draw() override;
 
 	void subsend_background_vao() const;
 	void subsend_checkerboard_vao() const;
 	void subsend_canvas_sprite_vao() const;
 	void send_gridlines_vao(const Gridlines& gridlines) const;
 	
-	void send_view();
-	glm::mat3 vp_matrix() const;
+	void send_view() override;
 	
 	void sync_canvas_transform();
 	
@@ -135,12 +126,4 @@ public:
 
 	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
 	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
-
-	void set_app_scale(Scale sc);
-	Scale get_app_scale() const;
-	
-	bool cursor_in_clipping() const;
-	float get_app_width() const;
-	float get_app_height() const;
-	glm::vec2 get_app_cursor_pos() const;
 };

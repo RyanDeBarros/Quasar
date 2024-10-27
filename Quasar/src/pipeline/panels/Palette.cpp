@@ -18,9 +18,6 @@ Palette::Palette()
 	};
 	gen_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 	
-	set_projection();
-	send_view();
-
 	background.sync_texture_slot(-1.0f);
 
 	background.set_image(nullptr, 1, 1);
@@ -28,10 +25,6 @@ Palette::Palette()
 	background.transform.scale = { float(Machine.main_window->width()), float(Machine.main_window->height()) };
 	background.sync_transform();
 	subsend_background_vao();
-	Machine.main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
-		set_projection();
-		send_view();
-		});
 }
 
 Palette::~Palette()
@@ -40,14 +33,8 @@ Palette::~Palette()
 	delete[] varr;
 }
 
-void Palette::set_projection()
+void Palette::draw()
 {
-	projection = glm::ortho<float>(0.0f, Machine.main_window->width() * app_scale.x, 0.0f, Machine.main_window->height() * app_scale.y);
-}
-
-void Palette::render() const
-{
-	Machine.palette_clip().scissor();
 	// bind
 	bind_shader(sprite_shader.rid);
 	// background
@@ -71,9 +58,4 @@ void Palette::send_view()
 	bind_shader(sprite_shader.rid);
 	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 	unbind_shader();
-}
-
-glm::mat3 Palette::vp_matrix() const
-{
-	return projection * view.camera();
 }

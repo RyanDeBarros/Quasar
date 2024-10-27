@@ -278,9 +278,6 @@ Easel::Easel()
 	};
 	gen_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 
-	set_projection();
-	send_view();
-
 	background.sync_texture_slot(-1.0f);
 	canvas.checkerboard.sync_texture_slot(CHECKERBOARD_TSLOT);
 	canvas.sprite.sync_texture_slot(CANVAS_SPRITE_TSLOT);
@@ -290,10 +287,6 @@ Easel::Easel()
 	background.transform.scale = { float(Machine.main_window->width()), float(Machine.main_window->height()) };
 	background.sync_transform();
 	subsend_background_vao();
-	Machine.main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
-		set_projection();
-		send_view();
-		});
 }
 
 Easel::~Easel()
@@ -302,14 +295,8 @@ Easel::~Easel()
 	delete[] varr;
 }
 
-void Easel::set_projection()
+void Easel::draw()
 {
-	projection = glm::ortho<float>(0.0f, Machine.main_window->width() * app_scale.x, 0.0f, Machine.main_window->height() * app_scale.y);
-}
-
-void Easel::render() const
-{
-	Machine.easel_clip().scissor();
 	// bind
 	bind_shader(sprite_shader.rid);
 	// background
@@ -383,11 +370,6 @@ void Easel::send_view()
 	bind_shader(canvas.major_gridlines.shader.rid);
 	QUASAR_GL(glUniformMatrix3fv(canvas.major_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 	unbind_shader();
-}
-
-glm::mat3 Easel::vp_matrix() const
-{
-	return projection * view.camera();
 }
 
 void Easel::sync_canvas_transform()
@@ -519,37 +501,4 @@ glm::vec2 Easel::to_screen_coordinates(const glm::vec2& world_coordinates) const
 	screen_coo.x = (1.0f + clip_space_pos.x) * 0.5f * Machine.main_window->width();
 	screen_coo.y = (1.0f + clip_space_pos.y) * 0.5f * Machine.main_window->height();
 	return screen_coo;
-}
-
-void Easel::set_app_scale(Scale sc)
-{
-	app_scale = 1.0f / sc;
-	set_projection();
-	send_view();
-	// LATER scale cursor? Have different discrete cursor sizes (only works for custom cursors).
-}
-
-Scale Easel::get_app_scale() const
-{
-	return 1.0f / app_scale;
-}
-
-bool Easel::cursor_in_clipping() const
-{
-	return Machine.easel_clip().contains_point(Machine.main_window->cursor_pos());
-}
-
-float Easel::get_app_width() const
-{
-	return Machine.easel_clip().screen_w * app_scale.x;
-}
-
-float Easel::get_app_height() const
-{
-	return Machine.easel_clip().screen_h * app_scale.y;
-}
-
-glm::vec2 Easel::get_app_cursor_pos() const
-{
-	return Machine.main_window->cursor_pos() * app_scale;
 }
