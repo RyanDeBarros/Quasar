@@ -2,7 +2,7 @@
 
 #include "variety/GLutility.h"
 
-UnitRenderable::UnitRenderable(const Shader& _shader, unsigned char num_vertices)
+UnitRenderable::UnitRenderable(Shader& _shader, unsigned char num_vertices)
 	: shader(_shader), num_vertices(num_vertices)
 {
 	varr = new GLfloat[num_vertices * shader.stride];
@@ -55,7 +55,7 @@ void UnitRenderable::draw() const
 	unbind_vao_buffers();
 }
 
-UnitMultiRenderable::UnitMultiRenderable(const Shader& _shader, unsigned short num_units, unsigned char unit_num_vertices)
+UnitMultiRenderable::UnitMultiRenderable(Shader& _shader, unsigned short num_units, unsigned char unit_num_vertices)
 	: shader(_shader), num_units(num_units), unit_num_vertices(unit_num_vertices)
 {
 	auto num_vertices = num_units * unit_num_vertices;
