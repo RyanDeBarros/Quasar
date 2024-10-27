@@ -1,8 +1,6 @@
 #version 440 core
 
-#define MAX_GRADIENT_COLORS 4
-
-uniform vec4 u_GradientColors[MAX_GRADIENT_COLORS];
+uniform vec4 u_GradientColors[$MAX_GRADIENT_COLORS];
 
 layout(location=0) out vec4 o_Color;
 

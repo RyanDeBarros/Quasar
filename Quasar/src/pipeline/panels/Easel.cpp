@@ -4,8 +4,7 @@
 #include "user/Machine.h"
 
 Gridlines::Gridlines()
-	: shader(FileSystem::resources_path("gridlines.vert"), FileSystem::resources_path("gridlines.frag"),
-		{ 2 }, { "u_VP", "u_FlatTransform", "u_Color" })
+	: shader(FileSystem::resources_path("gridlines.vert"), FileSystem::resources_path("gridlines.frag"))
 {
 	gen_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
 }
@@ -137,7 +136,7 @@ void Gridlines::draw() const
 {
 	if (_visible)
 	{
-		bind_shader(shader.rid);
+		bind_shader(shader);
 		bind_vao_buffers(vao, vb);
 		QUASAR_GL(glMultiDrawArrays(GL_TRIANGLE_STRIP, arrays_firsts, arrays_counts, num_quads()));
 	}
@@ -155,7 +154,7 @@ unsigned short Gridlines::num_rows() const
 
 void Gridlines::set_color(ColorFrame color)
 {
-	bind_shader(shader.rid);
+	bind_shader(shader);
 	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_Color"], 1, &color.rgba_as_vec()[0]));
 	unbind_shader();
 }
@@ -251,8 +250,7 @@ void Canvas::sync_transform()
 }
 
 Easel::Easel()
-	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
-		{ 1, 2, 2, 4, 4 }, { "u_VP" })
+	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"))
 {
 	static constexpr size_t num_quads = 3;
 
@@ -295,7 +293,7 @@ Easel::~Easel()
 void Easel::draw()
 {
 	// bind
-	bind_shader(sprite_shader.rid);
+	bind_shader(sprite_shader);
 	// background
 	bind_vao_buffers(vao, vb, ib);
 	// canvas
@@ -363,11 +361,11 @@ void Easel::_send_view()
 	background.sync_transform();
 	subsend_background_vao();
 	glm::mat3 cameraVP = vp_matrix();
-	bind_shader(sprite_shader.rid);
+	bind_shader(sprite_shader);
 	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
-	bind_shader(canvas.minor_gridlines.shader.rid);
+	bind_shader(canvas.minor_gridlines.shader);
 	QUASAR_GL(glUniformMatrix3fv(canvas.minor_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
-	bind_shader(canvas.major_gridlines.shader.rid);
+	bind_shader(canvas.major_gridlines.shader);
 	QUASAR_GL(glUniformMatrix3fv(canvas.major_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 	unbind_shader();
 }

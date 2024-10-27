@@ -15,7 +15,8 @@ struct Shader
 	std::vector<unsigned short> attributes;
 	std::vector<unsigned short> attribute_offsets;
 
-	Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, std::vector<unsigned short>&& attributes, std::vector<std::string>&& uniforms);
+	Shader(const FilePath& vertex_shader, const FilePath& fragment_shader);
+	Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, const std::unordered_map<std::string, std::string>& template_variables);
 	Shader(const Shader&) = delete;
 	Shader(Shader&&) noexcept;
 	Shader& operator=(Shader&&) noexcept = delete;
@@ -23,5 +24,9 @@ struct Shader
 
 	operator GLuint() const { return rid; }
 
-	void query_location(std::string&& uniform);
+private:
+	void setup();
+	void load_vertex_attributes();
+	void setup_attribute_offsets();
+	void load_uniforms();
 };

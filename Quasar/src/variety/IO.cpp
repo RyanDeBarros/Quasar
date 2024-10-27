@@ -19,6 +19,22 @@ bool IO_impl::read_file(const FilePath& filepath, std::string& content, std::ios
 	return false;
 }
 
+bool IO_impl::read_template_file(const FilePath& filepath, std::string& content, const std::unordered_map<std::string, std::string>& tmplate, std::ios_base::openmode mode)
+{
+	if (!read_file(filepath, content, mode))
+		return false;
+	for (const auto& [placeholder, value] : tmplate)
+	{
+		size_t pos = 0;
+		while ((pos = content.find(placeholder, pos)) != std::string::npos)
+		{
+			content.replace(pos, placeholder.length(), value);
+			pos += value.length();
+		}
+	}
+	return true;
+}
+
 bool IO_impl::parse_toml(const FilePath& filepath, const char* header, toml::v3::parse_result& parse_result)
 {
 	try

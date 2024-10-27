@@ -26,15 +26,8 @@ static GLuint compile_shader(GLenum type, const char* shader)
 	return id;
 }
 
-static GLuint load_program(const FilePath& vert, const FilePath& frag)
+static GLuint load_program(const std::string& vertex_shader, const std::string& fragment_shader)
 {
-	std::string vertex_shader;
-	if (!IO.read_file(vert, vertex_shader))
-		QUASAR_ASSERT(false);
-	std::string fragment_shader;
-	if (!IO.read_file(frag, fragment_shader))
-		QUASAR_ASSERT(false);
-
 	QUASAR_GL(GLuint shader = glCreateProgram());
 	GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader.c_str());
 	GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader.c_str());
@@ -80,28 +73,28 @@ static GLuint load_program(const FilePath& vert, const FilePath& frag)
 	return shader;
 }
 
-static unsigned short stride_of(const std::vector<unsigned short>& attributes)
+Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader)
 {
-	unsigned short sum = 0;
-	for (auto iter = attributes.begin(); iter != attributes.end(); ++iter)
-		sum += *iter;
-	return sum;
+	std::string vert;
+	if (!IO.read_file(vertex_shader, vert))
+		QUASAR_ASSERT(false);
+	std::string frag;
+	if (!IO.read_file(fragment_shader, frag))
+		QUASAR_ASSERT(false);
+	rid = load_program(vert, frag);
+	setup();
 }
 
-Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, std::vector<unsigned short>&& attribs, std::vector<std::string>&& uniforms)
-	: attributes(std::move(attribs)) // TODO query attributes programatically so it isn't necessary to pass. same with uniforms.
+Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, const std::unordered_map<std::string, std::string>& template_variables)
 {
-	stride = stride_of(attributes);
-	rid = load_program(vertex_shader, fragment_shader);
-	for (auto&& uniform : uniforms)
-		query_location(std::move(uniform));
-
-	unsigned short offset = 0;
-	for (unsigned short a : attributes)
-	{
-		attribute_offsets.push_back(offset);
-		offset += a;
-	}
+	std::string vert;
+	if (!IO.read_template_file(vertex_shader, vert, template_variables))
+		QUASAR_ASSERT(false);
+	std::string frag;
+	if (!IO.read_template_file(fragment_shader, frag, template_variables))
+		QUASAR_ASSERT(false);
+	rid = load_program(vert, frag);
+	setup();
 }
 
 Shader::Shader(Shader&& other) noexcept
@@ -116,14 +109,78 @@ Shader::~Shader()
 	QUASAR_GL(glDeleteProgram(rid));
 }
 
-void Shader::query_location(std::string&& uniform)
+static unsigned short float_count(GLenum type)
 {
-	QUASAR_GL(GLint location = glGetUniformLocation(rid, uniform.c_str()));
-	if (!std::signbit(location))
-		uniform_locations.emplace(std::move(uniform), location);
-	else
+	switch (type)
 	{
-		std::cerr << "Could not find uniform location: \"" << uniform << "\"" << std::endl;
-		QUASAR_ASSERT(false);
+	case GL_FLOAT: return 1;
+	case GL_FLOAT_VEC2: return 2;
+	case GL_FLOAT_VEC3: return 3;
+	case GL_FLOAT_VEC4: return 4;
+	case GL_INT: return 1;
+	case GL_INT_VEC2: return 2;
+	case GL_INT_VEC3: return 3;
+	case GL_INT_VEC4: return 4;
+	case GL_FLOAT_MAT2: return 4;
+	case GL_FLOAT_MAT3: return 9;
+	case GL_FLOAT_MAT4: return 16;
+	case GL_FLOAT_MAT2x3: return 6;
+	case GL_FLOAT_MAT2x4: return 8;
+	case GL_FLOAT_MAT3x2: return 6;
+	case GL_FLOAT_MAT3x4: return 12;
+	case GL_FLOAT_MAT4x2: return 8;
+	case GL_FLOAT_MAT4x3: return 12;
+	default: { QUASAR_ASSERT(false); return 0; }
+	}
+}
+
+void Shader::setup()
+{
+	load_vertex_attributes();
+	setup_attribute_offsets();
+	load_uniforms();
+}
+
+void Shader::load_vertex_attributes()
+{
+	GLint num_attributes;
+	QUASAR_GL(glGetProgramiv(rid, GL_ACTIVE_ATTRIBUTES, &num_attributes));
+	attributes.resize(num_attributes);
+	for (GLint i = 0; i < num_attributes; ++i)
+	{
+		char name[256];
+		GLint size;
+		GLenum type;
+		QUASAR_GL(glGetActiveAttrib(rid, i, sizeof(name), nullptr, &size, &type, name));
+		QUASAR_GL(GLint location = glGetAttribLocation(rid, name));
+		unsigned short attrib = float_count(type);
+		attributes[location] = attrib;
+		stride += attrib;
+	}
+}
+
+void Shader::setup_attribute_offsets()
+{
+	unsigned short offset = 0;
+	for (unsigned short a : attributes)
+	{
+		attribute_offsets.push_back(offset);
+		offset += a;
+	}
+}
+
+void Shader::load_uniforms()
+{
+	GLint num_uniforms;
+	QUASAR_GL(glGetProgramiv(rid, GL_ACTIVE_UNIFORMS, &num_uniforms));
+	for (GLint i = 0; i < num_uniforms; ++i)
+	{
+		char name[256];
+		GLint size;
+		GLenum type;
+		QUASAR_GL(glGetActiveUniform(rid, i, sizeof(name), nullptr, &size, &type, name));
+		QUASAR_GL(GLint location = glGetUniformLocation(rid, name));
+		if (location >= 0)
+			uniform_locations.emplace(name, location);
 	}
 }

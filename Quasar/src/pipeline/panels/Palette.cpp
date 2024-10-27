@@ -4,8 +4,7 @@
 #include "variety/GLutility.h"
 
 Palette::Palette()
-	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
-		{ 1, 2, 2, 4, 4 }, { "u_VP" })
+	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"))
 {
 	static constexpr size_t num_quads = 1;
 
@@ -32,7 +31,7 @@ Palette::~Palette()
 void Palette::draw()
 {
 	// bind
-	bind_shader(sprite_shader.rid);
+	bind_shader(sprite_shader);
 	// background
 	bind_vao_buffers(vao, vb, ib);
 	QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
@@ -56,7 +55,7 @@ void Palette::_send_view()
 	background.sync_transform();
 	subsend_background_vao();
 	glm::mat3 cameraVP = vp_matrix();
-	bind_shader(sprite_shader.rid);
+	bind_shader(sprite_shader);
 	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
 	color_picker.send_vp(&cameraVP[0][0]);
 	unbind_shader();

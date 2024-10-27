@@ -49,7 +49,7 @@ void UnitRenderable::send_single_vertex(unsigned char vertex) const
 
 void UnitRenderable::draw() const
 {
-	bind_shader(shader.rid);
+	bind_shader(shader);
 	bind_vao_buffers(vao, vb);
 	QUASAR_GL(glDrawArrays(GL_TRIANGLE_STRIP, 0, num_vertices));
 	unbind_vao_buffers();
@@ -120,7 +120,7 @@ void UnitMultiRenderable::send_single_vertex(unsigned short unit, unsigned char 
 
 void UnitMultiRenderable::draw() const
 {
-	bind_shader(shader.rid);
+	bind_shader(shader);
 	bind_vao_buffers(vao, vb);
 	QUASAR_GL(glMultiDrawArrays(GL_TRIANGLE_STRIP, first, count, num_units));
 	unbind_vao_buffers();
