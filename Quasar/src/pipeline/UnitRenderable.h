@@ -16,8 +16,8 @@ struct UnitRenderable
 	UnitRenderable(UnitRenderable&&) noexcept = delete;
 	~UnitRenderable();
 
-	bool set_attribute(size_t attrib, const float* v) const;
-	bool set_attribute_single_vertex(unsigned char vertex, size_t attrib, const float* v) const;
+	void set_attribute(size_t attrib, const float* v) const;
+	void set_attribute_single_vertex(unsigned char vertex, size_t attrib, const float* v) const;
 	void send_buffer() const;
 	void send_single_vertex(unsigned char vertex) const;
 	void draw() const;
@@ -38,8 +38,8 @@ struct UnitMultiRenderable
 	UnitMultiRenderable(UnitMultiRenderable&&) noexcept = delete;
 	~UnitMultiRenderable();
 
-	bool set_attribute(unsigned short unit, size_t attrib, const float* v) const;
-	bool set_attribute_single_vertex(unsigned short unit, unsigned char vertex, size_t attrib, const float* v) const;
+	void set_attribute(unsigned short unit, size_t attrib, const float* v) const;
+	void set_attribute_single_vertex(unsigned short unit, unsigned char vertex, size_t attrib, const float* v) const;
 	void send_buffer() const;
 	void send_single_unit(unsigned short unit) const;
 	void send_single_vertex(unsigned short unit, unsigned char vertex) const;

@@ -1,9 +1,17 @@
 #include "ColorPicker.h"
 
+#include <glm/gtc/type_ptr.inl>
+
 #include "variety/GLutility.h"
 
+static void send_gradient_color_uniform(Shader& shader, GLint index, glm::vec4 color)
+{
+	bind_shader(shader.rid);
+	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_GradientColors[0]"] + index, 1, glm::value_ptr(color)));
+}
+
 ColorPicker::ColorPicker()
-	: quad_shader(FileSystem::resources_path("gradients/quad.vert"), FileSystem::resources_path("gradients/quad.frag"), { 2, 4 }, { "u_VP" }),
+	: quad_shader(FileSystem::resources_path("gradients/quad.vert"), FileSystem::resources_path("gradients/quad.frag"), { 2, 2, 4 }, { "u_VP", "u_GradientColors[0]" }),
 	linear_hue_shader(FileSystem::resources_path("gradients/linear_hue.vert"), FileSystem::resources_path("gradients/linear_hue.frag"), { 2, 1 }, { "u_VP" }),
 	hue_wheel_w_shader(FileSystem::resources_path("gradients/hue_wheel_w.vert"), FileSystem::resources_path("gradients/hue_wheel_w.frag"), { 2, 2, 1 }, { "u_VP" }),
 	graphic_rgb_quad_gradient(quad_shader),
@@ -11,22 +19,27 @@ ColorPicker::ColorPicker()
 {
 	glm::vec2 pos;
 	pos = { -100, -100 };
-	graphic_rgb_quad_gradient.set_attribute_single_vertex(0, 0, &pos.x);
+	graphic_rgb_quad_gradient.set_attribute_single_vertex(0, 0, glm::value_ptr(pos));
 	pos = { 100, -100 };
-	graphic_rgb_quad_gradient.set_attribute_single_vertex(1, 0, &pos.x);
+	graphic_rgb_quad_gradient.set_attribute_single_vertex(1, 0, glm::value_ptr(pos));
 	pos = { -100, 100 };
-	graphic_rgb_quad_gradient.set_attribute_single_vertex(2, 0, &pos.x);
+	graphic_rgb_quad_gradient.set_attribute_single_vertex(2, 0, glm::value_ptr(pos));
 	pos = { 100, 100 };
-	graphic_rgb_quad_gradient.set_attribute_single_vertex(3, 0, &pos.x);
-	glm::vec4 clr;
-	clr = { 0.0f, 0.0f, 0.0f, 1.0f };
-	graphic_rgb_quad_gradient.set_attribute_single_vertex(0, 1, &clr.x);
-	clr = { 0.0f, 0.0f, 0.0f, 1.0f };
-	graphic_rgb_quad_gradient.set_attribute_single_vertex(1, 1, &clr.x);
-	clr = { 1.0f, 1.0f, 1.0f, 1.0f };
-	graphic_rgb_quad_gradient.set_attribute_single_vertex(2, 1, &clr.x);
-	clr = { 1.0f, 0.0f, 0.0f, 1.0f };
-	graphic_rgb_quad_gradient.set_attribute_single_vertex(3, 1, &clr.x);
+	graphic_rgb_quad_gradient.set_attribute_single_vertex(3, 0, glm::value_ptr(pos));
+	glm::vec2 uvs;
+	uvs = { 0.0f, 0.0f };
+	graphic_rgb_quad_gradient.set_attribute_single_vertex(0, 1, glm::value_ptr(uvs));
+	uvs = { 1.0f, 0.0f };
+	graphic_rgb_quad_gradient.set_attribute_single_vertex(1, 1, glm::value_ptr(uvs));
+	uvs = { 0.0f, 1.0f };
+	graphic_rgb_quad_gradient.set_attribute_single_vertex(2, 1, glm::value_ptr(uvs));
+	uvs = { 1.0f, 1.0f };
+	graphic_rgb_quad_gradient.set_attribute_single_vertex(3, 1, glm::value_ptr(uvs));
+	send_gradient_color_uniform(quad_shader, 0, { 0.0f, 0.0f, 0.0f, 1.0f });
+	send_gradient_color_uniform(quad_shader, 1, { 1.0f, 1.0f, 1.0f, 1.0f });
+	send_gradient_color_uniform(quad_shader, 2, { 1.0f, 0.0f, 0.0f, 1.0f });
+	glm::vec4 gradient_indexes{ 0.0f, 0.0f, 1.0f, 2.0f };
+	graphic_rgb_quad_gradient.set_attribute(2, glm::value_ptr(gradient_indexes));
 	graphic_rgb_quad_gradient.send_buffer();
 }
 

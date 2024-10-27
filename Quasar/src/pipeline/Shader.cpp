@@ -121,4 +121,9 @@ void Shader::query_location(std::string&& uniform)
 	QUASAR_GL(GLint location = glGetUniformLocation(rid, uniform.c_str()));
 	if (!std::signbit(location))
 		uniform_locations.emplace(std::move(uniform), location);
+	else
+	{
+		std::cerr << "Could not find uniform location: \"" << uniform << "\"" << std::endl;
+		QUASAR_ASSERT(false);
+	}
 }

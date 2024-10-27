@@ -58,5 +58,6 @@ void Palette::_send_view()
 	glm::mat3 cameraVP = vp_matrix();
 	bind_shader(sprite_shader.rid);
 	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+	color_picker.send_vp(&cameraVP[0][0]);
 	unbind_shader();
 }

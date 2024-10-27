@@ -16,7 +16,7 @@ UnitRenderable::~UnitRenderable()
 	delete[] varr;
 }
 
-bool UnitRenderable::set_attribute(size_t attrib, const float* v) const
+void UnitRenderable::set_attribute(size_t attrib, const float* v) const
 {
 	unsigned short attrib_len = shader.attributes[attrib];
 	GLfloat* buf = varr + shader.attribute_offsets[attrib];
@@ -25,27 +25,25 @@ bool UnitRenderable::set_attribute(size_t attrib, const float* v) const
 		memcpy(buf, v, attrib_len * sizeof(GLfloat));
 		buf += shader.stride;
 	}
-	return true;
 }
 
-bool UnitRenderable::set_attribute_single_vertex(unsigned char vertex, size_t attrib, const float* v) const
+void UnitRenderable::set_attribute_single_vertex(unsigned char vertex, size_t attrib, const float* v) const
 {
 	unsigned short attrib_len = shader.attributes[attrib];
 	memcpy(varr + shader.attribute_offsets[attrib] + vertex * shader.stride, v, attrib_len * sizeof(GLfloat));
-	return true;
 }
 
 void UnitRenderable::send_buffer() const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, size_t(num_vertices) * shader.stride, varr));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, size_t(num_vertices) * shader.stride * sizeof(GLfloat), varr));
 	unbind_vao_buffers();
 }
 
 void UnitRenderable::send_single_vertex(unsigned char vertex) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader.stride, shader.stride, varr + vertex * shader.stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader.stride, shader.stride * sizeof(GLfloat), varr + vertex * shader.stride));
 	unbind_vao_buffers();
 }
 
@@ -82,7 +80,7 @@ UnitMultiRenderable::~UnitMultiRenderable()
 	delete[] count;
 }
 
-bool UnitMultiRenderable::set_attribute(unsigned short unit, size_t attrib, const float* v) const
+void UnitMultiRenderable::set_attribute(unsigned short unit, size_t attrib, const float* v) const
 {
 	unsigned short attrib_len = shader.attributes[attrib];
 	GLfloat* buf = varr + unit * unit_num_vertices * shader.stride + shader.attribute_offsets[attrib];
@@ -91,34 +89,32 @@ bool UnitMultiRenderable::set_attribute(unsigned short unit, size_t attrib, cons
 		memcpy(buf, v, attrib_len * sizeof(GLfloat));
 		buf += shader.stride;
 	}
-	return true;
 }
 
-bool UnitMultiRenderable::set_attribute_single_vertex(unsigned short unit, unsigned char vertex, size_t attrib, const float* v) const
+void UnitMultiRenderable::set_attribute_single_vertex(unsigned short unit, unsigned char vertex, size_t attrib, const float* v) const
 {
 	unsigned short attrib_len = shader.attributes[attrib];
 	memcpy(varr + (unit * unit_num_vertices + vertex) * shader.stride + shader.attribute_offsets[attrib], v, attrib_len * sizeof(GLfloat));
-	return true;
 }
 
 void UnitMultiRenderable::send_buffer() const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, size_t(unit_num_vertices) * num_units * shader.stride, varr));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, size_t(unit_num_vertices) * num_units * shader.stride * sizeof(GLfloat), varr));
 	unbind_vao_buffers();
 }
 
 void UnitMultiRenderable::send_single_unit(unsigned short unit) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, unit * unit_num_vertices * shader.stride, size_t(unit_num_vertices) * shader.stride, varr + unit * unit_num_vertices * shader.stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, unit * unit_num_vertices * shader.stride, size_t(unit_num_vertices) * shader.stride * sizeof(GLfloat), varr + unit * unit_num_vertices * shader.stride));
 	unbind_vao_buffers();
 }
 
 void UnitMultiRenderable::send_single_vertex(unsigned short unit, unsigned char vertex) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, (unit * unit_num_vertices + vertex) * shader.stride, shader.stride, varr + (unit * unit_num_vertices + vertex) * shader.stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, (unit * unit_num_vertices + vertex) * shader.stride, shader.stride * sizeof(GLfloat), varr + (unit * unit_num_vertices + vertex) * shader.stride));
 	unbind_vao_buffers();
 }
 
