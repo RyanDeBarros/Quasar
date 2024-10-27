@@ -104,7 +104,7 @@ public:
 	void subsend_canvas_sprite_vao() const;
 	void send_gridlines_vao(const Gridlines& gridlines) const;
 	
-	void send_view() override;
+	void _send_view() override;
 	
 	void sync_canvas_transform();
 	
@@ -123,7 +123,4 @@ public:
 	void set_minor_gridlines_visibility(bool visible);
 	bool major_gridlines_are_visible() const { return major_gridlines_visible; }
 	void set_major_gridlines_visibility(bool visible);
-
-	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
-	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
 };

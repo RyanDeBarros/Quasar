@@ -88,7 +88,7 @@ struct ClippingRect
 
 	glm::vec2 center_point() const
 	{
-		return { 0.5f * (x + screen_w), 0.5f * (y + screen_h) };
+		return { x + 0.5f * screen_w, y + 0.5f * screen_h };
 	}
 
 	void scissor() const

@@ -282,3 +282,8 @@ void Window::end_frame() const
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	swap_buffers();
 }
+
+void Window::set_size_limits(int minwidth, int minheight, int maxwidth, int maxheight) const
+{
+	glfwSetWindowSizeLimits(window, minwidth, minheight, maxwidth, maxheight);
+}

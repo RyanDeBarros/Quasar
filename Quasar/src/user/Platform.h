@@ -168,6 +168,8 @@ struct Window
 	int width() const { int w, h; glfwGetWindowSize(window, &w, &h); return w; }
 	int height() const { int w, h; glfwGetWindowSize(window, &w, &h); return h; }
 	glm::ivec2 size() const { int w, h; glfwGetWindowSize(window, &w, &h); return { w, h }; }
+	void set_size_limits(int minwidth, int minheight, int maxwidth, int maxheight) const;
+
 	float cursor_x() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return float(xpos); }
 	float cursor_y() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return float(ypos); }
 	glm::vec2 cursor_pos() const { double xpos, ypos; glfwGetCursorPos(window, &xpos, &ypos); return { float(xpos), height() - float(ypos)}; }

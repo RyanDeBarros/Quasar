@@ -22,7 +22,7 @@ struct Palette : public Panel
 
 	void subsend_background_vao() const;
 
-	void send_view() override;
+	void _send_view() override;
 
 	void draw() override;
 };

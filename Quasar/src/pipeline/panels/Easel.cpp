@@ -284,9 +284,6 @@ Easel::Easel()
 
 	background.set_image(nullptr, 1, 1);
 	background.set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
-	background.transform.scale = { float(Machine.main_window->width()), float(Machine.main_window->height()) };
-	background.sync_transform();
-	subsend_background_vao();
 }
 
 Easel::~Easel()
@@ -360,8 +357,11 @@ void Easel::send_gridlines_vao(const Gridlines& gridlines) const
 	unbind_vao_buffers();
 }
 
-void Easel::send_view()
+void Easel::_send_view()
 {
+	background.transform.scale = get_app_size();
+	background.sync_transform();
+	subsend_background_vao();
 	glm::mat3 cameraVP = vp_matrix();
 	bind_shader(sprite_shader.rid);
 	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
@@ -475,30 +475,4 @@ void Easel::set_major_gridlines_visibility(bool visible)
 		_buffer_major_gridlines_sync_with_image = false;
 	}
 	major_gridlines_visible = visible;
-}
-
-glm::vec2 Easel::to_world_coordinates(const glm::vec2& screen_coordinates) const
-{
-	glm::vec3 ndc{};
-	ndc.x = 1.0f - 2.0f * (screen_coordinates.x / Machine.main_window->width());
-	ndc.y = 1.0f - 2.0f * (screen_coordinates.y / Machine.main_window->height());
-	ndc.z = 1.0f;
-
-	glm::mat3 invVP = glm::inverse(vp_matrix());
-	glm::vec3 world_pos = invVP * ndc;
-
-	if (world_pos.z != 0.0f)
-		world_pos / world_pos.z;
-
-	return glm::vec2{ -world_pos.x, -world_pos.y };
-}
-
-glm::vec2 Easel::to_screen_coordinates(const glm::vec2& world_coordinates) const
-{
-	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
-	glm::vec3 clip_space_pos = vp_matrix() * world_pos;
-	glm::vec2 screen_coo{};
-	screen_coo.x = (1.0f + clip_space_pos.x) * 0.5f * Machine.main_window->width();
-	screen_coo.y = (1.0f + clip_space_pos.y) * 0.5f * Machine.main_window->height();
-	return screen_coo;
 }

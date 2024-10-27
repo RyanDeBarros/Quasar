@@ -44,6 +44,8 @@ bool MachineImpl::create_main_window()
 	{
 		update_raw_mouse_motion();
 		update_vsync();
+		main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
+			window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
 		return true;
 	}
 	return false;
@@ -60,7 +62,6 @@ void MachineImpl::init_renderer()
 	panels = new PanelGroup();
 	panels->panels.push_back(std::make_unique<Easel>());
 	panels->panels.push_back(std::make_unique<Palette>());
-	panels->sync_panels();
 
 	easel()->bounds.x1 = window_layout_info.initial_brush_panel_width;
 	easel()->bounds.x2 = window_layout_info.initial_width - window_layout_info.initial_palette_panel_width;
@@ -71,10 +72,13 @@ void MachineImpl::init_renderer()
 	palette()->bounds.y1 = easel()->bounds.y1;
 	palette()->bounds.y2 = easel()->bounds.y2;
 
+	panels->sync_panels();
+
 	main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
 		update_panels_to_window_size(ws.width, ws.height);
 		panels->set_projection();
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
+		// LATER while resizing, just color window (block content) until resizing is done, for smoother transitioning.
 		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 		main_window->swap_buffers();
 		Machine.on_render();
