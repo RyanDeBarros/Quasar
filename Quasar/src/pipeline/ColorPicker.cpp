@@ -60,13 +60,12 @@ static void orient_vertical_hue_progress(UnitRenderable& renderable)
 	renderable.set_attribute_single_vertex(3, 1, &one);
 }
 
-template<size_t n>
-static void sync_cp_widget_transforms(CPWidget<n>& cpw)
+static void sync_cp_widget_transforms(Widget& cpw)
 {
-	for (size_t i = 0; i < n; ++i)
+	for (size_t i = 0; i < cpw.hobjs.size(); ++i)
 	{
-		standard_set_vertex_positions(cpw[i], VertexQuad(cpw.wps[i].relative_to(cpw.parent)));
-		cpw[i].send_buffer();
+		standard_set_vertex_positions(ur_wget(cpw, i), VertexQuad(cpw.wp_at(i).relative_to(cpw.parent)));
+		ur_wget(cpw, i).send_buffer();
 	}
 }
 
@@ -74,24 +73,24 @@ ColorPicker::ColorPicker()
 	: quad_shader(FileSystem::resources_path("gradients/quad.vert"), FileSystem::resources_path("gradients/quad.frag.tmpl"), { {"$MAX_GRADIENT_COLORS", MAX_GRADIENT_COLORS } }),
 	linear_hue_shader(FileSystem::resources_path("gradients/linear_hue.vert"), FileSystem::resources_path("gradients/linear_hue.frag")),
 	hue_wheel_w_shader(FileSystem::resources_path("gradients/hue_wheel_w.vert"), FileSystem::resources_path("gradients/hue_wheel_w.frag")),
-	graphic_rgb(quad_shader, linear_hue_shader)
+	widget({ new WP_UnitRenderable(quad_shader), new WP_UnitRenderable(linear_hue_shader) })
 {
 	send_gradient_quad_whiteblack_colors(quad_shader);
 
-	standard_set_rect_uvs(graphic_rgb[0]);
-	standard_setup_quad_gradient_color(graphic_rgb[0], RGB_QUAD_GRADIENT_INDEX);
-	send_gradient_color_uniform(graphic_rgb[0].shader, RGB_QUAD_GRADIENT_INDEX, ColorFrame(HSV(0.4f, 1.0f, 1.0f)).rgba_as_vec());
+	standard_set_rect_uvs(ur_wget(widget, 0));
+	standard_setup_quad_gradient_color(ur_wget(widget, 0), RGB_QUAD_GRADIENT_INDEX);
+	send_gradient_color_uniform(ur_wget(widget, 0).shader, RGB_QUAD_GRADIENT_INDEX, ColorFrame(HSV(0.4f, 1.0f, 1.0f)).rgba_as_vec());
 
-	orient_hue_progress(graphic_rgb[1], Cardinal::RIGHT);
+	orient_hue_progress(ur_wget(widget, 1), Cardinal::RIGHT);
 
-	graphic_rgb.wps[0].transform.position = { 0, -100 };
-	graphic_rgb.wps[0].size = { 200, 200 };
-	graphic_rgb.wps[0].pivot.y = 0;
-	graphic_rgb.wps[1].transform.position = { 0, -115 };
-	graphic_rgb.wps[1].size = { 200, 15 };
-	graphic_rgb.wps[1].pivot.y = 1;
-	graphic_rgb.parent.position.y = 200;
-	sync_cp_widget_transforms<>(graphic_rgb);
+	widget.wp_at(0).transform.position = { 0, -100 };
+	widget.wp_at(0).size = { 200, 200 };
+	widget.wp_at(0).pivot.y = 0;
+	widget.wp_at(1).transform.position = { 0, -115 };
+	widget.wp_at(1).size = { 200, 15 };
+	widget.wp_at(1).pivot.y = 1;
+	widget.parent.position.y = 200;
+	sync_cp_widget_transforms(widget);
 }
 
 void ColorPicker::render() const
@@ -99,8 +98,8 @@ void ColorPicker::render() const
 	switch (state)
 	{
 	case State::GRAPHIC_RGB:
-		graphic_rgb[0].draw();
-		graphic_rgb[1].draw();
+		ur_wget(widget, 0).draw();
+		ur_wget(widget, 1).draw();
 		break;
 	case State::GRAPHIC_HSV:
 		break;

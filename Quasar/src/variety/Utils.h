@@ -41,3 +41,11 @@ constexpr unsigned char hex_to_byte(unsigned int hex)
 	else
 		static_assert(false);
 }
+
+template<typename Held>
+struct PolyHolder
+{
+	Held held;
+
+	virtual ~PolyHolder() = default;
+};

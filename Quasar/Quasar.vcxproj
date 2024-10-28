@@ -204,6 +204,7 @@
     <ClInclude Include="src\pipeline\FlatSprite.h" />
     <ClInclude Include="src\pipeline\panels\Panel.h" />
     <ClInclude Include="src\pipeline\UnitRenderable.h" />
+    <ClInclude Include="src\pipeline\Widgets.h" />
     <ClInclude Include="src\user\Preferences.h" />
     <ClInclude Include="src\variety\FileSystem.h" />
     <ClInclude Include="src\user\GUI.h" />
