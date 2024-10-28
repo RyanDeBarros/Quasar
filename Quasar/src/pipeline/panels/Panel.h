@@ -34,20 +34,12 @@ struct Panel
 	glm::vec2 to_view_coordinates(const glm::vec2& screen_coordinates) const;
 	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
 	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
-
-protected:
-	const Scale& app_scale() const;
-	Scale& app_scale();
 };
 
 struct PanelGroup
 {
 	std::vector<std::unique_ptr<Panel>> panels;
 	glm::mat3 projection{};
-private:
-	friend Panel;
-	Scale app_scale;
-public:
 
 	PanelGroup() = default;
 	PanelGroup(const PanelGroup&) = delete;
@@ -56,7 +48,4 @@ public:
 	void sync_panels();
 	void render();
 	void set_projection();
-
-	void set_app_scale(Scale sc);
-	Scale get_app_scale() const;
 };

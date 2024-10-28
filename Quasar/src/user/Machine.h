@@ -70,7 +70,9 @@ struct MachineImpl
 	void on_render() const;
 	void mark();
 	void unmark();
-	void set_app_scale(glm::vec2 sc) const;
+	Scale inv_app_scale() const;
+	Scale get_app_scale() const;
+	void set_app_scale(Scale sc) const;
 	void set_clear_color(ColorFrame color);
 
 	ClippingRect main_window_clip() const { return ClippingRect(0, 0, main_window->width(), main_window->height()); }

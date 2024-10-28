@@ -13,6 +13,7 @@
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
 
+Scale app_inverse_scale{};
 static PanelGroup* panels = nullptr;
 
 static Easel* easel()
@@ -152,9 +153,20 @@ bool MachineImpl::canvas_image_ready() const
 	return easel()->canvas_image();
 }
 
-void MachineImpl::set_app_scale(glm::vec2 scale) const
+Scale MachineImpl::inv_app_scale() const
 {
-	panels->set_app_scale(scale);
+	return app_inverse_scale;
+}
+
+Scale MachineImpl::get_app_scale() const
+{
+	return 1.0f / app_inverse_scale;
+}
+
+void MachineImpl::set_app_scale(Scale scale) const
+{
+	app_inverse_scale = 1.0f / scale;
+	panels->set_projection();
 	float scale1d = (scale.x + scale.y + std::max(scale.x, scale.y)) / 3.0f;
 	static const float gui_scale_factor = 1.25f; // SETTINGS
 	float gui_scale = scale1d * gui_scale_factor;
