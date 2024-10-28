@@ -12,12 +12,12 @@ static void send_gradient_color_uniform(Shader& shader, GLint index, glm::vec4 c
 	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_GradientColors[0]"] + index, 1, glm::value_ptr(color)));
 }
 
-static void standard_set_vertex_positions(UnitRenderable& renderable, glm::vec2 bl, glm::vec2 br, glm::vec2 tl, glm::vec2 tr)
+static void standard_set_vertex_positions(UnitRenderable& renderable, const VertexQuad& quad)
 {
-	renderable.set_attribute_single_vertex(0, 0, glm::value_ptr(bl));
-	renderable.set_attribute_single_vertex(1, 0, glm::value_ptr(br));
-	renderable.set_attribute_single_vertex(2, 0, glm::value_ptr(tl));
-	renderable.set_attribute_single_vertex(3, 0, glm::value_ptr(tr));
+	renderable.set_attribute_single_vertex(0, 0, glm::value_ptr(quad.bl));
+	renderable.set_attribute_single_vertex(1, 0, glm::value_ptr(quad.br));
+	renderable.set_attribute_single_vertex(2, 0, glm::value_ptr(quad.tl));
+	renderable.set_attribute_single_vertex(3, 0, glm::value_ptr(quad.tr));
 }
 
 static void standard_set_rect_uvs(UnitRenderable& renderable)
@@ -60,26 +60,38 @@ static void orient_vertical_hue_progress(UnitRenderable& renderable)
 	renderable.set_attribute_single_vertex(3, 1, &one);
 }
 
+template<size_t n>
+static void sync_cp_widget_transforms(CPWidget<n>& cpw)
+{
+	for (size_t i = 0; i < n; ++i)
+	{
+		standard_set_vertex_positions(cpw[i], VertexQuad(cpw.wps[i].relative_to(cpw.parent)));
+		cpw[i].send_buffer();
+	}
+}
+
 ColorPicker::ColorPicker()
-	: quad_shader(FileSystem::resources_path("gradients/quad.vert"), FileSystem::resources_path("gradients/quad.frag.tmpl"), { {"$MAX_GRADIENT_COLORS", "4" } }),
+	: quad_shader(FileSystem::resources_path("gradients/quad.vert"), FileSystem::resources_path("gradients/quad.frag.tmpl"), { {"$MAX_GRADIENT_COLORS", MAX_GRADIENT_COLORS } }),
 	linear_hue_shader(FileSystem::resources_path("gradients/linear_hue.vert"), FileSystem::resources_path("gradients/linear_hue.frag")),
 	hue_wheel_w_shader(FileSystem::resources_path("gradients/hue_wheel_w.vert"), FileSystem::resources_path("gradients/hue_wheel_w.frag")),
-	graphic_rgb_quad_gradient(quad_shader),
-	graphic_rgb_linear_hue(linear_hue_shader)
+	graphic_rgb(quad_shader, linear_hue_shader)
 {
 	send_gradient_quad_whiteblack_colors(quad_shader);
 
-	static constexpr GLint RGB_QUAD_GRADIENT_INDEX = 2;
+	standard_set_rect_uvs(graphic_rgb[0]);
+	standard_setup_quad_gradient_color(graphic_rgb[0], RGB_QUAD_GRADIENT_INDEX);
+	send_gradient_color_uniform(graphic_rgb[0].shader, RGB_QUAD_GRADIENT_INDEX, ColorFrame(HSV(0.4f, 1.0f, 1.0f)).rgba_as_vec());
 
-	standard_set_vertex_positions(graphic_rgb_quad_gradient, { -100, -100 }, { 100, -100 }, { -100, 100 }, { 100, 100 });
-	standard_set_rect_uvs(graphic_rgb_quad_gradient);
-	standard_setup_quad_gradient_color(graphic_rgb_quad_gradient, RGB_QUAD_GRADIENT_INDEX);
-	graphic_rgb_quad_gradient.send_buffer();
-	send_gradient_color_uniform(graphic_rgb_quad_gradient.shader, RGB_QUAD_GRADIENT_INDEX, ColorFrame(HSV(0.4f, 1.0f, 1.0f)).rgba_as_vec());
+	orient_hue_progress(graphic_rgb[1], Cardinal::RIGHT);
 
-	standard_set_vertex_positions(graphic_rgb_linear_hue, { -100, -130 }, { 100, -130 }, { -100, -115 }, { 100, -115 });
-	orient_hue_progress(graphic_rgb_linear_hue, Cardinal::RIGHT);
-	graphic_rgb_linear_hue.send_buffer();
+	graphic_rgb.wps[0].transform.position = { 0, -100 };
+	graphic_rgb.wps[0].size = { 200, 200 };
+	graphic_rgb.wps[0].pivot.y = 0;
+	graphic_rgb.wps[1].transform.position = { 0, -115 };
+	graphic_rgb.wps[1].size = { 200, 15 };
+	graphic_rgb.wps[1].pivot.y = 1;
+	graphic_rgb.parent.position.y = 200;
+	sync_cp_widget_transforms<>(graphic_rgb);
 }
 
 void ColorPicker::render() const
@@ -87,8 +99,8 @@ void ColorPicker::render() const
 	switch (state)
 	{
 	case State::GRAPHIC_RGB:
-		graphic_rgb_quad_gradient.draw();
-		graphic_rgb_linear_hue.draw();
+		graphic_rgb[0].draw();
+		graphic_rgb[1].draw();
 		break;
 	case State::GRAPHIC_HSV:
 		break;

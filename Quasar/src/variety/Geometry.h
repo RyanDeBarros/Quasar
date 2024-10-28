@@ -28,6 +28,8 @@ struct Scale : glm::vec2
 {
 	Scale(float x = 1.0f, float y = 1.0f) : glm::vec2(x, y) {}
 	Scale(const glm::vec2& vec) : glm::vec2(vec) {}
+
+	Scale reciprocal() const { return { x ? 1.0f / x : 0.0f, y ? 1.0f / y : 0.0f }; }
 };
 
 struct Transform
@@ -46,11 +48,13 @@ struct Transform
 	glm::mat3 matrix() const
 	{
 		float cos = glm::cos(rotation), sin = glm::sin(rotation);
-		return glm::mat3({ scale.x * cos, scale.x * sin, 0.0f }, { -scale.y * sin, scale.y * cos, 0.0f }, { position.x, position.y, 1.0f });
+		return glm::mat3({ scale.x * cos, scale.x * sin, 0.0f },
+			{ -scale.y * sin, scale.y * cos, 0.0f }, { position.x, position.y, 1.0f });
 	}
 
 	glm::vec2 packed_p() const { return position; }
-	glm::vec4 packed_rs() const { return { scale.x * glm::cos(rotation), scale.x * glm::sin(rotation), -scale.y * glm::sin(rotation), scale.y * glm::cos(rotation) }; }
+	glm::vec4 packed_rs() const { return { scale.x * glm::cos(rotation), scale.x * glm::sin(rotation),
+		-scale.y * glm::sin(rotation), scale.y * glm::cos(rotation) }; }
 };
 
 struct FlatTransform
@@ -71,6 +75,41 @@ struct FlatTransform
 	}
 
 	glm::vec4 packed() const { return { position.x, position.y, scale.x, scale.y }; }
+
+	FlatTransform relative_to(const FlatTransform& parent) const
+	{
+		return { parent.position + parent.scale * position, parent.scale * scale };
+	}
+
+	FlatTransform get_relative(const FlatTransform& absolute) const
+	{
+		return { (absolute.position - position) * scale.reciprocal(), absolute.scale * scale.reciprocal() };
+	}
+};
+
+struct WidgetPlacement
+{
+	FlatTransform transform{};
+	glm::vec2 size{ 1, 1 };
+	glm::vec2 pivot{ 0.5f, 0.5f };
+
+	WidgetPlacement relative_to(const FlatTransform& parent) const
+	{
+		return { transform.relative_to(parent), size, pivot };
+	}
+};
+
+struct VertexQuad
+{
+	glm::vec2 bl, br, tl, tr;
+
+	VertexQuad() = default;
+	VertexQuad(const WidgetPlacement& wp)
+		: bl(wp.transform.position + wp.transform.scale * wp.size * glm::vec2{ -wp.pivot.x, -wp.pivot.y }),
+		  br(wp.transform.position + wp.transform.scale * wp.size * glm::vec2{ 1.0f - wp.pivot.x, -wp.pivot.y }),
+		  tl(wp.transform.position + wp.transform.scale * wp.size * glm::vec2{ -wp.pivot.x, 1.0f - wp.pivot.y }),
+		  tr(wp.transform.position + wp.transform.scale * wp.size * glm::vec2{ 1.0f - wp.pivot.x, 1.0f - wp.pivot.y })
+	{}
 };
 
 struct ClippingRect

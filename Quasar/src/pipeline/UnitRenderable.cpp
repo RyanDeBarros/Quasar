@@ -10,6 +10,14 @@ UnitRenderable::UnitRenderable(Shader& _shader, unsigned char num_vertices)
 	gen_dynamic_vao(vao, vb, num_vertices, shader.stride, varr, shader.attributes);
 }
 
+UnitRenderable::UnitRenderable(UnitRenderable&& other) noexcept
+	: shader(other.shader), num_vertices(other.num_vertices), vao(other.vao), vb(other.vb), varr(other.varr)
+{
+	other.vao = 0;
+	other.vb = 0;
+	other.varr = nullptr;
+}
+
 UnitRenderable::~UnitRenderable()
 {
 	delete_vao_buffers(vao, vb);

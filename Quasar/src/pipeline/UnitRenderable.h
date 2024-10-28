@@ -13,7 +13,8 @@ struct UnitRenderable
 
 	UnitRenderable(Shader& shader, unsigned char num_vertices = 4);
 	UnitRenderable(const UnitRenderable&) = delete;
-	UnitRenderable(UnitRenderable&&) noexcept = delete;
+	UnitRenderable(UnitRenderable&&) noexcept;
+	UnitRenderable& operator=(UnitRenderable&&) noexcept = delete;
 	~UnitRenderable();
 
 	void set_attribute(size_t attrib, const float* v) const;
