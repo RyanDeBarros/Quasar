@@ -1,9 +1,13 @@
 #include "GUI.h"
 
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
+
 #include "Machine.h"
 
-static void render_main_menu()
+void render_main_menu_bar()
 {
+	ImGui::Begin("-"); // TODO invisible flags
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	if (ImGui::BeginMainMenuBar())
 	{
@@ -104,9 +108,5 @@ static void render_main_menu()
 		}
 		ImGui::EndMainMenuBar();
 	}
-}
-
-void render_gui()
-{
-	render_main_menu();
+	ImGui::End();
 }

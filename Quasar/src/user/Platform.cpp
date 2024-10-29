@@ -4,6 +4,7 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 #include "Machine.h"
+#include "GUI.h"
 
 GLFWcursor* create_cursor(StandardCursor standard_cursor)
 {
@@ -294,6 +295,7 @@ void Window::new_frame() const
 
 void Window::end_frame() const
 {
+	ImGui::EndFrame();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	swap_buffers();

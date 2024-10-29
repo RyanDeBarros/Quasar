@@ -5,6 +5,7 @@
 #include "variety/GLutility.h"
 #include "edit/Color.h"
 #include "user/Machine.h"
+#include "user/GUI.h"
 
 enum class GradientIndex : GLint
 {
@@ -85,8 +86,9 @@ ColorPicker::~ColorPicker()
 	Machine.main_window->clbk_mouse_button_down.remove_at_owner(this);
 }
 
-void ColorPicker::render() const
+void ColorPicker::render()
 {
+	cp_render_gui();
 	switch (state)
 	{
 	case State::GRAPHIC_QUAD:
@@ -116,6 +118,44 @@ void ColorPicker::render() const
 	}
 }
 
+void ColorPicker::cp_render_gui()
+{
+	ImGui::SetNextWindowSize(ImVec2(0, 0));
+	ImGui::SetNextWindowBgAlpha(0);
+	auto sz = size;
+	ImGui::SetNextWindowSize(ImVec2(sz.x, sz.y));
+	Position pos = center - Position{ 0.5f * sz.x, 0.8f * sz.y };
+	ImGui::SetNextWindowPos({ pos.x, pos.y });
+
+	ImGuiWindowFlags invisible_flags = ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoDecoration;
+	if (ImGui::Begin("-", nullptr, invisible_flags))
+	{
+		if (ImGui::BeginTabBar("bar"))
+		{
+			if (ImGui::TabItemButton("QUAD"))
+				set_state(State::GRAPHIC_QUAD);
+			if (ImGui::TabItemButton("WHEEL"))
+				set_state(State::GRAPHIC_WHEEL);
+			ImGui::EndTabBar();
+		}
+		ImGui::End();
+	}
+}
+
+void ColorPicker::set_state(State _state)
+{
+	if (_state != state)
+	{
+		current_widget_control = -1; // release mouse
+		state = _state;
+	}
+}
+
 void ColorPicker::send_vp(const float* vp)
 {
 	bind_shader(quad_shader);
@@ -126,6 +166,7 @@ void ColorPicker::send_vp(const float* vp)
 	QUASAR_GL(glUniformMatrix3fv(hue_wheel_w_shader.uniform_locations["u_VP"], 1, GL_FALSE, vp));
 	bind_shader(circle_cursor_shader);
 	QUASAR_GL(glUniformMatrix3fv(circle_cursor_shader.uniform_locations["u_VP"], 1, GL_FALSE, vp));
+	sync_cp_widget_transforms();
 }
 
 void ColorPicker::initialize_widget()
@@ -164,8 +205,8 @@ void ColorPicker::initialize_widget()
 	send_graphic_wheel_value_to_uniform(1.0f);
 	setup_circle_cursor(GRAPHIC_HUE_WHEEL_CURSOR);
 	setup_rect_uvs(GRAPHIC_VALUE_SLIDER);
-	setup_gradient(GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::WHITE, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::WHITE); // TODO also put in orient method
-	send_gradient_color_uniform(quad_shader, GradientIndex::GRAPHIC_VALUE_SLIDER, ColorFrame());
+	setup_gradient(GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER); // TODO also put in orient method
+	send_graphic_value_slider_hue_and_sat_to_uniform(0.0f, 0.0f);
 	setup_circle_cursor(GRAPHIC_VALUE_SLIDER_CURSOR);
 	set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, 0.0f);
 
@@ -179,7 +220,6 @@ void ColorPicker::initialize_widget()
 
 	// ---------- PARENT ----------
 
-	widget.parent.position.y = 150;
 	sync_cp_widget_transforms();
 }
 
@@ -256,6 +296,12 @@ ColorFrame ColorPicker::get_color() const
 	return ColorFrame();
 }
 
+void ColorPicker::set_position(Position world_pos, Position screen_pos) // TODO pass one Position. Add coordinate functions to Machine.
+{
+	widget.parent.position = world_pos;
+	center = screen_pos;
+}
+
 void ColorPicker::mouse_handler_graphic_quad(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position = widget.wp_at(GRAPHIC_QUAD).clamp_point(local_cursor_pos);
@@ -281,6 +327,8 @@ void ColorPicker::mouse_handler_graphic_hue_wheel(Position local_cursor_pos)
 	widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position = widget.wp_at(GRAPHIC_HUE_WHEEL).clamp_point_in_ellipse(local_cursor_pos);
 	// TODO set circle cursor value if contrast is weak
 	sync_single_cp_widget_transform(GRAPHIC_HUE_WHEEL_CURSOR);
+	glm::vec2 hs = get_graphic_wheel_hue_and_sat();
+	send_graphic_value_slider_hue_and_sat_to_uniform(hs[0], hs[1]);
 }
 
 void ColorPicker::mouse_handler_graphic_value_slider(Position local_cursor_pos)
@@ -312,11 +360,15 @@ void ColorPicker::send_graphic_wheel_value_to_uniform(float value)
 	QUASAR_GL(glUniform1fv(hue_wheel_w_shader.uniform_locations["u_Value"], 1, &value));
 }
 
+void ColorPicker::send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat)
+{
+	send_gradient_color_uniform(quad_shader, GradientIndex::GRAPHIC_VALUE_SLIDER, ColorFrame(HSV(hue, sat, 1.0f)));
+}
+
 glm::vec2 ColorPicker::get_graphic_wheel_hue_and_sat() const
 {
 	glm::vec2 normal = 2.0f * widget.wp_at(GRAPHIC_HUE_WHEEL).normalize(widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position) - glm::vec2(1.0f);
-	float hue = 0.5f + glm::atan(normal.y, normal.x) / glm::tau<float>();
-	return { hue, glm::length(normal) };
+	return { 0.5f + glm::atan(normal.y, normal.x) / glm::tau<float>(), glm::length(normal) };
 }
 
 float ColorPicker::get_graphic_value_slider_value() const

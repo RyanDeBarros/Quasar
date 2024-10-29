@@ -40,7 +40,7 @@ static void update_panels_to_window_size(int width, int height)
 
 bool MachineImpl::create_main_window()
 {
-	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height, true);
+	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height);
 	if (main_window)
 	{
 		update_raw_mouse_motion();
@@ -98,7 +98,7 @@ void MachineImpl::init_renderer()
 	easel()->canvas.major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
 
 	set_app_scale(main_window->display_scale());
-	
+
 	import_file(FileSystem::workspace_path("ex/flag.png"));
 	//show_major_gridlines();
 }
@@ -122,7 +122,7 @@ void MachineImpl::on_render() const
 	main_window->new_frame();
 	panels->render();
 	main_window_clip().scissor();
-	render_gui();
+	render_main_menu_bar();
 	update_currently_bound_shader();
 	main_window->end_frame();
 
@@ -358,7 +358,7 @@ void MachineImpl::canvas_begin_panning()
 		panning_info.initial_canvas_pos = canvas_position();
 		panning_info.initial_cursor_pos = easel()->get_app_cursor_pos();
 		panning_info.panning = true;
-		main_window->override_gui_cursor_change(true);
+		//main_window->override_gui_cursor_change(true); // LATER
 		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
 	}
 }
@@ -368,7 +368,7 @@ void MachineImpl::canvas_end_panning()
 	if (panning_info.panning)
 	{
 		panning_info.panning = false;
-		main_window->override_gui_cursor_change(false);
+		//main_window->override_gui_cursor_change(false); // LATER
 		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
 		main_window->set_mouse_mode(MouseMode::VISIBLE);
 	}
@@ -381,7 +381,7 @@ void MachineImpl::canvas_cancel_panning()
 		panning_info.panning = false;
 		canvas_position() = panning_info.initial_canvas_pos;
 		sync_canvas_transform();
-		main_window->override_gui_cursor_change(false);
+		//main_window->override_gui_cursor_change(false); // LATER
 		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
 		main_window->set_mouse_mode(MouseMode::VISIBLE);
 	}

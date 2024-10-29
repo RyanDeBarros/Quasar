@@ -5,7 +5,6 @@
 #include "../Shader.h"
 #include "../ColorPicker.h"
 
-// TODO put common methods of Easel and Palette into (abstract?) Renderer class.
 struct Palette : public Panel
 {
 	GLfloat* varr = nullptr;

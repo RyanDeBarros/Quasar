@@ -2,6 +2,8 @@
 
 #include <array>
 
+#include <imgui/imgui.h>
+
 #include "user/Platform.h"
 #include "Widgets.h"
 #include "edit/Color.h"
@@ -19,11 +21,20 @@ struct ColorPicker
 		HEX_RGB,
 		HEX_HSV,
 		HEX_HSL
-	} state = State::GRAPHIC_WHEEL;
+	};
+private:
+	State state = State::GRAPHIC_WHEEL;
+public:
+	State get_state() const { return state; }
+	void set_state(State state);
 
 	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, circle_cursor_shader;
 
 	Widget widget;
+	Scale size;
+private:
+	Position center;
+public:
 	std::function<void(const Callback::MouseButton&)> clbk_mb;
 	std::function<void(const Callback::MouseButton&)> clbk_mb_down;
 	int current_widget_control = -1;
@@ -33,11 +44,13 @@ struct ColorPicker
 	ColorPicker(ColorPicker&&) noexcept = delete;
 	~ColorPicker();
 
-	void render() const;
+	void render();
 	void send_vp(const float* vp);
 	ColorFrame get_color() const;
+	void set_position(Position world_pos, Position screen_pos);
 
 private:
+	void cp_render_gui();
 	void initialize_widget();
 	void connect_mouse_handlers();
 
@@ -52,6 +65,7 @@ private:
 	float get_graphic_hue_slider_hue() const;
 
 	void send_graphic_wheel_value_to_uniform(float value);
+	void send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat);
 	glm::vec2 get_graphic_wheel_hue_and_sat() const;
 	float get_graphic_value_slider_value() const;
 
