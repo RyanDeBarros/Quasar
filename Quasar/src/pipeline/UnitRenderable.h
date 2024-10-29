@@ -19,6 +19,7 @@ struct UnitRenderable
 
 	void set_attribute(size_t attrib, const float* v) const;
 	void set_attribute_single_vertex(unsigned char vertex, size_t attrib, const float* v) const;
+	void get_attribute(unsigned char vertex, size_t attrib, float* v) const;
 	void send_buffer() const;
 	void send_single_vertex(unsigned char vertex) const;
 	void draw() const;
@@ -41,6 +42,7 @@ struct UnitMultiRenderable
 
 	void set_attribute(unsigned short unit, size_t attrib, const float* v) const;
 	void set_attribute_single_vertex(unsigned short unit, unsigned char vertex, size_t attrib, const float* v) const;
+	void get_attribute(unsigned short unit, unsigned char vertex, size_t attrib, float* v) const;
 	void send_buffer() const;
 	void send_single_unit(unsigned short unit) const;
 	void send_single_vertex(unsigned short unit, unsigned char vertex) const;

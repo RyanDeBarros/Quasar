@@ -41,6 +41,12 @@ void UnitRenderable::set_attribute_single_vertex(unsigned char vertex, size_t at
 	memcpy(varr + shader.attribute_offsets[attrib] + vertex * shader.stride, v, attrib_len * sizeof(GLfloat));
 }
 
+void UnitRenderable::get_attribute(unsigned char vertex, size_t attrib, float* v) const
+{
+	unsigned short attrib_len = shader.attributes[attrib];
+	memcpy(v, varr + shader.attribute_offsets[attrib] + vertex * shader.stride, attrib_len * sizeof(GLfloat));
+}
+
 void UnitRenderable::send_buffer() const
 {
 	bind_vao_buffers(vao, vb);
@@ -103,6 +109,12 @@ void UnitMultiRenderable::set_attribute_single_vertex(unsigned short unit, unsig
 {
 	unsigned short attrib_len = shader.attributes[attrib];
 	memcpy(varr + (unit * unit_num_vertices + vertex) * shader.stride + shader.attribute_offsets[attrib], v, attrib_len * sizeof(GLfloat));
+}
+
+void UnitMultiRenderable::get_attribute(unsigned short unit, unsigned char vertex, size_t attrib, float* v) const
+{
+	unsigned short attrib_len = shader.attributes[attrib];
+	memcpy(v, varr + (unit * unit_num_vertices + vertex) * shader.stride + shader.attribute_offsets[attrib], attrib_len * sizeof(GLfloat));
 }
 
 void UnitMultiRenderable::send_buffer() const

@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 
 #include <functional>
+#include <algorithm>
 
 #include "Macros.h"
 
@@ -85,31 +86,50 @@ struct FlatTransform
 	{
 		return { (absolute.position - position) * scale.reciprocal(), absolute.scale * scale.reciprocal() };
 	}
+
+	Position get_relative_pos(Position absolute) const { return (absolute - position) * scale.reciprocal(); }
 };
+
+inline bool on_interval(float val, float min_inclusive, float max_inclusive)
+{
+	return val >= min_inclusive && val <= max_inclusive;
+}
 
 struct WidgetPlacement
 {
 	FlatTransform transform{};
-	glm::vec2 size{ 1, 1 };
 	glm::vec2 pivot{ 0.5f, 0.5f };
 
-	WidgetPlacement relative_to(const FlatTransform& parent) const
-	{
-		return { transform.relative_to(parent), size, pivot };
-	}
+	WidgetPlacement relative_to(const FlatTransform& parent) const { return { transform.relative_to(parent), pivot }; }
+
+	float clamp_x(float x) const { return std::clamp(x, left(), right()); }
+	float clamp_y(float y) const { return std::clamp(y, bottom(), top()); }
+	Position clamp_point(Position pos) const { return { clamp_x(pos.x), clamp_y(pos.y) }; }
+
+	bool contains_x(float x) const { return on_interval(x, left(), right()); }
+	bool contains_y(float y) const { return on_interval(y, bottom(), top()); }
+	bool contains_point(Position pos) const { return contains_x(pos.x) && contains_y(pos.y); }
+
+	float center_x() const { return transform.position.x + (0.5f - pivot.x) * transform.scale.x; }
+	float center_y() const { return transform.position.y + (0.5f - pivot.y) * transform.scale.y; }
+	Position center_point() const { return { center_x(), center_y() }; }
+
+	float left() const { return transform.position.x - pivot.x * transform.scale.x; }
+	float right() const { return transform.position.x + (1.0f - pivot.x) * transform.scale.x; }
+	float bottom() const { return transform.position.y - pivot.y * transform.scale.y; }
+	float top() const { return transform.position.y + (1.0f - pivot.y) * transform.scale.y; }
+
+	float normalize_x(float x) const { return (x - transform.position.x + pivot.x * transform.scale.x) / transform.scale.x; }
+	float normalize_y(float y) const { return (y - transform.position.y + pivot.y * transform.scale.y) / transform.scale.y; }
+	Position normalize(Position pos) const { return { normalize_x(pos.x), normalize_y(pos.y) }; }
 };
 
 struct VertexQuad
 {
-	glm::vec2 bl, br, tl, tr;
+	Position bl, br, tl, tr;
 
 	VertexQuad() = default;
-	VertexQuad(const WidgetPlacement& wp)
-		: bl(wp.transform.position + wp.transform.scale * wp.size * glm::vec2{ -wp.pivot.x, -wp.pivot.y }),
-		  br(wp.transform.position + wp.transform.scale * wp.size * glm::vec2{ 1.0f - wp.pivot.x, -wp.pivot.y }),
-		  tl(wp.transform.position + wp.transform.scale * wp.size * glm::vec2{ -wp.pivot.x, 1.0f - wp.pivot.y }),
-		  tr(wp.transform.position + wp.transform.scale * wp.size * glm::vec2{ 1.0f - wp.pivot.x, 1.0f - wp.pivot.y })
-	{}
+	VertexQuad(const WidgetPlacement& wp) : bl(wp.left(), wp.bottom()), br(wp.right(), wp.bottom()), tl(wp.left(), wp.top()), tr(wp.right(), wp.top()) {}
 };
 
 struct ClippingRect
@@ -122,7 +142,7 @@ struct ClippingRect
 
 	bool contains_point(const glm::vec2& point) const
 	{
-		return x <= point.x && point.x < x + screen_w && y <= point.y && point.y < y + screen_h;
+		return on_interval(x - point.x, 0.0f, float(screen_w)) && on_interval(y - point.y, 0.0f, float(screen_h));
 	}
 
 	glm::vec2 center_point() const

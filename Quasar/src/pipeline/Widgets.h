@@ -9,6 +9,11 @@ struct Widget
 	FlatTransform parent;
 	std::vector<PolyHolder<WidgetPlacement>*> hobjs;
 
+	Widget(size_t null_length = 0)
+	{
+		for (size_t i = 0; i < null_length; ++i)
+			hobjs.push_back(nullptr);
+	}
 	Widget(std::vector<PolyHolder<WidgetPlacement>*>&& heap_hobjs) : hobjs(std::move(heap_hobjs)) {}
 	Widget(const Widget&) = delete;
 	Widget(Widget&&) noexcept = delete;

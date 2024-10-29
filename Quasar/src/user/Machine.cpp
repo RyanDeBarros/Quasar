@@ -117,6 +117,7 @@ bool MachineImpl::should_exit() const
 
 void MachineImpl::on_render() const
 {
+	main_window->send_down_events();
 	canvas_update_panning();
 	main_window->new_frame();
 	panels->render();
@@ -124,6 +125,9 @@ void MachineImpl::on_render() const
 	render_gui();
 	update_currently_bound_shader();
 	main_window->end_frame();
+
+	easel()->background.set_modulation(palette()->color_picker.get_color());
+	easel()->subsend_background_vao();
 }
 
 void MachineImpl::mark()
@@ -180,9 +184,24 @@ void MachineImpl::set_clear_color(ColorFrame color)
 	QUASAR_GL(glClearColor(vec[0], vec[1], vec[2], vec[3]));
 }
 
+glm::vec2 MachineImpl::easel_cursor_world_pos() const
+{
+	return easel()->to_world_coordinates(main_window->cursor_pos());
+}
+
+glm::vec2 MachineImpl::palette_cursor_world_pos() const
+{
+	return palette()->to_world_coordinates(main_window->cursor_pos());
+}
+
 bool MachineImpl::cursor_in_easel() const
 {
 	return easel()->cursor_in_clipping();
+}
+
+bool MachineImpl::cursor_in_palette() const
+{
+	return palette()->cursor_in_clipping();
 }
 
 bool MachineImpl::new_file()

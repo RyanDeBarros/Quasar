@@ -84,17 +84,41 @@ extern GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int heig
 
 namespace Callback
 {
+	template<typename Clbck>
+	struct Handler
+	{
+		std::function<void(const Clbck&)> f;
+		void* owner = nullptr;
+	};
+	template<typename Clbck>
+	struct HandlerVector
+	{
+		std::vector<Handler<Clbck>> vec;
+
+		HandlerVector() = default;
+
+		void push_back(const std::function<void(const Clbck&)>& f) { vec.push_back({ f }); }
+		void push_back(std::function<void(const Clbck&)>&& f) { vec.push_back({ std::move(f) }); }
+		void push_back(const std::function<void(const Clbck&)>& f, void* owner) { vec.push_back({ f, owner }); }
+		void push_back(std::function<void(const Clbck&)>&& f, void* owner) { vec.push_back({ std::move(f), owner }); }
+		void remove_at_owner(void* owner)
+		{
+			vec.erase(std::remove_if(vec.begin(), vec.end(), [owner](const Handler<Clbck>& h) { return h.owner == owner; }), vec.end());
+		}
+	};
 	struct WindowSize
 	{
 		int width;
 		int height;
 		WindowSize(int width, int height) : width(width), height(height) {}
+		bool operator==(const WindowSize&) const = default;
 	};
 	struct PathDrop
 	{
 		int num_paths;
 		const char** paths;
 		PathDrop(int num_paths, const char** paths) : num_paths(num_paths), paths(paths) {}
+		bool operator==(const PathDrop&) const = default;
 	};
 	struct Key
 	{
@@ -103,6 +127,7 @@ namespace Callback
 		::IAction action;
 		::Mod mods;
 		Key(int key, int scancode, int action, int mods) : key(::Key(key)), scancode(scancode), action(::IAction(action)), mods(::Mod(mods)) {}
+		bool operator==(const Key&) const = default;
 	};
 	struct MouseButton
 	{
@@ -110,23 +135,26 @@ namespace Callback
 		::IAction action;
 		::Mod mods;
 		MouseButton(int button, int action, int mods) : button(::MouseButton(button)), action(::IAction(action)), mods(::Mod(mods)) {}
+		bool operator==(const MouseButton&) const = default;
 	};
 	struct Scroll
 	{
 		float xoff;
 		float yoff;
 		Scroll(double xoff, double yoff) : xoff(float(xoff)), yoff(float(yoff)) {}
+		bool operator==(const Scroll&) const = default;
 	};
 	struct WindowMaximize
 	{
 		bool maximized;
 		WindowMaximize(bool maximized) : maximized(maximized) {}
+		bool operator==(const WindowMaximize&) const = default;
 	};
 	struct DisplayScale
 	{
 		glm::vec2 scale;
-
 		DisplayScale(float x_scale, float y_scale) : scale(x_scale, y_scale) {}
+		bool operator==(const DisplayScale&) const = default;
 	};
 }
 
@@ -135,13 +163,15 @@ struct Window
 	GLFWwindow* window = nullptr;
 	ImGuiContext* gui_context = nullptr;
 
-	std::vector<std::function<void(const Callback::WindowSize&)>> clbk_window_size;
-	std::vector<std::function<void(const Callback::PathDrop&)>> clbk_path_drop;
-	std::vector<std::function<void(const Callback::Key&)>> clbk_key;
-	std::vector<std::function<void(const Callback::MouseButton&)>> clbk_mouse_button;
-	std::vector<std::function<void(const Callback::Scroll&)>> clbk_scroll;
-	std::vector<std::function<void(const Callback::WindowMaximize&)>> clbk_window_maximize;
-	std::vector<std::function<void(const Callback::DisplayScale&)>> clbk_display_scale;
+	Callback::HandlerVector<Callback::WindowSize> clbk_window_size;
+	Callback::HandlerVector<Callback::PathDrop> clbk_path_drop;
+	Callback::HandlerVector<Callback::Key> clbk_key;
+	Callback::HandlerVector<Callback::Key> clbk_key_down;
+	Callback::HandlerVector<Callback::MouseButton> clbk_mouse_button;
+	Callback::HandlerVector<Callback::MouseButton> clbk_mouse_button_down;
+	Callback::HandlerVector<Callback::Scroll> clbk_scroll;
+	Callback::HandlerVector<Callback::WindowMaximize> clbk_window_maximize;
+	Callback::HandlerVector<Callback::DisplayScale> clbk_display_scale;
 
 	Window(const char* title, int width, int height, bool enable_gui = true, ImFontAtlas* gui_font_atlas = nullptr, GLFWcursor* cursor = nullptr);
 	Window(const Window&) = delete;
@@ -164,6 +194,8 @@ struct Window
 	bool should_close() const { return glfwWindowShouldClose(window); }
 	void swap_buffers() const { glfwSwapBuffers(window); }
 	void request_close() const { glfwSetWindowShouldClose(window, GLFW_TRUE); }
+
+	void send_down_events() const;
 	
 	int width() const { int w, h; glfwGetWindowSize(window, &w, &h); return w; }
 	int height() const { int w, h; glfwGetWindowSize(window, &w, &h); return h; }
@@ -205,6 +237,9 @@ private:
 	bool maximized = false;
 
 	void destroy();
+
+	std::vector<Callback::Key> key_downs;
+	std::vector<Callback::MouseButton> mouse_downs;
 };
 
 inline std::unordered_map<GLFWwindow*, Window*> Windows;

@@ -77,8 +77,11 @@ struct MachineImpl
 
 	ClippingRect main_window_clip() const { return ClippingRect(0, 0, main_window->width(), main_window->height()); }
 
-	// Easel
+	// Panels
+	glm::vec2 easel_cursor_world_pos() const;
+	glm::vec2 palette_cursor_world_pos() const;
 	bool cursor_in_easel() const;
+	bool cursor_in_palette() const;
 	
 	// Canvas
 	FlatTransform& canvas_transform() const;
