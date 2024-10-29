@@ -124,14 +124,6 @@ struct WidgetPlacement
 	Position normalize(Position pos) const { return { normalize_x(pos.x), normalize_y(pos.y) }; }
 };
 
-struct VertexQuad
-{
-	Position bl, br, tl, tr;
-
-	VertexQuad() = default;
-	VertexQuad(const WidgetPlacement& wp) : bl(wp.left(), wp.bottom()), br(wp.right(), wp.bottom()), tl(wp.left(), wp.top()), tr(wp.right(), wp.top()) {}
-};
-
 struct ClippingRect
 {
 	GLint x = 0, y = 0;

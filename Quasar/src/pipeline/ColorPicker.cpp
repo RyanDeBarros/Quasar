@@ -3,7 +3,6 @@
 #include <glm/gtc/type_ptr.inl>
 
 #include "variety/GLutility.h"
-#include "variety/Geometry.h"
 #include "edit/Color.h"
 #include "user/Machine.h"
 
@@ -13,95 +12,52 @@ static void send_gradient_color_uniform(Shader& shader, GLint index, glm::vec4 c
 	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_GradientColors[0]"] + index, 1, glm::value_ptr(color)));
 }
 
-static void standard_set_vertex_positions(UnitRenderable& renderable, const VertexQuad& quad)
-{
-	renderable.set_attribute_single_vertex(0, 0, glm::value_ptr(quad.bl));
-	renderable.set_attribute_single_vertex(1, 0, glm::value_ptr(quad.br));
-	renderable.set_attribute_single_vertex(2, 0, glm::value_ptr(quad.tl));
-	renderable.set_attribute_single_vertex(3, 0, glm::value_ptr(quad.tr));
-}
-
-static void standard_set_rect_uvs(UnitRenderable& renderable)
-{
-	renderable.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0.0f, 0.0f }));
-	renderable.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1.0f, 0.0f }));
-	renderable.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0.0f, 1.0f }));
-	renderable.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1.0f, 1.0f }));
-}
-
-static void send_gradient_quad_whiteblack_colors(Shader& quad_shader)
-{
-	send_gradient_color_uniform(quad_shader, 0, ColorFrame(HSV(0.0f, 0.0f, 0.0f)).rgba_as_vec());
-	send_gradient_color_uniform(quad_shader, 1, ColorFrame(HSV(0.0f, 0.0f, 1.0f)).rgba_as_vec());
-}
-
-static void standard_setup_quad_gradient_color(UnitRenderable& renderable, GLint gradient_index)
-{
-	glm::vec4 gradient_indexes{ 0, 0, 1, gradient_index };
-	renderable.set_attribute(2, glm::value_ptr(gradient_indexes));
-}
-
-static void orient_hue_progress(UnitRenderable& renderable, Cardinal i)
-{
-	float zero = 0.0f;
-	float one = 1.0f;
-	renderable.set_attribute_single_vertex(0, 1, i == Cardinal::DOWN  || i == Cardinal::LEFT ? &one : &zero);
-	renderable.set_attribute_single_vertex(1, 1, i == Cardinal::RIGHT || i == Cardinal::DOWN ? &one : &zero);
-	renderable.set_attribute_single_vertex(2, 1, i == Cardinal::UP    || i == Cardinal::LEFT ? &one : &zero);
-	renderable.set_attribute_single_vertex(3, 1, i == Cardinal::RIGHT || i == Cardinal::UP   ? &one : &zero);
-}
-
-static void orient_vertical_hue_progress(UnitRenderable& renderable)
-{
-	float zero = 0.0f;
-	float one = 1.0f;
-	renderable.set_attribute_single_vertex(0, 1, &zero);
-	renderable.set_attribute_single_vertex(1, 1, &zero);
-	renderable.set_attribute_single_vertex(2, 1, &one);
-	renderable.set_attribute_single_vertex(3, 1, &one);
-}
-
-static void circle_cursor_set_thickness(UnitRenderable& renderable, float thickness)
-{
-	renderable.set_attribute(2, &thickness);
-}
-
-static void circle_cursor_set_value(UnitRenderable& renderable, float value)
-{
-	renderable.set_attribute(3, &value);
-}
-
-static float circle_cursor_get_value(UnitRenderable& renderable)
-{
-	float value;
-	renderable.get_attribute(0, 3, &value);
-	return value;
-}
-
-static constexpr const char* MAX_GRADIENT_COLORS = "4";
-static constexpr GLint RGB_QUAD_GRADIENT_INDEX = 2;
+static constexpr GLint ALPHA_SLIDER_GRADIENT_INDEX = 2;
+static constexpr GLint RGB_QUAD_GRADIENT_INDEX = 3;
+static constexpr GLint HSV_VALUE_SLIDER_GRADIENT_INDEX = 4;
+static constexpr GLint RGB_R_SLIDER_GRADIENT_INDEX = 5;
+static constexpr GLint RGB_G_SLIDER_GRADIENT_INDEX = 6;
+static constexpr GLint RGB_B_SLIDER_GRADIENT_INDEX = 7;
+static constexpr GLint HSV_H_SLIDER_GRADIENT_INDEX = 8;
+static constexpr GLint HSV_S_SLIDER_GRADIENT_INDEX = 9;
+static constexpr GLint HSV_V_SLIDER_GRADIENT_INDEX = 10;
+static constexpr GLint HSL_H_SLIDER_GRADIENT_INDEX = 11;
+static constexpr GLint HSL_S_SLIDER_GRADIENT_INDEX = 12;
+static constexpr GLint HSL_L_SLIDER_GRADIENT_INDEX = 13;
+static constexpr const char* MAX_GRADIENT_COLORS = "14";
 
 // TODO use UMR when possible
 enum
 {
 	// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
-	ALPHA_SLIDER,			// quad
-	RGB_QUAD,				// quad
-	RGB_QUAD_CURSOR,		// circle_cursor
-	RGB_HUE_SLIDER,			// linear_hue
-	RGB_HUE_SLIDER_CURSOR,			// circle_cursor
-	HSV_WHEEL,				// hue_wheel
-	HSV_VALUE_SLIDER,		// quad
-	RGB_R_SLIDER,			// quad
-	RGB_G_SLIDER,			// quad
-	RGB_B_SLIDER,			// quad
-	HSV_R_SLIDER,			// quad
-	HSV_G_SLIDER,			// quad
-	HSV_B_SLIDER,			// quad
-	HSL_R_SLIDER,			// quad
-	HSL_G_SLIDER,			// quad
-	HSL_B_SLIDER,			// quad
-	_CPW_COUNT
+	ALPHA_SLIDER,				// quad
+	RGB_QUAD,					// quad
+	RGB_QUAD_CURSOR,			// circle_cursor
+	RGB_HUE_SLIDER,				// linear_hue
+	RGB_HUE_SLIDER_CURSOR,		// circle_cursor
+	HSV_WHEEL,					// hue_wheel
+	HSV_WHEEL_CURSOR,			// circle_cursor
+	HSV_VALUE_SLIDER,			// quad
+	HSV_VALUE_SLIDER_CURSOR,	// circle_cursor
+	RGB_R_SLIDER,				// quad
+	RGB_R_SLIDER_CURSOR,		// circle_cursor
+	RGB_G_SLIDER,				// quad
+	RGB_G_SLIDER_CURSOR,		// circle_cursor
+	RGB_B_SLIDER,				// quad
+	RGB_B_SLIDER_CURSOR,		// circle_cursor
+	HSV_H_SLIDER,				// quad
+	HSV_H_SLIDER_CURSOR,		// circle_cursor
+	HSV_S_SLIDER,				// quad
+	HSV_S_SLIDER_CURSOR,		// circle_cursor
+	HSV_V_SLIDER,				// quad
+	HSV_V_SLIDER_CURSOR,		// circle_cursor
+	HSL_H_SLIDER,				// quad
+	HSL_H_SLIDER_CURSOR,		// circle_cursor
+	HSL_S_SLIDER,				// quad
+	HSL_S_SLIDER_CURSOR,		// circle_cursor
+	HSL_L_SLIDER,				// quad
+	HSL_L_SLIDER_CURSOR,		// circle_cursor
+	_CPWC_COUNT
 };
 
 ColorPicker::ColorPicker()
@@ -109,77 +65,12 @@ ColorPicker::ColorPicker()
 	linear_hue_shader(FileSystem::resources_path("gradients/linear_hue.vert"), FileSystem::resources_path("gradients/linear_hue.frag")),
 	hue_wheel_w_shader(FileSystem::resources_path("gradients/hue_wheel_w.vert"), FileSystem::resources_path("gradients/hue_wheel_w.frag")),
 	circle_cursor_shader(FileSystem::resources_path("circle_cursor.vert"), FileSystem::resources_path("circle_cursor.frag")),
-	widget(_CPW_COUNT)
+	widget(_CPWC_COUNT)
 {
-	send_gradient_quad_whiteblack_colors(quad_shader);
-
-	widget.hobjs[RGB_QUAD] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[RGB_QUAD_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[RGB_HUE_SLIDER] = new WP_UnitRenderable(linear_hue_shader);
-	widget.hobjs[RGB_HUE_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	
-	standard_set_rect_uvs(ur_wget(widget, RGB_QUAD));
-	standard_setup_quad_gradient_color(ur_wget(widget, RGB_QUAD), RGB_QUAD_GRADIENT_INDEX);
-	send_gradient_color_uniform(ur_wget(widget, RGB_QUAD).shader, RGB_QUAD_GRADIENT_INDEX, ColorFrame(HSV(0.0f, 1.0f, 1.0f)).rgba_as_vec());
-
-	standard_set_rect_uvs(ur_wget(widget, RGB_QUAD_CURSOR));
-	circle_cursor_set_thickness(ur_wget(widget, RGB_QUAD_CURSOR), 0.4f);
-	circle_cursor_set_value(ur_wget(widget, RGB_QUAD_CURSOR), 1.0f);
-	standard_set_rect_uvs(ur_wget(widget, RGB_HUE_SLIDER_CURSOR));
-	circle_cursor_set_thickness(ur_wget(widget, RGB_HUE_SLIDER_CURSOR), 0.4f);
-	circle_cursor_set_value(ur_wget(widget, RGB_HUE_SLIDER_CURSOR), 1.0f);
-
-	clbk_mb = [this](const Callback::MouseButton& mb) {
-		if (mb.action == IAction::PRESS)
-		{
-			if (current_widget_control == -1)
-			{
-				Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
-				if (state == State::GRAPHIC_RGB)
-				{
-					if (widget.wp_at(RGB_QUAD).contains_point(local_cursor_pos))
-					{
-						current_widget_control = RGB_QUAD_CURSOR;
-						mouse_handler_rgb_quad(local_cursor_pos);
-					}
-					else if (widget.wp_at(RGB_HUE_SLIDER).contains_point(local_cursor_pos))
-					{
-						current_widget_control = RGB_HUE_SLIDER_CURSOR;
-						mouse_handler_rgb_hue_slider(local_cursor_pos);
-					}
-				}
-			}
-		}
-		else if (mb.action == IAction::RELEASE)
-		{
-			if (current_widget_control == RGB_QUAD_CURSOR || current_widget_control == RGB_HUE_SLIDER_CURSOR)
-				current_widget_control = -1;
-		}
-		};
-	clbk_mb_down = [this](const Callback::MouseButton& mb) {
-		Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
-		if (current_widget_control == RGB_QUAD_CURSOR)
-			mouse_handler_rgb_quad(local_cursor_pos);
-		else if (current_widget_control == RGB_HUE_SLIDER_CURSOR)
-			mouse_handler_rgb_hue_slider(local_cursor_pos);
-		};
-	Machine.main_window->clbk_mouse_button.push_back(clbk_mb, this);
-	Machine.main_window->clbk_mouse_button_down.push_back(clbk_mb_down, this);
-
-	orient_hue_progress(ur_wget(widget, RGB_HUE_SLIDER), Cardinal::RIGHT);
-
-	widget.wp_at(RGB_QUAD).transform.position = { 0, -100 };
-	widget.wp_at(RGB_QUAD).transform.scale = { 200, 200 };
-	widget.wp_at(RGB_QUAD).pivot.y = 0;
-	widget.wp_at(RGB_QUAD_CURSOR).transform.position = { widget.wp_at(RGB_QUAD).top(), widget.wp_at(RGB_QUAD).right() };
-	widget.wp_at(RGB_QUAD_CURSOR).transform.scale = { 8, 8 };
-	widget.wp_at(RGB_HUE_SLIDER).transform.position = { 0, -115 };
-	widget.wp_at(RGB_HUE_SLIDER).transform.scale = { 200, 15 };
-	widget.wp_at(RGB_HUE_SLIDER).pivot.y = 1;
-	widget.wp_at(RGB_HUE_SLIDER_CURSOR).transform.position = { widget.wp_at(RGB_HUE_SLIDER).left(), widget.wp_at(RGB_HUE_SLIDER).center_y() };
-	widget.wp_at(RGB_HUE_SLIDER_CURSOR).transform.scale = { 8, 8 };
-	widget.parent.position.y = 150;
-	sync_cp_widget_transforms();
+	send_gradient_color_uniform(quad_shader, 0, ColorFrame(HSV(0.0f, 0.0f, 0.0f)).rgba_as_vec());
+	send_gradient_color_uniform(quad_shader, 1, ColorFrame(HSV(0.0f, 0.0f, 1.0f)).rgba_as_vec());
+	initialize_widget();
+	connect_mouse_handlers();
 }
 
 ColorPicker::~ColorPicker()
@@ -227,19 +118,152 @@ void ColorPicker::send_vp(const float* vp)
 	QUASAR_GL(glUniformMatrix3fv(circle_cursor_shader.uniform_locations["u_VP"], 1, GL_FALSE, vp));
 }
 
-void ColorPicker::sync_cp_widget_transforms()
+void ColorPicker::initialize_widget()
+{
+	widget.hobjs[RGB_QUAD] = new WP_UnitRenderable(quad_shader);
+	widget.hobjs[RGB_QUAD_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+	widget.hobjs[RGB_HUE_SLIDER] = new WP_UnitRenderable(linear_hue_shader);
+	widget.hobjs[RGB_HUE_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+
+	setup_rect_uvs(RGB_QUAD);
+	setup_quad_gradient_color(RGB_QUAD, RGB_QUAD_GRADIENT_INDEX);
+	send_rgb_quad_hue_to_uniform(0.0f);
+	setup_circle_cursor(RGB_QUAD_CURSOR);
+	orient_rgb_hue_slider(Cardinal::RIGHT);
+	setup_circle_cursor(RGB_HUE_SLIDER_CURSOR);
+
+	widget.wp_at(RGB_QUAD).transform.position = { 0, -100 };
+	widget.wp_at(RGB_QUAD).transform.scale = { 200, 200 };
+	widget.wp_at(RGB_QUAD).pivot.y = 0;
+	widget.wp_at(RGB_QUAD_CURSOR).transform.position = { widget.wp_at(RGB_QUAD).top(), widget.wp_at(RGB_QUAD).right() };
+	widget.wp_at(RGB_HUE_SLIDER).transform.position = { 0, -115 };
+	widget.wp_at(RGB_HUE_SLIDER).transform.scale = { 200, 15 };
+	widget.wp_at(RGB_HUE_SLIDER).pivot.y = 1;
+	widget.wp_at(RGB_HUE_SLIDER_CURSOR).transform.position = { widget.wp_at(RGB_HUE_SLIDER).left(), widget.wp_at(RGB_HUE_SLIDER).center_y() };
+	widget.parent.position.y = 150;
+	sync_cp_widget_transforms();
+}
+
+void ColorPicker::connect_mouse_handlers()
+{
+	clbk_mb = [this](const Callback::MouseButton& mb) {
+		if (mb.action == IAction::PRESS)
+		{
+			if (current_widget_control == -1)
+			{
+				Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
+				if (state == State::GRAPHIC_RGB)
+				{
+					if (widget.wp_at(RGB_QUAD).contains_point(local_cursor_pos))
+					{
+						current_widget_control = RGB_QUAD_CURSOR;
+						mouse_handler_rgb_quad(local_cursor_pos);
+					}
+					else if (widget.wp_at(RGB_HUE_SLIDER).contains_point(local_cursor_pos))
+					{
+						current_widget_control = RGB_HUE_SLIDER_CURSOR;
+						mouse_handler_rgb_hue_slider(local_cursor_pos);
+					}
+				}
+			}
+		}
+		else if (mb.action == IAction::RELEASE)
+		{
+			if (current_widget_control == RGB_QUAD_CURSOR || current_widget_control == RGB_HUE_SLIDER_CURSOR)
+				current_widget_control = -1;
+		}
+		};
+	clbk_mb_down = [this](const Callback::MouseButton& mb) {
+		Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
+		if (current_widget_control == RGB_QUAD_CURSOR)
+			mouse_handler_rgb_quad(local_cursor_pos);
+		else if (current_widget_control == RGB_HUE_SLIDER_CURSOR)
+			mouse_handler_rgb_hue_slider(local_cursor_pos);
+		};
+	Machine.main_window->clbk_mouse_button.push_back(clbk_mb, this);
+	Machine.main_window->clbk_mouse_button_down.push_back(clbk_mb_down, this);
+}
+
+void ColorPicker::setup_vertex_positions(size_t control) const
+{
+	const UnitRenderable& renderable = ur_wget(widget, control);
+	WidgetPlacement wp = widget.wp_at(control).relative_to(widget.parent);
+	renderable.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
+	renderable.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
+	renderable.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
+	renderable.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
+}
+
+void ColorPicker::setup_rect_uvs(size_t control) const
+{
+	const UnitRenderable& renderable = ur_wget(widget, control);
+	renderable.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0.0f, 0.0f }));
+	renderable.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1.0f, 0.0f }));
+	renderable.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0.0f, 1.0f }));
+	renderable.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1.0f, 1.0f }));
+}
+
+void ColorPicker::setup_quad_gradient_color(size_t control, GLint gradient_index) const
+{
+	const UnitRenderable& renderable = ur_wget(widget, control);
+	glm::vec4 gradient_indexes{ 0, 0, 1, gradient_index };
+	renderable.set_attribute(2, glm::value_ptr(gradient_indexes));
+}
+
+void ColorPicker::sync_cp_widget_transforms() const
 {
 	for (size_t i = 0; i < widget.hobjs.size(); ++i)
 		sync_single_cp_widget_transform(i);
 }
 
-void ColorPicker::sync_single_cp_widget_transform(size_t i)
+void ColorPicker::sync_single_cp_widget_transform(size_t control) const
 {
-	if (widget.hobjs[i])
+	if (widget.hobjs[control])
 	{
-		standard_set_vertex_positions(ur_wget(widget, i), VertexQuad(widget.wp_at(i).relative_to(widget.parent)));
-		ur_wget(widget, i).send_buffer();
+		setup_vertex_positions(control);
+		ur_wget(widget, control).send_buffer();
 	}
+}
+
+void ColorPicker::set_circle_cursor_thickness(size_t cursor, float thickness)
+{
+	ur_wget(widget, cursor).set_attribute(2, &thickness);
+}
+
+void ColorPicker::set_circle_cursor_value(size_t cursor, float value)
+{
+	ur_wget(widget, cursor).set_attribute(3, &value);
+}
+
+float ColorPicker::get_circle_cursor_value(size_t cursor)
+{
+	float value;
+	ur_wget(widget, cursor).get_attribute(0, 3, &value);
+	return value;
+}
+
+void ColorPicker::setup_circle_cursor(size_t cursor)
+{
+	setup_rect_uvs(cursor);
+	set_circle_cursor_thickness(cursor, 0.4f);
+	set_circle_cursor_value(cursor, 1.0f);
+	widget.wp_at(RGB_QUAD_CURSOR).transform.scale = { 8, 8 };
+}
+
+void ColorPicker::send_rgb_quad_hue_to_uniform(float hue)
+{
+	send_gradient_color_uniform(quad_shader, RGB_QUAD_GRADIENT_INDEX, ColorFrame(HSV(hue, 1.0f, 1.0f)).rgba_as_vec());
+}
+
+void ColorPicker::orient_rgb_hue_slider(Cardinal i) const
+{
+	const UnitRenderable& renderable = ur_wget(widget, RGB_HUE_SLIDER);
+	float zero = 0.0f;
+	float one = 1.0f;
+	renderable.set_attribute_single_vertex(0, 1, i == Cardinal::DOWN || i == Cardinal::LEFT ? &one : &zero);
+	renderable.set_attribute_single_vertex(1, 1, i == Cardinal::RIGHT || i == Cardinal::DOWN ? &one : &zero);
+	renderable.set_attribute_single_vertex(2, 1, i == Cardinal::UP || i == Cardinal::LEFT ? &one : &zero);
+	renderable.set_attribute_single_vertex(3, 1, i == Cardinal::RIGHT || i == Cardinal::UP ? &one : &zero);
 }
 
 glm::vec2 ColorPicker::get_rgb_quad_sat_and_value() const
@@ -264,10 +288,10 @@ void ColorPicker::mouse_handler_rgb_hue_slider(Position local_cursor_pos)
 	widget.wp_at(RGB_HUE_SLIDER_CURSOR).transform.position.y = widget.wp_at(RGB_HUE_SLIDER).center_point().y;
 	float hue = get_rgb_hue_slider_hue();
 	if (on_interval(hue, 0.1f, 0.5f))
-		circle_cursor_set_value(ur_wget(widget, RGB_HUE_SLIDER_CURSOR), 0.0f);
+		set_circle_cursor_value(RGB_HUE_SLIDER_CURSOR, 0.0f);
 	else
-		circle_cursor_set_value(ur_wget(widget, RGB_HUE_SLIDER_CURSOR), 1.0f);
-	send_gradient_color_uniform(ur_wget(widget, RGB_QUAD).shader, RGB_QUAD_GRADIENT_INDEX, ColorFrame(HSV(hue, 1.0f, 1.0f)).rgba_as_vec());
+		set_circle_cursor_value(RGB_HUE_SLIDER_CURSOR, 1.0f);
+	send_rgb_quad_hue_to_uniform(hue);
 	sync_single_cp_widget_transform(RGB_HUE_SLIDER_CURSOR);
 }
 

@@ -5,6 +5,7 @@
 #include "user/Platform.h"
 #include "Widgets.h"
 #include "edit/Color.h"
+#include "variety/Geometry.h"
 
 struct ColorPicker
 {
@@ -36,8 +37,21 @@ struct ColorPicker
 	void send_vp(const float* vp);
 
 private:
-	void sync_cp_widget_transforms();
-	void sync_single_cp_widget_transform(size_t i);
+	void initialize_widget();
+	void connect_mouse_handlers();
+
+	void setup_vertex_positions(size_t control) const;
+	void setup_rect_uvs(size_t control) const;
+	void setup_quad_gradient_color(size_t control, GLint gradient_index) const;
+	void sync_cp_widget_transforms() const;
+	void sync_single_cp_widget_transform(size_t control) const;
+	void set_circle_cursor_thickness(size_t cursor, float thickness);
+	void set_circle_cursor_value(size_t cursor, float value);
+	float get_circle_cursor_value(size_t cursor);
+	void setup_circle_cursor(size_t cursor);
+
+	void send_rgb_quad_hue_to_uniform(float hue);
+	void orient_rgb_hue_slider(Cardinal i) const;
 	glm::vec2 get_rgb_quad_sat_and_value() const;
 	float get_rgb_hue_slider_hue() const;
 
