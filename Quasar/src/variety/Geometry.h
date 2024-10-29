@@ -105,6 +105,18 @@ struct WidgetPlacement
 	float clamp_x(float x) const { return std::clamp(x, left(), right()); }
 	float clamp_y(float y) const { return std::clamp(y, bottom(), top()); }
 	Position clamp_point(Position pos) const { return { clamp_x(pos.x), clamp_y(pos.y) }; }
+	Position clamp_point_in_ellipse(Position pos) const
+	{
+		Position cp = center_point();
+		Position rel = pos - cp;
+		float axis_x = 0.5f * transform.scale.x;
+		float axis_y = 0.5f * transform.scale.y;
+		// x^2 / axis_x^2 + y^2 / axis_y^2
+		float elliptical_radius = (rel.x / axis_x) * (rel.x / axis_x) + (rel.y / axis_y) * (rel.y / axis_y);
+		if (elliptical_radius <= 1.0f)
+			return pos;
+		return cp + rel * glm::inversesqrt(elliptical_radius);
+	}
 
 	bool contains_x(float x) const { return on_interval(x, left(), right()); }
 	bool contains_y(float y) const { return on_interval(y, bottom(), top()); }
