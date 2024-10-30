@@ -7,7 +7,6 @@
 
 void render_main_menu_bar()
 {
-	ImGui::Begin("-"); // TODO invisible flags
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	if (ImGui::BeginMainMenuBar())
 	{
@@ -108,5 +107,4 @@ void render_main_menu_bar()
 		}
 		ImGui::EndMainMenuBar();
 	}
-	ImGui::End();
 }

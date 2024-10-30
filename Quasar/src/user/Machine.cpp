@@ -29,7 +29,10 @@ static Palette* palette()
 static void update_panels_to_window_size(int width, int height)
 {
 	//easel()->bounds.x1 = 
-	easel()->bounds.x2 = width - Machine.window_layout_info.initial_palette_panel_width;
+	if (palette()->visible)
+		easel()->bounds.x2 = width - Machine.window_layout_info.initial_palette_panel_width;
+	else
+		easel()->bounds.x2 = width;
 	//easel()->bounds.y1 = 
 	easel()->bounds.y2 = height - Machine.window_layout_info.initial_menu_panel_height;
 	palette()->bounds.x1 = easel()->bounds.x2;
@@ -46,7 +49,8 @@ bool MachineImpl::create_main_window()
 		update_raw_mouse_motion();
 		update_vsync();
 		main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
-			window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
+			//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
+			window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
 		return true;
 	}
 	return false;
@@ -358,7 +362,7 @@ void MachineImpl::canvas_begin_panning()
 		panning_info.initial_canvas_pos = canvas_position();
 		panning_info.initial_cursor_pos = easel()->get_app_cursor_pos();
 		panning_info.panning = true;
-		//main_window->override_gui_cursor_change(true); // LATER
+		main_window->override_gui_cursor_change(true);
 		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
 	}
 }
@@ -368,7 +372,7 @@ void MachineImpl::canvas_end_panning()
 	if (panning_info.panning)
 	{
 		panning_info.panning = false;
-		//main_window->override_gui_cursor_change(false); // LATER
+		main_window->override_gui_cursor_change(false);
 		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
 		main_window->set_mouse_mode(MouseMode::VISIBLE);
 	}
@@ -381,7 +385,7 @@ void MachineImpl::canvas_cancel_panning()
 		panning_info.panning = false;
 		canvas_position() = panning_info.initial_canvas_pos;
 		sync_canvas_transform();
-		//main_window->override_gui_cursor_change(false); // LATER
+		main_window->override_gui_cursor_change(false);
 		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
 		main_window->set_mouse_mode(MouseMode::VISIBLE);
 	}
@@ -479,10 +483,12 @@ bool MachineImpl::brush_panel_visible() const
 
 void MachineImpl::open_brush_panel() const
 {
+	panels->set_projection();
 }
 
 void MachineImpl::close_brush_panel() const
 {
+	panels->set_projection();
 }
 
 bool MachineImpl::palette_panel_visible() const
@@ -494,12 +500,16 @@ void MachineImpl::open_palette_panel() const
 {
 	palette()->visible = true;
 	easel()->bounds.x2 = main_window->width() - window_layout_info.initial_palette_panel_width;
+	palette()->bounds.x1 = easel()->bounds.x2;
+	palette()->bounds.x2 = main_window->width();
+	panels->set_projection();
 }
 
 void MachineImpl::close_palette_panel() const
 {
 	palette()->visible = false;
 	easel()->bounds.x2 = main_window->width();
+	panels->set_projection();
 }
 
 bool MachineImpl::views_panel_visible() const
@@ -509,10 +519,12 @@ bool MachineImpl::views_panel_visible() const
 
 void MachineImpl::open_views_panel() const
 {
+	panels->set_projection();
 }
 
 void MachineImpl::close_views_panel() const
 {
+	panels->set_projection();
 }
 
 void MachineImpl::canvas_reset_camera()

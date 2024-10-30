@@ -32,7 +32,7 @@ static void send_gradient_color_uniform(Shader& shader, GradientIndex index, Col
 	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_GradientColors[0]"] + int(index), 1, glm::value_ptr(color.rgba_as_vec())));
 }
 
-// TODO use UMR when possible
+// LATER use UMR when possible
 enum
 {
 	// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
@@ -219,7 +219,7 @@ void ColorPicker::initialize_widget()
 	send_graphic_wheel_value_to_uniform(1.0f);
 	setup_circle_cursor(GRAPHIC_HUE_WHEEL_CURSOR);
 	setup_rect_uvs(GRAPHIC_VALUE_SLIDER);
-	setup_gradient(GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER); // TODO also put in orient method
+	setup_gradient(GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER); // LATER also put in orient method
 	send_graphic_value_slider_hue_and_sat_to_uniform(0.0f, 0.0f);
 	setup_circle_cursor(GRAPHIC_VALUE_SLIDER_CURSOR);
 	set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, 0.0f);
@@ -242,6 +242,7 @@ void ColorPicker::connect_mouse_handlers()
 	clbk_mb = [this](const Callback::MouseButton& mb) {
 		if (mb.action == IAction::PRESS)
 		{
+			// TODO change cursor when interacting
 			if (current_widget_control == -1)
 			{
 				Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
@@ -342,7 +343,7 @@ void ColorPicker::set_color(ColorFrame color)
 	}
 }
 
-void ColorPicker::set_position(Position world_pos, Position screen_pos) // TODO pass one Position. Add coordinate functions to Machine.
+void ColorPicker::set_position(Position world_pos, Position screen_pos) // LATER pass one Position. Add coordinate functions to Machine.
 {
 	widget.parent.position = world_pos;
 	center = screen_pos;

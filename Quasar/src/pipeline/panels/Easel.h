@@ -44,7 +44,7 @@ struct Canvas
 	SharedFlatSprite checkerboard;
 	RGBA checker1, checker2;
 
-	Gridlines minor_gridlines; // TODO move gridlines to Canvas
+	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);

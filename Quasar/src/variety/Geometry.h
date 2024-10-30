@@ -149,7 +149,7 @@ struct ClippingRect
 
 	bool contains_point(const glm::vec2& point) const
 	{
-		return on_interval(x - point.x, 0.0f, float(screen_w)) && on_interval(y - point.y, 0.0f, float(screen_h));
+		return on_interval(point.x - x, 0.0f, float(screen_w)) && on_interval(point.y - y, 0.0f, float(screen_h));
 	}
 
 	glm::vec2 center_point() const
