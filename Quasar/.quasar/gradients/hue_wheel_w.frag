@@ -13,7 +13,9 @@ void main() {
 	if (mag_sq > 1.0) discard;
 
 	o_Color.a = 1.0;
-	float hue = 0.5 + atan(t_UVs.y, t_UVs.x) / TAU;
+	float hue = -atan(t_UVs.y, t_UVs.x) / TAU;
+	if (hue < 0.0)
+		hue += 1.0;
 	float sat = sqrt(mag_sq);
 
 	// Sextant index

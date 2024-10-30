@@ -134,6 +134,9 @@ struct WidgetPlacement
 	float normalize_x(float x) const { return (x - transform.position.x + pivot.x * transform.scale.x) / transform.scale.x; }
 	float normalize_y(float y) const { return (y - transform.position.y + pivot.y * transform.scale.y) / transform.scale.y; }
 	Position normalize(Position pos) const { return { normalize_x(pos.x), normalize_y(pos.y) }; }
+
+	float interp_x(float t) const { return left() + t * transform.scale.x; }
+	float interp_y(float t) const { return bottom() + t * transform.scale.y; }
 };
 
 struct ClippingRect

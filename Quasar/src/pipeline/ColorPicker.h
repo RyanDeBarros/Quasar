@@ -23,7 +23,7 @@ struct ColorPicker
 		HEX_HSL
 	};
 private:
-	State state = State::GRAPHIC_WHEEL;
+	State state = State::GRAPHIC_QUAD;
 public:
 	State get_state() const { return state; }
 	void set_state(State state);
@@ -47,6 +47,7 @@ public:
 	void render();
 	void send_vp(const float* vp);
 	ColorFrame get_color() const;
+	void set_color(ColorFrame);
 	void set_position(Position world_pos, Position screen_pos);
 
 private:
@@ -58,6 +59,11 @@ private:
 	void mouse_handler_graphic_hue_slider(Position local_cursor_pos);
 	void mouse_handler_graphic_hue_wheel(Position local_cursor_pos);
 	void mouse_handler_graphic_value_slider(Position local_cursor_pos);
+
+	void enact_graphic_quad_cursor_position(float hue, float sat);
+	void enact_graphic_hue_slider_cursor_position(float hue);
+	void enact_graphic_hue_wheel_cursor_position(float hue, float sat);
+	void enact_graphic_value_slider_cursor_position(float value);
 
 	void send_graphic_quad_hue_to_uniform(float hue);
 	void orient_graphic_hue_slider(Cardinal i) const;
