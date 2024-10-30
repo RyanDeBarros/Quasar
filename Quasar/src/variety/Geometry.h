@@ -90,7 +90,7 @@ struct FlatTransform
 	Position get_relative_pos(Position absolute) const { return (absolute - position) * scale.reciprocal(); }
 };
 
-inline bool on_interval(float val, float min_inclusive, float max_inclusive)
+constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
 {
 	return val >= min_inclusive && val <= max_inclusive;
 }

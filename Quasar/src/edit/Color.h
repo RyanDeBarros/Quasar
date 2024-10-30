@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 
 #include "variety/Utils.h"
+#include "variety/Geometry.h"
 
 constexpr unsigned char operator"" _UC(unsigned long long num) { return static_cast<unsigned char>(num); }
 constexpr unsigned short operator"" _US(unsigned long long num) { return static_cast<unsigned short>(num); }
@@ -453,3 +454,45 @@ struct GrayScale
 {
 	unsigned char v = 0_UC;
 };
+
+constexpr float contrast_wb_value_simple_hue(float hue)
+{
+	return on_interval(hue, 0.1f, 0.5f) ? 0.0f : 1.0f;
+}
+
+constexpr float contrast_wb_value_simple_hue_and_sat(float hue, float sat)
+{
+	return on_interval(hue, 0.1f, 0.5f) || sat < 0.3f ? 0.0f : 1.0f;
+}
+
+constexpr float contrast_wb_value_simple_hue_and_value(float hue, float value)
+{
+	if (on_interval(hue, 0.1f, 0.5f))
+		return value < 0.5f ? 1.0f : 0.0f;
+	else
+		return value < 0.75f ? 1.0f : 0.0f;
+}
+
+// LATER use pass-by-value for structs <= 16 bytes
+constexpr float contrast_wb_value_complex(glm::vec3 hsv)
+{
+	const float sat1 = 0.0f;
+	float hue = hsv.x;
+	float sat2 = 1.0f;
+	if (on_interval(hue, 0.0f, 1 / 6.0f))
+		sat2 = 3.0f * hue + 0.5f;
+	else if (on_interval(hue, 1 / 2.0f, 2 / 3.0f))
+		sat2 = -3.0f * hue + 2.5f;
+	else if (hue > 2 / 3.0f)
+		sat2 = 0.5f;
+
+	const float val1 = 0.5f;
+	float val2 = 1.0f;
+	if (on_interval(hue, 0.0f, 1 / 3.0f))
+		val2 = -1.5f * hue + 1.0f;
+	else if (on_interval(hue, 1 / 3.0f, 2 / 3.0f))
+		val2 = 1.5f * hue;
+
+	float y = (hsv.y - sat1) * (val2 - val1) / (sat2 - sat1) + val1;
+	return hsv.z < y ? 1.0f : 0.0f;
+}

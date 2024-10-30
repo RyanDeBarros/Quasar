@@ -242,7 +242,6 @@ void ColorPicker::connect_mouse_handlers()
 	clbk_mb = [this](const Callback::MouseButton& mb) {
 		if (mb.action == IAction::PRESS)
 		{
-			// TODO change cursor when interacting
 			if (current_widget_control == -1)
 			{
 				Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
@@ -250,11 +249,13 @@ void ColorPicker::connect_mouse_handlers()
 				{
 					if (widget.wp_at(GRAPHIC_QUAD).contains_point(local_cursor_pos))
 					{
+						Machine.main_window->set_mouse_mode(MouseMode::VIRTUAL);
 						current_widget_control = GRAPHIC_QUAD_CURSOR;
 						mouse_handler_graphic_quad(local_cursor_pos);
 					}
 					else if (widget.wp_at(GRAPHIC_HUE_SLIDER).contains_point(local_cursor_pos))
 					{
+						Machine.main_window->set_mouse_mode(MouseMode::VIRTUAL);
 						current_widget_control = GRAPHIC_HUE_SLIDER_CURSOR;
 						mouse_handler_graphic_hue_slider(local_cursor_pos);
 					}
@@ -263,11 +264,13 @@ void ColorPicker::connect_mouse_handlers()
 				{
 					if (widget.wp_at(GRAPHIC_HUE_WHEEL).contains_point(local_cursor_pos))
 					{
+						Machine.main_window->set_mouse_mode(MouseMode::VIRTUAL);
 						current_widget_control = GRAPHIC_HUE_WHEEL_CURSOR;
 						mouse_handler_graphic_hue_wheel(local_cursor_pos);
 					}
 					else if (widget.wp_at(GRAPHIC_VALUE_SLIDER).contains_point(local_cursor_pos))
 					{
+						Machine.main_window->set_mouse_mode(MouseMode::VIRTUAL);
 						current_widget_control = GRAPHIC_VALUE_SLIDER_CURSOR;
 						mouse_handler_graphic_value_slider(local_cursor_pos);
 					}
@@ -276,6 +279,8 @@ void ColorPicker::connect_mouse_handlers()
 		}
 		else if (mb.action == IAction::RELEASE)
 		{
+			if (current_widget_control != -1)
+				Machine.main_window->set_mouse_mode(MouseMode::VISIBLE);
 			current_widget_control = -1;
 		}
 		};
@@ -298,13 +303,13 @@ ColorFrame ColorPicker::get_color() const
 {
 	if (state == State::GRAPHIC_QUAD)
 	{
-		// TODO add alpha
+		// LATER add alpha
 		glm::vec2 sv = get_graphic_quad_sat_and_value();
 		return ColorFrame(HSV(get_graphic_hue_slider_hue(), sv[0], sv[1]));
 	}
 	else if (state == State::GRAPHIC_WHEEL)
 	{
-		// TODO add alpha
+		// LATER add alpha
 		glm::vec2 hs = get_graphic_wheel_hue_and_sat();
 		return ColorFrame(HSV(hs[0], hs[1], get_graphic_value_slider_value()));
 	}
@@ -323,7 +328,7 @@ void ColorPicker::set_color(ColorFrame color)
 		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_QUAD).interp_y(val);
 		widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_HUE_SLIDER).interp_x(hue);
 		widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_HUE_SLIDER).center_point().y;
-		enact_graphic_quad_cursor_position(hue, sat);
+		enact_graphic_quad_cursor_position(hue, sat, val);
 		enact_graphic_hue_slider_cursor_position(hue);
 	}
 	else if (state == State::GRAPHIC_WHEEL)
@@ -339,7 +344,7 @@ void ColorPicker::set_color(ColorFrame color)
 		widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_VALUE_SLIDER).interp_x(val);
 		widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_VALUE_SLIDER).center_point().y;
 		enact_graphic_hue_wheel_cursor_position(hue, sat);
-		enact_graphic_value_slider_cursor_position(val);
+		enact_graphic_value_slider_cursor_position(hue, val);
 	}
 }
 
@@ -352,62 +357,70 @@ void ColorPicker::set_position(Position world_pos, Position screen_pos) // LATER
 void ColorPicker::mouse_handler_graphic_quad(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position = widget.wp_at(GRAPHIC_QUAD).clamp_point(local_cursor_pos);
-	glm::vec2 hs = widget.wp_at(GRAPHIC_QUAD).normalize(local_cursor_pos);
-	enact_graphic_quad_cursor_position(hs[0], hs[1]);
+	enact_graphic_quad_and_hue_slider_cursor_positions(local_cursor_pos);
 }
 
 void ColorPicker::mouse_handler_graphic_hue_slider(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_HUE_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_HUE_SLIDER).center_point().y;
-	enact_graphic_hue_slider_cursor_position(get_graphic_hue_slider_hue());
+	enact_graphic_quad_and_hue_slider_cursor_positions(local_cursor_pos);
 }
 
 void ColorPicker::mouse_handler_graphic_hue_wheel(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position = widget.wp_at(GRAPHIC_HUE_WHEEL).clamp_point_in_ellipse(local_cursor_pos);
-	glm::vec2 hs = get_graphic_wheel_hue_and_sat();
-	enact_graphic_hue_wheel_cursor_position(hs[0], hs[1]);
+	enact_graphic_hue_wheel_and_value_slider_cursor_positions(local_cursor_pos);
 }
 
 void ColorPicker::mouse_handler_graphic_value_slider(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_VALUE_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_VALUE_SLIDER).center_point().y;
-	enact_graphic_value_slider_cursor_position(get_graphic_value_slider_value());
+	enact_graphic_hue_wheel_and_value_slider_cursor_positions(local_cursor_pos);
 }
 
-void ColorPicker::enact_graphic_quad_cursor_position(float hue, float sat)
+void ColorPicker::enact_graphic_quad_cursor_position(float hue, float sat, float val)
 {
-	// TODO set circle cursor value if contrast is weak compared to hue and sat.
+	set_circle_cursor_value(GRAPHIC_QUAD_CURSOR, contrast_wb_value_complex({ hue, sat, val }));
 	sync_single_cp_widget_transform(GRAPHIC_QUAD_CURSOR);
 }
 
 void ColorPicker::enact_graphic_hue_slider_cursor_position(float hue)
 {
-	if (on_interval(hue, 0.1f, 0.5f))
-		set_circle_cursor_value(GRAPHIC_HUE_SLIDER_CURSOR, 0.0f);
-	else
-		set_circle_cursor_value(GRAPHIC_HUE_SLIDER_CURSOR, 1.0f);
+	set_circle_cursor_value(GRAPHIC_HUE_SLIDER_CURSOR, contrast_wb_value_simple_hue(hue));
 	send_graphic_quad_hue_to_uniform(hue);
 	sync_single_cp_widget_transform(GRAPHIC_HUE_SLIDER_CURSOR);
 }
 
+void ColorPicker::enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos)
+{
+	glm::vec2 sv = get_graphic_quad_sat_and_value();
+	float hue = get_graphic_hue_slider_hue();
+	enact_graphic_quad_cursor_position(hue, sv[0], sv[1]);
+	enact_graphic_hue_slider_cursor_position(hue);
+}
+
 void ColorPicker::enact_graphic_hue_wheel_cursor_position(float hue, float sat)
 {
-	// TODO set circle cursor value if contrast is weak compared to hue and sat.
+	set_circle_cursor_value(GRAPHIC_HUE_WHEEL_CURSOR, contrast_wb_value_simple_hue_and_sat(hue, sat));
 	sync_single_cp_widget_transform(GRAPHIC_HUE_WHEEL_CURSOR);
 	send_graphic_value_slider_hue_and_sat_to_uniform(hue, sat);
 }
 
-void ColorPicker::enact_graphic_value_slider_cursor_position(float value)
+void ColorPicker::enact_graphic_value_slider_cursor_position(float hue, float value)
 {
-	if (value > 0.5f)
-		set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, 0.0f);
-	else
-		set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, 1.0f);
+	set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hue, value));
 	send_graphic_wheel_value_to_uniform(value);
 	sync_single_cp_widget_transform(GRAPHIC_VALUE_SLIDER_CURSOR);
+}
+
+void ColorPicker::enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos)
+{
+	glm::vec2 hs = get_graphic_wheel_hue_and_sat();
+	float value = get_graphic_value_slider_value();
+	enact_graphic_hue_wheel_cursor_position(hs[0], hs[1]);
+	enact_graphic_value_slider_cursor_position(hs[0], value);
 }
 
 glm::vec2 ColorPicker::get_graphic_quad_sat_and_value() const

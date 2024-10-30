@@ -60,10 +60,12 @@ private:
 	void mouse_handler_graphic_hue_wheel(Position local_cursor_pos);
 	void mouse_handler_graphic_value_slider(Position local_cursor_pos);
 
-	void enact_graphic_quad_cursor_position(float hue, float sat);
+	void enact_graphic_quad_cursor_position(float hue, float sat, float val);
 	void enact_graphic_hue_slider_cursor_position(float hue);
+	void enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos);
 	void enact_graphic_hue_wheel_cursor_position(float hue, float sat);
-	void enact_graphic_value_slider_cursor_position(float value);
+	void enact_graphic_value_slider_cursor_position(float hue, float value);
+	void enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos);
 
 	void send_graphic_quad_hue_to_uniform(float hue);
 	void orient_graphic_hue_slider(Cardinal i) const;
