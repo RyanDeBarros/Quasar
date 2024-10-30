@@ -128,30 +128,42 @@ void ColorPicker::cp_render_gui()
 	Position pos = center - Position{ 0.5f * sz.x, 0.8f * sz.y };
 	ImGui::SetNextWindowPos({ pos.x, pos.y });
 
-	ImGuiWindowFlags invisible_flags = ImGuiWindowFlags_NoTitleBar |
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoResize |
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoScrollbar |
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoDecoration;
-	if (ImGui::Begin("-", nullptr, invisible_flags))
+	if (ImGui::Begin("-", nullptr, window_flags))
 	{
 		State to_state = state;
-		if (ImGui::BeginTabBar("bar"))
+		if (ImGui::BeginTabBar("cp-main-tb"))
 		{
-			if (state == State::GRAPHIC_QUAD)
-				ImGui::BeginDisabled();
-			if (ImGui::TabItemButton("QUAD"))
-				to_state = State::GRAPHIC_QUAD;
-			if (state == State::GRAPHIC_QUAD)
-				ImGui::EndDisabled();
-
-			if (state == State::GRAPHIC_WHEEL)
-				ImGui::BeginDisabled();
-			if (ImGui::TabItemButton("WHEEL"))
-				to_state = State::GRAPHIC_WHEEL;
-			if (state == State::GRAPHIC_WHEEL)
-				ImGui::EndDisabled();
+			cp_render_maintab_button(to_state, MainState::GRAPHIC, last_graphic_state, "GRAPHIC");
+			cp_render_maintab_button(to_state, MainState::SLIDER, last_slider_state, "SLIDER");
+			cp_render_maintab_button(to_state, MainState::HEX, last_hex_state, "HEX");
+			ImGui::EndTabBar();
+		}
+		ImGui::Dummy(ImVec2(0.0f, ImGui::GetContentRegionAvail().y - 32));
+		if (ImGui::BeginTabBar("cp-sub-tb"))
+		{
+			if (is_main_state(MainState::GRAPHIC))
+			{
+				cp_render_subtab_button(to_state, State::GRAPHIC_QUAD, "QUAD");
+				cp_render_subtab_button(to_state, State::GRAPHIC_WHEEL, "WHEEL");
+			}
+			else if (is_main_state(MainState::SLIDER))
+			{
+				cp_render_subtab_button(to_state, State::SLIDER_RGB, "RGB");
+				cp_render_subtab_button(to_state, State::SLIDER_HSV, "HSV");
+				cp_render_subtab_button(to_state, State::SLIDER_HSL, "HSL");
+			}
+			else if (is_main_state(MainState::HEX))
+			{
+				cp_render_subtab_button(to_state, State::HEX_RGB, "RGB");
+				cp_render_subtab_button(to_state, State::HEX_HSV, "HSV");
+				cp_render_subtab_button(to_state, State::HEX_HSL, "HSL");
+			}
 			ImGui::EndTabBar();
 		}
 		set_state(to_state);
@@ -159,10 +171,82 @@ void ColorPicker::cp_render_gui()
 	}
 }
 
+ColorPicker::MainState ColorPicker::main_state_of(State state)
+{
+	if (state == State::SLIDER_RGB || state == State::SLIDER_HSV || state == State::SLIDER_HSL)
+		return MainState::SLIDER;
+	else if (state == State::HEX_RGB || state == State::HEX_HSV || state == State::HEX_HSL)
+		return MainState::HEX;
+	else
+		return MainState::GRAPHIC;
+}
+
+bool ColorPicker::is_main_state(MainState main) const
+{
+	return (main == MainState::GRAPHIC && (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL))
+		|| (main == MainState::SLIDER && (state == State::SLIDER_RGB || state == State::SLIDER_HSV || state == State::SLIDER_HSL))
+		|| (main == MainState::HEX && (state == State::HEX_RGB || state == State::HEX_HSV || state == State::HEX_HSL));
+}
+
+bool ColorPicker::is_sub_state(SubState sub) const
+{
+	return (sub == SubState::QUAD && state == State::GRAPHIC_QUAD)
+		|| (sub == SubState::WHEEL && state == State::GRAPHIC_WHEEL)
+		|| (sub == SubState::RGB && (state == State::SLIDER_RGB || state == State::HEX_RGB))
+		|| (sub == SubState::HSV && (state == State::SLIDER_HSV || state == State::HEX_HSV))
+		|| (sub == SubState::HSL && (state == State::SLIDER_HSL || state == State::HEX_HSL));
+}
+
+void ColorPicker::cp_render_maintab_button(State& to_state, MainState main_state, State main_state_default, const char* display) const
+{
+	bool is_main = is_main_state(main_state);
+	if (is_main)
+		ImGui::BeginDisabled();
+	if (ImGui::TabItemButton(display))
+	{
+		if (!is_main)
+			to_state = main_state_default;
+	}
+	if (is_main)
+		ImGui::EndDisabled();
+}
+
+void ColorPicker::cp_render_subtab_button(State& to_state, State compare, const char* display) const
+{
+	if (state == compare)
+		ImGui::BeginDisabled();
+	if (ImGui::TabItemButton(display))
+		to_state = compare;
+	if (state == compare)
+		ImGui::EndDisabled();
+}
+
 void ColorPicker::set_state(State _state)
 {
 	if (_state != state)
 	{
+		if (main_state_of(state) == MainState::GRAPHIC)
+		{
+			if (main_state_of(_state) == MainState::GRAPHIC)
+				last_graphic_state = _state;
+			else
+				last_graphic_state = state;
+		}
+		else if (main_state_of(state) == MainState::SLIDER)
+		{
+			if (main_state_of(_state) == MainState::SLIDER)
+				last_slider_state = _state;
+			else
+				last_slider_state = state;
+		}
+		else if (main_state_of(state) == MainState::HEX)
+		{
+			if (main_state_of(_state) == MainState::HEX)
+				last_hex_state = _state;
+			else
+				last_hex_state = state;
+		}
+
 		current_widget_control = -1; // release mouse
 		ColorFrame color = get_color();
 		state = _state;

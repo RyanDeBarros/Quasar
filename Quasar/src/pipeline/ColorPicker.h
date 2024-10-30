@@ -22,6 +22,22 @@ struct ColorPicker
 		HEX_HSV,
 		HEX_HSL
 	};
+
+	enum class MainState
+	{
+		GRAPHIC,
+		SLIDER,
+		HEX
+	};
+
+	enum class SubState
+	{
+		QUAD,
+		WHEEL,
+		RGB,
+		HSV,
+		HSL
+	};
 private:
 	State state = State::GRAPHIC_QUAD;
 public:
@@ -34,6 +50,9 @@ public:
 	Scale size;
 private:
 	Position center;
+	State last_graphic_state = State::GRAPHIC_QUAD;
+	State last_slider_state = State::SLIDER_RGB;
+	State last_hex_state = State::HEX_RGB;
 public:
 	std::function<void(const Callback::MouseButton&)> clbk_mb;
 	std::function<void(const Callback::MouseButton&)> clbk_mb_down;
@@ -52,6 +71,11 @@ public:
 
 private:
 	void cp_render_gui();
+	static MainState main_state_of(State state);
+	bool is_main_state(MainState main_state) const;
+	bool is_sub_state(SubState sub_state) const;
+	void cp_render_maintab_button(State& to_state, MainState main_state, State main_state_default, const char* display) const;
+	void cp_render_subtab_button(State& to_state, State compare, const char* display) const;
 	void initialize_widget();
 	void connect_mouse_handlers();
 
