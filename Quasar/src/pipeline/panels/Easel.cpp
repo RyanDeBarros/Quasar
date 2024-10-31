@@ -2,6 +2,7 @@
 
 #include "variety/GLutility.h"
 #include "user/Machine.h"
+#include "../Uniforms.h"
 
 Gridlines::Gridlines()
 	: shader(FileSystem::resources_path("gridlines.vert"), FileSystem::resources_path("gridlines.frag"))
@@ -152,11 +153,9 @@ unsigned short Gridlines::num_rows() const
 	return unsigned short(std::ceil(height / line_spacing.y)) + 1_US;
 }
 
-void Gridlines::set_color(ColorFrame color)
+void Gridlines::set_color(ColorFrame color) const
 {
-	bind_shader(shader);
-	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_Color"], 1, &color.rgba_as_vec()[0]));
-	unbind_shader();
+	Uniforms::send_4(shader, "u_Color", color.rgba_as_vec(), 0, true);
 }
 
 void Canvas::create_checkerboard_image()
@@ -361,12 +360,9 @@ void Easel::_send_view()
 	background.sync_transform();
 	subsend_background_vao();
 	glm::mat3 cameraVP = vp_matrix();
-	bind_shader(sprite_shader);
-	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
-	bind_shader(canvas.minor_gridlines.shader);
-	QUASAR_GL(glUniformMatrix3fv(canvas.minor_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
-	bind_shader(canvas.major_gridlines.shader);
-	QUASAR_GL(glUniformMatrix3fv(canvas.major_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(canvas.minor_gridlines.shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(canvas.major_gridlines.shader, "u_VP", cameraVP);
 	unbind_shader();
 }
 
@@ -388,8 +384,7 @@ void Easel::sync_canvas_transform()
 
 void Easel::gridlines_send_flat_transform(Gridlines& gridlines) const
 {
-	bind_shader(gridlines.shader.rid);
-	QUASAR_GL(glUniform4fv(gridlines.shader.uniform_locations["u_FlatTransform"], 1, &canvas.transform().packed()[0]));
+	Uniforms::send_4(gridlines.shader, "u_FlatTransform", canvas.transform().packed());
 	update_gridlines_scale(gridlines);
 }
 

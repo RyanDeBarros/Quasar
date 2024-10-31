@@ -105,6 +105,9 @@
     <ClCompile Include="src\edit\Color.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\pipeline\Uniforms.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\variety\IO.h">
@@ -1086,6 +1089,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\pipeline\Widgets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\Uniforms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

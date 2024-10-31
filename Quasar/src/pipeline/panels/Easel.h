@@ -35,7 +35,7 @@ public:
 	GLsizei num_quads() const { return num_rows() + num_cols(); }
 	GLsizei num_vertices() const { return num_quads() * 4; }
 
-	void set_color(ColorFrame color);
+	void set_color(ColorFrame color) const;
 };
 
 struct Canvas

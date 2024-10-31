@@ -64,7 +64,7 @@ public:
 	~ColorPicker();
 
 	void render();
-	void send_vp(const float* vp);
+	void send_vp(const glm::mat3& vp) const;
 	ColorFrame get_color() const;
 	void set_color(ColorFrame);
 	void set_position(Position world_pos, Position screen_pos);
@@ -99,29 +99,29 @@ private:
 	void mouse_handler_slider_hsl_s(Position local_cursor_pos);
 	void mouse_handler_slider_hsl_l(Position local_cursor_pos);
 
-	void enact_graphic_quad_cursor_position(float hue, float sat, float val);
-	void enact_graphic_hue_slider_cursor_position(float hue);
-	void enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos);
+	void enact_graphic_quad_cursor_position(float hue, float sat, float val) const;
+	void enact_graphic_hue_slider_cursor_position(float hue) const;
+	void enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos) const;
 
-	void enact_graphic_hue_wheel_cursor_position(float hue, float sat);
-	void enact_graphic_value_slider_cursor_position(float hue, float value);
-	void enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos);
+	void enact_graphic_hue_wheel_cursor_position(float hue, float sat) const;
+	void enact_graphic_value_slider_cursor_position(float hue, float value) const;
+	void enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos) const;
 
-	void enact_slider_rgb_cursor_positions();
-	void enact_slider_hsv_cursor_positions();
-	void enact_slider_hsl_cursor_positions();
+	void enact_slider_rgb_cursor_positions() const;
+	void enact_slider_hsv_cursor_positions() const;
+	void enact_slider_hsl_cursor_positions() const;
 
 	void orient_progress_slider(size_t control, Cardinal i) const;
 	
-	void send_graphic_quad_hue_to_uniform(float hue);
+	void send_graphic_quad_hue_to_uniform(float hue) const;
 	glm::vec2 get_graphic_quad_sat_and_value() const;
 
-	void send_graphic_wheel_value_to_uniform(float value);
-	void send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat);
+	void send_graphic_wheel_value_to_uniform(float value) const;
+	void send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat) const;
 	glm::vec2 get_graphic_wheel_hue_and_sat() const;
 
-	void send_slider_hsv_hue_and_value_to_uniform(float hue, float value);
-	void send_slider_hsl_hue_and_lightness_to_uniform(float hue, float lightness);
+	void send_slider_hsv_hue_and_value_to_uniform(float hue, float value) const;
+	void send_slider_hsl_hue_and_lightness_to_uniform(float hue, float lightness) const;
 
 	float slider_normal_x(size_t control, size_t cursor) const;
 	void setup_vertex_positions(size_t control) const;
@@ -129,8 +129,8 @@ private:
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
 	void sync_cp_widget_transforms() const;
 	void sync_single_cp_widget_transform(size_t control) const;
-	void set_circle_cursor_thickness(size_t cursor, float thickness);
-	void set_circle_cursor_value(size_t cursor, float value);
-	float get_circle_cursor_value(size_t cursor);
+	void set_circle_cursor_thickness(size_t cursor, float thickness) const;
+	void set_circle_cursor_value(size_t cursor, float value) const;
+	float get_circle_cursor_value(size_t cursor) const;
 	void setup_circle_cursor(size_t cursor);
 };

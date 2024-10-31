@@ -1,11 +1,11 @@
 #include "ColorPicker.h"
 
 #include <glm/gtc/type_ptr.inl>
-
 #include "variety/GLutility.h"
 #include "edit/Color.h"
 #include "user/Machine.h"
 #include "user/GUI.h"
+#include "Uniforms.h"
 
 enum class GradientIndex : GLint
 {
@@ -25,10 +25,9 @@ enum class GradientIndex : GLint
 	_MAX_GRADIENT_COLORS
 };
 
-static void send_gradient_color_uniform(Shader& shader, GradientIndex index, ColorFrame color)
+static void send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color)
 {
-	bind_shader(shader);
-	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_GradientColors[0]"] + int(index), 1, glm::value_ptr(color.rgba_as_vec())));
+	Uniforms::send_4(shader, "u_GradientColors[0]", color.rgba_as_vec(), (GLint)index);
 }
 
 // LATER use UMR when possible
@@ -272,18 +271,13 @@ void ColorPicker::set_state(State _state)
 	}
 }
 
-void ColorPicker::send_vp(const float* vp)
+void ColorPicker::send_vp(const glm::mat3& vp) const
 {
-	bind_shader(quad_shader);
-	QUASAR_GL(glUniformMatrix3fv(quad_shader.uniform_locations["u_VP"], 1, GL_FALSE, vp));
-	bind_shader(linear_hue_shader);
-	QUASAR_GL(glUniformMatrix3fv(linear_hue_shader.uniform_locations["u_VP"], 1, GL_FALSE, vp));
-	bind_shader(hue_wheel_w_shader);
-	QUASAR_GL(glUniformMatrix3fv(hue_wheel_w_shader.uniform_locations["u_VP"], 1, GL_FALSE, vp));
-	bind_shader(linear_lightness_shader);
-	QUASAR_GL(glUniformMatrix3fv(linear_lightness_shader.uniform_locations["u_VP"], 1, GL_FALSE, vp));
-	bind_shader(circle_cursor_shader);
-	QUASAR_GL(glUniformMatrix3fv(circle_cursor_shader.uniform_locations["u_VP"], 1, GL_FALSE, vp));
+	Uniforms::send_matrix3(quad_shader, "u_VP", vp);
+	Uniforms::send_matrix3(linear_hue_shader, "u_VP", vp);
+	Uniforms::send_matrix3(hue_wheel_w_shader, "u_VP", vp);
+	Uniforms::send_matrix3(linear_lightness_shader, "u_VP", vp);
+	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", vp);
 	sync_cp_widget_transforms();
 }
 
@@ -787,20 +781,20 @@ void ColorPicker::mouse_handler_slider_hsl_l(Position local_cursor_pos)
 	enact_slider_hsl_cursor_positions();
 }
 
-void ColorPicker::enact_graphic_quad_cursor_position(float hue, float sat, float val)
+void ColorPicker::enact_graphic_quad_cursor_position(float hue, float sat, float val) const
 {
 	set_circle_cursor_value(GRAPHIC_QUAD_CURSOR, contrast_wb_value_complex_hsv({ hue, sat, val }));
 	sync_single_cp_widget_transform(GRAPHIC_QUAD_CURSOR);
 }
 
-void ColorPicker::enact_graphic_hue_slider_cursor_position(float hue)
+void ColorPicker::enact_graphic_hue_slider_cursor_position(float hue) const
 {
 	set_circle_cursor_value(GRAPHIC_HUE_SLIDER_CURSOR, contrast_wb_value_simple_hue(hue));
 	send_graphic_quad_hue_to_uniform(hue);
 	sync_single_cp_widget_transform(GRAPHIC_HUE_SLIDER_CURSOR);
 }
 
-void ColorPicker::enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos)
+void ColorPicker::enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos) const
 {
 	glm::vec2 sv = get_graphic_quad_sat_and_value();
 	float hue = slider_normal_x(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR);
@@ -808,21 +802,21 @@ void ColorPicker::enact_graphic_quad_and_hue_slider_cursor_positions(Position lo
 	enact_graphic_hue_slider_cursor_position(hue);
 }
 
-void ColorPicker::enact_graphic_hue_wheel_cursor_position(float hue, float sat)
+void ColorPicker::enact_graphic_hue_wheel_cursor_position(float hue, float sat) const
 {
 	set_circle_cursor_value(GRAPHIC_HUE_WHEEL_CURSOR, contrast_wb_value_simple_hue_and_sat(hue, sat));
 	sync_single_cp_widget_transform(GRAPHIC_HUE_WHEEL_CURSOR);
 	send_graphic_value_slider_hue_and_sat_to_uniform(hue, sat);
 }
 
-void ColorPicker::enact_graphic_value_slider_cursor_position(float hue, float value)
+void ColorPicker::enact_graphic_value_slider_cursor_position(float hue, float value) const
 {
 	set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hue, value));
 	send_graphic_wheel_value_to_uniform(value);
 	sync_single_cp_widget_transform(GRAPHIC_VALUE_SLIDER_CURSOR);
 }
 
-void ColorPicker::enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos)
+void ColorPicker::enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos) const
 {
 	glm::vec2 hs = get_graphic_wheel_hue_and_sat();
 	float value = slider_normal_x(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR);
@@ -830,14 +824,14 @@ void ColorPicker::enact_graphic_hue_wheel_and_value_slider_cursor_positions(Posi
 	enact_graphic_value_slider_cursor_position(hs[0], value);
 }
 
-void ColorPicker::enact_slider_rgb_cursor_positions()
+void ColorPicker::enact_slider_rgb_cursor_positions() const
 {
 	sync_single_cp_widget_transform(RGB_R_SLIDER_CURSOR);
 	sync_single_cp_widget_transform(RGB_G_SLIDER_CURSOR);
 	sync_single_cp_widget_transform(RGB_B_SLIDER_CURSOR);
 }
 
-void ColorPicker::enact_slider_hsv_cursor_positions()
+void ColorPicker::enact_slider_hsv_cursor_positions() const
 {
 	glm::vec3 hsv{
 		slider_normal_x(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR),
@@ -853,7 +847,7 @@ void ColorPicker::enact_slider_hsv_cursor_positions()
 	sync_single_cp_widget_transform(HSV_V_SLIDER_CURSOR);
 }
 
-void ColorPicker::enact_slider_hsl_cursor_positions()
+void ColorPicker::enact_slider_hsl_cursor_positions() const
 {
 	glm::vec3 hsl{
 		slider_normal_x(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR),
@@ -880,7 +874,7 @@ void ColorPicker::orient_progress_slider(size_t control, Cardinal i) const
 	renderable.set_attribute_single_vertex(3, 1, i == Cardinal::RIGHT || i == Cardinal::UP ? &one : &zero);
 }
 
-void ColorPicker::send_graphic_quad_hue_to_uniform(float hue)
+void ColorPicker::send_graphic_quad_hue_to_uniform(float hue) const
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::GRAPHIC_QUAD, RGB::precise_from_hsv(hue, 1.0f, 1.0f));
 }
@@ -890,13 +884,12 @@ glm::vec2 ColorPicker::get_graphic_quad_sat_and_value() const
 	return widget.wp_at(GRAPHIC_QUAD).normalize(widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position);
 }
 
-void ColorPicker::send_graphic_wheel_value_to_uniform(float value)
+void ColorPicker::send_graphic_wheel_value_to_uniform(float value) const
 {
-	bind_shader(hue_wheel_w_shader);
-	QUASAR_GL(glUniform1fv(hue_wheel_w_shader.uniform_locations["u_Value"], 1, &value));
+	Uniforms::send_1(hue_wheel_w_shader, "u_Value", value);
 }
 
-void ColorPicker::send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat)
+void ColorPicker::send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat) const
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::GRAPHIC_VALUE_SLIDER, RGB::precise_from_hsv(hue, sat, 1.0f));
 }
@@ -910,20 +903,18 @@ glm::vec2 ColorPicker::get_graphic_wheel_hue_and_sat() const
 	return { hue, glm::length(normal) };
 }
 
-void ColorPicker::send_slider_hsv_hue_and_value_to_uniform(float hue, float value)
+void ColorPicker::send_slider_hsv_hue_and_value_to_uniform(float hue, float value) const
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ZERO, RGB::precise_from_hsv(hue, 0.0f, value));
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ONE, RGB::precise_from_hsv(hue, 1.0f, value));
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_V_SLIDER, HSV(hue, 1.0f, 1.0f));
 }
 
-void ColorPicker::send_slider_hsl_hue_and_lightness_to_uniform(float hue, float lightness)
+void ColorPicker::send_slider_hsl_hue_and_lightness_to_uniform(float hue, float lightness) const
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ZERO, RGB::precise_from_hsl(hue, 0.0f, lightness));
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ONE, RGB::precise_from_hsl(hue, 1.0f, lightness));
-	ColorFrame c = RGB::precise_from_hsl(hue, 1.0f, lightness);
-	bind_shader(linear_lightness_shader);
-	QUASAR_GL(glUniform1fv(linear_lightness_shader.uniform_locations["u_Hue"], 1, &hue)); // TODO move these types of functions to Shader
+	Uniforms::send_1(linear_lightness_shader, "u_Hue", hue);
 }
 
 float ColorPicker::slider_normal_x(size_t control, size_t cursor) const
@@ -970,17 +961,17 @@ void ColorPicker::sync_single_cp_widget_transform(size_t control) const
 	}
 }
 
-void ColorPicker::set_circle_cursor_thickness(size_t cursor, float thickness)
+void ColorPicker::set_circle_cursor_thickness(size_t cursor, float thickness) const
 {
 	ur_wget(widget, cursor).set_attribute(2, &thickness);
 }
 
-void ColorPicker::set_circle_cursor_value(size_t cursor, float value)
+void ColorPicker::set_circle_cursor_value(size_t cursor, float value) const
 {
 	ur_wget(widget, cursor).set_attribute(3, &value);
 }
 
-float ColorPicker::get_circle_cursor_value(size_t cursor)
+float ColorPicker::get_circle_cursor_value(size_t cursor) const
 {
 	float value;
 	ur_wget(widget, cursor).get_attribute(0, 3, &value);

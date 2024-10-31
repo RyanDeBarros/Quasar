@@ -173,6 +173,7 @@
     <ClCompile Include="src\pipeline\panels\Easel.cpp" />
     <ClCompile Include="src\pipeline\FlatSprite.cpp" />
     <ClCompile Include="src\pipeline\panels\Panel.cpp" />
+    <ClCompile Include="src\pipeline\Uniforms.cpp" />
     <ClCompile Include="src\pipeline\UnitRenderable.cpp" />
     <ClCompile Include="src\user\GUI.cpp" />
     <ClCompile Include="src\user\Machine.cpp" />
@@ -204,6 +205,7 @@
     <ClInclude Include="src\pipeline\panels\Easel.h" />
     <ClInclude Include="src\pipeline\FlatSprite.h" />
     <ClInclude Include="src\pipeline\panels\Panel.h" />
+    <ClInclude Include="src\pipeline\Uniforms.h" />
     <ClInclude Include="src\pipeline\UnitRenderable.h" />
     <ClInclude Include="src\pipeline\Widgets.h" />
     <ClInclude Include="src\user\Preferences.h" />

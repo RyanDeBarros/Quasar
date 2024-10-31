@@ -2,6 +2,7 @@
 
 #include "user/Machine.h"
 #include "variety/GLutility.h"
+#include "../Uniforms.h"
 
 Palette::Palette()
 	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"))
@@ -55,14 +56,13 @@ void Palette::_send_view()
 	background.sync_transform();
 	subsend_background_vao();
 	glm::mat3 cameraVP = vp_matrix();
-	bind_shader(sprite_shader);
-	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
 
 	color_picker.size = Scale{ 220, 400 } * Machine.get_app_scale();
 	Position pos_rel{ 0.0f, 0.275f };
 	Position ppos = pos_rel * glm::vec2{ bounds.clip().screen_w, bounds.clip().screen_h } * Machine.inv_app_scale();
 	auto test = bounds.clip().screen_w;
 	color_picker.set_position(ppos, to_screen_coordinates(ppos));
-	color_picker.send_vp(&cameraVP[0][0]);
+	color_picker.send_vp(cameraVP);
 	unbind_shader();
 }
