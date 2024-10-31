@@ -410,6 +410,7 @@ private:
 public:
 	constexpr ColorFrame(unsigned char alpha = 255_UC) : alpha(alpha) {}
 	constexpr ColorFrame(int alpha) : alpha(static_cast<unsigned char>(alpha)) {}
+	constexpr ColorFrame(float alpha) : alpha(round_uchar(255 * alpha)) {}
 	constexpr ColorFrame(RGB rgb, unsigned char alpha = 255_UC) : alpha(alpha) { set_rgb(rgb); }
 	constexpr ColorFrame(HSV hsv, unsigned char alpha = 255_UC) : alpha(alpha) { set_hsv(hsv); }
 	constexpr ColorFrame(HSL hsl, unsigned char alpha = 255_UC) : alpha(alpha) { set_hsl(hsl); }

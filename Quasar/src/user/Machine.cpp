@@ -129,9 +129,6 @@ void MachineImpl::on_render() const
 	render_main_menu_bar();
 	update_currently_bound_shader();
 	main_window->end_frame();
-
-	easel()->background.set_modulation(palette()->color_picker.get_color());
-	easel()->subsend_background_vao();
 }
 
 void MachineImpl::mark()

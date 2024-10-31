@@ -11,6 +11,8 @@ enum class GradientIndex : GLint
 {
 	BLACK,
 	WHITE,
+	TRANSPARENT,
+	PREVIEW,
 	ALPHA_SLIDER,
 	GRAPHIC_QUAD,
 	GRAPHIC_VALUE_SLIDER,
@@ -34,7 +36,9 @@ static void send_gradient_color_uniform(const Shader& shader, GradientIndex inde
 enum
 {
 	// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
+	PREVIEW,						// quad		TODO
 	ALPHA_SLIDER,					// quad
+	ALPHA_SLIDER_CURSOR,			// circle_cursor
 	GRAPHIC_QUAD,					// quad
 	GRAPHIC_QUAD_CURSOR,			// circle_cursor
 	GRAPHIC_HUE_SLIDER,				// linear_hue
@@ -75,6 +79,7 @@ ColorPicker::ColorPicker()
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(RGB::precise_from_hsv(0.0f, 0.0f, 0.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::WHITE, ColorFrame(RGB::precise_from_hsv(0.0f, 0.0f, 1.0f)));
+	send_gradient_color_uniform(quad_shader, GradientIndex::TRANSPARENT, ColorFrame(0_UC));
 	initialize_widget();
 	connect_mouse_handlers();
 	set_color(ColorFrame());
@@ -89,6 +94,9 @@ ColorPicker::~ColorPicker()
 void ColorPicker::render()
 {
 	cp_render_gui();
+	ur_wget(widget, ALPHA_SLIDER).draw();
+	ur_wget(widget, ALPHA_SLIDER_CURSOR).draw();
+	ur_wget(widget, PREVIEW).draw();
 	switch (state)
 	{
 	case State::GRAPHIC_QUAD:
@@ -127,7 +135,7 @@ void ColorPicker::render()
 		ur_wget(widget, HSL_L_SLIDER).draw();
 		ur_wget(widget, HSL_L_SLIDER_CURSOR).draw();
 		break;
-	case State::HEX_RGB:
+	case State::HEX_RGB: // TODO HEX includes both UC/US-range and percentage text fields.
 		break;
 	case State::HEX_HSV:
 		break;
@@ -283,6 +291,15 @@ void ColorPicker::send_vp(const glm::mat3& vp) const
 
 void ColorPicker::initialize_widget()
 {
+	// ---------- COMMON CONSTANTS ----------
+
+	const float slider1_y = 80;
+	const float slider2_y = 10;
+	const float slider3_y = -60;
+	const float slider4_y = -160;
+	const float preview_x = 90;
+	const float preview_y = -190;
+
 	// ---------- GRAPHIC QUAD ----------
 
 	widget.hobjs[GRAPHIC_QUAD] = new WP_UnitRenderable(quad_shader);
@@ -297,12 +314,12 @@ void ColorPicker::initialize_widget()
 	orient_progress_slider(GRAPHIC_HUE_SLIDER, Cardinal::RIGHT);
 	setup_circle_cursor(GRAPHIC_HUE_SLIDER_CURSOR);
 
-	widget.wp_at(GRAPHIC_QUAD).transform.position = { 0, -100 };
+	widget.wp_at(GRAPHIC_QUAD).transform.position.y = -100;
 	widget.wp_at(GRAPHIC_QUAD).transform.scale = { 200, 200 };
 	widget.wp_at(GRAPHIC_QUAD).pivot.y = 0;
 	widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position = { widget.wp_at(GRAPHIC_QUAD).top(), widget.wp_at(GRAPHIC_QUAD).right() };
-	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.position = { 0, -115 };
-	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.scale = { 200, 15 };
+	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.position.y = -115;
+	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(GRAPHIC_HUE_SLIDER).pivot.y = 1;
 	widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position = { widget.wp_at(GRAPHIC_HUE_SLIDER).left(), widget.wp_at(GRAPHIC_HUE_SLIDER).center_y() };
 
@@ -322,15 +339,15 @@ void ColorPicker::initialize_widget()
 	setup_circle_cursor(GRAPHIC_VALUE_SLIDER_CURSOR);
 	set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, 0.0f);
 
-	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.position = { 0, -100 };
+	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.position.y = -100;
 	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.scale = { 200, 200 };
 	widget.wp_at(GRAPHIC_HUE_WHEEL).pivot.y = 0;
-	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.position = { 0, -115 };
-	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.scale = { 200, 15 };
+	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.position.y = -115;
+	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(GRAPHIC_VALUE_SLIDER).pivot.y = 1;
 	widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position = { widget.wp_at(GRAPHIC_VALUE_SLIDER).right(), widget.wp_at(GRAPHIC_VALUE_SLIDER).center_y() };
 
-	// ---------- RGB SLIDER ----------
+	// ---------- RGB SLIDERS ----------
 
 	widget.hobjs[RGB_R_SLIDER] = new WP_UnitRenderable(quad_shader);
 	widget.hobjs[RGB_R_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
@@ -352,17 +369,17 @@ void ColorPicker::initialize_widget()
 	setup_gradient(RGB_B_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_B_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_B_SLIDER);
 	send_gradient_color_uniform(quad_shader, GradientIndex::RGB_B_SLIDER, RGB(0x0000FF));
 
-	widget.wp_at(RGB_R_SLIDER).transform.position = { 0, 80 };
+	widget.wp_at(RGB_R_SLIDER).transform.position.y = slider1_y;
 	widget.wp_at(RGB_R_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(RGB_R_SLIDER_CURSOR).transform.position = { widget.wp_at(RGB_R_SLIDER).right(), widget.wp_at(RGB_R_SLIDER).center_y() };
-	widget.wp_at(RGB_G_SLIDER).transform.position = { 0, 0 };
+	widget.wp_at(RGB_G_SLIDER).transform.position.y = slider2_y;
 	widget.wp_at(RGB_G_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(RGB_G_SLIDER_CURSOR).transform.position = { widget.wp_at(RGB_G_SLIDER).right(), widget.wp_at(RGB_G_SLIDER).center_y() };
-	widget.wp_at(RGB_B_SLIDER).transform.position = { 0, -80 };
+	widget.wp_at(RGB_B_SLIDER).transform.position.y = slider3_y;
 	widget.wp_at(RGB_B_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(RGB_B_SLIDER_CURSOR).transform.position = { widget.wp_at(RGB_B_SLIDER).right(), widget.wp_at(RGB_B_SLIDER).center_y() };
 
-	// ---------- HSV SLIDER ----------
+	// ---------- HSV SLIDERS ----------
 
 	widget.hobjs[HSV_H_SLIDER] = new WP_UnitRenderable(linear_hue_shader);
 	widget.hobjs[HSV_H_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
@@ -383,17 +400,17 @@ void ColorPicker::initialize_widget()
 	setup_gradient(HSV_V_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::HSV_V_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::HSV_V_SLIDER);
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_V_SLIDER, RGB::precise_from_hsv(0.0f, 1.0f, 1.0f));
 
-	widget.wp_at(HSV_H_SLIDER).transform.position = { 0, 80 };
+	widget.wp_at(HSV_H_SLIDER).transform.position.y = slider1_y;
 	widget.wp_at(HSV_H_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(HSV_H_SLIDER_CURSOR).transform.position = { widget.wp_at(HSV_H_SLIDER).right(), widget.wp_at(HSV_H_SLIDER).center_y() };
-	widget.wp_at(HSV_S_SLIDER).transform.position = { 0, 0 };
+	widget.wp_at(HSV_S_SLIDER).transform.position.y = slider2_y;
 	widget.wp_at(HSV_S_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(HSV_S_SLIDER_CURSOR).transform.position = { widget.wp_at(HSV_S_SLIDER).right(), widget.wp_at(HSV_S_SLIDER).center_y() };
-	widget.wp_at(HSV_V_SLIDER).transform.position = { 0, -80 };
+	widget.wp_at(HSV_V_SLIDER).transform.position.y = slider3_y;
 	widget.wp_at(HSV_V_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(HSV_V_SLIDER_CURSOR).transform.position = { widget.wp_at(HSV_V_SLIDER).right(), widget.wp_at(HSV_V_SLIDER).center_y() };
 
-	// ---------- HSL SLIDER ----------
+	// ---------- HSL SLIDERS ----------
 
 	widget.hobjs[HSL_H_SLIDER] = new WP_UnitRenderable(linear_hue_shader);
 	widget.hobjs[HSL_H_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
@@ -412,15 +429,39 @@ void ColorPicker::initialize_widget()
 	orient_progress_slider(HSL_L_SLIDER, Cardinal::RIGHT);
 	setup_circle_cursor(HSL_L_SLIDER_CURSOR);
 	
-	widget.wp_at(HSL_H_SLIDER).transform.position = { 0, 80 };
+	widget.wp_at(HSL_H_SLIDER).transform.position.y = slider1_y;
 	widget.wp_at(HSL_H_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(HSL_H_SLIDER_CURSOR).transform.position = { widget.wp_at(HSL_H_SLIDER).right(), widget.wp_at(HSL_H_SLIDER).center_y() };
-	widget.wp_at(HSL_S_SLIDER).transform.position = { 0, 0 };
+	widget.wp_at(HSL_S_SLIDER).transform.position.y = slider2_y;
 	widget.wp_at(HSL_S_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(HSL_S_SLIDER_CURSOR).transform.position = { widget.wp_at(HSL_S_SLIDER).right(), widget.wp_at(HSL_S_SLIDER).center_y() };
-	widget.wp_at(HSL_L_SLIDER).transform.position = { 0, -80 };
+	widget.wp_at(HSL_L_SLIDER).transform.position.y = slider3_y;
 	widget.wp_at(HSL_L_SLIDER).transform.scale = { 200, 20 };
 	widget.wp_at(HSL_L_SLIDER_CURSOR).transform.position = { widget.wp_at(HSL_L_SLIDER).right(), widget.wp_at(HSL_L_SLIDER).center_y() };
+
+	// ---------- ALPHA SLIDER ----------
+	
+	widget.hobjs[ALPHA_SLIDER] = new WP_UnitRenderable(quad_shader);
+	widget.hobjs[ALPHA_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+
+	setup_rect_uvs(ALPHA_SLIDER);
+	setup_circle_cursor(ALPHA_SLIDER_CURSOR);
+	setup_gradient(ALPHA_SLIDER, (GLint)GradientIndex::TRANSPARENT, (GLint)GradientIndex::ALPHA_SLIDER, (GLint)GradientIndex::TRANSPARENT, (GLint)GradientIndex::ALPHA_SLIDER);
+	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, ColorFrame());
+
+	widget.wp_at(ALPHA_SLIDER).transform.position.y = slider4_y;
+	widget.wp_at(ALPHA_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(ALPHA_SLIDER_CURSOR).transform.position = { widget.wp_at(ALPHA_SLIDER).right(), widget.wp_at(ALPHA_SLIDER).center_y() };
+
+	// ---------- PREVIEW ----------
+	
+	widget.hobjs[PREVIEW] = new WP_UnitRenderable(quad_shader);
+	setup_rect_uvs(PREVIEW);
+	setup_gradient(PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW);
+	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, ColorFrame());
+	widget.wp_at(PREVIEW).transform.position = { preview_x, preview_y };
+	widget.wp_at(PREVIEW).transform.scale = { 40, 40 };
+	widget.wp_at(PREVIEW).pivot = { 1, 1 };
 
 	// ---------- PARENT ----------
 
@@ -435,7 +476,13 @@ void ColorPicker::connect_mouse_handlers()
 			if (current_widget_control == -1)
 			{
 				Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
-				if (state == State::GRAPHIC_QUAD)
+				if (widget.wp_at(ALPHA_SLIDER).contains_point(local_cursor_pos))
+				{
+					take_over_cursor();
+					current_widget_control = ALPHA_SLIDER_CURSOR;
+					mouse_handler_alpha_slider(local_cursor_pos);
+				}
+				else if (state == State::GRAPHIC_QUAD)
 				{
 					if (widget.wp_at(GRAPHIC_QUAD).contains_point(local_cursor_pos))
 					{
@@ -535,7 +582,9 @@ void ColorPicker::connect_mouse_handlers()
 		};
 	clbk_mb_down = [this](const Callback::MouseButton& mb) {
 		Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
-		if (current_widget_control == GRAPHIC_QUAD_CURSOR)
+		if (current_widget_control == ALPHA_SLIDER_CURSOR)
+			mouse_handler_alpha_slider(local_cursor_pos);
+		else if (current_widget_control == GRAPHIC_QUAD_CURSOR)
 			mouse_handler_graphic_quad(local_cursor_pos);
 		else if (current_widget_control == GRAPHIC_HUE_SLIDER_CURSOR)
 			mouse_handler_graphic_hue_slider(local_cursor_pos);
@@ -586,43 +635,45 @@ void ColorPicker::release_cursor()
 
 ColorFrame ColorPicker::get_color() const
 {
-	// LATER add alpha
+	ColorFrame color(slider_normal_x(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR));
 	if (state == State::GRAPHIC_QUAD)
 	{
 		glm::vec2 sv = get_graphic_quad_sat_and_value();
-		return RGB::precise_from_hsv(slider_normal_x(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR), sv[0], sv[1]);
+		color.set_rgb(RGB::precise_from_hsv(slider_normal_x(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR), sv[0], sv[1]));
 	}
 	else if (state == State::GRAPHIC_WHEEL)
 	{
 		glm::vec2 hs = get_graphic_wheel_hue_and_sat();
-		return RGB::precise_from_hsv(hs[0], hs[1], slider_normal_x(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR));
+		color.set_rgb(RGB::precise_from_hsv(hs[0], hs[1], slider_normal_x(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR)));
 	}
 	else if (state == State::SLIDER_RGB)
 	{
 		float r = slider_normal_x(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR);
 		float g = slider_normal_x(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR);
 		float b = slider_normal_x(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR);
-		return RGB(r, g, b);
+		color.set_rgb(r, g, b);
 	}
 	else if (state == State::SLIDER_HSV)
 	{
 		float h = slider_normal_x(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR);
 		float s = slider_normal_x(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR);
 		float v = slider_normal_x(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR);
-		return RGB::precise_from_hsv(h, s, v);
+		color.set_rgb(RGB::precise_from_hsv(h, s, v));
 	}
 	else if (state == State::SLIDER_HSL)
 	{
 		float h = slider_normal_x(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR);
 		float s = slider_normal_x(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR);
 		float l = slider_normal_x(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR);
-		return RGB::precise_from_hsl(h, s, l);
+		color.set_rgb(RGB::precise_from_hsl(h, s, l));
 	}
-	return ColorFrame();
+	return color;
 }
 
 void ColorPicker::set_color(ColorFrame color)
 {
+	widget.wp_at(ALPHA_SLIDER_CURSOR).transform.position.x = widget.wp_at(ALPHA_SLIDER).interp_x(color.alpha * inv255);
+	widget.wp_at(ALPHA_SLIDER_CURSOR).transform.position.y = widget.wp_at(ALPHA_SLIDER).center_y(); // TODO extract these two lines to method.
 	if (state == State::GRAPHIC_QUAD)
 	{
 		glm::vec4 hsva = color.hsva_as_vec();
@@ -692,10 +743,18 @@ void ColorPicker::set_position(Position world_pos, Position screen_pos) // LATER
 	center = screen_pos;
 }
 
+void ColorPicker::mouse_handler_alpha_slider(Position local_cursor_pos)
+{
+	widget.wp_at(ALPHA_SLIDER_CURSOR).transform.position.x = widget.wp_at(ALPHA_SLIDER).clamp_x(local_cursor_pos.x);
+	widget.wp_at(ALPHA_SLIDER_CURSOR).transform.position.y = widget.wp_at(ALPHA_SLIDER).center_y(); // TODO extract these two lines to a method
+	enact_alpha_slider_cursor_position();
+}
+
 void ColorPicker::mouse_handler_graphic_quad(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position = widget.wp_at(GRAPHIC_QUAD).clamp_point(local_cursor_pos);
 	enact_graphic_quad_and_hue_slider_cursor_positions(local_cursor_pos);
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_graphic_hue_slider(Position local_cursor_pos)
@@ -703,12 +762,14 @@ void ColorPicker::mouse_handler_graphic_hue_slider(Position local_cursor_pos)
 	widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_HUE_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_HUE_SLIDER).center_y();
 	enact_graphic_quad_and_hue_slider_cursor_positions(local_cursor_pos);
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_graphic_hue_wheel(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position = widget.wp_at(GRAPHIC_HUE_WHEEL).clamp_point_in_ellipse(local_cursor_pos);
 	enact_graphic_hue_wheel_and_value_slider_cursor_positions(local_cursor_pos);
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_graphic_value_slider(Position local_cursor_pos)
@@ -716,6 +777,7 @@ void ColorPicker::mouse_handler_graphic_value_slider(Position local_cursor_pos)
 	widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_VALUE_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_VALUE_SLIDER).center_y();
 	enact_graphic_hue_wheel_and_value_slider_cursor_positions(local_cursor_pos);
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_rgb_r(Position local_cursor_pos)
@@ -723,6 +785,7 @@ void ColorPicker::mouse_handler_slider_rgb_r(Position local_cursor_pos)
 	widget.wp_at(RGB_R_SLIDER_CURSOR).transform.position.x = widget.wp_at(RGB_R_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(RGB_R_SLIDER_CURSOR).transform.position.y = widget.wp_at(RGB_R_SLIDER).center_y();
 	enact_slider_rgb_cursor_positions();
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_rgb_g(Position local_cursor_pos)
@@ -730,6 +793,7 @@ void ColorPicker::mouse_handler_slider_rgb_g(Position local_cursor_pos)
 	widget.wp_at(RGB_G_SLIDER_CURSOR).transform.position.x = widget.wp_at(RGB_G_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(RGB_G_SLIDER_CURSOR).transform.position.y = widget.wp_at(RGB_G_SLIDER).center_y();
 	enact_slider_rgb_cursor_positions();
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_rgb_b(Position local_cursor_pos)
@@ -737,6 +801,7 @@ void ColorPicker::mouse_handler_slider_rgb_b(Position local_cursor_pos)
 	widget.wp_at(RGB_B_SLIDER_CURSOR).transform.position.x = widget.wp_at(RGB_B_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(RGB_B_SLIDER_CURSOR).transform.position.y = widget.wp_at(RGB_B_SLIDER).center_y();
 	enact_slider_rgb_cursor_positions();
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_hsv_h(Position local_cursor_pos)
@@ -744,6 +809,7 @@ void ColorPicker::mouse_handler_slider_hsv_h(Position local_cursor_pos)
 	widget.wp_at(HSV_H_SLIDER_CURSOR).transform.position.x = widget.wp_at(HSV_H_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(HSV_H_SLIDER_CURSOR).transform.position.y = widget.wp_at(HSV_H_SLIDER).center_y();
 	enact_slider_hsv_cursor_positions();
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_hsv_s(Position local_cursor_pos)
@@ -751,6 +817,7 @@ void ColorPicker::mouse_handler_slider_hsv_s(Position local_cursor_pos)
 	widget.wp_at(HSV_S_SLIDER_CURSOR).transform.position.x = widget.wp_at(HSV_S_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(HSV_S_SLIDER_CURSOR).transform.position.y = widget.wp_at(HSV_S_SLIDER).center_y();
 	enact_slider_hsv_cursor_positions();
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_hsv_v(Position local_cursor_pos)
@@ -758,6 +825,7 @@ void ColorPicker::mouse_handler_slider_hsv_v(Position local_cursor_pos)
 	widget.wp_at(HSV_V_SLIDER_CURSOR).transform.position.x = widget.wp_at(HSV_V_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(HSV_V_SLIDER_CURSOR).transform.position.y = widget.wp_at(HSV_V_SLIDER).center_y();
 	enact_slider_hsv_cursor_positions();
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_hsl_h(Position local_cursor_pos)
@@ -765,6 +833,7 @@ void ColorPicker::mouse_handler_slider_hsl_h(Position local_cursor_pos)
 	widget.wp_at(HSL_H_SLIDER_CURSOR).transform.position.x = widget.wp_at(HSL_H_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(HSL_H_SLIDER_CURSOR).transform.position.y = widget.wp_at(HSL_H_SLIDER).center_y();
 	enact_slider_hsl_cursor_positions();
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_hsl_s(Position local_cursor_pos)
@@ -772,6 +841,7 @@ void ColorPicker::mouse_handler_slider_hsl_s(Position local_cursor_pos)
 	widget.wp_at(HSL_S_SLIDER_CURSOR).transform.position.x = widget.wp_at(HSL_S_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(HSL_S_SLIDER_CURSOR).transform.position.y = widget.wp_at(HSL_S_SLIDER).center_y();
 	enact_slider_hsl_cursor_positions();
+	enact_alpha_slider_cursor_position();
 }
 
 void ColorPicker::mouse_handler_slider_hsl_l(Position local_cursor_pos)
@@ -779,6 +849,22 @@ void ColorPicker::mouse_handler_slider_hsl_l(Position local_cursor_pos)
 	widget.wp_at(HSL_L_SLIDER_CURSOR).transform.position.x = widget.wp_at(HSL_L_SLIDER).clamp_x(local_cursor_pos.x);
 	widget.wp_at(HSL_L_SLIDER_CURSOR).transform.position.y = widget.wp_at(HSL_L_SLIDER).center_y();
 	enact_slider_hsl_cursor_positions();
+	enact_alpha_slider_cursor_position();
+}
+
+void ColorPicker::update_preview() const
+{
+	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, get_color());
+}
+
+void ColorPicker::enact_alpha_slider_cursor_position()
+{
+	RGB rgb = get_color().rgb();
+	float alpha = slider_normal_x(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR);
+	set_circle_cursor_value(ALPHA_SLIDER_CURSOR, 1.0f); // TODO alpha contrast
+	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, ColorFrame(rgb, alpha));
+	sync_single_cp_widget_transform(ALPHA_SLIDER_CURSOR);
+	update_preview();
 }
 
 void ColorPicker::enact_graphic_quad_cursor_position(float hue, float sat, float val) const

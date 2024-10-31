@@ -81,6 +81,8 @@ private:
 	void take_over_cursor() const;
 	void release_cursor();
 
+	void mouse_handler_alpha_slider(Position local_cursor_pos);
+
 	void mouse_handler_graphic_quad(Position local_cursor_pos);
 	void mouse_handler_graphic_hue_slider(Position local_cursor_pos);
 	
@@ -98,6 +100,10 @@ private:
 	void mouse_handler_slider_hsl_h(Position local_cursor_pos);
 	void mouse_handler_slider_hsl_s(Position local_cursor_pos);
 	void mouse_handler_slider_hsl_l(Position local_cursor_pos);
+
+	void update_preview() const;
+
+	void enact_alpha_slider_cursor_position();
 
 	void enact_graphic_quad_cursor_position(float hue, float sat, float val) const;
 	void enact_graphic_hue_slider_cursor_position(float hue) const;
