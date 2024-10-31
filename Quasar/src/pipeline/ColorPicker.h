@@ -78,18 +78,31 @@ private:
 	void cp_render_subtab_button(State& to_state, State compare, const char* display) const;
 	void initialize_widget();
 	void connect_mouse_handlers();
+	void take_over_cursor() const;
+	void release_cursor();
 
 	void mouse_handler_graphic_quad(Position local_cursor_pos);
 	void mouse_handler_graphic_hue_slider(Position local_cursor_pos);
+	
 	void mouse_handler_graphic_hue_wheel(Position local_cursor_pos);
 	void mouse_handler_graphic_value_slider(Position local_cursor_pos);
+
+	void mouse_handler_slider_rgb_r(Position local_cursor_pos);
+	void mouse_handler_slider_rgb_g(Position local_cursor_pos);
+	void mouse_handler_slider_rgb_b(Position local_cursor_pos);
 
 	void enact_graphic_quad_cursor_position(float hue, float sat, float val);
 	void enact_graphic_hue_slider_cursor_position(float hue);
 	void enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos);
+
 	void enact_graphic_hue_wheel_cursor_position(float hue, float sat);
 	void enact_graphic_value_slider_cursor_position(float hue, float value);
 	void enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos);
+
+	void enact_slider_rgb_r_cursor_position();
+	void enact_slider_rgb_g_cursor_position();
+	void enact_slider_rgb_b_cursor_position();
+	void enact_slider_rgb_cursor_positions();
 
 	void send_graphic_quad_hue_to_uniform(float hue);
 	void orient_graphic_hue_slider(Cardinal i) const;
