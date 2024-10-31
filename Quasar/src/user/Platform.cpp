@@ -118,20 +118,20 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 	}
 
 	clbk_key.push_back([this](const Callback::Key& k) {
-		Callback::Key dk = k;
-		dk.action = IAction::DOWN;
-		if (k.action == IAction::PRESS || k.action == IAction::DOWN)
-			key_downs.push_back(std::move(dk));
+		if (k.action == IAction::RELEASE)
+			--keys_pressed[k.key];
 		else
-			key_downs.erase(std::find(key_downs.begin(), key_downs.end(), dk), key_downs.end());
+			++keys_pressed[k.key];
+		if (keys_pressed[k.key] == 0)
+			keys_pressed.erase(k.key);
 		});
-	clbk_mouse_button.push_back([this](const Callback::MouseButton& m) {
-		Callback::MouseButton dm = m;
-		dm.action = IAction::DOWN;
-		if (m.action == IAction::PRESS || m.action == IAction::DOWN)
-			mouse_downs.push_back(std::move(dm));
+	clbk_mouse_button.push_back([this](const Callback::MouseButton& mb) {
+		if (mb.action == IAction::RELEASE)
+			--mouse_buttons_pressed[mb.button];
 		else
-			mouse_downs.erase(std::find(mouse_downs.begin(), mouse_downs.end(), dm));
+			++mouse_buttons_pressed[mb.button];
+		if (mouse_buttons_pressed[mb.button] == 0)
+			mouse_buttons_pressed.erase(mb.button);
 		});
 	clbk_window_maximize.push_back([this](const Callback::WindowMaximize& wm) {
 		maximized = wm.maximized;
@@ -303,15 +303,31 @@ void Window::end_frame() const
 
 void Window::send_down_events() const
 {
-	for (auto& k : key_downs)
+	int mods = 0;
+	if (is_shift_pressed())
+		mods |= Mod::SHIFT;
+	if (is_ctrl_pressed())
+		mods |= Mod::CONTROL;
+	if (is_alt_pressed())
+		mods |= Mod::ALT;
+	if (is_super_pressed())
+		mods |= Mod::SUPER;
+	if (is_key_pressed(Key::CAPS_LOCK))
+		mods |= Mod::CAPS_LOCK;
+	if (is_key_pressed(Key::NUM_LOCK))
+		mods |= Mod::NUM_LOCK;
+		
+	for (auto iter = keys_pressed.begin(); iter != keys_pressed.end(); ++iter)
 	{
-		for (auto& h : clbk_key_down.vec)
-			h.f(k);
+		Callback::Key key_event(iter->first, glfwGetKeyScancode(int(iter->first)), IAction::DOWN, mods);
+		for (const auto& f : clbk_key_down.vec)
+			f.f(key_event);
 	}
-	for (auto& m : mouse_downs)
+	for (auto iter = mouse_buttons_pressed.begin(); iter != mouse_buttons_pressed.end(); ++iter)
 	{
-		for (auto& h : clbk_mouse_button_down.vec)
-			h.f(m);
+		Callback::MouseButton mouse_button_event(iter->first, IAction::DOWN, mods);
+		for (const auto& f : clbk_mouse_button_down.vec)
+			f.f(mouse_button_event);
 	}
 }
 

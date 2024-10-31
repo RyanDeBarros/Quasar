@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <functional>
+#include <unordered_map>
 
 #include "Macros.h"
 
@@ -44,6 +45,10 @@ enum class Key
 	RIGHT_CTRL = GLFW_KEY_RIGHT_CONTROL,
 	LEFT_ALT = GLFW_KEY_LEFT_ALT,
 	RIGHT_ALT = GLFW_KEY_RIGHT_ALT,
+	LEFT_SUPER = GLFW_KEY_LEFT_SUPER,
+	RIGHT_SUPER = GLFW_KEY_RIGHT_SUPER,
+	CAPS_LOCK = GLFW_KEY_CAPS_LOCK,
+	NUM_LOCK = GLFW_KEY_NUM_LOCK,
 	SPACE = GLFW_KEY_SPACE,
 	F11 = GLFW_KEY_F11,
 	ROW0 = GLFW_KEY_0,
@@ -77,7 +82,13 @@ enum class Mod
 
 constexpr int operator~(Mod m1) { return ~int(m1); }
 constexpr int operator&(Mod m1, Mod m2) { return int(m1) & int(m2); }
+constexpr int operator&(Mod m1, int m2) { return int(m1) & m2; }
+constexpr int operator&(int m1, Mod m2) { return m1 & int(m2); }
+constexpr int operator&=(int m1, Mod m2) { return m1 &= int(m2); }
 constexpr int operator|(Mod m1, Mod m2) { return int(m1) | int(m2); }
+constexpr int operator|(Mod m1, int m2) { return int(m1) | m2; }
+constexpr int operator|(int m1, Mod m2) { return m1 | int(m2); }
+constexpr int operator|=(int m1, Mod m2) { return m1 |= int(m2); }
 
 extern GLFWcursor* create_cursor(StandardCursor standard_cursor);
 extern GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot);
@@ -125,16 +136,18 @@ namespace Callback
 		::Key key;
 		int scancode;
 		::IAction action;
-		::Mod mods;
-		Key(int key, int scancode, int action, int mods) : key(::Key(key)), scancode(scancode), action(::IAction(action)), mods(::Mod(mods)) {}
+		int mods;
+		Key(int key, int scancode, int action, int mods) : key(::Key(key)), scancode(scancode), action(::IAction(action)), mods(mods) {}
+		Key(::Key key, int scancode, ::IAction action, int mods) : key(key), scancode(scancode), action(action), mods(mods) {}
 		bool operator==(const Key&) const = default;
 	};
 	struct MouseButton
 	{
 		::MouseButton button;
 		::IAction action;
-		::Mod mods;
-		MouseButton(int button, int action, int mods) : button(::MouseButton(button)), action(::IAction(action)), mods(::Mod(mods)) {}
+		int mods;
+		MouseButton(int button, int action, int mods) : button(::MouseButton(button)), action(::IAction(action)), mods(mods) {}
+		MouseButton(::MouseButton button, ::IAction action, int mods) : button(button), action(action), mods(mods) {}
 		bool operator==(const MouseButton&) const = default;
 	};
 	struct Scroll
@@ -221,10 +234,12 @@ struct Window
 	bool is_maximized() const { return maximized; }
 	glm::vec2 display_scale() const { glm::vec2 ds{}; glfwGetWindowContentScale(window, &ds.x, &ds.y); return ds; }
 
-	bool is_key_pressed(Key key) const { return glfwGetKey(window, int(key)) == int(IAction::PRESS); }
+	bool is_key_pressed(Key key) const { return glfwGetKey(window, int(key)) != int(IAction::RELEASE); }
 	bool is_shift_pressed() const { return is_key_pressed(Key::LEFT_SHIFT) || is_key_pressed(Key::RIGHT_SHIFT); }
 	bool is_ctrl_pressed() const { return is_key_pressed(Key::LEFT_CTRL) || is_key_pressed(Key::RIGHT_CTRL); }
 	bool is_alt_pressed() const { return is_key_pressed(Key::LEFT_ALT) || is_key_pressed(Key::RIGHT_ALT); }
+	bool is_super_pressed() const { return is_key_pressed(Key::LEFT_SUPER) || is_key_pressed(Key::RIGHT_SUPER); }
+	bool is_mouse_button_down(MouseButton mb) const { return glfwGetMouseButton(window, int(mb)) != int(IAction::RELEASE); }
 
 	void override_gui_cursor_change(bool _override) const;
 
@@ -237,9 +252,8 @@ private:
 	bool maximized = false;
 
 	void destroy();
-
-	std::vector<Callback::Key> key_downs;
-	std::vector<Callback::MouseButton> mouse_downs;
+	std::unordered_map<Key, int> keys_pressed;
+	std::unordered_map<MouseButton, int> mouse_buttons_pressed;
 };
 
 inline std::unordered_map<GLFWwindow*, Window*> Windows;
