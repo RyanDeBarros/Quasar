@@ -44,7 +44,7 @@ public:
 	State get_state() const { return state; }
 	void set_state(State state);
 
-	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, circle_cursor_shader;
+	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader;
 
 	Widget widget;
 	Scale size;
@@ -91,6 +91,14 @@ private:
 	void mouse_handler_slider_rgb_g(Position local_cursor_pos);
 	void mouse_handler_slider_rgb_b(Position local_cursor_pos);
 
+	void mouse_handler_slider_hsv_h(Position local_cursor_pos);
+	void mouse_handler_slider_hsv_s(Position local_cursor_pos);
+	void mouse_handler_slider_hsv_v(Position local_cursor_pos);
+
+	void mouse_handler_slider_hsl_h(Position local_cursor_pos);
+	void mouse_handler_slider_hsl_s(Position local_cursor_pos);
+	void mouse_handler_slider_hsl_l(Position local_cursor_pos);
+
 	void enact_graphic_quad_cursor_position(float hue, float sat, float val);
 	void enact_graphic_hue_slider_cursor_position(float hue);
 	void enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos);
@@ -99,21 +107,23 @@ private:
 	void enact_graphic_value_slider_cursor_position(float hue, float value);
 	void enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos);
 
-	void enact_slider_rgb_r_cursor_position();
-	void enact_slider_rgb_g_cursor_position();
-	void enact_slider_rgb_b_cursor_position();
 	void enact_slider_rgb_cursor_positions();
+	void enact_slider_hsv_cursor_positions();
+	void enact_slider_hsl_cursor_positions();
 
+	void orient_progress_slider(size_t control, Cardinal i) const;
+	
 	void send_graphic_quad_hue_to_uniform(float hue);
-	void orient_graphic_hue_slider(Cardinal i) const;
 	glm::vec2 get_graphic_quad_sat_and_value() const;
-	float get_graphic_hue_slider_hue() const;
 
 	void send_graphic_wheel_value_to_uniform(float value);
 	void send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat);
 	glm::vec2 get_graphic_wheel_hue_and_sat() const;
-	float get_graphic_value_slider_value() const;
 
+	void send_slider_hsv_hue_and_value_to_uniform(float hue, float value);
+	void send_slider_hsl_hue_and_lightness_to_uniform(float hue, float lightness);
+
+	float slider_normal_x(size_t control, size_t cursor) const;
 	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;

@@ -164,6 +164,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\edit\Color.cpp" />
     <ClCompile Include="src\edit\Image.cpp" />
     <ClCompile Include="src\edit\PixelBuffer.cpp" />
     <ClCompile Include="src\edit\PixelBufferPaths.cpp" />

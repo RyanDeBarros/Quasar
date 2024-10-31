@@ -43,8 +43,8 @@ struct RGB
 	constexpr HSL to_hsl() const;
 	constexpr glm::vec3 as_vec() const { return { r * inv255, g * inv255, b * inv255 }; }
 	
-	constexpr void precise_from_hsv(float h, float s, float v);
-	constexpr void precise_from_hsl(float h, float s, float l);
+	constexpr static RGB precise_from_hsv(float h, float s, float v);
+	constexpr static RGB precise_from_hsl(float h, float s, float l);
 };
 
 /// H[0,359] - S[0,127] - V[0,255]
@@ -164,20 +164,14 @@ constexpr HSL RGB::to_hsl() const
 	return hsl;
 }
 
-inline constexpr void RGB::precise_from_hsv(float h, float s, float v)
+constexpr RGB RGB::precise_from_hsv(float h, float s, float v)
 {
 	h = std::clamp(h, 0.0f, 1.0f);
 	s = std::clamp(s, 0.0f, 1.0f);
 	v = std::clamp(v, 0.0f, 1.0f);
-	r = g = b = 0_UC;
 	unsigned char nv = round_uchar(v * 255);
 	if (s < NEAR_ZERO)
-	{
-		r = nv;
-		g = nv;
-		b = nv;
-		return;
-	}
+		return RGB(nv, nv, nv);
 	// Sextant index
 	unsigned char si = static_cast<unsigned char>(6 * h);
 	// Fractional part
@@ -187,93 +181,93 @@ inline constexpr void RGB::precise_from_hsv(float h, float s, float v)
 	unsigned char pre = round_uchar(nv * (1 - s * fr));
 	unsigned char post = round_uchar(nv * (1 - s * (1.0f - fr)));
 	// Switch on sextant
+	RGB rgb;
 	switch (si)
 	{
 	case 0:
-		r = nv;
-		g = post;
-		b = min;
+		rgb.r = nv;
+		rgb.g = post;
+		rgb.b = min;
 		break;
 	case 1:
-		r = pre;
-		g = nv;
-		b = min;
+		rgb.r = pre;
+		rgb.g = nv;
+		rgb.b = min;
 		break;
 	case 2:
-		r = min;
-		g = nv;
-		b = post;
+		rgb.r = min;
+		rgb.g = nv;
+		rgb.b = post;
 		break;
 	case 3:
-		r = min;
-		g = pre;
-		b = nv;
+		rgb.r = min;
+		rgb.g = pre;
+		rgb.b = nv;
 		break;
 	case 4:
-		r = post;
-		g = min;
-		b = nv;
+		rgb.r = post;
+		rgb.g = min;
+		rgb.b = nv;
 		break;
 	case 5:
-		r = nv;
-		g = min;
-		b = pre;
+		rgb.r = nv;
+		rgb.g = min;
+		rgb.b = pre;
 		break;
 	}
+	return rgb;
 }
 
-inline constexpr void RGB::precise_from_hsl(float h, float s, float l)
+constexpr RGB RGB::precise_from_hsl(float h, float s, float l)
 {
 	h = std::clamp(h, 0.0f, 1.0f);
 	s = std::clamp(s, 0.0f, 1.0f);
 	l = std::clamp(l, 0.0f, 1.0f);
-	r = g = b = 0_UC;
 	unsigned char nl = round_uchar(l * 255);
-
 	// Chroma
 	float chroma = (1.0f - absolute(2 * l - 1.0f)) * s;
 	float x = chroma * (1.0f - absolute(modulo((6 * h), 2.0f) - 1.0f));
-
 	// RGB channels (unordered)
 	unsigned char c1 = round_uchar(nl + 255 * chroma * 0.5f);
 	unsigned char c2 = round_uchar(nl - 255 * chroma * 0.5f + 255 * x);
 	unsigned char c3 = round_uchar(nl - 255 * chroma * 0.5f);
-
 	// Order RGB channels
 	unsigned char si = static_cast<unsigned char>(6 * h);
+	RGB rgb;
 	switch (si)
 	{
 	case 0:
-		r = c1;
-		g = c2;
-		b = c3;
+		rgb.r = c1;
+		rgb.g = c2;
+		rgb.b = c3;
 		break;
 	case 1:
-		r = c2;
-		g = c1;
-		b = c3;
+		rgb.r = c2;
+		rgb.g = c1;
+		rgb.b = c3;
 		break;
 	case 2:
-		r = c3;
-		g = c1;
-		b = c2;
+		rgb.r = c3;
+		rgb.g = c1;
+		rgb.b = c2;
 		break;
 	case 3:
-		r = c3;
-		g = c2;
-		b = c1;
+		rgb.r = c3;
+		rgb.g = c2;
+		rgb.b = c1;
 		break;
 	case 4:
-		r = c2;
-		g = c3;
-		b = c1;
+		rgb.r = c2;
+		rgb.g = c3;
+		rgb.b = c1;
 		break;
 	case 5:
-		r = c1;
-		g = c3;
-		b = c2;
+		rgb.r = c1;
+		rgb.g = c3;
+		rgb.b = c2;
 		break;
 	}
+	return rgb;
 }
 
 constexpr RGB HSV::to_rgb() const
@@ -455,44 +449,9 @@ struct GrayScale
 	unsigned char v = 0_UC;
 };
 
-constexpr float contrast_wb_value_simple_hue(float hue)
-{
-	return on_interval(hue, 0.1f, 0.5f) ? 0.0f : 1.0f;
-}
-
-constexpr float contrast_wb_value_simple_hue_and_sat(float hue, float sat)
-{
-	return on_interval(hue, 0.1f, 0.5f) || sat < 0.3f ? 0.0f : 1.0f;
-}
-
-constexpr float contrast_wb_value_simple_hue_and_value(float hue, float value)
-{
-	if (on_interval(hue, 0.1f, 0.5f))
-		return value < 0.5f ? 1.0f : 0.0f;
-	else
-		return value < 0.75f ? 1.0f : 0.0f;
-}
-
-// LATER use pass-by-value for structs <= 16 bytes
-constexpr float contrast_wb_value_complex(glm::vec3 hsv)
-{
-	const float sat1 = 0.0f;
-	float hue = hsv.x;
-	float sat2 = 1.0f;
-	if (on_interval(hue, 0.0f, 1 / 6.0f))
-		sat2 = 3.0f * hue + 0.5f;
-	else if (on_interval(hue, 1 / 2.0f, 2 / 3.0f))
-		sat2 = -3.0f * hue + 2.5f;
-	else if (hue > 2 / 3.0f)
-		sat2 = 0.5f;
-
-	const float val1 = 0.5f;
-	float val2 = 1.0f;
-	if (on_interval(hue, 0.0f, 1 / 3.0f))
-		val2 = -1.5f * hue + 1.0f;
-	else if (on_interval(hue, 1 / 3.0f, 2 / 3.0f))
-		val2 = 1.5f * hue;
-
-	float y = (hsv.y - sat1) * (val2 - val1) / (sat2 - sat1) + val1;
-	return hsv.z < y ? 1.0f : 0.0f;
-}
+extern float contrast_wb_value_simple_hue(float hue);
+extern float contrast_wb_value_simple_hue_and_sat(float hue, float sat);
+extern float contrast_wb_value_simple_hue_and_value(float hue, float value);
+extern float contrast_wb_value_complex_hsv(glm::vec3 hsv);
+extern float contrast_wb_value_simple_hue_and_lightness(float hue, float lightness);
+extern float contrast_wb_value_complex_hsl(glm::vec3 hsv);
