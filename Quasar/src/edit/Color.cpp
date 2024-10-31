@@ -47,6 +47,12 @@ float contrast_wb_value_complex_hsv(glm::vec3 hsv)
 	return hsv.z < y ? WHITE : BLACK;
 }
 
+float contrast_wb_value_complex_hsva(glm::vec4 hsva)
+{
+	// TODO
+	return WHITE;
+}
+
 float contrast_wb_value_simple_hue_and_lightness(float hue, float lightness)
 {
 	if (on_interval(hue, 0.1f, 0.5f))

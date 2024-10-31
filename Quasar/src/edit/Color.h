@@ -454,5 +454,6 @@ extern float contrast_wb_value_simple_hue(float hue);
 extern float contrast_wb_value_simple_hue_and_sat(float hue, float sat);
 extern float contrast_wb_value_simple_hue_and_value(float hue, float value);
 extern float contrast_wb_value_complex_hsv(glm::vec3 hsv);
+extern float contrast_wb_value_complex_hsva(glm::vec4 hsva);
 extern float contrast_wb_value_simple_hue_and_lightness(float hue, float lightness);
 extern float contrast_wb_value_complex_hsl(glm::vec3 hsv);

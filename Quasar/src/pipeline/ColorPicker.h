@@ -101,6 +101,9 @@ private:
 	void mouse_handler_slider_hsl_s(Position local_cursor_pos);
 	void mouse_handler_slider_hsl_l(Position local_cursor_pos);
 
+	void move_slider_cursor_x_absolute(size_t control, size_t cursor, float absolute);
+	void move_slider_cursor_x_relative(size_t control, size_t cursor, float relative);
+
 	void update_preview() const;
 
 	void enact_alpha_slider_cursor_position();
