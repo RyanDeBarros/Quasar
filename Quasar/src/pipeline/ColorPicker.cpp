@@ -135,12 +135,6 @@ void ColorPicker::render()
 		ur_wget(widget, HSL_L_SLIDER).draw();
 		ur_wget(widget, HSL_L_SLIDER_CURSOR).draw();
 		break;
-	case State::HEX_RGB: // TODO HEX includes both UC/US-range and percentage text fields.
-		break;
-	case State::HEX_HSV:
-		break;
-	case State::HEX_HSL:
-		break;
 	}
 }
 
@@ -150,7 +144,7 @@ void ColorPicker::cp_render_gui()
 	ImGui::SetNextWindowBgAlpha(0);
 	auto sz = size;
 	ImGui::SetNextWindowSize(ImVec2(sz.x, sz.y));
-	Position pos = center - Position{ 0.5f * sz.x, 0.8f * sz.y };
+	Position pos = center - Position{ 0.5f * sz.x, 0.775f * sz.y };
 	ImGui::SetNextWindowPos({ pos.x, pos.y });
 
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar |
@@ -164,118 +158,120 @@ void ColorPicker::cp_render_gui()
 		State to_state = state;
 		if (ImGui::BeginTabBar("cp-main-tb"))
 		{
-			cp_render_maintab_button(to_state, MainState::GRAPHIC, last_graphic_state, "GRAPHIC");
-			cp_render_maintab_button(to_state, MainState::SLIDER, last_slider_state, "SLIDER");
-			cp_render_maintab_button(to_state, MainState::HEX, last_hex_state, "HEX");
+			cp_render_tab_button(to_state, last_graphic_state, state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL, "GRAPHIC");
+			cp_render_tab_button(to_state, State::SLIDER_RGB, state == State::SLIDER_RGB, "RGB");
+			cp_render_tab_button(to_state, State::SLIDER_HSV, state == State::SLIDER_HSV, "HSV");
+			cp_render_tab_button(to_state, State::SLIDER_HSL, state == State::SLIDER_HSL, "HSL");
 			ImGui::EndTabBar();
 		}
-		ImGui::Dummy(ImVec2(0.0f, ImGui::GetContentRegionAvail().y - 32));
-		if (ImGui::BeginTabBar("cp-sub-tb"))
+		if (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL)
 		{
-			if (is_main_state(MainState::GRAPHIC))
+			if (ImGui::BeginTabBar("cp-sub-tb"))
 			{
-				cp_render_subtab_button(to_state, State::GRAPHIC_QUAD, "QUAD");
-				cp_render_subtab_button(to_state, State::GRAPHIC_WHEEL, "WHEEL");
+				cp_render_tab_button(to_state, State::GRAPHIC_QUAD, state == State::GRAPHIC_QUAD, "QUAD");
+				cp_render_tab_button(to_state, State::GRAPHIC_WHEEL, state == State::GRAPHIC_WHEEL, "WHEEL");
+				ImGui::EndTabBar();
 			}
-			else if (is_main_state(MainState::SLIDER))
+			ImGui::SameLine();
+		}
+		else if (state == State::SLIDER_RGB)
+		{
+			if (ImGui::Button("HEX"))
 			{
-				cp_render_subtab_button(to_state, State::SLIDER_RGB, "RGB");
-				cp_render_subtab_button(to_state, State::SLIDER_HSV, "HSV");
-				cp_render_subtab_button(to_state, State::SLIDER_HSL, "HSL");
+				ImGui::OpenPopup("hex-popup");
 			}
-			else if (is_main_state(MainState::HEX))
+			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_None))
 			{
-				cp_render_subtab_button(to_state, State::HEX_RGB, "RGB");
-				cp_render_subtab_button(to_state, State::HEX_HSV, "HSV");
-				cp_render_subtab_button(to_state, State::HEX_HSL, "HSL");
+				ImGui::Text("RGB hex code");
+				ImGui::Text("#");
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(90);
+				ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size);
+				update_rgb_hex();
+				ImGui::EndPopup();
 			}
-			ImGui::EndTabBar();
+			ImGui::SameLine();
+		}
+		if (txtfld_mode == TextFieldMode::NUMBER)
+		{
+			float buttonWidth = ImGui::CalcTextSize("#").x + ImGui::GetStyle().FramePadding.x * 2;
+			ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth - ImGui::GetStyle().WindowPadding.x);
+			if (ImGui::Button("#"))
+			{
+				txtfld_mode = TextFieldMode::PERCENT;
+				// TODO modify textfields
+			}
+		}
+		else if (txtfld_mode == TextFieldMode::PERCENT)
+		{
+			float buttonWidth = ImGui::CalcTextSize("%").x + ImGui::GetStyle().FramePadding.x * 2;
+			ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth - ImGui::GetStyle().WindowPadding.x);
+			if (ImGui::Button("%"))
+			{
+				txtfld_mode = TextFieldMode::NUMBER;
+				// TODO modify textfields
+			}
 		}
 		set_state(to_state);
 		ImGui::End();
 	}
 }
 
-ColorPicker::MainState ColorPicker::main_state_of(State state)
+void ColorPicker::cp_render_tab_button(State& to_state, State state, bool disable, const char* display) const
 {
-	if (state == State::SLIDER_RGB || state == State::SLIDER_HSV || state == State::SLIDER_HSL)
-		return MainState::SLIDER;
-	else if (state == State::HEX_RGB || state == State::HEX_HSV || state == State::HEX_HSL)
-		return MainState::HEX;
-	else
-		return MainState::GRAPHIC;
-}
-
-bool ColorPicker::is_main_state(MainState main) const
-{
-	return (main == MainState::GRAPHIC && (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL))
-		|| (main == MainState::SLIDER && (state == State::SLIDER_RGB || state == State::SLIDER_HSV || state == State::SLIDER_HSL))
-		|| (main == MainState::HEX && (state == State::HEX_RGB || state == State::HEX_HSV || state == State::HEX_HSL));
-}
-
-bool ColorPicker::is_sub_state(SubState sub) const
-{
-	return (sub == SubState::QUAD && state == State::GRAPHIC_QUAD)
-		|| (sub == SubState::WHEEL && state == State::GRAPHIC_WHEEL)
-		|| (sub == SubState::RGB && (state == State::SLIDER_RGB || state == State::HEX_RGB))
-		|| (sub == SubState::HSV && (state == State::SLIDER_HSV || state == State::HEX_HSV))
-		|| (sub == SubState::HSL && (state == State::SLIDER_HSL || state == State::HEX_HSL));
-}
-
-void ColorPicker::cp_render_maintab_button(State& to_state, MainState main_state, State main_state_default, const char* display) const
-{
-	bool is_main = is_main_state(main_state);
-	if (is_main)
+	if (disable)
 		ImGui::BeginDisabled();
 	if (ImGui::TabItemButton(display))
+		to_state = state;
+	if (disable)
+		ImGui::EndDisabled();
+}
+
+static bool is_hex(char c)
+{
+	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+static char to_hex(unsigned char num)
+{
+	return num < 10 ? num + '0' : (num - 10) + 'A';
+}
+
+void ColorPicker::update_rgb_hex()
+{
+	unsigned int hex = 0;
+	for (size_t i = 0; i < rgb_hex_size - 1; ++i)
 	{
-		if (!is_main)
-			to_state = main_state_default;
+		if (!is_hex(rgb_hex[i]))
+		{
+			memcpy(rgb_hex, rgb_hex_prev, rgb_hex_size - 1);
+			return;
+		}
+		if (isalpha(rgb_hex[i]))
+		{
+			rgb_hex[i] = toupper(rgb_hex[i]);
+			hex |= ((rgb_hex[i] - 'A') + 10) << (4 * (rgb_hex_size - 2 - i));
+		}
+		else
+			hex |= (rgb_hex[i] - '0') << (4 * (rgb_hex_size - 2 - i));
 	}
-	if (is_main)
-		ImGui::EndDisabled();
-}
-
-void ColorPicker::cp_render_subtab_button(State& to_state, State compare, const char* display) const
-{
-	if (state == compare)
-		ImGui::BeginDisabled();
-	if (ImGui::TabItemButton(display))
-		to_state = compare;
-	if (state == compare)
-		ImGui::EndDisabled();
+	set_color(RGB(hex));
 }
 
 void ColorPicker::set_state(State _state)
 {
 	if (_state != state)
 	{
-		if (main_state_of(state) == MainState::GRAPHIC)
-		{
-			if (main_state_of(_state) == MainState::GRAPHIC)
-				last_graphic_state = _state;
-			else
-				last_graphic_state = state;
-		}
-		else if (main_state_of(state) == MainState::SLIDER)
-		{
-			if (main_state_of(_state) == MainState::SLIDER)
-				last_slider_state = _state;
-			else
-				last_slider_state = state;
-		}
-		else if (main_state_of(state) == MainState::HEX)
-		{
-			if (main_state_of(_state) == MainState::HEX)
-				last_hex_state = _state;
-			else
-				last_hex_state = state;
-		}
+		if (_state == State::GRAPHIC_QUAD)
+			last_graphic_state = State::GRAPHIC_QUAD;
+		else if (_state == State::GRAPHIC_WHEEL)
+			last_graphic_state = State::GRAPHIC_WHEEL;
+		else if (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL)
+			last_graphic_state = state;
 
 		release_cursor();
-		ColorFrame color = get_color();
 		state = _state;
-		set_color(color);
+		set_color(get_color());
 	}
 }
 
@@ -293,12 +289,23 @@ void ColorPicker::initialize_widget()
 {
 	// ---------- COMMON CONSTANTS ----------
 
+	const float graphic_y = -120;
+	const float graphic_sx = 200;
+	const float graphic_sy = 200;
+	const float g_slider_y = -135;
+	
+	const float slider_sep = 70;
 	const float slider1_y = 80;
-	const float slider2_y = 10;
-	const float slider3_y = -60;
-	const float slider4_y = -160;
+	const float slider2_y = slider1_y - slider_sep;
+	const float slider3_y = slider2_y - slider_sep;
+	const float slider4_y = slider3_y - 120;
+	const float slider_w = 200;
+	const float slider_h = 20;
+	
 	const float preview_x = 90;
-	const float preview_y = -190;
+	const float preview_y = -210;
+	const float preview_w = 40;
+	const float preview_h = 40;
 
 	// ---------- GRAPHIC QUAD ----------
 
@@ -314,12 +321,12 @@ void ColorPicker::initialize_widget()
 	orient_progress_slider(GRAPHIC_HUE_SLIDER, Cardinal::RIGHT);
 	setup_circle_cursor(GRAPHIC_HUE_SLIDER_CURSOR);
 
-	widget.wp_at(GRAPHIC_QUAD).transform.position.y = -100;
-	widget.wp_at(GRAPHIC_QUAD).transform.scale = { 200, 200 };
+	widget.wp_at(GRAPHIC_QUAD).transform.position.y = graphic_y;
+	widget.wp_at(GRAPHIC_QUAD).transform.scale = { graphic_sx, graphic_sy };
 	widget.wp_at(GRAPHIC_QUAD).pivot.y = 0;
 	widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position = { widget.wp_at(GRAPHIC_QUAD).top(), widget.wp_at(GRAPHIC_QUAD).right() };
-	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.position.y = -115;
-	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.position.y = g_slider_y;
+	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(GRAPHIC_HUE_SLIDER).pivot.y = 1;
 	widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position = { widget.wp_at(GRAPHIC_HUE_SLIDER).left(), widget.wp_at(GRAPHIC_HUE_SLIDER).center_y() };
 
@@ -339,11 +346,11 @@ void ColorPicker::initialize_widget()
 	setup_circle_cursor(GRAPHIC_VALUE_SLIDER_CURSOR);
 	set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, 0.0f);
 
-	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.position.y = -100;
-	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.scale = { 200, 200 };
+	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.position.y = graphic_y;
+	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.scale = { graphic_sx, graphic_sy };
 	widget.wp_at(GRAPHIC_HUE_WHEEL).pivot.y = 0;
-	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.position.y = -115;
-	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.position.y = g_slider_y;
+	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(GRAPHIC_VALUE_SLIDER).pivot.y = 1;
 	widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position = { widget.wp_at(GRAPHIC_VALUE_SLIDER).right(), widget.wp_at(GRAPHIC_VALUE_SLIDER).center_y() };
 
@@ -370,13 +377,13 @@ void ColorPicker::initialize_widget()
 	send_gradient_color_uniform(quad_shader, GradientIndex::RGB_B_SLIDER, RGB(0x0000FF));
 
 	widget.wp_at(RGB_R_SLIDER).transform.position.y = slider1_y;
-	widget.wp_at(RGB_R_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(RGB_R_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(RGB_R_SLIDER_CURSOR).transform.position = { widget.wp_at(RGB_R_SLIDER).right(), widget.wp_at(RGB_R_SLIDER).center_y() };
 	widget.wp_at(RGB_G_SLIDER).transform.position.y = slider2_y;
-	widget.wp_at(RGB_G_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(RGB_G_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(RGB_G_SLIDER_CURSOR).transform.position = { widget.wp_at(RGB_G_SLIDER).right(), widget.wp_at(RGB_G_SLIDER).center_y() };
 	widget.wp_at(RGB_B_SLIDER).transform.position.y = slider3_y;
-	widget.wp_at(RGB_B_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(RGB_B_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(RGB_B_SLIDER_CURSOR).transform.position = { widget.wp_at(RGB_B_SLIDER).right(), widget.wp_at(RGB_B_SLIDER).center_y() };
 
 	// ---------- HSV SLIDERS ----------
@@ -401,13 +408,13 @@ void ColorPicker::initialize_widget()
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_V_SLIDER, HSV(0.0f, 1.0f, 1.0f));
 
 	widget.wp_at(HSV_H_SLIDER).transform.position.y = slider1_y;
-	widget.wp_at(HSV_H_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(HSV_H_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(HSV_H_SLIDER_CURSOR).transform.position = { widget.wp_at(HSV_H_SLIDER).right(), widget.wp_at(HSV_H_SLIDER).center_y() };
 	widget.wp_at(HSV_S_SLIDER).transform.position.y = slider2_y;
-	widget.wp_at(HSV_S_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(HSV_S_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(HSV_S_SLIDER_CURSOR).transform.position = { widget.wp_at(HSV_S_SLIDER).right(), widget.wp_at(HSV_S_SLIDER).center_y() };
 	widget.wp_at(HSV_V_SLIDER).transform.position.y = slider3_y;
-	widget.wp_at(HSV_V_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(HSV_V_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(HSV_V_SLIDER_CURSOR).transform.position = { widget.wp_at(HSV_V_SLIDER).right(), widget.wp_at(HSV_V_SLIDER).center_y() };
 
 	// ---------- HSL SLIDERS ----------
@@ -430,13 +437,13 @@ void ColorPicker::initialize_widget()
 	setup_circle_cursor(HSL_L_SLIDER_CURSOR);
 	
 	widget.wp_at(HSL_H_SLIDER).transform.position.y = slider1_y;
-	widget.wp_at(HSL_H_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(HSL_H_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(HSL_H_SLIDER_CURSOR).transform.position = { widget.wp_at(HSL_H_SLIDER).right(), widget.wp_at(HSL_H_SLIDER).center_y() };
 	widget.wp_at(HSL_S_SLIDER).transform.position.y = slider2_y;
-	widget.wp_at(HSL_S_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(HSL_S_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(HSL_S_SLIDER_CURSOR).transform.position = { widget.wp_at(HSL_S_SLIDER).right(), widget.wp_at(HSL_S_SLIDER).center_y() };
 	widget.wp_at(HSL_L_SLIDER).transform.position.y = slider3_y;
-	widget.wp_at(HSL_L_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(HSL_L_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(HSL_L_SLIDER_CURSOR).transform.position = { widget.wp_at(HSL_L_SLIDER).right(), widget.wp_at(HSL_L_SLIDER).center_y() };
 
 	// ---------- ALPHA SLIDER ----------
@@ -450,7 +457,7 @@ void ColorPicker::initialize_widget()
 	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, ColorFrame());
 
 	widget.wp_at(ALPHA_SLIDER).transform.position.y = slider4_y;
-	widget.wp_at(ALPHA_SLIDER).transform.scale = { 200, 20 };
+	widget.wp_at(ALPHA_SLIDER).transform.scale = { slider_w, slider_h };
 	widget.wp_at(ALPHA_SLIDER_CURSOR).transform.position = { widget.wp_at(ALPHA_SLIDER).right(), widget.wp_at(ALPHA_SLIDER).center_y() };
 
 	// ---------- PREVIEW ----------
@@ -460,7 +467,7 @@ void ColorPicker::initialize_widget()
 	setup_gradient(PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW);
 	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, ColorFrame());
 	widget.wp_at(PREVIEW).transform.position = { preview_x, preview_y };
-	widget.wp_at(PREVIEW).transform.scale = { 40, 40 };
+	widget.wp_at(PREVIEW).transform.scale = { preview_w, preview_h };
 	widget.wp_at(PREVIEW).pivot = { 1, 1 };
 
 	// ---------- PARENT ----------
@@ -834,13 +841,13 @@ void ColorPicker::move_slider_cursor_x_relative(size_t control, size_t cursor, f
 	widget.wp_at(cursor).transform.position.y = widget.wp_at(control).center_y();
 }
 
-void ColorPicker::update_display_colors() const
+void ColorPicker::update_display_colors()
 {
 	ColorFrame color = get_color();
 	// preview
 	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, color);
 	// alpha
-	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, color);
+	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, ColorFrame(color.rgb()));
 	set_circle_cursor_value(ALPHA_SLIDER_CURSOR, contrast_wb_value_complex_hsva(color.hsva()));
 	send_cpwc_buffer(ALPHA_SLIDER_CURSOR);
 	if (state == State::GRAPHIC_QUAD)
@@ -864,7 +871,16 @@ void ColorPicker::update_display_colors() const
 	}
 	else if (state == State::SLIDER_RGB)
 	{
+		RGB rgb = color.rgb();
 		// TODO cursor contrast ? possibly not necessary
+		// hex
+		rgb_hex[0] = to_hex(rgb.get_pixel_r() >> 4);
+		rgb_hex[1] = to_hex(rgb.get_pixel_r() & 0xF);
+		rgb_hex[2] = to_hex(rgb.get_pixel_g() >> 4);
+		rgb_hex[3] = to_hex(rgb.get_pixel_g() & 0xF);
+		rgb_hex[4] = to_hex(rgb.get_pixel_b() >> 4);
+		rgb_hex[5] = to_hex(rgb.get_pixel_b() & 0xF);
+		memcpy(rgb_hex_prev, rgb_hex, rgb_hex_size - 1);
 	}
 	else if (state == State::SLIDER_HSV)
 	{

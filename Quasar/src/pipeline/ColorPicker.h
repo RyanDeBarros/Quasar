@@ -18,26 +18,8 @@ struct ColorPicker
 		SLIDER_RGB,
 		SLIDER_HSV,
 		SLIDER_HSL,
-		HEX_RGB,
-		HEX_HSV,
-		HEX_HSL
 	};
 
-	enum class MainState
-	{
-		GRAPHIC,
-		SLIDER,
-		HEX
-	};
-
-	enum class SubState
-	{
-		QUAD,
-		WHEEL,
-		RGB,
-		HSV,
-		HSL
-	};
 private:
 	State state = State::GRAPHIC_QUAD;
 public:
@@ -51,8 +33,14 @@ public:
 private:
 	Position center;
 	State last_graphic_state = State::GRAPHIC_QUAD;
-	State last_slider_state = State::SLIDER_RGB;
-	State last_hex_state = State::HEX_RGB;
+	enum class TextFieldMode
+	{
+		NUMBER,
+		PERCENT
+	} txtfld_mode = TextFieldMode::NUMBER;
+	static const size_t rgb_hex_size = 7;
+	char rgb_hex_prev[rgb_hex_size] = "FFFFFF";
+	char rgb_hex[rgb_hex_size] = "FFFFFF";
 public:
 	std::function<void(const Callback::MouseButton&)> clbk_mb;
 	std::function<void(const Callback::MouseButton&)> clbk_mb_down;
@@ -71,11 +59,9 @@ public:
 
 private:
 	void cp_render_gui();
-	static MainState main_state_of(State state);
-	bool is_main_state(MainState main_state) const;
-	bool is_sub_state(SubState sub_state) const;
-	void cp_render_maintab_button(State& to_state, MainState main_state, State main_state_default, const char* display) const;
-	void cp_render_subtab_button(State& to_state, State compare, const char* display) const;
+	void cp_render_tab_button(State& to_state, State state, bool disable, const char* display) const;
+	void update_rgb_hex();
+
 	void initialize_widget();
 	void connect_mouse_handlers();
 	void take_over_cursor() const;
@@ -104,7 +90,7 @@ private:
 	void move_slider_cursor_x_absolute(size_t control, size_t cursor, float absolute);
 	void move_slider_cursor_x_relative(size_t control, size_t cursor, float relative);
 
-	void update_display_colors() const;
+	void update_display_colors();
 
 	void orient_progress_slider(size_t control, Cardinal i) const;
 	
