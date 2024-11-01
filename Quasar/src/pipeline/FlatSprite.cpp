@@ -113,7 +113,7 @@ ColorFrame FlatSprite::modulation_color_frame() const
 void FlatSprite::set_modulation(ColorFrame color) const
 {
 	GLfloat* row = varr;
-	glm::vec4 cvec = color.rgba_as_vec();
+	glm::vec4 cvec = color.rgba().as_vec();
 	for (size_t i = 0; i < NUM_VERTICES; ++i)
 	{
 		memcpy(row + SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
@@ -198,7 +198,7 @@ ColorFrame SharedFlatSprite::modulation_color_frame() const
 void SharedFlatSprite::set_modulation(ColorFrame color) const
 {
 	GLfloat* row = varr;
-	glm::vec4 cvec = color.rgba_as_vec();
+	glm::vec4 cvec = color.rgba().as_vec();
 	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
 	{
 		memcpy(row + FlatSprite::SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));

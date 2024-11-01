@@ -24,10 +24,10 @@ float contrast_wb_value_simple_hue_and_value(float hue, float value)
 }
 
 // LATER use pass-by-value for structs <= 16 bytes
-float contrast_wb_value_complex_hsv(glm::vec3 hsv)
+float contrast_wb_value_complex_hsv(HSV hsv)
 {
 	const float sat1 = 0.0f;
-	float hue = hsv.x;
+	float hue = hsv.h;
 	float sat2 = 1.0f;
 	if (on_interval(hue, 0.0f, 1 / 6.0f))
 		sat2 = 3.0f * hue + 0.5f;
@@ -43,11 +43,11 @@ float contrast_wb_value_complex_hsv(glm::vec3 hsv)
 	else if (on_interval(hue, 1 / 3.0f, 2 / 3.0f))
 		val2 = 1.5f * hue;
 
-	float y = (hsv.y - sat1) * (val2 - val1) / (sat2 - sat1) + val1;
-	return hsv.z < y ? WHITE : BLACK;
+	float y = (hsv.s - sat1) * (val2 - val1) / (sat2 - sat1) + val1;
+	return hsv.v < y ? WHITE : BLACK;
 }
 
-float contrast_wb_value_complex_hsva(glm::vec4 hsva)
+float contrast_wb_value_complex_hsva(HSVA hsva)
 {
 	// TODO
 	return WHITE;
@@ -61,10 +61,10 @@ float contrast_wb_value_simple_hue_and_lightness(float hue, float lightness)
 		return lightness < 0.8f ? WHITE : BLACK;
 }
 
-float contrast_wb_value_complex_hsl(glm::vec3 hsl)
+float contrast_wb_value_complex_hsl(HSL hsl)
 {
-	if (on_interval(hsl.x, 0.1f, 0.5f))
-		return hsl.z < 0.4f ? WHITE : BLACK;
+	if (on_interval(hsl.h, 0.1f, 0.5f))
+		return hsl.l < 0.4f ? WHITE : BLACK;
 	else
-		return hsl.z < 0.8f ? WHITE : BLACK;
+		return hsl.l < 0.8f ? WHITE : BLACK;
 }

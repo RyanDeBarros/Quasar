@@ -116,21 +116,21 @@ void IO_impl::load_workspace_preferences(const FilePath& filepath, const char* w
 			{
 				if (auto _Checkerboard_checker1 = _Checkerboard["checker1"].as_array())
 				{
-					auto c1 = _Checkerboard_checker1->get_as<int64_t>(0);
-					auto c2 = _Checkerboard_checker1->get_as<int64_t>(1);
-					auto c3 = _Checkerboard_checker1->get_as<int64_t>(2);
-					auto c4 = _Checkerboard_checker1->get_as<int64_t>(3);
+					auto c1 = _Checkerboard_checker1->get_as<double>(0);
+					auto c2 = _Checkerboard_checker1->get_as<double>(1);
+					auto c3 = _Checkerboard_checker1->get_as<double>(2);
+					auto c4 = _Checkerboard_checker1->get_as<double>(3);
 					if (c1 && c2 && c3 && c4)
-						preferences.checker1 = RGBA((unsigned char)c1->get(), (unsigned char)c2->get(), (unsigned char)c3->get(), (unsigned char)c4->get());
+						preferences.checker1 = RGBA((float)c1->get(), (float)c2->get(), (float)c3->get(), (float)c4->get());
 				}
 				if (auto _Checkerboard_checker2 = _Checkerboard["checker2"].as_array())
 				{
-					auto c1 = _Checkerboard_checker2->get_as<int64_t>(0);
-					auto c2 = _Checkerboard_checker2->get_as<int64_t>(1);
-					auto c3 = _Checkerboard_checker2->get_as<int64_t>(2);
-					auto c4 = _Checkerboard_checker2->get_as<int64_t>(3);
+					auto c1 = _Checkerboard_checker2->get_as<double>(0);
+					auto c2 = _Checkerboard_checker2->get_as<double>(1);
+					auto c3 = _Checkerboard_checker2->get_as<double>(2);
+					auto c4 = _Checkerboard_checker2->get_as<double>(3);
 					if (c1 && c2 && c3 && c4)
-						preferences.checker2 = RGBA((unsigned char)c1->get(), (unsigned char)c2->get(), (unsigned char)c3->get(), (unsigned char)c4->get());
+						preferences.checker2 = RGBA((float)c1->get(), (float)c2->get(), (float)c3->get(), (float)c4->get());
 				}
 				if (auto _Checkerboard_checker_size = _Checkerboard["checker_size"].as_array())
 				{

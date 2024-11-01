@@ -96,9 +96,9 @@ void MachineImpl::init_renderer()
 	attach_canvas_controls();
 	attach_global_user_controls();
 
-	easel()->canvas.minor_gridlines.set_color(ColorFrame(RGBA(31_UC, 63_UC, 107_UC, 255_UC))); // SETTINGS
+	easel()->canvas.minor_gridlines.set_color(ColorFrame(RGBA(31, 63, 107, 255))); // SETTINGS
 	easel()->canvas.minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
-	easel()->canvas.major_gridlines.set_color(ColorFrame(RGBA(31_UC, 72_UC, 127_UC, 255_UC))); // SETTINGS
+	easel()->canvas.major_gridlines.set_color(ColorFrame(RGBA(31, 72, 127, 255))); // SETTINGS
 	easel()->canvas.major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
 
 	set_app_scale(main_window->display_scale());
@@ -181,7 +181,7 @@ void MachineImpl::set_app_scale(Scale scale) const
 
 void MachineImpl::set_clear_color(ColorFrame color)
 {
-	auto vec = color.rgba_as_vec();
+	auto vec = color.rgba().as_vec();
 	QUASAR_GL(glClearColor(vec[0], vec[1], vec[2], vec[3]));
 }
 

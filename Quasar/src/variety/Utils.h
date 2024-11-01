@@ -2,19 +2,11 @@
 
 #include <climits>
 #include <cmath>
+#include <concepts>
 
-constexpr unsigned char round_uchar(float x)
+constexpr int roundi(float x)
 {
-	if (x <= 0.0f) return 0;
-	if (x >= static_cast<float>(UCHAR_MAX)) return UCHAR_MAX;
-	return static_cast<unsigned char>(x + 0.5f);
-}
-
-constexpr unsigned short round_ushort(float x)
-{
-	if (x <= 0.0f) return 0;
-	if (x >= static_cast<float>(USHRT_MAX)) return USHRT_MAX;
-	return static_cast<unsigned short>(x + 0.5f);
+	return static_cast<int>(x + 0.5f);
 }
 
 constexpr float modulo(float x, float y)
@@ -49,3 +41,25 @@ struct PolyHolder
 
 	virtual ~PolyHolder() = default;
 };
+
+template<std::integral T, T min_, T max_>
+class PercentageRange
+{
+	float fraction;
+	T num;
+
+public:
+	static constexpr T min = min_;
+	static constexpr T max = max_;
+
+	PercentageRange(T num) { set_num(num); }
+	PercentageRange(float fraction) { set_fraction(fraction); }
+
+	float get_fraction() const { return fraction; }
+	T get_num() const { return num; }
+	void set_fraction(float fraction_) { fraction = fraction_; num = fraction * (max - min) + min; }
+	void set_num(T num_) { num = num_; fraction = (num - min) / (max - min); }
+};
+
+typedef PercentageRange<int, 0, 255> PR255;
+typedef PercentageRange<int, 0, 359> PR359;

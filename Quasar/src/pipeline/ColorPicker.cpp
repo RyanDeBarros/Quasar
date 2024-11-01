@@ -29,7 +29,7 @@ enum class GradientIndex : GLint
 
 static void send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color)
 {
-	Uniforms::send_4(shader, "u_GradientColors[0]", color.rgba_as_vec(), (GLint)index);
+	Uniforms::send_4(shader, "u_GradientColors[0]", color.rgba().as_vec(), (GLint)index);
 }
 
 // LATER use UMR when possible
@@ -77,9 +77,9 @@ ColorPicker::ColorPicker()
 	circle_cursor_shader(FileSystem::resources_path("circle_cursor.vert"), FileSystem::resources_path("circle_cursor.frag")),
 	widget(_CPWC_COUNT)
 {
-	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(RGB::precise_from_hsv(0.0f, 0.0f, 0.0f)));
-	send_gradient_color_uniform(quad_shader, GradientIndex::WHITE, ColorFrame(RGB::precise_from_hsv(0.0f, 0.0f, 1.0f)));
-	send_gradient_color_uniform(quad_shader, GradientIndex::TRANSPARENT, ColorFrame(0_UC));
+	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(HSV(0.0f, 0.0f, 0.0f)));
+	send_gradient_color_uniform(quad_shader, GradientIndex::WHITE, ColorFrame(HSV(0.0f, 0.0f, 1.0f)));
+	send_gradient_color_uniform(quad_shader, GradientIndex::TRANSPARENT, ColorFrame(0));
 	initialize_widget();
 	connect_mouse_handlers();
 	set_color(ColorFrame());
@@ -393,12 +393,12 @@ void ColorPicker::initialize_widget()
 	setup_rect_uvs(HSV_S_SLIDER);
 	setup_circle_cursor(HSV_S_SLIDER_CURSOR);
 	setup_gradient(HSV_S_SLIDER, (GLint)GradientIndex::HSV_S_SLIDER_ZERO, (GLint)GradientIndex::HSV_S_SLIDER_ONE, (GLint)GradientIndex::HSV_S_SLIDER_ZERO, (GLint)GradientIndex::HSV_S_SLIDER_ONE);
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ZERO, RGB::precise_from_hsv(0.0f, 0.0f, 1.0f));
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ONE, RGB::precise_from_hsv(0.0f, 1.0f, 1.0f));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ZERO, HSV(0.0f, 0.0f, 1.0f));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ONE, HSV(0.0f, 1.0f, 1.0f));
 	setup_rect_uvs(HSV_V_SLIDER);
 	setup_circle_cursor(HSV_V_SLIDER_CURSOR);
 	setup_gradient(HSV_V_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::HSV_V_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::HSV_V_SLIDER);
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_V_SLIDER, RGB::precise_from_hsv(0.0f, 1.0f, 1.0f));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_V_SLIDER, HSV(0.0f, 1.0f, 1.0f));
 
 	widget.wp_at(HSV_H_SLIDER).transform.position.y = slider1_y;
 	widget.wp_at(HSV_H_SLIDER).transform.scale = { 200, 20 };
@@ -424,8 +424,8 @@ void ColorPicker::initialize_widget()
 	setup_rect_uvs(HSL_S_SLIDER);
 	setup_circle_cursor(HSL_S_SLIDER_CURSOR);
 	setup_gradient(HSL_S_SLIDER, (GLint)GradientIndex::HSL_S_SLIDER_ZERO, (GLint)GradientIndex::HSL_S_SLIDER_ONE, (GLint)GradientIndex::HSL_S_SLIDER_ZERO, (GLint)GradientIndex::HSL_S_SLIDER_ONE);
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ZERO, RGB::precise_from_hsv(0.0f, 0.0f, 0.5f));
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ONE, RGB::precise_from_hsv(0.0f, 1.0f, 0.5f));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ZERO, HSL(0.0f, 0.0f, 0.5f));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ONE, HSL(0.0f, 1.0f, 0.5f));
 	orient_progress_slider(HSL_L_SLIDER, Cardinal::RIGHT);
 	setup_circle_cursor(HSL_L_SLIDER_CURSOR);
 	
@@ -639,88 +639,82 @@ ColorFrame ColorPicker::get_color() const
 	if (state == State::GRAPHIC_QUAD)
 	{
 		glm::vec2 sv = get_graphic_quad_sat_and_value();
-		color.set_rgb(RGB::precise_from_hsv(slider_normal_x(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR), sv[0], sv[1]));
+		color.set_hsv(HSV(slider_normal_x(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR), sv[0], sv[1]));
 	}
 	else if (state == State::GRAPHIC_WHEEL)
 	{
 		glm::vec2 hs = get_graphic_wheel_hue_and_sat();
-		color.set_rgb(RGB::precise_from_hsv(hs[0], hs[1], slider_normal_x(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR)));
+		color.set_hsv(HSV(hs[0], hs[1], slider_normal_x(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR)));
 	}
 	else if (state == State::SLIDER_RGB)
 	{
 		float r = slider_normal_x(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR);
 		float g = slider_normal_x(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR);
 		float b = slider_normal_x(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR);
-		color.set_rgb(r, g, b);
+		color.set_rgb(RGB(r, g, b));
 	}
 	else if (state == State::SLIDER_HSV)
 	{
 		float h = slider_normal_x(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR);
 		float s = slider_normal_x(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR);
 		float v = slider_normal_x(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR);
-		color.set_rgb(RGB::precise_from_hsv(h, s, v));
+		color.set_hsv(HSV(h, s, v));
 	}
 	else if (state == State::SLIDER_HSL)
 	{
 		float h = slider_normal_x(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR);
 		float s = slider_normal_x(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR);
 		float l = slider_normal_x(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR);
-		color.set_rgb(RGB::precise_from_hsl(h, s, l));
+		color.set_hsl(HSL(h, s, l));
 	}
 	return color;
 }
 
 void ColorPicker::set_color(ColorFrame color)
 {
-	move_slider_cursor_x_relative(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, color.alpha * inv255);
+	move_slider_cursor_x_relative(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, color.alpha);
 	if (state == State::GRAPHIC_QUAD)
 	{
-		glm::vec4 hsva = color.hsva_as_vec();
-		float hue = hsva.x;
-		float sat = hsva.y;
-		float val = hsva.z;
-		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_QUAD).interp_x(sat);
-		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_QUAD).interp_y(val);
-		move_slider_cursor_x_relative(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, hue);
-		enact_graphic_quad_cursor_position(hue, sat, val);
-		enact_graphic_hue_slider_cursor_position(hue);
+		HSV hsv = color.hsv();
+		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_QUAD).interp_x(hsv.s);
+		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_QUAD).interp_y(hsv.v);
+		move_slider_cursor_x_relative(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, hsv.h);
+		enact_graphic_quad_cursor_position(hsv.h, hsv.s, hsv.v);
+		enact_graphic_hue_slider_cursor_position(hsv.h);
 	}
 	else if (state == State::GRAPHIC_WHEEL)
 	{
-		glm::vec4 hsva = color.hsva_as_vec();
-		float hue = hsva.x;
-		float sat = hsva.y;
-		float val = hsva.z;
-		float x = sat * glm::cos(glm::tau<float>() * hue);
-		float y = -sat * glm::sin(glm::tau<float>() * hue);
+		HSV hsv = color.hsv();
+		float x = hsv.s * glm::cos(glm::tau<float>() * hsv.h);
+		float y = -hsv.s * glm::sin(glm::tau<float>() * hsv.h);
 		widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_HUE_WHEEL).interp_x(0.5f * (x + 1));
 		widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_HUE_WHEEL).interp_y(0.5f * (y + 1));
-		move_slider_cursor_x_relative(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, val);
-		enact_graphic_hue_wheel_cursor_position(hue, sat);
-		enact_graphic_value_slider_cursor_position(hue, val);
+		move_slider_cursor_x_relative(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, hsv.v);
+		enact_graphic_hue_wheel_cursor_position(hsv.h, hsv.s);
+		enact_graphic_value_slider_cursor_position(hsv.h, hsv.v);
 	}
 	else if (state == State::SLIDER_RGB)
 	{
-		glm::vec4 rgba = color.rgba_as_vec();
-		move_slider_cursor_x_relative(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, rgba.r);
-		move_slider_cursor_x_relative(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, rgba.g);
-		move_slider_cursor_x_relative(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, rgba.b);
+		RGB rgb = color.rgb();
+		move_slider_cursor_x_relative(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, rgb.r);
+		move_slider_cursor_x_relative(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, rgb.g);
+		move_slider_cursor_x_relative(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, rgb.b);
 		enact_slider_rgb_cursor_positions();
 	}
 	else if (state == State::SLIDER_HSV)
 	{
-		glm::vec4 hsva = color.hsva_as_vec();
-		move_slider_cursor_x_relative(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, hsva.x);
-		move_slider_cursor_x_relative(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, hsva.y);
-		move_slider_cursor_x_relative(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, hsva.z);
+		HSV hsv = color.hsv();
+		move_slider_cursor_x_relative(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, hsv.h);
+		move_slider_cursor_x_relative(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, hsv.s);
+		move_slider_cursor_x_relative(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, hsv.v);
 		enact_slider_hsv_cursor_positions();
 	}
 	else if (state == State::SLIDER_HSL)
 	{
-		glm::vec4 hsla = color.hsla_as_vec();
-		move_slider_cursor_x_relative(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, hsla.x);
-		move_slider_cursor_x_relative(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, hsla.y);
-		move_slider_cursor_x_relative(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, hsla.z);
+		HSL hsl = color.hsl();
+		move_slider_cursor_x_relative(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, hsl.h);
+		move_slider_cursor_x_relative(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, hsl.s);
+		move_slider_cursor_x_relative(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, hsl.l);
 		enact_slider_hsl_cursor_positions();
 	}
 }
@@ -849,7 +843,7 @@ void ColorPicker::enact_alpha_slider_cursor_position()
 {
 	float alpha = slider_normal_x(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR);
 	ColorFrame color(get_color().rgb(), alpha);
-	set_circle_cursor_value(ALPHA_SLIDER_CURSOR, contrast_wb_value_complex_hsva(color.hsva_as_vec()));
+	set_circle_cursor_value(ALPHA_SLIDER_CURSOR, contrast_wb_value_complex_hsva(color.hsva()));
 	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, color);
 	sync_single_cp_widget_transform(ALPHA_SLIDER_CURSOR);
 	update_preview();
@@ -907,15 +901,15 @@ void ColorPicker::enact_slider_rgb_cursor_positions() const
 
 void ColorPicker::enact_slider_hsv_cursor_positions() const
 {
-	glm::vec3 hsv{
+	HSV hsv(
 		slider_normal_x(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR),
 		slider_normal_x(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR),
 		slider_normal_x(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR)
-	};
-	set_circle_cursor_value(HSV_H_SLIDER_CURSOR, contrast_wb_value_simple_hue(hsv.x));
+	);
+	set_circle_cursor_value(HSV_H_SLIDER_CURSOR, contrast_wb_value_simple_hue(hsv.h));
 	set_circle_cursor_value(HSV_S_SLIDER_CURSOR, contrast_wb_value_complex_hsv(hsv));
-	set_circle_cursor_value(HSV_V_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hsv.x, hsv.z));
-	send_slider_hsv_hue_and_value_to_uniform(hsv.x, hsv.z);
+	set_circle_cursor_value(HSV_V_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hsv.h, hsv.v));
+	send_slider_hsv_hue_and_value_to_uniform(hsv.h, hsv.v);
 	sync_single_cp_widget_transform(HSV_H_SLIDER_CURSOR);
 	sync_single_cp_widget_transform(HSV_S_SLIDER_CURSOR);
 	sync_single_cp_widget_transform(HSV_V_SLIDER_CURSOR);
@@ -923,15 +917,15 @@ void ColorPicker::enact_slider_hsv_cursor_positions() const
 
 void ColorPicker::enact_slider_hsl_cursor_positions() const
 {
-	glm::vec3 hsl{
+	HSL hsl(
 		slider_normal_x(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR),
 		slider_normal_x(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR),
 		slider_normal_x(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR)
-	};
+	);
 	set_circle_cursor_value(HSL_H_SLIDER_CURSOR, contrast_wb_value_simple_hue(slider_normal_x(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR)));
 	set_circle_cursor_value(HSL_S_SLIDER_CURSOR, contrast_wb_value_complex_hsl(hsl));
-	set_circle_cursor_value(HSL_L_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_lightness(hsl.x, hsl.z));
-	send_slider_hsl_hue_and_lightness_to_uniform(hsl.x, hsl.z);
+	set_circle_cursor_value(HSL_L_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_lightness(hsl.h, hsl.l));
+	send_slider_hsl_hue_and_lightness_to_uniform(hsl.h, hsl.l);
 	sync_single_cp_widget_transform(HSL_H_SLIDER_CURSOR);
 	sync_single_cp_widget_transform(HSL_S_SLIDER_CURSOR);
 	sync_single_cp_widget_transform(HSL_L_SLIDER_CURSOR);
@@ -950,7 +944,7 @@ void ColorPicker::orient_progress_slider(size_t control, Cardinal i) const
 
 void ColorPicker::send_graphic_quad_hue_to_uniform(float hue) const
 {
-	send_gradient_color_uniform(quad_shader, GradientIndex::GRAPHIC_QUAD, RGB::precise_from_hsv(hue, 1.0f, 1.0f));
+	send_gradient_color_uniform(quad_shader, GradientIndex::GRAPHIC_QUAD, HSV(hue, 1.0f, 1.0f));
 }
 
 glm::vec2 ColorPicker::get_graphic_quad_sat_and_value() const
@@ -965,7 +959,7 @@ void ColorPicker::send_graphic_wheel_value_to_uniform(float value) const
 
 void ColorPicker::send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat) const
 {
-	send_gradient_color_uniform(quad_shader, GradientIndex::GRAPHIC_VALUE_SLIDER, RGB::precise_from_hsv(hue, sat, 1.0f));
+	send_gradient_color_uniform(quad_shader, GradientIndex::GRAPHIC_VALUE_SLIDER, HSV(hue, sat, 1.0f));
 }
 
 glm::vec2 ColorPicker::get_graphic_wheel_hue_and_sat() const
@@ -979,15 +973,15 @@ glm::vec2 ColorPicker::get_graphic_wheel_hue_and_sat() const
 
 void ColorPicker::send_slider_hsv_hue_and_value_to_uniform(float hue, float value) const
 {
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ZERO, RGB::precise_from_hsv(hue, 0.0f, value));
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ONE, RGB::precise_from_hsv(hue, 1.0f, value));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ZERO, HSV(hue, 0.0f, value));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ONE, HSV(hue, 1.0f, value));
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_V_SLIDER, HSV(hue, 1.0f, 1.0f));
 }
 
 void ColorPicker::send_slider_hsl_hue_and_lightness_to_uniform(float hue, float lightness) const
 {
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ZERO, RGB::precise_from_hsl(hue, 0.0f, lightness));
-	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ONE, RGB::precise_from_hsl(hue, 1.0f, lightness));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ZERO, HSL(hue, 0.0f, lightness));
+	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ONE, HSL(hue, 1.0f, lightness));
 	Uniforms::send_1(linear_lightness_shader, "u_Hue", hue);
 }
 

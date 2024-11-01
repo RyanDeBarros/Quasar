@@ -145,17 +145,17 @@ void Gridlines::draw() const
 
 unsigned short Gridlines::num_cols() const
 {
-	return unsigned short(std::ceil(width / line_spacing.x)) + 1_US;
+	return unsigned short(std::ceil(width / line_spacing.x)) + 1;
 }
 
 unsigned short Gridlines::num_rows() const
 {
-	return unsigned short(std::ceil(height / line_spacing.y)) + 1_US;
+	return unsigned short(std::ceil(height / line_spacing.y)) + 1;
 }
 
 void Gridlines::set_color(ColorFrame color) const
 {
-	Uniforms::send_4(shader, "u_Color", color.rgba_as_vec(), 0, true);
+	Uniforms::send_4(shader, "u_Color", color.rgba().as_vec(), 0, true);
 }
 
 void Canvas::create_checkerboard_image()
@@ -176,17 +176,17 @@ void Canvas::sync_checkerboard_colors() const
 	{
 		for (size_t i = 0; i < 2; ++i)
 		{
-			checkerboard.image->buf.pixels[0 + 12 * i] = checker1.rgb.r;
-			checkerboard.image->buf.pixels[1 + 12 * i] = checker1.rgb.g;
-			checkerboard.image->buf.pixels[2 + 12 * i] = checker1.rgb.b;
-			checkerboard.image->buf.pixels[3 + 12 * i] = checker1.alpha;
+			checkerboard.image->buf.pixels[0 + 12 * i] = checker1.get_pixel_r();
+			checkerboard.image->buf.pixels[1 + 12 * i] = checker1.get_pixel_g();
+			checkerboard.image->buf.pixels[2 + 12 * i] = checker1.get_pixel_b();
+			checkerboard.image->buf.pixels[3 + 12 * i] = checker1.get_pixel_a();
 		}
 		for (size_t i = 0; i < 2; ++i)
 		{
-			checkerboard.image->buf.pixels[4 + 4 * i] = checker2.rgb.r;
-			checkerboard.image->buf.pixels[5 + 4 * i] = checker2.rgb.g;
-			checkerboard.image->buf.pixels[6 + 4 * i] = checker2.rgb.b;
-			checkerboard.image->buf.pixels[7 + 4 * i] = checker2.alpha;
+			checkerboard.image->buf.pixels[4 + 4 * i] = checker2.get_pixel_r();
+			checkerboard.image->buf.pixels[5 + 4 * i] = checker2.get_pixel_g();
+			checkerboard.image->buf.pixels[6 + 4 * i] = checker2.get_pixel_b();
+			checkerboard.image->buf.pixels[7 + 4 * i] = checker2.get_pixel_a();
 		}
 	}
 	sync_checkerboard_texture();
