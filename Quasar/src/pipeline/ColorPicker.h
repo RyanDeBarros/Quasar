@@ -104,21 +104,7 @@ private:
 	void move_slider_cursor_x_absolute(size_t control, size_t cursor, float absolute);
 	void move_slider_cursor_x_relative(size_t control, size_t cursor, float relative);
 
-	void update_preview() const;
-
-	void enact_alpha_slider_cursor_position();
-
-	void enact_graphic_quad_cursor_position(float hue, float sat, float val) const;
-	void enact_graphic_hue_slider_cursor_position(float hue) const;
-	void enact_graphic_quad_and_hue_slider_cursor_positions(Position local_cursor_pos) const;
-
-	void enact_graphic_hue_wheel_cursor_position(float hue, float sat) const;
-	void enact_graphic_value_slider_cursor_position(float hue, float value) const;
-	void enact_graphic_hue_wheel_and_value_slider_cursor_positions(Position local_cursor_pos) const;
-
-	void enact_slider_rgb_cursor_positions() const;
-	void enact_slider_hsv_cursor_positions() const;
-	void enact_slider_hsl_cursor_positions() const;
+	void update_display_colors() const;
 
 	void orient_progress_slider(size_t control, Cardinal i) const;
 	
@@ -138,6 +124,7 @@ private:
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
 	void sync_cp_widget_transforms() const;
 	void sync_single_cp_widget_transform(size_t control) const;
+	void send_cpwc_buffer(size_t control) const;
 	void set_circle_cursor_thickness(size_t cursor, float thickness) const;
 	void set_circle_cursor_value(size_t cursor, float value) const;
 	float get_circle_cursor_value(size_t cursor) const;
