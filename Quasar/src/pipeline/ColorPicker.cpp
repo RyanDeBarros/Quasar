@@ -65,7 +65,8 @@ enum
 	HSL_S_SLIDER_CURSOR,			// circle_cursor
 	HSL_L_SLIDER,					// linear_lightness
 	HSL_L_SLIDER_CURSOR,			// circle_cursor
-	_CPWC_COUNT
+	_CPWC_COUNT,
+	IMGUI,							// ImGui
 };
 
 ColorPicker::ColorPicker()
@@ -156,6 +157,7 @@ void ColorPicker::cp_render_gui()
 	if (ImGui::Begin("-", nullptr, window_flags))
 	{
 		State to_state = state;
+		bool let_imgui_handle_input = false;
 		if (ImGui::BeginTabBar("cp-main-tb"))
 		{
 			cp_render_tab_button(to_state, last_graphic_state, state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL, "GRAPHIC");
@@ -180,14 +182,22 @@ void ColorPicker::cp_render_gui()
 			{
 				ImGui::OpenPopup("hex-popup");
 			}
-			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_None))
+			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
 			{
-				ImGui::Text("RGB hex code");
-				ImGui::Text("#");
-				ImGui::SameLine();
-				ImGui::SetNextItemWidth(90);
-				ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size);
-				update_rgb_hex();
+				if (Machine.main_window->is_key_pressed(Key::ESCAPE))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+				else
+				{
+					ImGui::Text("RGB hex code");
+					ImGui::Text("#");
+					ImGui::SameLine();
+					ImGui::SetNextItemWidth(90);
+					ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size);
+					update_rgb_hex();
+					let_imgui_handle_input = true;
+				}
 				ImGui::EndPopup();
 			}
 			ImGui::SameLine();
@@ -213,6 +223,10 @@ void ColorPicker::cp_render_gui()
 			}
 		}
 		set_state(to_state);
+		if (let_imgui_handle_input)
+			current_widget_control = IMGUI;
+		else if (current_widget_control == IMGUI)
+			current_widget_control = -1;
 		ImGui::End();
 	}
 }
@@ -270,8 +284,9 @@ void ColorPicker::set_state(State _state)
 			last_graphic_state = state;
 
 		release_cursor();
+		ColorFrame pre_color = get_color();
 		state = _state;
-		set_color(get_color());
+		set_color(pre_color);
 	}
 }
 
@@ -480,7 +495,7 @@ void ColorPicker::connect_mouse_handlers()
 	clbk_mb = [this](const Callback::MouseButton& mb) {
 		if (mb.action == IAction::PRESS)
 		{
-			if (current_widget_control == -1)
+			if (current_widget_control < 0)
 			{
 				Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
 				if (widget.wp_at(ALPHA_SLIDER).contains_point(local_cursor_pos))
@@ -583,7 +598,7 @@ void ColorPicker::connect_mouse_handlers()
 					}
 				}
 
-				if (current_widget_control != -1)
+				if (current_widget_control >= 0)
 					update_display_colors();
 			}
 		}
@@ -621,7 +636,7 @@ void ColorPicker::connect_mouse_handlers()
 		else if (current_widget_control == HSL_L_SLIDER_CURSOR)
 			mouse_handler_slider_hsl_l(local_cursor_pos);
 
-		if (current_widget_control != -1)
+		if (current_widget_control >= 0)
 			update_display_colors();
 		};
 	Machine.main_window->clbk_mouse_button.push_back(clbk_mb, this);
@@ -637,7 +652,7 @@ void ColorPicker::take_over_cursor() const
 
 void ColorPicker::release_cursor()
 {
-	if (current_widget_control != -1)
+	if (current_widget_control >= 0 && current_widget_control != IMGUI)
 	{
 		//Machine.main_window->set_mouse_mode(MouseMode::VISIBLE);
 		Machine.main_window->override_gui_cursor_change(false);

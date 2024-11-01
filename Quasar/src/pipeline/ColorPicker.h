@@ -41,10 +41,11 @@ private:
 	static const size_t rgb_hex_size = 7;
 	char rgb_hex_prev[rgb_hex_size] = "FFFFFF";
 	char rgb_hex[rgb_hex_size] = "FFFFFF";
-public:
+
 	std::function<void(const Callback::MouseButton&)> clbk_mb;
 	std::function<void(const Callback::MouseButton&)> clbk_mb_down;
 	int current_widget_control = -1;
+public:
 
 	ColorPicker();
 	ColorPicker(const ColorPicker&) = delete;

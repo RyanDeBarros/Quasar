@@ -106,6 +106,7 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 	glfwSetScrollCallback(window, scroll_callback);
 	glfwSetWindowMaximizeCallback(window, window_maximize_callback);
 	glfwSetWindowContentScaleCallback(window, display_scale_callback);
+	// LATER use better input system than callback vectors. Instead, use input hierarchy that can consume input events at different nodes.
 
 	if (cursor)
 		glfwSetCursor(window, cursor);
