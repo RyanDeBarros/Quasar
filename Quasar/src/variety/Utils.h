@@ -41,25 +41,3 @@ struct PolyHolder
 
 	virtual ~PolyHolder() = default;
 };
-
-template<std::integral T, T min_, T max_>
-class PercentageRange
-{
-	float fraction;
-	T num;
-
-public:
-	static constexpr T min = min_;
-	static constexpr T max = max_;
-
-	PercentageRange(T num) { set_num(num); }
-	PercentageRange(float fraction) { set_fraction(fraction); }
-
-	float get_fraction() const { return fraction; }
-	T get_num() const { return num; }
-	void set_fraction(float fraction_) { fraction = fraction_; num = fraction * (max - min) + min; }
-	void set_num(T num_) { num = num_; fraction = (num - min) / (max - min); }
-};
-
-typedef PercentageRange<int, 0, 255> PR255;
-typedef PercentageRange<int, 0, 359> PR359;

@@ -47,7 +47,7 @@ struct HSV
 	float v;
 
 	constexpr HSV() : h(0.0f), s(0.0f), v(0.0f) {}
-	constexpr HSV(int h, int s, int v) : h(std::clamp(h, 0, 359) * inv255), s(std::clamp(s, 0, 255) * inv255), v(std::clamp(v, 0, 255) * inv255) {}
+	constexpr HSV(int h, int s, int v) : h(std::clamp(h, 0, 359) * inv359), s(std::clamp(s, 0, 255) * inv255), v(std::clamp(v, 0, 255) * inv255) {}
 	constexpr HSV(float h, float s, float v) : h(std::clamp(h, 0.0f, 1.0f)), s(std::clamp(s, 0.0f, 1.0f)), v(std::clamp(v, 0.0f, 1.0f)) {}
 
 	constexpr glm::ivec3 pixel3() const { return { get_pixel_h(), get_pixel_s(), get_pixel_v() }; }
@@ -69,7 +69,7 @@ struct HSL
 	float l;
 
 	constexpr HSL() : h(0.0f), s(0.0f), l(0.0f) {}
-	constexpr HSL(int h, int s, int l) : h(std::clamp(h, 0, 359) * inv255), s(std::clamp(s, 0, 255) * inv255), l(std::clamp(l, 0, 255) * inv255) {}
+	constexpr HSL(int h, int s, int l) : h(std::clamp(h, 0, 359) * inv359), s(std::clamp(s, 0, 255) * inv255), l(std::clamp(l, 0, 255) * inv255) {}
 	constexpr HSL(float h, float s, float l) : h(std::clamp(h, 0.0f, 1.0f)), s(std::clamp(s, 0.0f, 1.0f)), l(std::clamp(l, 0.0f, 1.0f)) {}
 
 	constexpr glm::ivec3 pixel3() const { return { get_pixel_h(), get_pixel_s(), get_pixel_l() }; }
@@ -153,7 +153,7 @@ constexpr RGB HSV::to_rgb() const
 	float pre = v * (1 - s * fr);
 	float post = v * (1 - s * (1.0f - fr));
 	// Switch on sextant
-	switch (si)
+	switch (si % 6)
 	{
 	case 0:
 		return RGB(v, post, min);
@@ -196,7 +196,7 @@ constexpr RGB HSL::to_rgb() const
 	float c3 = l - chroma * 0.5f;
 	// Order RGB channels
 	unsigned char si = static_cast<unsigned char>(h * 6.0f);
-	switch (si)
+	switch (si % 6)
 	{
 	case 0:
 		return RGB(c1, c2, c3);
@@ -230,10 +230,10 @@ struct RGBA
 	RGB rgb;
 	float alpha;
 
-	constexpr RGBA(RGB rgb = RGB(), float alpha = 0.0f) : rgb(rgb), alpha(alpha) {}
-	constexpr RGBA(RGB rgb, int alpha) : rgb(rgb), alpha(alpha * inv255) {}
-	constexpr RGBA(float r, float g, float b, float a) : rgb(r, g, b), alpha(a) {}
-	constexpr RGBA(int r, int g, int b, int a) : rgb(r, g, b), alpha(a * inv255) {}
+	constexpr RGBA(RGB rgb = RGB(), float alpha = 0.0f) : rgb(rgb), alpha(std::clamp(alpha, 0.0f, 1.0f)) {}
+	constexpr RGBA(RGB rgb, int alpha) : rgb(rgb), alpha(std::clamp(alpha, 0, 255) * inv255) {}
+	constexpr RGBA(float r, float g, float b, float a) : rgb(r, g, b), alpha(std::clamp(a, 0.0f, 1.0f)) {}
+	constexpr RGBA(int r, int g, int b, int a) : rgb(r, g, b), alpha(std::clamp(a, 0, 255) * inv255) {}
 
 	glm::vec4 as_vec() const { return { rgb.r, rgb.g, rgb.b, alpha }; }
 
@@ -253,10 +253,10 @@ struct HSVA
 	HSV hsv;
 	float alpha;
 
-	constexpr HSVA(HSV hsv = HSV(), float alpha = 0.0f) : hsv(hsv), alpha(alpha) {}
-	constexpr HSVA(HSV hsv, int alpha) : hsv(hsv), alpha(alpha * inv255) {}
-	constexpr HSVA(float h, float s, float v, float a) : hsv(h, s, v), alpha(a) {}
-	constexpr HSVA(int h, int s, int v, int a) : hsv(h, s, v), alpha(a * inv255) {}
+	constexpr HSVA(HSV hsv = HSV(), float alpha = 0.0f) : hsv(hsv), alpha(std::clamp(alpha, 0.0f, 1.0f)) {}
+	constexpr HSVA(HSV hsv, int alpha) : hsv(hsv), alpha(std::clamp(alpha, 0, 255) * inv255) {}
+	constexpr HSVA(float h, float s, float v, float a) : hsv(h, s, v), alpha(std::clamp(a, 0.0f, 1.0f)) {}
+	constexpr HSVA(int h, int s, int v, int a) : hsv(h, s, v), alpha(std::clamp(a, 0, 255) * inv255) {}
 
 	glm::vec4 as_vec() const { return { hsv.h, hsv.s, hsv.v, alpha}; }
 
@@ -275,10 +275,10 @@ struct HSLA
 	HSL hsl;
 	float alpha;
 
-	constexpr HSLA(HSL hsl = HSL(), float alpha = 0.0f) : hsl(hsl), alpha(alpha) {}
-	constexpr HSLA(HSL hsl, int alpha) : hsl(hsl), alpha(alpha * inv255) {}
-	constexpr HSLA(float h, float s, float l, float a) : hsl(h, s, l), alpha(a) {}
-	constexpr HSLA(int h, int s, int l, int a) : hsl(h, s, l), alpha(a * inv255) {}
+	constexpr HSLA(HSL hsl = HSL(), float alpha = 0.0f) : hsl(hsl), alpha(std::clamp(alpha, 0.0f, 1.0f)) {}
+	constexpr HSLA(HSL hsl, int alpha) : hsl(hsl), alpha(std::clamp(alpha, 0, 255) * inv255) {}
+	constexpr HSLA(float h, float s, float l, float a) : hsl(h, s, l), alpha(std::clamp(a, 0.0f, 1.0f)) {}
+	constexpr HSLA(int h, int s, int l, int a) : hsl(h, s, l), alpha(std::clamp(a, 0, 255) * inv255) {}
 
 	glm::vec4 as_vec() const { return { hsl.h, hsl.s, hsl.l, alpha }; }
 
@@ -302,14 +302,14 @@ private:
 	HSL _hsl = HSL(0.0f, 0.0f, 1.0f);
 
 public:
-	constexpr ColorFrame(float alpha = 1.0f) : alpha(alpha) {}
-	constexpr ColorFrame(int alpha) : alpha(alpha * inv255) {}
-	constexpr ColorFrame(RGB rgb, float alpha = 1.0f) : alpha(alpha) { set_rgb(rgb); }
-	constexpr ColorFrame(HSV hsv, float alpha = 1.0f) : alpha(alpha) { set_hsv(hsv); }
-	constexpr ColorFrame(HSL hsl, float alpha = 1.0f) : alpha(alpha) { set_hsl(hsl); }
-	constexpr ColorFrame(RGB rgb, int alpha) : alpha(alpha * inv255) { set_rgb(rgb); }
-	constexpr ColorFrame(HSV hsv, int alpha) : alpha(alpha * inv255) { set_hsv(hsv); }
-	constexpr ColorFrame(HSL hsl, int alpha) : alpha(alpha * inv255) { set_hsl(hsl); }
+	constexpr ColorFrame(float alpha = 1.0f) : alpha(std::clamp(alpha, 0.0f, 1.0f)) {}
+	constexpr ColorFrame(int alpha) : alpha(std::clamp(alpha, 0, 255) * inv255) {}
+	constexpr ColorFrame(RGB rgb, float alpha = 1.0f) : alpha(std::clamp(alpha, 0.0f, 1.0f)) { set_rgb(rgb); }
+	constexpr ColorFrame(HSV hsv, float alpha = 1.0f) : alpha(std::clamp(alpha, 0.0f, 1.0f)) { set_hsv(hsv); }
+	constexpr ColorFrame(HSL hsl, float alpha = 1.0f) : alpha(std::clamp(alpha, 0.0f, 1.0f)) { set_hsl(hsl); }
+	constexpr ColorFrame(RGB rgb, int alpha) : alpha(std::clamp(alpha, 0, 255) * inv255) { set_rgb(rgb); }
+	constexpr ColorFrame(HSV hsv, int alpha) : alpha(std::clamp(alpha, 0, 255) * inv255) { set_hsv(hsv); }
+	constexpr ColorFrame(HSL hsl, int alpha) : alpha(std::clamp(alpha, 0, 255) * inv255) { set_hsl(hsl); }
 	constexpr ColorFrame(RGBA rgba) : alpha(rgba.alpha) { set_rgb(rgba.rgb); }
 	constexpr ColorFrame(HSVA hsva) : alpha(hsva.alpha) { set_hsv(hsva.hsv); }
 	constexpr ColorFrame(HSLA hsla) : alpha(hsla.alpha) { set_hsl(hsla.hsl); }
@@ -324,6 +324,9 @@ public:
 	constexpr void set_rgb(RGB rgb) { _rgb = rgb; _hsv = rgb.to_hsv(); _hsl = rgb.to_hsl(); }
 	constexpr void set_hsv(HSV hsv) { _hsv = hsv; _rgb = hsv.to_rgb(); _hsl = hsv.to_hsl(); }
 	constexpr void set_hsl(HSL hsl) { _hsl = hsl; _rgb = hsl.to_rgb(); _hsv = hsl.to_hsv(); }
+
+	constexpr int get_pixel_a() const { return roundi(alpha * 255); }
+	constexpr void set_pixel_a(int a) { alpha = std::clamp(a, 0, 255) * inv255; }
 };
 
 struct RedGreen

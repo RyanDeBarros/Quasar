@@ -17,7 +17,7 @@ void main() {
 	float c3 = t_LightnessProgress - chroma * 0.5;
 	// Order RGB channels
 	uint si = uint(floor(u_Hue * 6.0));
-	switch (si)
+	switch (si % 6)
 	{
 	case 0:
 		o_Color.r = c1;

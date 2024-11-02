@@ -59,7 +59,7 @@ void Palette::_send_view()
 	glm::mat3 cameraVP = vp_matrix();
 	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
 
-	color_picker.size = Scale{ 220, 420 } * Machine.get_app_scale();
+	color_picker.size = Scale{ 240, 420 } * Machine.get_app_scale();
 	Position pos_rel{ 0.0f, 0.275f };
 	Position ppos = pos_rel * glm::vec2{ bounds.clip().screen_w, bounds.clip().screen_h } * Machine.inv_app_scale();
 	auto test = bounds.clip().screen_w;

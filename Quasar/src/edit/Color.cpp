@@ -50,7 +50,7 @@ float contrast_wb_value_complex_hsv(HSV hsv)
 float contrast_wb_value_complex_hsva(HSVA hsva)
 {
 	// TODO
-	return WHITE;
+	return hsva.alpha < 0.5f ? WHITE : contrast_wb_value_complex_hsv(hsva.hsv);
 }
 
 float contrast_wb_value_simple_hue_and_lightness(float hue, float lightness)

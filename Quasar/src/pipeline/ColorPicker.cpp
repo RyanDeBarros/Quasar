@@ -222,54 +222,169 @@ void ColorPicker::cp_render_gui()
 				txtfld_mode = TextFieldMode::NUMBER;
 			}
 		}
+
+		float alpha = get_color().alpha;
+		float imgui_y_add1 = 68;
+		float imgui_y_add2 = 173;
+		float imgui_y_add3 = 278;
+		float imgui_sml_x = 97;
 		if (state == State::SLIDER_RGB)
 		{
 			RGB rgb = get_color().rgb();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
+				bool mod = false;
 				float imgui_y = ImGui::GetCursorPosY();
 				int r = rgb.get_pixel_r(), g = rgb.get_pixel_g(), b = rgb.get_pixel_b();
-				ImGui::SetCursorPosY(imgui_y + 70);
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
 				ImGui::Text("Red");
-				ImGui::SameLine(100);
-				ImGui::InputInt("##it-red", &r, 5, 10);
-				ImGui::SetCursorPosY(imgui_y + 175);
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-red", &r, 5, 10);
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
 				ImGui::Text("Green");
-				ImGui::SameLine(100);
-				ImGui::InputInt("##it-green", &g, 5, 10);
-				ImGui::SetCursorPosY(imgui_y + 280);
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-green", &g, 5, 10);
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
 				ImGui::Text("Blue");
-				ImGui::SameLine(100);
-				ImGui::InputInt("##it-blue", &b, 5, 10);
-				set_color(RGB(r, g, b));
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-blue", &b, 5, 10);
+				if (mod)
+					set_color(ColorFrame(RGB(r, g, b), alpha));
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
+				bool mod = false;
 				float imgui_y = ImGui::GetCursorPosY();
 				float r = rgb.r * 100, g = rgb.g * 100, b = rgb.b * 100;
-				ImGui::SetCursorPosY(imgui_y + 70);
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
 				ImGui::Text("Red");
-				ImGui::SameLine(100);
-				ImGui::InputFloat("##it-red", &r, 5, 10, "%.2f");
-				ImGui::SetCursorPosY(imgui_y + 175);
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-red", &r, 5, 10, "%.2f");
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
 				ImGui::Text("Green");
-				ImGui::SameLine(100);
-				ImGui::InputFloat("##it-green", &g, 5, 10, "%.2f");
-				ImGui::SetCursorPosY(imgui_y + 280);
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-green", &g, 5, 10, "%.2f");
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
 				ImGui::Text("Blue");
-				ImGui::SameLine(100);
-				ImGui::InputFloat("##it-blue", &b, 5, 10, "%.2f");
-				set_color(RGB(r * 0.01f, g * 0.01f, b * 0.01f));
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-blue", &b, 5, 10, "%.2f");
+				if (mod)
+					set_color(RGBA(r * 0.01f, g * 0.01f, b * 0.01f, alpha));
 			}
 		}
 		else if (state == State::SLIDER_HSV)
 		{
-
+			HSV hsv = get_color().hsv();
+			if (txtfld_mode == TextFieldMode::NUMBER)
+			{
+				bool mod = false;
+				float imgui_y = ImGui::GetCursorPosY();
+				int h = hsv.get_pixel_h(), s = hsv.get_pixel_s(), v = hsv.get_pixel_v();
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
+				ImGui::Text("Hue");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-hue", &h, 5, 10);
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
+				ImGui::Text("Sat");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-sat", &s, 5, 10);
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
+				ImGui::Text("Value");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-value", &v, 5, 10);
+				if (mod)
+					set_color(ColorFrame(HSV(h, s, v), alpha));
+			}
+			else if (txtfld_mode == TextFieldMode::PERCENT)
+			{
+				bool mod = false;
+				float imgui_y = ImGui::GetCursorPosY();
+				float h = hsv.h * 100, s = hsv.s * 100, v = hsv.v * 100;
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
+				ImGui::Text("Hue");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-hue", &h, 5, 10, "%.2f");
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
+				ImGui::Text("Sat");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-sat", &s, 5, 10, "%.2f");
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
+				ImGui::Text("Value");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-value", &v, 5, 10, "%.2f");
+				if (mod)
+					set_color(HSVA(h * 0.01f, s * 0.01f, v * 0.01f, alpha));
+			}
 		}
 		else if (state == State::SLIDER_HSL)
 		{
-
+			HSL hsl = get_color().hsl();
+			if (txtfld_mode == TextFieldMode::NUMBER)
+			{
+				bool mod = false;
+				float imgui_y = ImGui::GetCursorPosY();
+				int h = hsl.get_pixel_h(), s = hsl.get_pixel_s(), l = hsl.get_pixel_l();
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
+				ImGui::Text("Hue");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-hue", &h, 5, 10);
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
+				ImGui::Text("Sat");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-sat", &s, 5, 10);
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
+				ImGui::Text("Light");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputInt("##it-light", &l, 5, 10);
+				if (mod)
+					set_color(ColorFrame(HSL(h, s, l), alpha));
+			}
+			else if (txtfld_mode == TextFieldMode::PERCENT)
+			{
+				bool mod = false;
+				float imgui_y = ImGui::GetCursorPosY();
+				float h = hsl.h * 100, s = hsl.s * 100, l = hsl.l * 100;
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
+				ImGui::Text("Hue");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-hue", &h, 5, 10, "%.2f");
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
+				ImGui::Text("Sat");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-sat", &s, 5, 10, "%.2f");
+				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
+				ImGui::Text("Light");
+				ImGui::SameLine(imgui_sml_x);
+				mod |= ImGui::InputFloat("##it-light", &l, 5, 10, "%.2f");
+				if (mod)
+					set_color(HSLA(h * 0.01f, s * 0.01f, l * 0.01f, alpha));
+			}
 		}
+		// alpha
+		if (txtfld_mode == TextFieldMode::NUMBER)
+		{
+			ColorFrame color = get_color();
+			int a = color.get_pixel_a();
+			ImGui::SetCursorPosY(480);
+			ImGui::Text("Alpha");
+			ImGui::SameLine(imgui_sml_x);
+			if (ImGui::InputInt("##it-alpha", &a, 5, 10))
+			{
+				color.set_pixel_a(a);
+				set_color(color);
+			}
+		}
+		else if (txtfld_mode == TextFieldMode::PERCENT)
+		{
+			ColorFrame color = get_color();
+			float a = color.alpha * 100;
+			ImGui::SetCursorPosY(480);
+			ImGui::Text("Alpha");
+			ImGui::SameLine(imgui_sml_x);
+			if (ImGui::InputFloat("##it-alpha", &a, 5, 10, "%.2f"))
+				set_color(ColorFrame(color.rgb(), a * 0.01f));
+		}
+
 		set_state(to_state);
 		ImGui::End();
 	}
@@ -346,18 +461,23 @@ void ColorPicker::send_vp(const glm::mat3& vp) const
 
 void ColorPicker::initialize_widget()
 {
+	// TODO put in ColorPicker struct data member for access in cp_render_gui()
 	// ---------- COMMON CONSTANTS ----------
 
 	const float graphic_y = -120;
-	const float graphic_sx = 200;
-	const float graphic_sy = 200;
-	const float g_slider_y = -135;
-	
+	const float graphic_x = -15;
+	const float graphic_sx = 180;
+	const float graphic_sy = 180;
+	const float g_slider_x = 97.5f;
+	const float g_slider_y = -120;
+	const float g_slider_w = 15;
+	const float g_slider_h = 180;
+
 	const float slider_sep = 70;
 	const float slider1_y = 60;
 	const float slider2_y = slider1_y - slider_sep;
 	const float slider3_y = slider2_y - slider_sep;
-	const float slider4_y = slider3_y - 100;
+	const float slider4_y = slider3_y - slider_sep;
 	const float slider_w = 200;
 	const float slider_h = 20;
 	
@@ -377,17 +497,19 @@ void ColorPicker::initialize_widget()
 	setup_gradient(GRAPHIC_QUAD, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::WHITE, (GLint)GradientIndex::GRAPHIC_QUAD);
 	send_graphic_quad_hue_to_uniform(0.0f);
 	setup_circle_cursor(GRAPHIC_QUAD_CURSOR);
-	orient_progress_slider(GRAPHIC_HUE_SLIDER, Cardinal::RIGHT);
+	orient_progress_slider(GRAPHIC_HUE_SLIDER, Cardinal::UP);
 	setup_circle_cursor(GRAPHIC_HUE_SLIDER_CURSOR);
 
+	widget.wp_at(GRAPHIC_QUAD).transform.position.x = graphic_x;
 	widget.wp_at(GRAPHIC_QUAD).transform.position.y = graphic_y;
 	widget.wp_at(GRAPHIC_QUAD).transform.scale = { graphic_sx, graphic_sy };
 	widget.wp_at(GRAPHIC_QUAD).pivot.y = 0;
 	widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position = { widget.wp_at(GRAPHIC_QUAD).top(), widget.wp_at(GRAPHIC_QUAD).right() };
+	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.position.x = g_slider_x;
 	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.position.y = g_slider_y;
-	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.scale = { slider_w, slider_h };
-	widget.wp_at(GRAPHIC_HUE_SLIDER).pivot.y = 1;
-	widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position = { widget.wp_at(GRAPHIC_HUE_SLIDER).left(), widget.wp_at(GRAPHIC_HUE_SLIDER).center_y() };
+	widget.wp_at(GRAPHIC_HUE_SLIDER).transform.scale = { g_slider_w, g_slider_h };
+	widget.wp_at(GRAPHIC_HUE_SLIDER).pivot.y = 0;
+	widget.wp_at(GRAPHIC_HUE_SLIDER_CURSOR).transform.position = { widget.wp_at(GRAPHIC_HUE_SLIDER).center_x(), widget.wp_at(GRAPHIC_HUE_SLIDER).bottom() };
 
 	// ---------- GRAPHIC WHEEL ----------
 
@@ -400,18 +522,20 @@ void ColorPicker::initialize_widget()
 	send_graphic_wheel_value_to_uniform(1.0f);
 	setup_circle_cursor(GRAPHIC_HUE_WHEEL_CURSOR);
 	setup_rect_uvs(GRAPHIC_VALUE_SLIDER);
-	setup_gradient(GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER); // LATER also put in orient method
+	setup_gradient(GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER);
 	send_graphic_value_slider_hue_and_sat_to_uniform(0.0f, 0.0f);
 	setup_circle_cursor(GRAPHIC_VALUE_SLIDER_CURSOR);
 	set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, 0.0f);
 
+	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.position.x = graphic_x;
 	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.position.y = graphic_y;
 	widget.wp_at(GRAPHIC_HUE_WHEEL).transform.scale = { graphic_sx, graphic_sy };
 	widget.wp_at(GRAPHIC_HUE_WHEEL).pivot.y = 0;
+	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.position.x = g_slider_x;
 	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.position.y = g_slider_y;
-	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.scale = { slider_w, slider_h };
-	widget.wp_at(GRAPHIC_VALUE_SLIDER).pivot.y = 1;
-	widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position = { widget.wp_at(GRAPHIC_VALUE_SLIDER).right(), widget.wp_at(GRAPHIC_VALUE_SLIDER).center_y() };
+	widget.wp_at(GRAPHIC_VALUE_SLIDER).transform.scale = { g_slider_w, g_slider_h };
+	widget.wp_at(GRAPHIC_VALUE_SLIDER).pivot.y = 0;
+	widget.wp_at(GRAPHIC_VALUE_SLIDER_CURSOR).transform.position = { widget.wp_at(GRAPHIC_VALUE_SLIDER).center_x(), widget.wp_at(GRAPHIC_VALUE_SLIDER).top() };
 
 	// ---------- RGB SLIDERS ----------
 
@@ -743,12 +867,12 @@ ColorFrame ColorPicker::get_color() const
 	if (state == State::GRAPHIC_QUAD)
 	{
 		glm::vec2 sv = get_graphic_quad_sat_and_value();
-		color.set_hsv(HSV(slider_normal_x(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR), sv[0], sv[1]));
+		color.set_hsv(HSV(slider_normal_y(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR), sv[0], sv[1]));
 	}
 	else if (state == State::GRAPHIC_WHEEL)
 	{
 		glm::vec2 hs = get_graphic_wheel_hue_and_sat();
-		color.set_hsv(HSV(hs[0], hs[1], slider_normal_x(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR)));
+		color.set_hsv(HSV(hs[0], hs[1], slider_normal_y(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR)));
 	}
 	else if (state == State::SLIDER_RGB)
 	{
@@ -777,12 +901,13 @@ ColorFrame ColorPicker::get_color() const
 void ColorPicker::set_color(ColorFrame color)
 {
 	move_slider_cursor_x_relative(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, color.alpha);
+	sync_single_cp_widget_transform(ALPHA_SLIDER_CURSOR);
 	if (state == State::GRAPHIC_QUAD)
 	{
 		HSV hsv = color.hsv();
 		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_QUAD).interp_x(hsv.s);
 		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_QUAD).interp_y(hsv.v);
-		move_slider_cursor_x_relative(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, hsv.h);
+		move_slider_cursor_y_relative(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, hsv.h);
 		sync_single_cp_widget_transform(GRAPHIC_QUAD_CURSOR);
 		sync_single_cp_widget_transform(GRAPHIC_HUE_SLIDER_CURSOR);
 	}
@@ -793,7 +918,7 @@ void ColorPicker::set_color(ColorFrame color)
 		float y = -hsv.s * glm::sin(glm::tau<float>() * hsv.h);
 		widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_HUE_WHEEL).interp_x(0.5f * (x + 1));
 		widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_HUE_WHEEL).interp_y(0.5f * (y + 1));
-		move_slider_cursor_x_relative(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, hsv.v);
+		move_slider_cursor_y_relative(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, hsv.v);
 		sync_single_cp_widget_transform(GRAPHIC_HUE_WHEEL_CURSOR);
 		sync_single_cp_widget_transform(GRAPHIC_VALUE_SLIDER_CURSOR);
 	}
@@ -850,7 +975,7 @@ void ColorPicker::mouse_handler_graphic_quad(Position local_cursor_pos)
 
 void ColorPicker::mouse_handler_graphic_hue_slider(Position local_cursor_pos)
 {
-	move_slider_cursor_x_absolute(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos.x);
+	move_slider_cursor_y_absolute(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos.y);
 	sync_single_cp_widget_transform(GRAPHIC_HUE_SLIDER_CURSOR);
 }
 
@@ -862,7 +987,7 @@ void ColorPicker::mouse_handler_graphic_hue_wheel(Position local_cursor_pos)
 
 void ColorPicker::mouse_handler_graphic_value_slider(Position local_cursor_pos)
 {
-	move_slider_cursor_x_absolute(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos.x);
+	move_slider_cursor_y_absolute(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos.y);
 	sync_single_cp_widget_transform(GRAPHIC_VALUE_SLIDER_CURSOR);
 }
 
@@ -932,6 +1057,18 @@ void ColorPicker::move_slider_cursor_x_relative(size_t control, size_t cursor, f
 	widget.wp_at(cursor).transform.position.y = widget.wp_at(control).center_y();
 }
 
+void ColorPicker::move_slider_cursor_y_absolute(size_t control, size_t cursor, float absolute)
+{
+	widget.wp_at(cursor).transform.position.x = widget.wp_at(control).center_x();
+	widget.wp_at(cursor).transform.position.y = widget.wp_at(control).clamp_y(absolute);
+}
+
+void ColorPicker::move_slider_cursor_y_relative(size_t control, size_t cursor, float relative)
+{
+	widget.wp_at(cursor).transform.position.x = widget.wp_at(control).center_x();
+	widget.wp_at(cursor).transform.position.y = widget.wp_at(control).interp_y(relative);
+}
+
 void ColorPicker::update_display_colors()
 {
 	ColorFrame color = get_color();
@@ -956,14 +1093,14 @@ void ColorPicker::update_display_colors()
 		set_circle_cursor_value(GRAPHIC_HUE_WHEEL_CURSOR, contrast_wb_value_simple_hue_and_sat(hsv.h, hsv.s));
 		send_cpwc_buffer(GRAPHIC_HUE_WHEEL_CURSOR);
 		send_graphic_value_slider_hue_and_sat_to_uniform(hsv.h, hsv.s);
-		set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hsv.h, hsv.v));
+		set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hsv.h, hsv.v)); // LATER better contrast functions
 		send_graphic_wheel_value_to_uniform(hsv.v);
 		send_cpwc_buffer(GRAPHIC_VALUE_SLIDER_CURSOR);
 	}
 	else if (state == State::SLIDER_RGB)
 	{
 		RGB rgb = color.rgb();
-		// TODO cursor contrast ? possibly not necessary
+		// LATER cursor contrast ? possibly not necessary
 		// hex
 		rgb_hex[0] = to_hex(rgb.get_pixel_r() >> 4);
 		rgb_hex[1] = to_hex(rgb.get_pixel_r() & 0xF);
@@ -1054,6 +1191,11 @@ void ColorPicker::send_slider_hsl_hue_and_lightness_to_uniform(float hue, float 
 float ColorPicker::slider_normal_x(size_t control, size_t cursor) const
 {
 	return widget.wp_at(control).normalize_x(widget.wp_at(cursor).transform.position.x);
+}
+
+float ColorPicker::slider_normal_y(size_t control, size_t cursor) const
+{
+	return widget.wp_at(control).normalize_y(widget.wp_at(cursor).transform.position.y);
 }
 
 void ColorPicker::setup_vertex_positions(size_t control) const

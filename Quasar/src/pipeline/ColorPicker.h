@@ -99,6 +99,8 @@ private:
 
 	void move_slider_cursor_x_absolute(size_t control, size_t cursor, float absolute);
 	void move_slider_cursor_x_relative(size_t control, size_t cursor, float relative);
+	void move_slider_cursor_y_absolute(size_t control, size_t cursor, float absolute);
+	void move_slider_cursor_y_relative(size_t control, size_t cursor, float relative);
 
 	void update_display_colors();
 
@@ -115,6 +117,8 @@ private:
 	void send_slider_hsl_hue_and_lightness_to_uniform(float hue, float lightness) const;
 
 	float slider_normal_x(size_t control, size_t cursor) const;
+	float slider_normal_y(size_t control, size_t cursor) const;
+
 	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;

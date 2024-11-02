@@ -14,7 +14,7 @@ void main() {
 	float pre = 1.0 - fr;
 	float post = fr;
 	// Switch on sextant
-	switch (si)
+	switch (si % 6)
 	{
 	case 0:
 		o_Color.r = 1.0;

@@ -30,7 +30,7 @@ void main() {
 	float post = u_Value * (1.0 - sat * (1.0 - fr));
 	
 	// Switch on sextant
-	switch (si)
+	switch (si % 6)
 	{
 	case 0:
 		o_Color.r = u_Value;
