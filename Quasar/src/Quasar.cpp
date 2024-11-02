@@ -1,5 +1,6 @@
 #include "user/Machine.h"
 #include "variety/IO.h"
+#include "Logger.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -20,7 +21,7 @@ int main()
 		return -1;
 	}
 
-	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
+	QUASAR_GL(LOG << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << LOG.endl);
 
 	Machine.init_renderer();
 
