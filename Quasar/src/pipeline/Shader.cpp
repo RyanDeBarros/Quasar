@@ -4,7 +4,7 @@
 
 #include "variety/IO.h"
 
-static GLuint compile_shader(GLenum type, const char* shader)
+static GLuint compile_shader(GLenum type, const char* shader, const char* filepath)
 {
 	QUASAR_GL(GLuint id = glCreateShader(type));
 	QUASAR_GL(glShaderSource(id, 1, &shader, nullptr));
@@ -16,21 +16,26 @@ static GLuint compile_shader(GLenum type, const char* shader)
 	{
 		GLint length;
 		QUASAR_GL(glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length));
-		GLchar* message = new GLchar[length];
-		QUASAR_GL(glGetShaderInfoLog(id, length, &length, message));
-		std::cerr << "Shader compilation failed: " << message << std::endl;
-		delete[] message;
+		if (length)
+		{
+			GLchar* message = new GLchar[length];
+			QUASAR_GL(glGetShaderInfoLog(id, length, &length, message));
+			LOG << LOG.error << LOG.start << "Shader compilation failed (\"" << filepath << "\"): " << message << LOG.endl;
+			delete[] message;
+		}
+		else
+			LOG << LOG.error << LOG.start << "Shader compilation failed (\"" << filepath << "\"): no program info log provided" << LOG.endl;
 		QUASAR_GL(glDeleteShader(id));
 		return 0;
 	}
 	return id;
 }
 
-static GLuint load_program(const std::string& vertex_shader, const std::string& fragment_shader)
+static GLuint load_program(const std::string& vertex_shader, const char* vertex_filepath, const std::string& fragment_shader, const char* fragment_filepath)
 {
 	QUASAR_GL(GLuint shader = glCreateProgram());
-	GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader.c_str());
-	GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader.c_str());
+	GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader.c_str(), vertex_filepath);
+	GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader.c_str(), fragment_filepath);
 	if (vs && fs)
 	{
 		QUASAR_GL(glAttachShader(shader, vs));
@@ -47,10 +52,15 @@ static GLuint load_program(const std::string& vertex_shader, const std::string& 
 		{
 			GLint length;
 			QUASAR_GL(glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &length));
-			GLchar* message = new GLchar[length];
-			QUASAR_GL(glGetProgramInfoLog(shader, length, &length, message));
-			std::cerr << "Shader linking failed: " << message << std::endl;
-			delete[] message;
+			if (length)
+			{
+				GLchar* message = new GLchar[length];
+				QUASAR_GL(glGetProgramInfoLog(shader, length, &length, message));
+				LOG << LOG.error << LOG.start << "Shader linkage failed (vertex=\"" << vertex_filepath << "\", fragment=\"" << fragment_filepath << "\"): " << message << LOG.endl;
+				delete[] message;
+			}
+			else
+				LOG << LOG.error << LOG.start << "Shader linkage failed (vertex=\"" << vertex_filepath << "\", fragment=\"" << fragment_filepath << "\"): no program info log provided" << LOG.endl;
 			QUASAR_GL(glDeleteShader(shader));
 			shader = 0;
 		}
@@ -81,7 +91,7 @@ Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader)
 	std::string frag;
 	if (!IO.read_file(fragment_shader, frag))
 		QUASAR_ASSERT(false);
-	rid = load_program(vert, frag);
+	rid = load_program(vert, vertex_shader.c_str(), frag, fragment_shader.c_str());
 	setup();
 }
 
@@ -93,7 +103,7 @@ Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, c
 	std::string frag;
 	if (!IO.read_template_file(fragment_shader, frag, template_variables))
 		QUASAR_ASSERT(false);
-	rid = load_program(vert, frag);
+	rid = load_program(vert, vertex_shader.c_str(), frag, fragment_shader.c_str());
 	setup();
 }
 
@@ -130,7 +140,12 @@ static unsigned short float_count(GLenum type)
 	case GL_FLOAT_MAT3x4: return 12;
 	case GL_FLOAT_MAT4x2: return 8;
 	case GL_FLOAT_MAT4x3: return 12;
-	default: { QUASAR_ASSERT(false); return 0; }
+	default:
+	{
+		LOG << LOG.error << LOG.start << "Cannot parse number of floats in type (" << type << ')' << LOG.nl;
+		QUASAR_ASSERT(false);
+		return 0;
+	}
 	}
 }
 

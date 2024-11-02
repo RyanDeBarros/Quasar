@@ -168,6 +168,7 @@
     <ClCompile Include="src\edit\Image.cpp" />
     <ClCompile Include="src\edit\PixelBuffer.cpp" />
     <ClCompile Include="src\edit\PixelBufferPaths.cpp" />
+    <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="src\pipeline\ColorPicker.cpp" />
     <ClCompile Include="src\pipeline\panels\Palette.cpp" />
     <ClCompile Include="src\pipeline\panels\Easel.cpp" />
@@ -200,6 +201,7 @@
     <ClInclude Include="src\edit\Color.h" />
     <ClInclude Include="src\edit\PixelBuffer.h" />
     <ClInclude Include="src\edit\PixelBufferPaths.h" />
+    <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\pipeline\ColorPicker.h" />
     <ClInclude Include="src\pipeline\panels\Palette.h" />
     <ClInclude Include="src\pipeline\panels\Easel.h" />

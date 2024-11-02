@@ -3,7 +3,7 @@
 
 static void glfw_error_callback(int error, const char* description)
 {
-	std::cerr << "[GLFW ERROR " << error << "]: " << description << std::endl;
+	LOG << LOG.error << LOG.start_gl(error) << description << LOG.endl;
 	QUASAR_ASSERT(false);
 }
 
@@ -20,7 +20,9 @@ int main()
 		return -1;
 	}
 
-	QUASAR_GL(std::cout << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << std::endl);
+	LOG.specify_logfile(FileSystem::workspace_path("quasar.log").c_str(), true) << LOG.target_logfile;
+	QUASAR_GL(LOG << "Welcome to Quasar - GL_VERSION: " << glGetString(GL_VERSION) << LOG.nl << LOG.endl);
+	// LATER add info and debug logging on most operations.
 
 	Machine.init_renderer();
 
