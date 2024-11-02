@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sstream>
+#include <fstream>
 
 class Logger
 {
@@ -22,8 +23,13 @@ class Logger
 
 	struct _start_gl { long long code = 0; } start_gl_impl;
 	struct _start_glfw { long long code = 0; } start_glfw_impl;
-public:
+	
+	bool targeting_console = true;
+	bool targeting_logfile = false;
 
+	std::ofstream file;
+
+public:
 	static Logger& instance() { static Logger logger; return logger; }
 
 	struct _nl {} nl;
@@ -34,11 +40,28 @@ public:
 	_start_gl& start_gl(long long code) { start_gl_impl.code = code; return start_gl_impl; }
 	_start_glfw& start_glfw(long long code) { start_glfw_impl.code = code; return start_glfw_impl; }
 	struct _start_toml {} start_toml;
+
+	bool enable_debug = true;
 	struct _level_debug {} debug;
+	bool enable_info = true;
 	struct _level_info {} info;
+	bool enable_warning = true;
 	struct _level_warning {} warning;
+	bool enable_error = true;
 	struct _level_error {} error;
+	bool enable_fatal = true;
 	struct _level_fatal {} fatal;
+
+	Logger& specify_logfile(const char* filepath, bool append = false);
+	struct _target_console {} target_console;
+	struct _target_logfile {} target_logfile;
+	struct _untarget_console {} untarget_console;
+	struct _untarget_logfile {} untarget_logfile;
+
+	Logger& operator<<(const _target_console& target_console);
+	Logger& operator<<(const _target_logfile& target_logfile);
+	Logger& operator<<(const _untarget_console& untarget_console);
+	Logger& operator<<(const _untarget_logfile& untarget_logfile);
 
 	Logger& operator<<(const _nl& nl);
 	Logger& operator<<(const _flush& flush);

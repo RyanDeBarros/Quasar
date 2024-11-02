@@ -1,6 +1,56 @@
 #include "Logger.h"
 
 #include <iostream>
+#include <chrono>
+
+Logger& Logger::specify_logfile(const char* filepath, bool append)
+{
+	file.close();
+	if (append)
+		file.open(filepath, std::ios_base::app);
+	else
+		file.open(filepath);
+
+	auto now = std::chrono::system_clock::now();
+	auto time = std::chrono::system_clock::to_time_t(now);
+	auto current_time = std::localtime(&time);
+	auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+	const char log_start[] = "--- LOG started at ";
+	const char log_end[] = " ---";
+	file << std::setfill('-') << std::setw(sizeof(log_start) - 1 + 23 + sizeof(log_end) - 1) << "" << '\n';
+	file << log_start;
+	file << std::put_time(current_time, "%Y-%m-%d %H:%M:%S") << '.' << std::setfill('0') << std::setw(3) << milliseconds.count();
+	file << log_end << '\n';
+	file << std::setfill('-') << std::setw(sizeof(log_start) - 1 + 23 + sizeof(log_end) - 1) << "" << '\n';
+	file.flush();
+
+	return *this;
+}
+
+Logger& Logger::operator<<(const _target_console& target_console)
+{
+	targeting_console = true;
+	return *this;
+}
+
+Logger& Logger::operator<<(const _target_logfile& target_logfile)
+{
+	targeting_logfile = true;
+	return *this;
+}
+
+Logger& Logger::operator<<(const _untarget_console& untarget_console)
+{
+	targeting_console = false;
+	return *this;
+}
+
+Logger& Logger::operator<<(const _untarget_logfile& untarget_logfile)
+{
+	targeting_logfile = false;
+	return *this;
+}
 
 Logger& Logger::operator<<(const _nl& nl)
 {
@@ -9,7 +59,16 @@ Logger& Logger::operator<<(const _nl& nl)
 
 Logger& Logger::operator<<(const _flush& flush)
 {
-	std::cout << stream.str(); // TODO logger target
+	if (targeting_logfile)
+	{
+		file << stream.str();
+		file.flush();
+	}
+	if (targeting_console)
+	{
+		std::cout << stream.str();
+		std::cout.flush();
+	}
 	stream.str(std::string());
 	stream.clear();
 	return *this;
@@ -22,76 +81,112 @@ Logger& Logger::operator<<(const _endl& endl)
 
 Logger& Logger::operator<<(const _start& start)
 {
-	// TODO only log for level if that level is enabled
 	switch (level)
 	{
 	case Level::DEBUG:
-		return *this << "[Debug] ";
+		if (enable_debug)
+			return *this << "[Debug] ";
+		break;
 	case Level::INFO:
-		return *this << "[Info] ";
+		if (enable_info)
+			return *this << "[Info] ";
+		break;
 	case Level::WARNING:
-		return *this << "[Warning] ";
+		if (enable_warning)
+			return *this << "[Warning] ";
+		break;
 	case Level::ERROR:
-		return *this << "[Error] ";
+		if (enable_error)
+			return *this << "[Error] ";
+		break;
 	case Level::FATAL:
-		return *this << "[Fatal] ";
+		if (enable_fatal)
+			return *this << "[Fatal] ";
+		break;
 	}
 	return *this;
 }
 
 Logger& Logger::operator<<(const _start_gl& start_gl)
 {
-	// TODO only log for level if that level is enabled
 	switch (level)
 	{
 	case Level::DEBUG:
-		return *this << "[Debug - OpenGL(" << start_gl.code << ")] ";
+		if (enable_debug)
+			return *this << "[Debug - OpenGL(" << start_gl.code << ")] ";
+		break;
 	case Level::INFO:
-		return *this << "[Info - OpenGL(" << start_gl.code << ")] ";
+		if (enable_info)
+			return *this << "[Info - OpenGL(" << start_gl.code << ")] ";
+		break;
 	case Level::WARNING:
-		return *this << "[Warning - OpenGL(" << start_gl.code << ")] ";
+		if (enable_warning)
+			return *this << "[Warning - OpenGL(" << start_gl.code << ")] ";
+		break;
 	case Level::ERROR:
-		return *this << "[Error - OpenGL(" << start_gl.code << ")] ";
+		if (enable_error)
+			return *this << "[Error - OpenGL(" << start_gl.code << ")] ";
+		break;
 	case Level::FATAL:
-		return *this << "[Fatal - OpenGL(" << start_gl.code << ")] ";
+		if (enable_fatal)
+			return *this << "[Fatal - OpenGL(" << start_gl.code << ")] ";
+		break;
 	}
 	return *this;
 }
 
 Logger& Logger::operator<<(const _start_glfw& start_glfw)
 {
-	// TODO only log for level if that level is enabled
 	switch (level)
 	{
 	case Level::DEBUG:
-		return *this << "[Debug - GLFW(" << start_glfw.code << ")] ";
+		if (enable_debug)
+			return *this << "[Debug - GLFW(" << start_glfw.code << ")] ";
+		break;
 	case Level::INFO:
-		return *this << "[Info - GLFW(" << start_glfw.code << ")] ";
+		if (enable_info)
+			return *this << "[Info - GLFW(" << start_glfw.code << ")] ";
+		break;
 	case Level::WARNING:
-		return *this << "[Warning - GLFW(" << start_glfw.code << ")] ";
+		if (enable_warning)
+			return *this << "[Warning - GLFW(" << start_glfw.code << ")] ";
+		break;
 	case Level::ERROR:
-		return *this << "[Error - GLFW(" << start_glfw.code << ")] ";
+		if (enable_error)
+			return *this << "[Error - GLFW(" << start_glfw.code << ")] ";
+		break;
 	case Level::FATAL:
-		return *this << "[Fatal - GLFW(" << start_glfw.code << ")] ";
+		if (enable_fatal)
+			return *this << "[Fatal - GLFW(" << start_glfw.code << ")] ";
+		break;
 	}
 	return *this;
 }
 
 Logger& Logger::operator<<(const _start_toml& start_toml)
 {
-	// TODO only log for level if that level is enabled
 	switch (level)
 	{
 	case Level::DEBUG:
-		return *this << "[Debug - TOML] ";
+		if (enable_debug)
+			return *this << "[Debug - TOML] ";
+		break;
 	case Level::INFO:
-		return *this << "[Info - TOML] ";
+		if (enable_info)
+			return *this << "[Info - TOML] ";
+		break;
 	case Level::WARNING:
-		return *this << "[Warning - TOML] ";
+		if (enable_warning)
+			return *this << "[Warning - TOML] ";
+		break;
 	case Level::ERROR:
-		return *this << "[Error - TOML] ";
+		if (enable_error)
+			return *this << "[Error - TOML] ";
+		break;
 	case Level::FATAL:
-		return *this << "[Fatal - TOML] ";
+		if (enable_fatal)
+			return *this << "[Fatal - TOML] ";
+		break;
 	}
 	return *this;
 }
