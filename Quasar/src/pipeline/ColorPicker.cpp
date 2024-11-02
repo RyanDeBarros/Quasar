@@ -461,7 +461,7 @@ void ColorPicker::send_vp(const glm::mat3& vp) const
 
 void ColorPicker::initialize_widget()
 {
-	// TODO put in ColorPicker struct data member for access in cp_render_gui()
+	// LATER put in ColorPicker struct data member for access in cp_render_gui()
 	// ---------- COMMON CONSTANTS ----------
 
 	const float graphic_y = -120;
@@ -481,9 +481,8 @@ void ColorPicker::initialize_widget()
 	const float slider_w = 200;
 	const float slider_h = 20;
 	
-	const float preview_x = 90;
 	const float preview_y = -210;
-	const float preview_w = 40;
+	const float preview_w = 80;
 	const float preview_h = 40;
 
 	// ---------- GRAPHIC QUAD ----------
@@ -649,9 +648,9 @@ void ColorPicker::initialize_widget()
 	setup_rect_uvs(PREVIEW);
 	setup_gradient(PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW);
 	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, ColorFrame());
-	widget.wp_at(PREVIEW).transform.position = { preview_x, preview_y };
+	widget.wp_at(PREVIEW).transform.position.y = preview_y;
 	widget.wp_at(PREVIEW).transform.scale = { preview_w, preview_h };
-	widget.wp_at(PREVIEW).pivot = { 1, 1 };
+	widget.wp_at(PREVIEW).pivot.y = 1;
 
 	// ---------- PARENT ----------
 
