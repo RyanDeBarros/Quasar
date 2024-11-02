@@ -211,7 +211,6 @@ void ColorPicker::cp_render_gui()
 			if (ImGui::Button("#"))
 			{
 				txtfld_mode = TextFieldMode::PERCENT;
-				// TODO modify textfields
 			}
 		}
 		else if (txtfld_mode == TextFieldMode::PERCENT)
@@ -221,8 +220,55 @@ void ColorPicker::cp_render_gui()
 			if (ImGui::Button("%"))
 			{
 				txtfld_mode = TextFieldMode::NUMBER;
-				// TODO modify textfields
 			}
+		}
+		if (state == State::SLIDER_RGB)
+		{
+			RGB rgb = get_color().rgb();
+			if (txtfld_mode == TextFieldMode::NUMBER)
+			{
+				float imgui_y = ImGui::GetCursorPosY();
+				int r = rgb.get_pixel_r(), g = rgb.get_pixel_g(), b = rgb.get_pixel_b();
+				ImGui::SetCursorPosY(imgui_y + 70);
+				ImGui::Text("Red");
+				ImGui::SameLine(100);
+				ImGui::InputInt("##it-red", &r, 5, 10);
+				ImGui::SetCursorPosY(imgui_y + 175);
+				ImGui::Text("Green");
+				ImGui::SameLine(100);
+				ImGui::InputInt("##it-green", &g, 5, 10);
+				ImGui::SetCursorPosY(imgui_y + 280);
+				ImGui::Text("Blue");
+				ImGui::SameLine(100);
+				ImGui::InputInt("##it-blue", &b, 5, 10);
+				set_color(RGB(r, g, b));
+			}
+			else if (txtfld_mode == TextFieldMode::PERCENT)
+			{
+				float imgui_y = ImGui::GetCursorPosY();
+				float r = rgb.r * 100, g = rgb.g * 100, b = rgb.b * 100;
+				ImGui::SetCursorPosY(imgui_y + 70);
+				ImGui::Text("Red");
+				ImGui::SameLine(100);
+				ImGui::InputFloat("##it-red", &r, 5, 10, "%.2f");
+				ImGui::SetCursorPosY(imgui_y + 175);
+				ImGui::Text("Green");
+				ImGui::SameLine(100);
+				ImGui::InputFloat("##it-green", &g, 5, 10, "%.2f");
+				ImGui::SetCursorPosY(imgui_y + 280);
+				ImGui::Text("Blue");
+				ImGui::SameLine(100);
+				ImGui::InputFloat("##it-blue", &b, 5, 10, "%.2f");
+				set_color(RGB(r * 0.01f, g * 0.01f, b * 0.01f));
+			}
+		}
+		else if (state == State::SLIDER_HSV)
+		{
+
+		}
+		else if (state == State::SLIDER_HSL)
+		{
+
 		}
 		set_state(to_state);
 		ImGui::End();
@@ -308,10 +354,10 @@ void ColorPicker::initialize_widget()
 	const float g_slider_y = -135;
 	
 	const float slider_sep = 70;
-	const float slider1_y = 80;
+	const float slider1_y = 60;
 	const float slider2_y = slider1_y - slider_sep;
 	const float slider3_y = slider2_y - slider_sep;
-	const float slider4_y = slider3_y - 120;
+	const float slider4_y = slider3_y - 100;
 	const float slider_w = 200;
 	const float slider_h = 20;
 	
