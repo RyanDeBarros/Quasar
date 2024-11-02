@@ -23,57 +23,50 @@ GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
 	auto win = Windows[window];
-	Callback::WindowSize args(width, height);
-	for (const auto& f : win->clbk_window_size.vec)
-		f.f(args);
+	WindowSizeEvent event(width, height);
+	win->root_window_size.on_callback(event);
 }
 
 static void path_drop_callback(GLFWwindow* window, int num_paths, const char** paths)
 {
 	auto win = Windows[window];
-	Callback::PathDrop args(num_paths, paths);
-	for (const auto& f : win->clbk_path_drop.vec)
-		f.f(args);
+	PathDropEvent event(num_paths, paths);
+	win->root_path_drop.on_callback(event);
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	auto win = Windows[window];
-	Callback::Key args(key, scancode, action, mods);
-	for (const auto& f : win->clbk_key.vec)
-		f.f(args);
+	KeyEvent event(key, scancode, action, mods);
+	win->root_key.on_callback(event);
 }
 
 static void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
 	auto win = Windows[window];
-	Callback::MouseButton args(button, action, mods);
-	for (const auto& f : win->clbk_mouse_button.vec)
-		f.f(args);
+	MouseButtonEvent event(button, action, mods);
+	win->root_mouse_button.on_callback(event);
 }
 
 static void scroll_callback(GLFWwindow* window, double xoff, double yoff)
 {
 	auto win = Windows[window];
-	Callback::Scroll args(xoff, yoff);
-	for (const auto& f : win->clbk_scroll.vec)
-		f.f(args);
+	ScrollEvent event(xoff, yoff);
+	win->root_scroll.on_callback(event);
 }
 
 static void window_maximize_callback(GLFWwindow* window, int maximized)
 {
 	auto win = Windows[window];
-	Callback::WindowMaximize args(maximized);
-	for (const auto& f : win->clbk_window_maximize.vec)
-		f.f(args);
+	WindowMaximizeEvent event(maximized);
+	win->root_window_maximize.on_callback(event);
 }
 
 static void display_scale_callback(GLFWwindow* window, float x_scale, float y_scale)
 {
 	auto win = Windows[window];
-	Callback::DisplayScale args(x_scale, y_scale);
-	for (const auto& f : win->clbk_display_scale.vec)
-		f.f(args);
+	DisplayScaleEvent event(x_scale, y_scale);
+	win->root_display_scale.on_callback(event);
 }
 
 Window::Window(const char* title, int width, int height, bool enable_gui, ImFontAtlas* gui_font_atlas, GLFWcursor* cursor)
@@ -118,45 +111,38 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 		ImGui_ImplOpenGL3_Init();
 	}
 
-	clbk_key.push_back([this](const Callback::Key& k) {
-		if (k.action == IAction::RELEASE)
-			--keys_pressed[k.key];
-		else
-			++keys_pressed[k.key];
-		if (keys_pressed[k.key] == 0)
-			keys_pressed.erase(k.key);
-		});
-	clbk_mouse_button.push_back([this](const Callback::MouseButton& mb) {
-		if (mb.action == IAction::RELEASE)
-			--mouse_buttons_pressed[mb.button];
-		else
-			++mouse_buttons_pressed[mb.button];
-		if (mouse_buttons_pressed[mb.button] == 0)
-			mouse_buttons_pressed.erase(mb.button);
-		});
-	clbk_window_maximize.push_back([this](const Callback::WindowMaximize& wm) {
+	root_window_maximize.callback = [this](const WindowMaximizeEvent& wm) {
 		maximized = wm.maximized;
-		});
-	clbk_key.push_back([this](const Callback::Key& k) {
-		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mod::SHIFT))
+		};
+
+	// first callback in root to force
+	window_maximizer.callback = [this](const KeyEvent& k) {
+		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
 		{
+			k.consumed = true;
 			if (!is_maximized())
 				toggle_fullscreen();
 			Machine.on_render();
 		}
-		else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mod::ALT)
+		else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mods::ALT)
 		{
+			k.consumed = true;
 			if (!is_fullscreen())
 				toggle_maximized();
 			Machine.on_render();
 		}
-		else if (k.key == Key::ESCAPE && k.action == IAction::PRESS && !(k.mods & Mod::SHIFT))
+		};
+	root_key.children.push_back(&window_maximizer);
+
+	root_key.callback = [this](const KeyEvent& k) {
+		if (k.key == Key::ESCAPE && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
 		{
+			k.consumed = true;
 			set_fullscreen(false);
 			set_maximized(false);
 			Machine.on_render();
 		}
-		});
+		};
 }
 
 Window::~Window()
@@ -300,36 +286,6 @@ void Window::end_frame() const
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 	swap_buffers();
-}
-
-void Window::send_down_events() const
-{
-	int mods = 0;
-	if (is_shift_pressed())
-		mods |= Mod::SHIFT;
-	if (is_ctrl_pressed())
-		mods |= Mod::CONTROL;
-	if (is_alt_pressed())
-		mods |= Mod::ALT;
-	if (is_super_pressed())
-		mods |= Mod::SUPER;
-	if (is_key_pressed(Key::CAPS_LOCK))
-		mods |= Mod::CAPS_LOCK;
-	if (is_key_pressed(Key::NUM_LOCK))
-		mods |= Mod::NUM_LOCK;
-		
-	for (auto iter = keys_pressed.begin(); iter != keys_pressed.end(); ++iter)
-	{
-		Callback::Key key_event(iter->first, glfwGetKeyScancode(int(iter->first)), IAction::DOWN, mods);
-		for (const auto& f : clbk_key_down.vec)
-			f.f(key_event);
-	}
-	for (auto iter = mouse_buttons_pressed.begin(); iter != mouse_buttons_pressed.end(); ++iter)
-	{
-		Callback::MouseButton mouse_button_event(iter->first, IAction::DOWN, mods);
-		for (const auto& f : clbk_mouse_button_down.vec)
-			f.f(mouse_button_event);
-	}
 }
 
 void Window::set_size_limits(int minwidth, int minheight, int maxwidth, int maxheight) const

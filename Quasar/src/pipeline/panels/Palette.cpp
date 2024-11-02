@@ -5,7 +5,8 @@
 #include "../Uniforms.h"
 
 Palette::Palette()
-	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"))
+	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag")),
+	color_picker(Machine.palette_mb_handler, Machine.palette_key_handler) // LATER initialize panels early and put mb_handlers as data members of panels?
 {
 	static constexpr size_t num_quads = 1;
 

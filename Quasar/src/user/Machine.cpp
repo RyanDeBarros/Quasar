@@ -51,6 +51,15 @@ bool MachineImpl::create_main_window()
 		main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
 			//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
 			window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
+
+		main_window->root_window_size.children.push_back(&resize_handler);
+		main_window->root_display_scale.children.push_back(&rescale_handler);
+		main_window->root_mouse_button.children.push_back(&easel_mb_handler);
+		main_window->root_mouse_button.children.push_back(&palette_mb_handler);
+		main_window->root_key.children.push_back(&palette_key_handler);
+		main_window->root_scroll.children.push_back(&easel_scroll_handler);
+		main_window->root_key.children.push_back(&global_key_handler);
+		main_window->root_path_drop.children.push_back(&path_drop_handler);
 		return true;
 	}
 	return false;
@@ -79,7 +88,7 @@ void MachineImpl::init_renderer()
 
 	panels->sync_panels();
 
-	main_window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
+	resize_handler.callback = [this](const WindowSizeEvent& ws) {
 		update_panels_to_window_size(ws.width, ws.height);
 		panels->set_projection();
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
@@ -87,15 +96,15 @@ void MachineImpl::init_renderer()
 		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
 		main_window->swap_buffers();
 		Machine.on_render();
-		});
-	main_window->clbk_display_scale.push_back([](const Callback::DisplayScale& ds) {
+		};
+	rescale_handler.callback = [](const DisplayScaleEvent& ds) {
 		Machine.set_app_scale(ds.scale);
-		});
+		};
 
 	canvas_reset_camera();
 	attach_canvas_controls();
 	attach_global_user_controls();
-
+	
 	easel()->canvas.minor_gridlines.set_color(ColorFrame(RGBA(31, 63, 107, 255))); // SETTINGS
 	easel()->canvas.minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
 	easel()->canvas.major_gridlines.set_color(ColorFrame(RGBA(31, 72, 127, 255))); // SETTINGS
@@ -121,7 +130,6 @@ bool MachineImpl::should_exit() const
 
 void MachineImpl::on_render() const
 {
-	main_window->send_down_events();
 	canvas_update_panning();
 	main_window->new_frame();
 	panels->render();

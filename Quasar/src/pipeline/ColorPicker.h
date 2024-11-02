@@ -42,12 +42,19 @@ private:
 	char rgb_hex_prev[rgb_hex_size] = "FFFFFF";
 	char rgb_hex[rgb_hex_size] = "FFFFFF";
 
-	std::function<void(const Callback::MouseButton&)> clbk_mb;
-	std::function<void(const Callback::MouseButton&)> clbk_mb_down;
+	MouseButtonHandler& parent_mb_handler;
+	MouseButtonHandler mb_handler;
+	MouseButtonHandler imgui_mb_handler;
+	KeyHandler& parent_key_handler;
+	KeyHandler key_handler;
+	
+	bool imgui_takeover_mb = false;
+	bool imgui_takeover_key = false;
+	
 	int current_widget_control = -1;
-public:
 
-	ColorPicker();
+public:
+	ColorPicker(MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
 	ColorPicker(const ColorPicker&) = delete;
 	ColorPicker(ColorPicker&&) noexcept = delete;
 	~ColorPicker();
@@ -59,6 +66,8 @@ public:
 	void set_position(Position world_pos, Position screen_pos);
 
 private:
+	void process_mb_down_events();
+
 	void cp_render_gui();
 	void cp_render_tab_button(State& to_state, State state, bool disable, const char* display) const;
 	void update_rgb_hex();

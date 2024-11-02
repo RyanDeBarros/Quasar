@@ -6,7 +6,7 @@
 void attach_canvas_controls()
 {
 	// Panning
-	Machine.main_window->clbk_mouse_button.push_back([](const Callback::MouseButton& mb) {
+	Machine.easel_mb_handler.callback = [](const MouseButtonEvent& mb) {
 		if (mb.button == MouseButton::MIDDLE)
 		{
 			if (mb.action == IAction::PRESS && Machine.cursor_in_easel())
@@ -21,26 +21,24 @@ void attach_canvas_controls()
 			else if (mb.action == IAction::RELEASE)
 				Machine.canvas_end_panning();
 		}
-		});
+		};
 	// Zooming
-	Machine.main_window->clbk_scroll.push_back([](const Callback::Scroll& s) {
+	Machine.easel_scroll_handler.callback = [](const ScrollEvent& s) {
 		if (Machine.cursor_in_easel() && !Machine.panning_info.panning)
 			Machine.canvas_zoom_by(s.yoff);
-		});
-	// Reset camera
-	Machine.main_window->clbk_key.push_back([](const Callback::Key& k) {
-		if (k.key == Key::ROW0 && k.action == IAction::PRESS)
-			Machine.canvas_reset_camera();
-		});
+		};
 }
 
 void attach_global_user_controls()
 {
-	Machine.main_window->clbk_key.push_back([](const Callback::Key& k) {
+	Machine.global_key_handler.callback = [](const KeyEvent& k) {
 		if (k.action == IAction::PRESS)
 		{
 			switch (k.key)
 			{
+			case Key::ROW0:
+				Machine.canvas_reset_camera();
+				break;
 			case Key::Z:
 				if (Machine.main_window->is_ctrl_pressed())
 				{
@@ -100,8 +98,8 @@ void attach_global_user_controls()
 				Machine.canvas_cancel_panning();
 			}
 		}
-		});
-	Machine.main_window->clbk_path_drop.push_back([](const Callback::PathDrop& pd) {
+		};
+	Machine.path_drop_handler.callback = [](const PathDropEvent& pd) {
 		if (pd.num_paths >= 1 && Machine.cursor_in_easel())
 		{
 			FilePath filepath = pd.paths[0];
@@ -116,5 +114,5 @@ void attach_global_user_controls()
 			// LATER note no error popup otherwise?
 		}
 		Machine.main_window->focus();
-		});
+		};
 }

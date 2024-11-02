@@ -18,6 +18,15 @@ struct MachineImpl
 	ActionHistory history;
 	Window* main_window = nullptr;
 
+	WindowSizeHandler resize_handler;
+	DisplayScaleHandler rescale_handler;
+	MouseButtonHandler easel_mb_handler;
+	MouseButtonHandler palette_mb_handler;
+	KeyHandler palette_key_handler;
+	ScrollHandler easel_scroll_handler;
+	KeyHandler global_key_handler;
+	PathDropHandler path_drop_handler;
+
 	struct
 	{
 		constexpr static int initial_width = 2160;

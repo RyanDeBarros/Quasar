@@ -65,18 +65,17 @@ enum
 	HSL_S_SLIDER_CURSOR,			// circle_cursor
 	HSL_L_SLIDER,					// linear_lightness
 	HSL_L_SLIDER_CURSOR,			// circle_cursor
-	_CPWC_COUNT,
-	IMGUI,							// ImGui
+	_CPWC_COUNT
 };
 
-ColorPicker::ColorPicker()
+ColorPicker::ColorPicker(MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler)
 	: quad_shader(FileSystem::resources_path("gradients/quad.vert"), FileSystem::resources_path("gradients/quad.frag.tmpl"),
 		{ {"$MAX_GRADIENT_COLORS", std::to_string((int)GradientIndex::_MAX_GRADIENT_COLORS) } }),
 	linear_hue_shader(FileSystem::resources_path("gradients/linear_hue.vert"), FileSystem::resources_path("gradients/linear_hue.frag")),
 	hue_wheel_w_shader(FileSystem::resources_path("gradients/hue_wheel_w.vert"), FileSystem::resources_path("gradients/hue_wheel_w.frag")),
 	linear_lightness_shader(FileSystem::resources_path("gradients/linear_lightness.vert"), FileSystem::resources_path("gradients/linear_lightness.frag")),
 	circle_cursor_shader(FileSystem::resources_path("circle_cursor.vert"), FileSystem::resources_path("circle_cursor.frag")),
-	widget(_CPWC_COUNT)
+	widget(_CPWC_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler)
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(HSV(0.0f, 0.0f, 0.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::WHITE, ColorFrame(HSV(0.0f, 0.0f, 1.0f)));
@@ -88,12 +87,13 @@ ColorPicker::ColorPicker()
 
 ColorPicker::~ColorPicker()
 {
-	Machine.main_window->clbk_mouse_button.remove_at_owner(this);
-	Machine.main_window->clbk_mouse_button_down.remove_at_owner(this);
+	parent_mb_handler.remove_child(&mb_handler);
+	parent_key_handler.remove_child(&key_handler);
 }
 
 void ColorPicker::render()
 {
+	process_mb_down_events();
 	cp_render_gui();
 	ur_wget(widget, ALPHA_SLIDER).draw();
 	ur_wget(widget, ALPHA_SLIDER_CURSOR).draw();
@@ -157,7 +157,8 @@ void ColorPicker::cp_render_gui()
 	if (ImGui::Begin("-", nullptr, window_flags))
 	{
 		State to_state = state;
-		bool let_imgui_handle_input = false;
+		imgui_takeover_mb = false;
+		imgui_takeover_key = false;
 		if (ImGui::BeginTabBar("cp-main-tb"))
 		{
 			cp_render_tab_button(to_state, last_graphic_state, state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL, "GRAPHIC");
@@ -196,7 +197,8 @@ void ColorPicker::cp_render_gui()
 					ImGui::SetNextItemWidth(90);
 					ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size);
 					update_rgb_hex();
-					let_imgui_handle_input = true;
+					imgui_takeover_mb = true;
+					imgui_takeover_key = true;
 				}
 				ImGui::EndPopup();
 			}
@@ -223,10 +225,6 @@ void ColorPicker::cp_render_gui()
 			}
 		}
 		set_state(to_state);
-		if (let_imgui_handle_input)
-			current_widget_control = IMGUI;
-		else if (current_widget_control == IMGUI)
-			current_widget_control = -1;
 		ImGui::End();
 	}
 }
@@ -492,7 +490,8 @@ void ColorPicker::initialize_widget()
 
 void ColorPicker::connect_mouse_handlers()
 {
-	clbk_mb = [this](const Callback::MouseButton& mb) {
+	parent_mb_handler.children.push_back(&mb_handler);
+	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (mb.action == IAction::PRESS)
 		{
 			if (current_widget_control < 0)
@@ -502,6 +501,7 @@ void ColorPicker::connect_mouse_handlers()
 				{
 					take_over_cursor();
 					current_widget_control = ALPHA_SLIDER_CURSOR;
+					mb.consumed = true;
 					mouse_handler_alpha_slider(local_cursor_pos);
 				}
 				else if (state == State::GRAPHIC_QUAD)
@@ -510,12 +510,14 @@ void ColorPicker::connect_mouse_handlers()
 					{
 						take_over_cursor();
 						current_widget_control = GRAPHIC_QUAD_CURSOR;
+						mb.consumed = true;
 						mouse_handler_graphic_quad(local_cursor_pos);
 					}
 					else if (widget.wp_at(GRAPHIC_HUE_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = GRAPHIC_HUE_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_graphic_hue_slider(local_cursor_pos);
 					}
 				}
@@ -525,12 +527,14 @@ void ColorPicker::connect_mouse_handlers()
 					{
 						take_over_cursor();
 						current_widget_control = GRAPHIC_HUE_WHEEL_CURSOR;
+						mb.consumed = true;
 						mouse_handler_graphic_hue_wheel(local_cursor_pos);
 					}
 					else if (widget.wp_at(GRAPHIC_VALUE_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = GRAPHIC_VALUE_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_graphic_value_slider(local_cursor_pos);
 					}
 				}
@@ -540,18 +544,21 @@ void ColorPicker::connect_mouse_handlers()
 					{
 						take_over_cursor();
 						current_widget_control = RGB_R_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_rgb_r(local_cursor_pos);
 					}
 					else if (widget.wp_at(RGB_G_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = RGB_G_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_rgb_g(local_cursor_pos);
 					}
 					else if (widget.wp_at(RGB_B_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = RGB_B_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_rgb_b(local_cursor_pos);
 					}
 				}
@@ -561,18 +568,21 @@ void ColorPicker::connect_mouse_handlers()
 					{
 						take_over_cursor();
 						current_widget_control = HSV_H_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_hsv_h(local_cursor_pos);
 					}
 					else if (widget.wp_at(HSV_S_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = HSV_S_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_hsv_s(local_cursor_pos);
 					}
 					else if (widget.wp_at(HSV_V_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = HSV_V_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_hsv_v(local_cursor_pos);
 					}
 				}
@@ -582,18 +592,21 @@ void ColorPicker::connect_mouse_handlers()
 					{
 						take_over_cursor();
 						current_widget_control = HSL_H_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_hsl_h(local_cursor_pos);
 					}
 					else if (widget.wp_at(HSL_S_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = HSL_S_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_hsl_s(local_cursor_pos);
 					}
 					else if (widget.wp_at(HSL_L_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = HSL_L_SLIDER_CURSOR;
+						mb.consumed = true;
 						mouse_handler_slider_hsl_l(local_cursor_pos);
 					}
 				}
@@ -603,44 +616,61 @@ void ColorPicker::connect_mouse_handlers()
 			}
 		}
 		else if (mb.action == IAction::RELEASE)
+		{
 			release_cursor();
+			mb.consumed = true;
+		}
+	};
+	mb_handler.children.push_back(&imgui_mb_handler);
+	imgui_mb_handler.callback = [this](const MouseButtonEvent& mb) {
+		if (imgui_takeover_mb)
+			mb.consumed = true;
 		};
-	clbk_mb_down = [this](const Callback::MouseButton& mb) {
-		Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
-		if (current_widget_control == ALPHA_SLIDER_CURSOR)
-			mouse_handler_alpha_slider(local_cursor_pos);
-		else if (current_widget_control == GRAPHIC_QUAD_CURSOR)
-			mouse_handler_graphic_quad(local_cursor_pos);
-		else if (current_widget_control == GRAPHIC_HUE_SLIDER_CURSOR)
-			mouse_handler_graphic_hue_slider(local_cursor_pos);
-		else if (current_widget_control == GRAPHIC_HUE_WHEEL_CURSOR)
-			mouse_handler_graphic_hue_wheel(local_cursor_pos);
-		else if (current_widget_control == GRAPHIC_VALUE_SLIDER_CURSOR)
-			mouse_handler_graphic_value_slider(local_cursor_pos);
-		else if (current_widget_control == RGB_R_SLIDER_CURSOR)
-			mouse_handler_slider_rgb_r(local_cursor_pos);
-		else if (current_widget_control == RGB_G_SLIDER_CURSOR)
-			mouse_handler_slider_rgb_g(local_cursor_pos);
-		else if (current_widget_control == RGB_B_SLIDER_CURSOR)
-			mouse_handler_slider_rgb_b(local_cursor_pos);
-		else if (current_widget_control == HSV_H_SLIDER_CURSOR)
-			mouse_handler_slider_hsv_h(local_cursor_pos);
-		else if (current_widget_control == HSV_S_SLIDER_CURSOR)
-			mouse_handler_slider_hsv_s(local_cursor_pos);
-		else if (current_widget_control == HSV_V_SLIDER_CURSOR)
-			mouse_handler_slider_hsv_v(local_cursor_pos);
-		else if (current_widget_control == HSL_H_SLIDER_CURSOR)
-			mouse_handler_slider_hsl_h(local_cursor_pos);
-		else if (current_widget_control == HSL_S_SLIDER_CURSOR)
-			mouse_handler_slider_hsl_s(local_cursor_pos);
-		else if (current_widget_control == HSL_L_SLIDER_CURSOR)
-			mouse_handler_slider_hsl_l(local_cursor_pos);
 
-		if (current_widget_control >= 0)
-			update_display_colors();
+	parent_key_handler.children.push_back(&key_handler);
+	key_handler.callback = [this](const KeyEvent& key) {
+		if (imgui_takeover_key)
+			key.consumed = true;
 		};
-	Machine.main_window->clbk_mouse_button.push_back(clbk_mb, this);
-	Machine.main_window->clbk_mouse_button_down.push_back(clbk_mb_down, this);
+}
+
+void ColorPicker::process_mb_down_events()
+{
+	if (!Machine.main_window->is_mouse_button_pressed(MouseButton::LEFT))
+		return;
+
+	Position local_cursor_pos = widget.parent.get_relative_pos(Machine.palette_cursor_world_pos());
+	if (current_widget_control == ALPHA_SLIDER_CURSOR)
+		mouse_handler_alpha_slider(local_cursor_pos);
+	else if (current_widget_control == GRAPHIC_QUAD_CURSOR)
+		mouse_handler_graphic_quad(local_cursor_pos);
+	else if (current_widget_control == GRAPHIC_HUE_SLIDER_CURSOR)
+		mouse_handler_graphic_hue_slider(local_cursor_pos);
+	else if (current_widget_control == GRAPHIC_HUE_WHEEL_CURSOR)
+		mouse_handler_graphic_hue_wheel(local_cursor_pos);
+	else if (current_widget_control == GRAPHIC_VALUE_SLIDER_CURSOR)
+		mouse_handler_graphic_value_slider(local_cursor_pos);
+	else if (current_widget_control == RGB_R_SLIDER_CURSOR)
+		mouse_handler_slider_rgb_r(local_cursor_pos);
+	else if (current_widget_control == RGB_G_SLIDER_CURSOR)
+		mouse_handler_slider_rgb_g(local_cursor_pos);
+	else if (current_widget_control == RGB_B_SLIDER_CURSOR)
+		mouse_handler_slider_rgb_b(local_cursor_pos);
+	else if (current_widget_control == HSV_H_SLIDER_CURSOR)
+		mouse_handler_slider_hsv_h(local_cursor_pos);
+	else if (current_widget_control == HSV_S_SLIDER_CURSOR)
+		mouse_handler_slider_hsv_s(local_cursor_pos);
+	else if (current_widget_control == HSV_V_SLIDER_CURSOR)
+		mouse_handler_slider_hsv_v(local_cursor_pos);
+	else if (current_widget_control == HSL_H_SLIDER_CURSOR)
+		mouse_handler_slider_hsl_h(local_cursor_pos);
+	else if (current_widget_control == HSL_S_SLIDER_CURSOR)
+		mouse_handler_slider_hsl_s(local_cursor_pos);
+	else if (current_widget_control == HSL_L_SLIDER_CURSOR)
+		mouse_handler_slider_hsl_l(local_cursor_pos);
+
+	if (current_widget_control >= 0)
+		update_display_colors();
 }
 
 void ColorPicker::take_over_cursor() const
@@ -652,7 +682,7 @@ void ColorPicker::take_over_cursor() const
 
 void ColorPicker::release_cursor()
 {
-	if (current_widget_control >= 0 && current_widget_control != IMGUI)
+	if (current_widget_control >= 0)
 	{
 		//Machine.main_window->set_mouse_mode(MouseMode::VISIBLE);
 		Machine.main_window->override_gui_cursor_change(false);

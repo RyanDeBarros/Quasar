@@ -1010,9 +1010,6 @@
     <ClInclude Include="src\variety\Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\user\UserInput.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\variety\Debug.h">
       <Filter>Header Files</Filter>
     </ClInclude>
