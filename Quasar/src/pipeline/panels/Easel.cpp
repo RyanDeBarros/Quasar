@@ -2,10 +2,10 @@
 
 #include "variety/GLutility.h"
 #include "user/Machine.h"
+#include "../Uniforms.h"
 
 Gridlines::Gridlines()
-	: shader(FileSystem::resources_path("gridlines.vert"), FileSystem::resources_path("gridlines.frag"),
-		{ 2 }, { "u_VP", "u_FlatTransform", "u_Color" })
+	: shader(FileSystem::resources_path("gridlines.vert"), FileSystem::resources_path("gridlines.frag"))
 {
 	gen_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
 }
@@ -137,7 +137,7 @@ void Gridlines::draw() const
 {
 	if (_visible)
 	{
-		bind_shader(shader.rid);
+		bind_shader(shader);
 		bind_vao_buffers(vao, vb);
 		QUASAR_GL(glMultiDrawArrays(GL_TRIANGLE_STRIP, arrays_firsts, arrays_counts, num_quads()));
 	}
@@ -145,19 +145,17 @@ void Gridlines::draw() const
 
 unsigned short Gridlines::num_cols() const
 {
-	return unsigned short(std::ceil(width / line_spacing.x)) + 1_US;
+	return unsigned short(std::ceil(width / line_spacing.x)) + 1;
 }
 
 unsigned short Gridlines::num_rows() const
 {
-	return unsigned short(std::ceil(height / line_spacing.y)) + 1_US;
+	return unsigned short(std::ceil(height / line_spacing.y)) + 1;
 }
 
-void Gridlines::set_color(ColorFrame color)
+void Gridlines::set_color(ColorFrame color) const
 {
-	bind_shader(shader.rid);
-	QUASAR_GL(glUniform4fv(shader.uniform_locations["u_Color"], 1, &color.rgba_as_vec()[0]));
-	unbind_shader();
+	Uniforms::send_4(shader, "u_Color", color.rgba().as_vec(), 0, true);
 }
 
 void Canvas::create_checkerboard_image()
@@ -178,17 +176,17 @@ void Canvas::sync_checkerboard_colors() const
 	{
 		for (size_t i = 0; i < 2; ++i)
 		{
-			checkerboard.image->buf.pixels[0 + 12 * i] = checker1.rgb.r;
-			checkerboard.image->buf.pixels[1 + 12 * i] = checker1.rgb.g;
-			checkerboard.image->buf.pixels[2 + 12 * i] = checker1.rgb.b;
-			checkerboard.image->buf.pixels[3 + 12 * i] = checker1.alpha;
+			checkerboard.image->buf.pixels[0 + 12 * i] = checker1.get_pixel_r();
+			checkerboard.image->buf.pixels[1 + 12 * i] = checker1.get_pixel_g();
+			checkerboard.image->buf.pixels[2 + 12 * i] = checker1.get_pixel_b();
+			checkerboard.image->buf.pixels[3 + 12 * i] = checker1.get_pixel_a();
 		}
 		for (size_t i = 0; i < 2; ++i)
 		{
-			checkerboard.image->buf.pixels[4 + 4 * i] = checker2.rgb.r;
-			checkerboard.image->buf.pixels[5 + 4 * i] = checker2.rgb.g;
-			checkerboard.image->buf.pixels[6 + 4 * i] = checker2.rgb.b;
-			checkerboard.image->buf.pixels[7 + 4 * i] = checker2.alpha;
+			checkerboard.image->buf.pixels[4 + 4 * i] = checker2.get_pixel_r();
+			checkerboard.image->buf.pixels[5 + 4 * i] = checker2.get_pixel_g();
+			checkerboard.image->buf.pixels[6 + 4 * i] = checker2.get_pixel_b();
+			checkerboard.image->buf.pixels[7 + 4 * i] = checker2.get_pixel_a();
 		}
 	}
 	sync_checkerboard_texture();
@@ -250,11 +248,12 @@ void Canvas::sync_transform()
 	checkerboard.sync_transform();
 }
 
-Easel::Easel(Window* w)
-	: window(w), sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"),
-		{ 1, 2, 2, 4, 4 }, { "u_VP" }), clip(0, 0, window->width(), window->height())
+Easel::Easel()
+	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"))
 {
-	varr = new GLfloat[3 * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
+	static constexpr size_t num_quads = 3;
+
+	varr = new GLfloat[num_quads * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
 	background.varr = varr;
 	canvas.checkerboard.varr = background.varr + FlatSprite::NUM_VERTICES * FlatSprite::STRIDE;
 	canvas.sprite.varr = canvas.checkerboard.varr + FlatSprite::NUM_VERTICES * FlatSprite::STRIDE;
@@ -269,33 +268,19 @@ Easel::Easel(Window* w)
 	canvas.set_checker_size(Machine.preferences.checker_size);
 	canvas.sync_checkerboard_colors();
 
-	GLuint IARR[3*6]{
+	GLuint IARR[num_quads * 6]{
 		0, 1, 2, 2, 3, 0,
 		4, 5, 6, 6, 7, 4,
 		8, 9, 10, 10, 11, 8
 	};
-	gen_dynamic_vao(vao, vb, ib, size_t(3) * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
+	gen_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 
-	set_projection();
-	send_view();
-	clip.window_size_to_bounds = [](int width, int height) -> glm::ivec4 { return { 0, 0, width, height }; };
-
-	background.sync_texture_slot(BACKGROUND_TSLOT);
+	background.sync_texture_slot(-1.0f);
 	canvas.checkerboard.sync_texture_slot(CHECKERBOARD_TSLOT);
 	canvas.sprite.sync_texture_slot(CANVAS_SPRITE_TSLOT);
 
 	background.set_image(nullptr, 1, 1);
 	background.set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
-	background.transform.scale = { float(window->width()), float(window->height()) };
-	background.sync_transform();
-	subsend_background_vao();
-	window->clbk_window_size.push_back([this](const Callback::WindowSize& ws) {
-		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
-		clip.update_window_size(ws.width, ws.height);
-		set_projection(float(ws.width), float(ws.height));
-		send_view();
-		Machine.on_render();
-		});
 }
 
 Easel::~Easel()
@@ -304,21 +289,10 @@ Easel::~Easel()
 	delete[] varr;
 }
 
-void Easel::set_projection(float width, float height)
-{
-	projection = glm::ortho<float>(0.0f, width * app_scale, 0.0f, height * app_scale);
-}
-
-void Easel::set_projection()
-{
-	projection = glm::ortho<float>(0.0f, window->width() * app_scale, 0.0f, window->height() * app_scale);
-}
-
-void Easel::render() const
+void Easel::draw()
 {
 	// bind
-	bind_shader(sprite_shader.rid);
-	QUASAR_GL(glScissor(clip.x, clip.y, clip.screen_w, clip.screen_h));
+	bind_shader(sprite_shader);
 	// background
 	bind_vao_buffers(vao, vb, ib);
 	// canvas
@@ -350,7 +324,6 @@ void Easel::render() const
 	// unbind
 	unbind_vao_buffers();
 	unbind_shader();
-	QUASAR_GL(glScissor(0, 0, window->width(), window->height()));
 }
 
 void Easel::subsend_background_vao() const
@@ -381,21 +354,16 @@ void Easel::send_gridlines_vao(const Gridlines& gridlines) const
 	unbind_vao_buffers();
 }
 
-void Easel::send_view()
+void Easel::_send_view()
 {
+	background.transform.scale = get_app_size();
+	background.sync_transform();
+	subsend_background_vao();
 	glm::mat3 cameraVP = vp_matrix();
-	bind_shader(sprite_shader.rid);
-	QUASAR_GL(glUniformMatrix3fv(sprite_shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
-	bind_shader(canvas.minor_gridlines.shader.rid);
-	QUASAR_GL(glUniformMatrix3fv(canvas.minor_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
-	bind_shader(canvas.major_gridlines.shader.rid);
-	QUASAR_GL(glUniformMatrix3fv(canvas.major_gridlines.shader.uniform_locations["u_VP"], 1, GL_FALSE, &cameraVP[0][0]));
+	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(canvas.minor_gridlines.shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(canvas.major_gridlines.shader, "u_VP", cameraVP);
 	unbind_shader();
-}
-
-glm::mat3 Easel::vp_matrix() const
-{
-	return projection * view.camera();
 }
 
 void Easel::sync_canvas_transform()
@@ -416,8 +384,7 @@ void Easel::sync_canvas_transform()
 
 void Easel::gridlines_send_flat_transform(Gridlines& gridlines) const
 {
-	bind_shader(gridlines.shader.rid);
-	QUASAR_GL(glUniform4fv(gridlines.shader.uniform_locations["u_FlatTransform"], 1, &canvas.transform().packed()[0]));
+	Uniforms::send_4(gridlines.shader, "u_FlatTransform", canvas.transform().packed());
 	update_gridlines_scale(gridlines);
 }
 
@@ -501,43 +468,4 @@ void Easel::set_major_gridlines_visibility(bool visible)
 		_buffer_major_gridlines_sync_with_image = false;
 	}
 	major_gridlines_visible = visible;
-}
-
-glm::vec2 Easel::to_world_coordinates(const glm::vec2& screen_coordinates) const
-{
-	glm::vec3 ndc{};
-	ndc.x = 1.0f - 2.0f * (screen_coordinates.x / window->width());
-	ndc.y = 1.0f - 2.0f * (screen_coordinates.y / window->height());
-	ndc.z = 1.0f;
-
-	glm::mat3 invVP = glm::inverse(vp_matrix());
-	glm::vec3 world_pos = invVP * ndc;
-
-	if (world_pos.z != 0.0f)
-		world_pos / world_pos.z;
-
-	return glm::vec2{ -world_pos.x, -world_pos.y };
-}
-
-glm::vec2 Easel::to_screen_coordinates(const glm::vec2& world_coordinates) const
-{
-	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
-	glm::vec3 clip_space_pos = vp_matrix() * world_pos;
-	glm::vec2 screen_coo{};
-	screen_coo.x = (1.0f + clip_space_pos.x) * 0.5f * window->width();
-	screen_coo.y = (1.0f + clip_space_pos.y) * 0.5f * window->height();
-	return screen_coo;
-}
-
-void Easel::set_app_scale(float sc)
-{
-	app_scale = 1.0f / sc;
-	set_projection();
-	send_view();
-	// LATER scale cursor? Have different discrete cursor sizes (only works for custom cursors).
-}
-
-float Easel::get_app_scale() const
-{
-	return 1.0f / app_scale;
 }

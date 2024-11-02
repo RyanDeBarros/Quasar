@@ -1,8 +1,8 @@
 #pragma once
 
-#include "user/Platform.h"
-#include "FlatSprite.h"
-#include "Shader.h"
+#include "Panel.h"
+#include "../FlatSprite.h"
+#include "../Shader.h"
 
 struct Gridlines
 {
@@ -35,7 +35,7 @@ public:
 	GLsizei num_quads() const { return num_rows() + num_cols(); }
 	GLsizei num_vertices() const { return num_quads() * 4; }
 
-	void set_color(ColorFrame color);
+	void set_color(ColorFrame color) const;
 };
 
 struct Canvas
@@ -44,7 +44,7 @@ struct Canvas
 	SharedFlatSprite checkerboard;
 	RGBA checker1, checker2;
 
-	Gridlines minor_gridlines; // TODO move gridlines to Canvas
+	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
@@ -70,13 +70,11 @@ public:
 	void set_checkerboard_uv_size(float width, float height) const;
 };
 
-struct Easel
+struct Easel : public Panel
 {
-	constexpr static float BACKGROUND_TSLOT = -1.0f;
 	constexpr static float CHECKERBOARD_TSLOT = 0.0f;
 	constexpr static float CANVAS_SPRITE_TSLOT = 1.0f;
 
-	Window* window;
 	GLfloat* varr = nullptr;
 	Canvas canvas;
 	GLuint vao = 0, vb = 0, ib = 0;
@@ -94,32 +92,19 @@ private:
 	bool _buffer_major_gridlines_sync_with_image = false;
 public:
 
-	// View
-	glm::mat3 projection{};
-	FlatTransform view{};
-	float view_scale = 1.0f;
-private:
-	float app_scale;
-public:
-	ClippingRect clip;
-
-	Easel(Window* window);
+	Easel();
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
 	~Easel();
 
-	void set_projection(float width, float height);
-	void set_projection();
-
-	void render() const;
+	void draw() override;
 
 	void subsend_background_vao() const;
 	void subsend_checkerboard_vao() const;
 	void subsend_canvas_sprite_vao() const;
 	void send_gridlines_vao(const Gridlines& gridlines) const;
 	
-	void send_view();
-	glm::mat3 vp_matrix() const;
+	void _send_view() override;
 	
 	void sync_canvas_transform();
 	
@@ -138,15 +123,4 @@ public:
 	void set_minor_gridlines_visibility(bool visible);
 	bool major_gridlines_are_visible() const { return major_gridlines_visible; }
 	void set_major_gridlines_visibility(bool visible);
-
-	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
-	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
-
-	void set_app_scale(float sc = 1.0f);
-	float get_app_scale() const;
-	
-	bool cursor_in_clipping() const { return clip.contains_point(window->cursor_pos()); }
-	float get_app_width() const { return clip.screen_w * app_scale; }
-	float get_app_height() const { return clip.screen_h * app_scale; }
-	glm::vec2 get_app_cursor_pos() const { return window->cursor_pos() * app_scale; }
 };

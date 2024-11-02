@@ -18,6 +18,29 @@ struct MachineImpl
 	ActionHistory history;
 	Window* main_window = nullptr;
 
+	WindowSizeHandler resize_handler;
+	DisplayScaleHandler rescale_handler;
+	MouseButtonHandler easel_mb_handler;
+	MouseButtonHandler palette_mb_handler;
+	KeyHandler palette_key_handler;
+	ScrollHandler easel_scroll_handler;
+	KeyHandler global_key_handler;
+	PathDropHandler path_drop_handler;
+
+	struct
+	{
+		constexpr static int initial_width = 2160;
+		constexpr static int initial_height = 1440;
+		constexpr static int initial_menu_panel_height = 32;
+		constexpr static int initial_brush_panel_width = 432;
+		constexpr static int initial_palette_panel_width = 432;
+		constexpr static int initial_views_panel_height = 288;
+		int menu_panel_height = initial_menu_panel_height;
+		int brush_panel_width = initial_brush_panel_width;
+		int palette_panel_width = initial_palette_panel_width;
+		int views_panel_height = initial_views_panel_height;
+	} window_layout_info;
+
 	FilePath current_filepath = "";
 	bool unsaved = true;
 	WorkspacePreferences preferences;
@@ -56,11 +79,19 @@ struct MachineImpl
 	void on_render() const;
 	void mark();
 	void unmark();
+	Scale inv_app_scale() const;
+	Scale get_app_scale() const;
+	void set_app_scale(Scale sc) const;
+	void set_clear_color(ColorFrame color);
 
-	// Easel
+	ClippingRect main_window_clip() const { return ClippingRect(0, 0, main_window->width(), main_window->height()); }
+
+	// Panels
+	glm::vec2 easel_cursor_world_pos() const;
+	glm::vec2 palette_cursor_world_pos() const;
 	bool cursor_in_easel() const;
-	void set_easel_app_scale(float sc) const;
-
+	bool cursor_in_palette() const;
+	
 	// Canvas
 	FlatTransform& canvas_transform() const;
 	Position& canvas_position() const { return canvas_transform().position; }
@@ -101,6 +132,15 @@ struct MachineImpl
 	void rotate_270();
 
 	// View menu
+	bool brush_panel_visible() const;
+	void open_brush_panel() const;
+	void close_brush_panel() const;
+	bool palette_panel_visible() const;
+	void open_palette_panel() const;
+	void close_palette_panel() const;
+	bool views_panel_visible() const;
+	void open_views_panel() const;
+	void close_views_panel() const;
 	void canvas_reset_camera();
 	bool minor_gridlines_visible();
 	void show_minor_gridlines();

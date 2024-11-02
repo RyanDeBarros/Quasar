@@ -164,11 +164,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\edit\Color.cpp" />
     <ClCompile Include="src\edit\Image.cpp" />
     <ClCompile Include="src\edit\PixelBuffer.cpp" />
     <ClCompile Include="src\edit\PixelBufferPaths.cpp" />
-    <ClCompile Include="src\pipeline\Easel.cpp" />
+    <ClCompile Include="src\pipeline\ColorPicker.cpp" />
+    <ClCompile Include="src\pipeline\panels\Palette.cpp" />
+    <ClCompile Include="src\pipeline\panels\Easel.cpp" />
     <ClCompile Include="src\pipeline\FlatSprite.cpp" />
+    <ClCompile Include="src\pipeline\panels\Panel.cpp" />
+    <ClCompile Include="src\pipeline\Uniforms.cpp" />
+    <ClCompile Include="src\pipeline\UnitRenderable.cpp" />
     <ClCompile Include="src\user\GUI.cpp" />
     <ClCompile Include="src\user\Machine.cpp" />
     <ClCompile Include="src\variety\FileSystem.cpp" />
@@ -194,9 +200,16 @@
     <ClInclude Include="src\edit\Color.h" />
     <ClInclude Include="src\edit\PixelBuffer.h" />
     <ClInclude Include="src\edit\PixelBufferPaths.h" />
-    <ClInclude Include="src\pipeline\Easel.h" />
+    <ClInclude Include="src\pipeline\ColorPicker.h" />
+    <ClInclude Include="src\pipeline\panels\Palette.h" />
+    <ClInclude Include="src\pipeline\panels\Easel.h" />
     <ClInclude Include="src\pipeline\FlatSprite.h" />
+    <ClInclude Include="src\pipeline\panels\Panel.h" />
+    <ClInclude Include="src\pipeline\Uniforms.h" />
+    <ClInclude Include="src\pipeline\UnitRenderable.h" />
+    <ClInclude Include="src\pipeline\Widgets.h" />
     <ClInclude Include="src\user\Preferences.h" />
+    <ClInclude Include="src\user\UserInput.h" />
     <ClInclude Include="src\variety\FileSystem.h" />
     <ClInclude Include="src\user\GUI.h" />
     <ClInclude Include="src\user\Machine.h" />
@@ -208,7 +221,6 @@
     <ClInclude Include="src\variety\IO.h" />
     <ClInclude Include="src\Macros.h" />
     <ClInclude Include="src\pipeline\Shader.h" />
-    <ClInclude Include="src\user\UserInput.h" />
     <ClInclude Include="src\variety\Utils.h" />
     <ClInclude Include="src\user\Platform.h" />
     <ClInclude Include="vendor\glm\common.hpp" />

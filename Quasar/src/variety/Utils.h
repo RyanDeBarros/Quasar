@@ -2,19 +2,11 @@
 
 #include <climits>
 #include <cmath>
+#include <concepts>
 
-constexpr unsigned char round_uchar(float x)
+constexpr int roundi(float x)
 {
-	if (x <= 0.0f) return 0;
-	if (x >= static_cast<float>(UCHAR_MAX)) return UCHAR_MAX;
-	return static_cast<unsigned char>(x + 0.5f);
-}
-
-constexpr unsigned short round_ushort(float x)
-{
-	if (x <= 0.0f) return 0;
-	if (x >= static_cast<float>(USHRT_MAX)) return USHRT_MAX;
-	return static_cast<unsigned short>(x + 0.5f);
+	return static_cast<int>(x + 0.5f);
 }
 
 constexpr float modulo(float x, float y)
@@ -41,3 +33,11 @@ constexpr unsigned char hex_to_byte(unsigned int hex)
 	else
 		static_assert(false);
 }
+
+template<typename Held>
+struct PolyHolder
+{
+	Held held;
+
+	virtual ~PolyHolder() = default;
+};

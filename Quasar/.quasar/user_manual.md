@@ -28,6 +28,7 @@
 ### Panning
 
 * Move mouse while holding MMB or SPACE+LMB.
+* Hold SHIFT to only pan in one axis.
 * Press ESCAPE to cancel panning.
 
 ### Zooming

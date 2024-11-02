@@ -5,8 +5,8 @@ workspace = "workspace1"
 workspace_root = "D:/Projects/Visual Studio/Quasar/Quasar/ex"
 
 [Easel.Canvas.Checkerboard]
-checker1 = [54, 77, 77, 127]
-checker2 = [41, 51, 51, 127]
+checker1 = [0.2, 0.3, 0.3, 0.5]
+checker2 = [0.16, 0.2, 0.2, 0.5]
 checker_size = [16, 16]
 
 [Easel.Gridlines]
