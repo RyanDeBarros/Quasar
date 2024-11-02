@@ -4,6 +4,11 @@
 
 #include "variety/GLutility.h"
 
+static void uniform_does_not_exist(const char* uniform, size_t shader)
+{
+	LOG << LOG.error << LOG.start << "Uniform \"" << uniform << "\" does not exist in shader (" << shader << ")." << LOG.endl;
+}
+
 void Uniforms::send_1(const Shader& shader, const char* uniform, float value, GLint uniform_offset, bool unbind)
 {
 	auto iter = shader.uniform_locations.find(uniform);
@@ -15,9 +20,7 @@ void Uniforms::send_1(const Shader& shader, const char* uniform, float value, GL
 			unbind_shader();
 	}
 	else
-	{
-		std::cerr << "Uniform \"" << uniform << "\" does not exist in shader (" << shader.rid << ")." << std::endl;
-	}
+		uniform_does_not_exist(uniform, shader);
 }
 
 void Uniforms::send_4(const Shader& shader, const char* uniform, glm::vec4 value, GLint uniform_offset, bool unbind)
@@ -31,9 +34,7 @@ void Uniforms::send_4(const Shader& shader, const char* uniform, glm::vec4 value
 			unbind_shader();
 	}
 	else
-	{
-		std::cerr << "Uniform \"" << uniform << "\" does not exist in shader (" << shader.rid << ")." << std::endl;
-	}
+		uniform_does_not_exist(uniform, shader);
 }
 
 void Uniforms::send_matrix3(const Shader& shader, const char* uniform, const glm::mat3& value, GLint uniform_offset, bool unbind)
@@ -47,7 +48,5 @@ void Uniforms::send_matrix3(const Shader& shader, const char* uniform, const glm
 			unbind_shader();
 	}
 	else
-	{
-		std::cerr << "Uniform \"" << uniform << "\" does not exist in shader (" << shader.rid << ")." << std::endl;
-	}
+		uniform_does_not_exist(uniform, shader);
 }

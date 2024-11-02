@@ -1,6 +1,5 @@
 #include "IO.h"
 
-#include <sstream>
 #include <iostream>
 
 #include "Macros.h"
@@ -16,6 +15,7 @@ bool IO_impl::read_file(const FilePath& filepath, std::string& content, std::ios
 		content = oss.str();
 		return true;
 	}
+	LOG << LOG.warning << LOG.start << "Could not open \"" << filepath.c_str() << "\" for reading" << LOG.endl;
 	return false;
 }
 
@@ -44,17 +44,15 @@ bool IO_impl::parse_toml(const FilePath& filepath, const char* header, toml::v3:
 		{
 			if (head.value() == header)
 				return true;
-			// LATER use logging system. Don't use log functions, but rather log streams similar to std::cout, std::cerr, and std::endl.
-			// Of course, this will probably get printed to a log file, in addition to console.
-			std::cerr << "[Error TOML]: Header \"" << head.value() << "\" does not match with expected header \"" << header << "\"." << std::endl;
+			LOG << LOG.error << LOG.start_toml << "Header \"" << head.value() << "\" does not match with expected header \"" << header << "\"." << LOG.endl;
 			return false;
 		}
-		std::cerr << "[Error TOML]: Header \"" << header << "\" is missing." << std::endl;
+		LOG << LOG.error << LOG.start_toml << "Header \"" << header << "\" is missing." << LOG.endl;
 		return false;
 	}
 	catch (const toml::parse_error& err)
 	{
-		std::cerr << "Cannot parse toml file: \"" << filepath.c_str() << "\": " << err.description() << std::endl;
+		LOG << LOG.error << LOG.start << "Cannot parse toml file: \"" << filepath.c_str() << "\": " << err.description() << LOG.endl;
 		return false;
 	}
 }
@@ -64,7 +62,7 @@ void IO_impl::load_quasar_settings()
 	toml::v3::parse_result _TOML;
 	if (!parse_toml("./Quasar.toml", "settings", _TOML))
 	{
-		std::cerr << "Quasar settings could not be loaded. Press any key to quit..." << std::endl;
+		LOG << LOG.fatal << LOG.start << "Quasar settings could not be loaded. Press any key to quit..." << LOG.endl;
 		std::cin.get();
 		QUASAR_ASSERT(false);
 	}
@@ -89,17 +87,18 @@ void IO_impl::load_workspace_preferences(const FilePath& filepath, const char* w
 	toml::v3::parse_result _TOML;
 	if (!parse_toml(filepath, "preferences", _TOML))
 	{
+		LOG << LOG.fatal << LOG.start << "Could not load preferences file \"" << filepath.c_str() << LOG.endl;
 		QUASAR_ASSERT(false);
 	}
 	auto _wspc = _TOML["workspace"].value<std::string>();
 	if (!_wspc)
 	{
-		std::cerr << "Workspace \"" << workspace << "\" not present in preferences file." << std::endl;
+		LOG << LOG.error << LOG.start << "Workspace \"" << workspace << "\" not present in preferences file." << LOG.endl;
 		QUASAR_ASSERT(false);
 	}
 	if (_wspc.value() != workspace)
 	{
-		std::cerr << "Workspace \"" << _wspc.value() << "\" does not match up with expected workspace \"" << workspace << "\"" << std::endl;
+		LOG << LOG.error << LOG.start << "Workspace \"" << _wspc.value() << "\" does not match up with expected workspace \"" << workspace << "\"" << LOG.endl;
 		QUASAR_ASSERT(false);
 	}
 

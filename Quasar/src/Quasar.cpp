@@ -1,10 +1,9 @@
 #include "user/Machine.h"
 #include "variety/IO.h"
-#include "Logger.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
-	std::cerr << "[GLFW ERROR " << error << "]: " << description << std::endl;
+	LOG << LOG.error << LOG.start_gl(error) << description << LOG.endl;
 	QUASAR_ASSERT(false);
 }
 

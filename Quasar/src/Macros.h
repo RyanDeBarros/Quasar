@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -24,13 +22,17 @@
 #endif
 #endif
 
+#include "Logger.h"
+
 inline bool no_gl_error(const char* function, const char* file, int line)
 {
 	bool no_err = true;
 	while (GLenum error = glGetError())
 	{
-		std::cerr << "[OpenGL ERROR " << error << "]: " << function << " " << file << ":" << line << std::endl;
+		LOG << LOG.error << LOG.start_gl(error) << function << " " << file << ":" << line << LOG.nl;
 		no_err = false;
 	}
+	if (!no_err)
+		LOG << LOG.flush;
 	return no_err;
 }
