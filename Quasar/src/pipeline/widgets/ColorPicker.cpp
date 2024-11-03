@@ -98,7 +98,7 @@ ColorPicker::~ColorPicker()
 void ColorPicker::render()
 {
 	process_mb_down_events();
-	rr_wget(widget, BACKGROUND).ur->draw();
+	ur_wget(widget, BACKGROUND).draw();
 	cp_render_gui();
 	ur_wget(widget, ALPHA_SLIDER).draw();
 	ur_wget(widget, ALPHA_SLIDER_CURSOR).draw();
