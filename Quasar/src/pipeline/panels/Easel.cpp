@@ -2,10 +2,10 @@
 
 #include "variety/GLutility.h"
 #include "user/Machine.h"
-#include "../Uniforms.h"
+#include "../render/Uniforms.h"
 
 Gridlines::Gridlines()
-	: shader(FileSystem::resources_path("gridlines.vert"), FileSystem::resources_path("gridlines.frag"))
+	: shader(FileSystem::shader_path("gridlines.vert"), FileSystem::shader_path("gridlines.frag"))
 {
 	gen_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
 }
@@ -249,7 +249,7 @@ void Canvas::sync_transform()
 }
 
 Easel::Easel()
-	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag"))
+	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag"))
 {
 	static constexpr size_t num_quads = 3;
 

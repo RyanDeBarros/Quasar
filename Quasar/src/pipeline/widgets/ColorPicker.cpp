@@ -6,7 +6,7 @@
 #include "edit/Color.h"
 #include "user/Machine.h"
 #include "user/GUI.h"
-#include "../Uniforms.h"
+#include "../render/Uniforms.h"
 #include "RoundRect.h"
 
 enum class GradientIndex : GLint
@@ -72,13 +72,13 @@ enum
 };
 
 ColorPicker::ColorPicker(MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler)
-	: quad_shader(FileSystem::resources_path("gradients/quad.vert"), FileSystem::resources_path("gradients/quad.frag.tmpl"),
+	: quad_shader(FileSystem::shader_path("gradients/quad.vert"), FileSystem::shader_path("gradients/quad.frag.tmpl"),
 		{ {"$MAX_GRADIENT_COLORS", std::to_string((int)GradientIndex::_MAX_GRADIENT_COLORS) } }),
-	linear_hue_shader(FileSystem::resources_path("gradients/linear_hue.vert"), FileSystem::resources_path("gradients/linear_hue.frag")),
-	hue_wheel_w_shader(FileSystem::resources_path("gradients/hue_wheel_w.vert"), FileSystem::resources_path("gradients/hue_wheel_w.frag")),
-	linear_lightness_shader(FileSystem::resources_path("gradients/linear_lightness.vert"), FileSystem::resources_path("gradients/linear_lightness.frag")),
-	circle_cursor_shader(FileSystem::resources_path("circle_cursor.vert"), FileSystem::resources_path("circle_cursor.frag")),
-	round_rect_shader(FileSystem::resources_path("round_rect.vert"), FileSystem::resources_path("round_rect.frag")),
+	linear_hue_shader(FileSystem::shader_path("gradients/linear_hue.vert"), FileSystem::shader_path("gradients/linear_hue.frag")),
+	hue_wheel_w_shader(FileSystem::shader_path("gradients/hue_wheel_w.vert"), FileSystem::shader_path("gradients/hue_wheel_w.frag")),
+	linear_lightness_shader(FileSystem::shader_path("gradients/linear_lightness.vert"), FileSystem::shader_path("gradients/linear_lightness.frag")),
+	circle_cursor_shader(FileSystem::shader_path("circle_cursor.vert"), FileSystem::shader_path("circle_cursor.frag")),
+	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
 	widget(_CPWC_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler)
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(HSV(0.0f, 0.0f, 0.0f)));

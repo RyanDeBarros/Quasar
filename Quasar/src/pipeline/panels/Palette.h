@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Panel.h"
-#include "../FlatSprite.h"
-#include "../Shader.h"
+#include "../render/FlatSprite.h"
+#include "../render/Shader.h"
 #include "../widgets/ColorPicker.h"
 
 struct Palette : public Panel
