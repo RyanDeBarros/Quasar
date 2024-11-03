@@ -9,6 +9,7 @@
 #include "edit/Color.h"
 #include "variety/Geometry.h"
 
+// TODO make ColorPicker inherit from PolyHolder<WidgetPlacement>
 struct ColorPicker
 {
 	enum class State
@@ -26,11 +27,11 @@ public:
 	State get_state() const { return state; }
 	void set_state(State state);
 
-	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader;
+	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader, round_rect_shader;
 
 	Widget widget;
-	Scale size;
 private:
+	Scale size;
 	Position center;
 	State last_graphic_state = State::GRAPHIC_QUAD;
 	enum class TextFieldMode
@@ -60,9 +61,10 @@ public:
 	~ColorPicker();
 
 	void render();
-	void send_vp(const glm::mat3& vp) const;
+	void send_vp(const glm::mat3& vp);
 	ColorFrame get_color() const;
 	void set_color(ColorFrame);
+	void set_size(Scale size);
 	void set_position(Position world_pos, Position screen_pos);
 
 private:
@@ -122,8 +124,8 @@ private:
 	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
-	void sync_cp_widget_transforms() const;
-	void sync_single_cp_widget_transform(size_t control) const;
+	void sync_cp_widget_with_vp() const;
+	void sync_single_cp_widget_transform_ur(size_t control) const;
 	void send_cpwc_buffer(size_t control) const;
 	void set_circle_cursor_thickness(size_t cursor, float thickness) const;
 	void set_circle_cursor_value(size_t cursor, float value) const;

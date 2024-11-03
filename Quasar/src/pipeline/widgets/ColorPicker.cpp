@@ -1,11 +1,13 @@
 #include "ColorPicker.h"
 
 #include <glm/gtc/type_ptr.inl>
+
 #include "variety/GLutility.h"
 #include "edit/Color.h"
 #include "user/Machine.h"
 #include "user/GUI.h"
-#include "Uniforms.h"
+#include "../Uniforms.h"
+#include "RoundRect.h"
 
 enum class GradientIndex : GLint
 {
@@ -65,6 +67,7 @@ enum
 	HSL_S_SLIDER_CURSOR,			// circle_cursor
 	HSL_L_SLIDER,					// linear_lightness
 	HSL_L_SLIDER_CURSOR,			// circle_cursor
+	BACKGROUND,						// separate widget
 	_CPWC_COUNT
 };
 
@@ -75,6 +78,7 @@ ColorPicker::ColorPicker(MouseButtonHandler& parent_mb_handler, KeyHandler& pare
 	hue_wheel_w_shader(FileSystem::resources_path("gradients/hue_wheel_w.vert"), FileSystem::resources_path("gradients/hue_wheel_w.frag")),
 	linear_lightness_shader(FileSystem::resources_path("gradients/linear_lightness.vert"), FileSystem::resources_path("gradients/linear_lightness.frag")),
 	circle_cursor_shader(FileSystem::resources_path("circle_cursor.vert"), FileSystem::resources_path("circle_cursor.frag")),
+	round_rect_shader(FileSystem::resources_path("round_rect.vert"), FileSystem::resources_path("round_rect.frag")),
 	widget(_CPWC_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler)
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(HSV(0.0f, 0.0f, 0.0f)));
@@ -94,6 +98,7 @@ ColorPicker::~ColorPicker()
 void ColorPicker::render()
 {
 	process_mb_down_events();
+	rr_wget(widget, BACKGROUND).ur->draw();
 	cp_render_gui();
 	ur_wget(widget, ALPHA_SLIDER).draw();
 	ur_wget(widget, ALPHA_SLIDER_CURSOR).draw();
@@ -141,7 +146,6 @@ void ColorPicker::render()
 
 void ColorPicker::cp_render_gui()
 {
-	ImGui::SetNextWindowSize(ImVec2(0, 0));
 	ImGui::SetNextWindowBgAlpha(0);
 	auto sz = size;
 	ImGui::SetNextWindowSize(ImVec2(sz.x, sz.y));
@@ -153,7 +157,8 @@ void ColorPicker::cp_render_gui()
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoScrollbar |
 		ImGuiWindowFlags_NoSavedSettings |
-		ImGuiWindowFlags_NoDecoration;
+		ImGuiWindowFlags_NoDecoration |
+		ImGuiWindowFlags_NoBackground;
 	if (ImGui::Begin("-", nullptr, window_flags))
 	{
 		State to_state = state;
@@ -449,14 +454,15 @@ void ColorPicker::set_state(State _state)
 	}
 }
 
-void ColorPicker::send_vp(const glm::mat3& vp) const
+void ColorPicker::send_vp(const glm::mat3& vp)
 {
 	Uniforms::send_matrix3(quad_shader, "u_VP", vp);
 	Uniforms::send_matrix3(linear_hue_shader, "u_VP", vp);
 	Uniforms::send_matrix3(hue_wheel_w_shader, "u_VP", vp);
 	Uniforms::send_matrix3(linear_lightness_shader, "u_VP", vp);
 	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", vp);
-	sync_cp_widget_transforms();
+	Uniforms::send_matrix3(round_rect_shader, "u_VP", vp);
+	sync_cp_widget_with_vp();
 }
 
 void ColorPicker::initialize_widget()
@@ -652,9 +658,16 @@ void ColorPicker::initialize_widget()
 	widget.wp_at(PREVIEW).transform.scale = { preview_w, preview_h };
 	widget.wp_at(PREVIEW).pivot.y = 1;
 
-	// ---------- PARENT ----------
+	// ---------- BACKGROUND ----------
 
-	sync_cp_widget_transforms();
+	widget.hobjs[BACKGROUND] = new RoundRect(round_rect_shader);
+	widget.wp_at(BACKGROUND).transform.position.y = -55;
+	widget.wp_at(BACKGROUND).transform.scale = size;
+	rr_wget(widget, BACKGROUND).thickness = 0.5f;
+	rr_wget(widget, BACKGROUND).corner_radius = 10;
+	rr_wget(widget, BACKGROUND).border_color = RGBA(HSV(0.7f, 0.5f, 0.5f).to_rgb(), 0.5f);
+	rr_wget(widget, BACKGROUND).fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.5f);
+	rr_wget(widget, BACKGROUND).update_all();
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -900,15 +913,15 @@ ColorFrame ColorPicker::get_color() const
 void ColorPicker::set_color(ColorFrame color)
 {
 	move_slider_cursor_x_relative(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, color.alpha);
-	sync_single_cp_widget_transform(ALPHA_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(ALPHA_SLIDER_CURSOR);
 	if (state == State::GRAPHIC_QUAD)
 	{
 		HSV hsv = color.hsv();
 		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_QUAD).interp_x(hsv.s);
 		widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_QUAD).interp_y(hsv.v);
 		move_slider_cursor_y_relative(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, hsv.h);
-		sync_single_cp_widget_transform(GRAPHIC_QUAD_CURSOR);
-		sync_single_cp_widget_transform(GRAPHIC_HUE_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(GRAPHIC_QUAD_CURSOR);
+		sync_single_cp_widget_transform_ur(GRAPHIC_HUE_SLIDER_CURSOR);
 	}
 	else if (state == State::GRAPHIC_WHEEL)
 	{
@@ -918,8 +931,8 @@ void ColorPicker::set_color(ColorFrame color)
 		widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position.x = widget.wp_at(GRAPHIC_HUE_WHEEL).interp_x(0.5f * (x + 1));
 		widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position.y = widget.wp_at(GRAPHIC_HUE_WHEEL).interp_y(0.5f * (y + 1));
 		move_slider_cursor_y_relative(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, hsv.v);
-		sync_single_cp_widget_transform(GRAPHIC_HUE_WHEEL_CURSOR);
-		sync_single_cp_widget_transform(GRAPHIC_VALUE_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(GRAPHIC_HUE_WHEEL_CURSOR);
+		sync_single_cp_widget_transform_ur(GRAPHIC_VALUE_SLIDER_CURSOR);
 	}
 	else if (state == State::SLIDER_RGB)
 	{
@@ -927,9 +940,9 @@ void ColorPicker::set_color(ColorFrame color)
 		move_slider_cursor_x_relative(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, rgb.r);
 		move_slider_cursor_x_relative(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, rgb.g);
 		move_slider_cursor_x_relative(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, rgb.b);
-		sync_single_cp_widget_transform(RGB_R_SLIDER_CURSOR);
-		sync_single_cp_widget_transform(RGB_G_SLIDER_CURSOR);
-		sync_single_cp_widget_transform(RGB_B_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(RGB_R_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(RGB_G_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(RGB_B_SLIDER_CURSOR);
 	}
 	else if (state == State::SLIDER_HSV)
 	{
@@ -937,9 +950,9 @@ void ColorPicker::set_color(ColorFrame color)
 		move_slider_cursor_x_relative(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, hsv.h);
 		move_slider_cursor_x_relative(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, hsv.s);
 		move_slider_cursor_x_relative(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, hsv.v);
-		sync_single_cp_widget_transform(HSV_H_SLIDER_CURSOR);
-		sync_single_cp_widget_transform(HSV_S_SLIDER_CURSOR);
-		sync_single_cp_widget_transform(HSV_V_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(HSV_H_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(HSV_S_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(HSV_V_SLIDER_CURSOR);
 	}
 	else if (state == State::SLIDER_HSL)
 	{
@@ -947,11 +960,17 @@ void ColorPicker::set_color(ColorFrame color)
 		move_slider_cursor_x_relative(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, hsl.h);
 		move_slider_cursor_x_relative(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, hsl.s);
 		move_slider_cursor_x_relative(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, hsl.l);
-		sync_single_cp_widget_transform(HSL_H_SLIDER_CURSOR);
-		sync_single_cp_widget_transform(HSL_S_SLIDER_CURSOR);
-		sync_single_cp_widget_transform(HSL_L_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(HSL_H_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(HSL_S_SLIDER_CURSOR);
+		sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
 	}
 	update_display_colors();
+}
+
+void ColorPicker::set_size(Scale size_)
+{
+	size = size_;
+	widget.wp_at(BACKGROUND).transform.scale = size_ * Machine.inv_app_scale();
 }
 
 void ColorPicker::set_position(Position world_pos, Position screen_pos) // LATER pass one Position. Add coordinate functions to Machine.
@@ -963,85 +982,85 @@ void ColorPicker::set_position(Position world_pos, Position screen_pos) // LATER
 void ColorPicker::mouse_handler_alpha_slider(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(ALPHA_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(ALPHA_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_graphic_quad(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_QUAD_CURSOR).transform.position = widget.wp_at(GRAPHIC_QUAD).clamp_point(local_cursor_pos);
-	sync_single_cp_widget_transform(GRAPHIC_QUAD_CURSOR);
+	sync_single_cp_widget_transform_ur(GRAPHIC_QUAD_CURSOR);
 }
 
 void ColorPicker::mouse_handler_graphic_hue_slider(Position local_cursor_pos)
 {
 	move_slider_cursor_y_absolute(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos.y);
-	sync_single_cp_widget_transform(GRAPHIC_HUE_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(GRAPHIC_HUE_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_graphic_hue_wheel(Position local_cursor_pos)
 {
 	widget.wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position = widget.wp_at(GRAPHIC_HUE_WHEEL).clamp_point_in_ellipse(local_cursor_pos);
-	sync_single_cp_widget_transform(GRAPHIC_HUE_WHEEL_CURSOR);
+	sync_single_cp_widget_transform_ur(GRAPHIC_HUE_WHEEL_CURSOR);
 }
 
 void ColorPicker::mouse_handler_graphic_value_slider(Position local_cursor_pos)
 {
 	move_slider_cursor_y_absolute(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos.y);
-	sync_single_cp_widget_transform(GRAPHIC_VALUE_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(GRAPHIC_VALUE_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_rgb_r(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(RGB_R_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(RGB_R_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_rgb_g(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(RGB_G_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(RGB_G_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_rgb_b(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(RGB_B_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(RGB_B_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_hsv_h(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(HSV_H_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSV_H_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_hsv_s(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(HSV_S_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSV_S_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_hsv_v(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(HSV_V_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSV_V_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_hsl_h(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(HSL_H_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSL_H_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_hsl_s(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(HSL_S_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSL_S_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_slider_hsl_l(Position local_cursor_pos)
 {
 	move_slider_cursor_x_absolute(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform(HSL_L_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
 }
 
 void ColorPicker::move_slider_cursor_x_absolute(size_t control, size_t cursor, float absolute)
@@ -1221,18 +1240,46 @@ void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, G
 	ur_wget(widget, control).set_attribute(2, glm::value_ptr(glm::vec4{ g1, g2, g3, g4 }));
 }
 
-void ColorPicker::sync_cp_widget_transforms() const
+void ColorPicker::sync_cp_widget_with_vp() const
 {
-	for (size_t i = 0; i < widget.hobjs.size(); ++i)
-		sync_single_cp_widget_transform(i);
+	sync_single_cp_widget_transform_ur(PREVIEW);
+	sync_single_cp_widget_transform_ur(ALPHA_SLIDER);
+	sync_single_cp_widget_transform_ur(ALPHA_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(GRAPHIC_QUAD);
+	sync_single_cp_widget_transform_ur(GRAPHIC_QUAD_CURSOR);
+	sync_single_cp_widget_transform_ur(GRAPHIC_HUE_SLIDER);
+	sync_single_cp_widget_transform_ur(GRAPHIC_HUE_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(GRAPHIC_HUE_WHEEL);
+	sync_single_cp_widget_transform_ur(GRAPHIC_HUE_WHEEL_CURSOR);
+	sync_single_cp_widget_transform_ur(GRAPHIC_VALUE_SLIDER);
+	sync_single_cp_widget_transform_ur(GRAPHIC_VALUE_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(RGB_R_SLIDER);
+	sync_single_cp_widget_transform_ur(RGB_R_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(RGB_G_SLIDER);
+	sync_single_cp_widget_transform_ur(RGB_G_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(RGB_B_SLIDER);
+	sync_single_cp_widget_transform_ur(RGB_B_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSV_H_SLIDER);
+	sync_single_cp_widget_transform_ur(HSV_H_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSV_S_SLIDER);
+	sync_single_cp_widget_transform_ur(HSV_S_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSV_V_SLIDER);
+	sync_single_cp_widget_transform_ur(HSV_V_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSL_H_SLIDER);
+	sync_single_cp_widget_transform_ur(HSL_H_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSL_S_SLIDER);
+	sync_single_cp_widget_transform_ur(HSL_S_SLIDER_CURSOR);
+	sync_single_cp_widget_transform_ur(HSL_L_SLIDER);
+	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
+	rr_wget(widget, BACKGROUND).send_transform_under_parent(widget.parent);
 }
 
-void ColorPicker::sync_single_cp_widget_transform(size_t control) const
+void ColorPicker::sync_single_cp_widget_transform_ur(size_t control) const
 {
 	if (widget.hobjs[control])
 	{
 		setup_vertex_positions(control);
-		ur_wget(widget, control).send_buffer(); // TODO don't send buffer, but call send_cpwc_buffer() after sync_single_cp_widget_transform()
+		ur_wget(widget, control).send_buffer(); // TODO don't send buffer, but call send_cpwc_buffer() after sync_single_cp_widget_transform_ur()
 	}
 }
 

@@ -3,7 +3,7 @@
 #include "Panel.h"
 #include "../FlatSprite.h"
 #include "../Shader.h"
-#include "../ColorPicker.h"
+#include "../widgets/ColorPicker.h"
 
 struct Palette : public Panel
 {
