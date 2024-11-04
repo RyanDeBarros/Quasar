@@ -127,17 +127,22 @@ Font::Glyph::Glyph(Font* font, int index, float scale, size_t buffer_pos)
 	height = ch_y1 - ch_y0;
 }
 
-void Font::Glyph::render_on_bitmap_shared(const Buffer& buffer, bool plus_one)
+void Font::Glyph::render_on_bitmap_shared(const Buffer& buffer, int left_padding, int right_padding, int bottom_padding, int top_padding)
 {
 	unsigned char* temp = new unsigned char[width * height];
 	stbtt_MakeGlyphBitmap(&font->font_info, temp, width, height, width, font->scale, font->scale, index);
-	for (size_t row = 0; row < height; ++row)
-		memcpy(buffer.pixels + row * buffer.stride(), temp + row * width, width);
+	for (size_t row = 0; row < bottom_padding; ++row)
+		memset(buffer.pixels + row * buffer.width, 0, left_padding + width + right_padding);
+	for (size_t row = bottom_padding; row < bottom_padding + height; ++row)
+	{
+		memset(buffer.pixels + row * buffer.width, 0, left_padding);
+		memcpy(buffer.pixels + row * buffer.width + left_padding, temp + (row - bottom_padding) * width, width);
+		memset(buffer.pixels + row * buffer.width + left_padding + width, 0, right_padding);
+
+	}
+	for (size_t row = height + bottom_padding; row < buffer.height; ++row)
+		memset(buffer.pixels + row * buffer.width, 0, left_padding + width + right_padding);
 	delete[] temp;
-	for (size_t row = height; row < buffer.height; ++row)
-		memset(buffer.pixels + row * buffer.stride(), 0, width);
-	if (plus_one) for (size_t row = 0; row < buffer.height; ++row)
-		buffer.pixels[row * buffer.stride() + width] = 0;
 	location = buffer.pixels;
 }
 
@@ -182,12 +187,13 @@ Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer,
 		if (!gIndex) // TODO add warning/info logs throughout font/text code
 			continue;
 		Glyph glyph(this, gIndex, scale, common_bmp.width);
-		common_bmp.width += glyph.width + size_t(1);
+		common_bmp.width += glyph.width + size_t(2);
 		if (glyph.height > common_bmp.height)
 			common_bmp.height = glyph.height;
 		glyphs.insert({ codepoint, std::move(glyph) });
 		codepoints.push_back(codepoint);
 	}
+	common_bmp.height += 2;
 	if (common_bmp.width > 0)
 	{
 		common_bmp.pxnew();
@@ -196,7 +202,7 @@ Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer,
 		{
 			Font::Glyph& glyph = glyphs[codepoint];
 			offset.pixels = common_bmp.pixels + glyph.buffer_pos;
-			glyph.render_on_bitmap_shared(offset, true);
+			glyph.render_on_bitmap_shared(offset, 1, 1, 1, 1);
 		}
 		common_texture.buf = common_bmp;
 		common_texture.gen_texture(texture_params);
@@ -286,8 +292,8 @@ Bounds Font::uvs(const Glyph& glyph) const
 	Bounds b{};
 	if (glyph.buffer_pos != size_t(-1))
 	{
-		b.x1 = static_cast<float>(glyph.buffer_pos) / common_bmp.width;
-		b.x2 = static_cast<float>(glyph.buffer_pos + glyph.width) / common_bmp.width;
+		b.x1 = static_cast<float>(glyph.buffer_pos + 1) / common_bmp.width;
+		b.x2 = static_cast<float>(glyph.buffer_pos + 1 + glyph.width) / common_bmp.width;
 		b.y1 = 0.0f;
 		b.y2 = static_cast<float>(glyph.height) / common_bmp.height;
 	}

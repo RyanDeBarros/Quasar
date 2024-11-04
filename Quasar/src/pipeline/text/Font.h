@@ -45,7 +45,7 @@ struct Font
 		Glyph() = default;
 		Glyph(Font* font, int index, float scale, size_t buffer_pos);
 
-		void render_on_bitmap_shared(const Buffer& buffer, bool plus_one);
+		void render_on_bitmap_shared(const Buffer& buffer, int left_padding, int right_padding, int bottom_padding, int top_padding);
 		void render_on_bitmap_unique(const Buffer& buffer);
 	};
 

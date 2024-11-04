@@ -119,17 +119,6 @@ void MachineImpl::init_renderer()
 
 	import_file(FileSystem::workspace_path("ex/flag.png"));
 	//show_major_gridlines();
-
-	const Buffer& cpy = Fonts::roboto_regular->common_texture.buf;
-	std::shared_ptr<Image> img = std::make_shared<Image>();
-	img->buf.chpp = cpy.chpp;
-	img->buf.width = cpy.width;
-	img->buf.height = cpy.height;
-	img->buf.pxnew();
-	subbuffer_copy(img->buf, cpy);
-	img->gen_texture(TextureParams::linear);
-	easel()->set_canvas_image(std::move(img));
-	canvas_reset_camera();
 }
 
 void MachineImpl::destroy()

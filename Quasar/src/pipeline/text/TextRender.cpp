@@ -129,10 +129,10 @@ void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t 
 {
 	FlatTransform local{ { float(x), float(y - glyph.ch_y0) }, { float(glyph.width), -float(glyph.height) } };
 	local = local.relative_to(held.transform.relative_to(parent));
-	float left = local.position.x - 0.5f * local.scale.x;
-	float right = local.position.x + 0.5f * local.scale.x;
-	float bottom = local.position.y - 0.5f * local.scale.y;
-	float top = local.position.y + 0.5f * local.scale.y;
+	float left = local.position.x;
+	float right = local.position.x + local.scale.x;
+	float bottom = local.position.y;
+	float top = local.position.y + local.scale.y;
 
 	ir->set_attribute_single_vertex(quad_index * 4 + 0, 0, glm::value_ptr(glm::vec2{ left, bottom }));
 	ir->set_attribute_single_vertex(quad_index * 4 + 1, 0, glm::value_ptr(glm::vec2{ right, bottom }));

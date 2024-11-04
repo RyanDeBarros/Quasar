@@ -685,8 +685,6 @@ void ColorPicker::initialize_widget()
 	widget.hobjs[TEXT_ALPHA] = new TextRender(Fonts::roboto_regular, "Alpha");
 	widget.wp_at(TEXT_ALPHA).transform.position.x = -1000;
 	widget.wp_at(TEXT_ALPHA).transform.position.y = -100;
-	widget.wp_at(TEXT_ALPHA).transform.scale.x = 10;
-	widget.wp_at(TEXT_ALPHA).transform.scale.y = 10;
 	//tr_wget(widget, TEXT_ALPHA).format.horizontal_align = TextRender::HorizontalAlign::CENTER;
 }
 
