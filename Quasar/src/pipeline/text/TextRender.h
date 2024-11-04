@@ -85,21 +85,23 @@ public:
 
 	void draw() const;
 
-	void set_text(const UTF::String& text_, FlatTransform parent = {}) { text = text_; update_text(parent); }
-	void set_text(UTF::String&& text_, FlatTransform parent = {}) { text = std::move(text_); update_text(parent); }
+	void set_text(const UTF::String& text_) { text = text_; update_text(); }
+	void set_text(UTF::String&& text_) { text = std::move(text_); update_text(); }
+
+	void send_vp(const glm::mat3 vp) const;
 
 	Bounds get_bounds() const { return bounds; }
 	int outer_width() const { return std::max(bounds.inner_width, format.min_width); }
 	int outer_height() const { return std::max(bounds.inner_height, format.min_height); }
 
 private:
-	void update_text(FlatTransform parent);
+	void update_text();
 	size_t num_printable_glyphs = 0;
 	void build_layout();
 public:
-	void setup_renderable(FlatTransform parent);
+	void setup_renderable();
 private:
-	void add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t quad_index, FlatTransform parent);
+	void add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t quad_index);
 	void format_line(size_t line, LineFormattingInfo& line_formatting) const;
 	PageFormattingInfo format_page() const;
 

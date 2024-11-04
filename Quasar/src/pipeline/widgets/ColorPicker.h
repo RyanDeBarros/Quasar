@@ -30,9 +30,11 @@ public:
 	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader, round_rect_shader;
 
 	Widget widget;
+
 private:
 	Scale size;
 	Position center;
+	glm::mat3 vp;
 	State last_graphic_state = State::GRAPHIC_QUAD;
 	enum class TextFieldMode
 	{

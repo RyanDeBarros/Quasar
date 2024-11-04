@@ -461,18 +461,15 @@ void ColorPicker::set_state(State _state)
 	}
 }
 
-void ColorPicker::send_vp(const glm::mat3& vp)
+void ColorPicker::send_vp(const glm::mat3& vp_)
 {
+	vp = vp_;
 	Uniforms::send_matrix3(quad_shader, "u_VP", vp);
 	Uniforms::send_matrix3(linear_hue_shader, "u_VP", vp);
 	Uniforms::send_matrix3(hue_wheel_w_shader, "u_VP", vp);
 	Uniforms::send_matrix3(linear_lightness_shader, "u_VP", vp);
 	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", vp);
 	Uniforms::send_matrix3(round_rect_shader, "u_VP", vp);
-
-	// TODO send mvp
-	Uniforms::send_matrix3(*ir_wget(widget, TEXT_ALPHA).shader, "u_VP", vp);
-
 	sync_cp_widget_with_vp();
 }
 
@@ -682,10 +679,11 @@ void ColorPicker::initialize_widget()
 
 	// ---------- BACKGROUND ----------
 	
-	widget.hobjs[TEXT_ALPHA] = new TextRender(Fonts::roboto_regular->get_font(32), "Alpha");
+	widget.hobjs[TEXT_ALPHA] = new TextRender(Fonts::roboto_regular->get_font(32), "Alpha\nhi\r\n\rkdjjhaskldfh");
 	widget.wp_at(TEXT_ALPHA).transform.position.x = -1000;
 	widget.wp_at(TEXT_ALPHA).transform.position.y = -100;
-	//tr_wget(widget, TEXT_ALPHA).format.horizontal_align = TextRender::HorizontalAlign::CENTER;
+	tr_wget(widget, TEXT_ALPHA).format.horizontal_align = TextRender::HorizontalAlign::CENTER;
+	tr_wget(widget, TEXT_ALPHA).setup_renderable();
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -1290,8 +1288,7 @@ void ColorPicker::sync_cp_widget_with_vp()
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER);
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
 	rr_wget(widget, BACKGROUND).send_transform_under_parent(widget.parent);
-
-	tr_wget(widget, TEXT_ALPHA).setup_renderable(widget.parent);
+	tr_wget(widget, TEXT_ALPHA).send_vp(vp);
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control) const

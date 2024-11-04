@@ -32,12 +32,19 @@ void TextRender::draw() const
 	ir->draw();
 }
 
-void TextRender::update_text(FlatTransform parent)
+void TextRender::send_vp(const glm::mat3 vp) const
+{
+	bind_shader(shader);
+	Uniforms::send_matrix3(shader, "u_MVP", vp * held.transform.matrix());
+	unbind_shader();
+}
+
+void TextRender::update_text()
 {
 	ir->varr.clear();
 	ir->iarr.clear();
 	build_layout();
-	setup_renderable(parent);
+	setup_renderable();
 }
 
 void TextRender::build_layout()
@@ -82,7 +89,7 @@ void TextRender::build_layout()
 	bounds_formatting.last_line(*this);
 }
 
-void TextRender::setup_renderable(FlatTransform parent)
+void TextRender::setup_renderable()
 {
 	ir->fill_iarr_with_quads(num_printable_glyphs);
 	ir->push_back_vertices(num_printable_glyphs * 4);
@@ -108,17 +115,16 @@ void TextRender::setup_renderable(FlatTransform parent)
 		{
 			const Font::Glyph& glyph = font->glyphs[codepoint];
 			formatting.kerning_advance_x(*this, glyph, codepoint);
-			add_glyph_to_ir(glyph, formatting.x, formatting.y, quad_index++, parent);
+			add_glyph_to_ir(glyph, formatting.x, formatting.y, quad_index++);
 			formatting.advance_x(glyph.advance_width * font->scale * formatting.line.mul_x, codepoint);
 		}
 	}
 	ir->send_both_buffers_resized();
 }
 
-void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t quad_index, FlatTransform parent)
+void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t quad_index)
 {
-	FlatTransform local{ { float(x), float(y - glyph.ch_y0) }, { float(glyph.width), -float(glyph.height) } };
-	local = local.relative_to(held.transform.relative_to(parent));
+	FlatTransform local{ { float(x), float(y - glyph.ch_y0) }, { float(glyph.width), -float(glyph.height) } }; // TODO baseline offset + to y. In file similar to .kern. Makes certain characters align to baseline better.
 	float left = local.position.x;
 	float right = local.position.x + local.scale.x;
 	float bottom = local.position.y;
