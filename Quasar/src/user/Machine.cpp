@@ -7,6 +7,8 @@
 #include "pipeline/panels/Panel.h"
 #include "pipeline/panels/Easel.h"
 #include "pipeline/panels/Palette.h"
+#include "pipeline/text/TextRender.h"
+#include "pipeline/text/CommonFonts.h"
 #include "variety/GLutility.h"
 #include "variety/Utils.h"
 
@@ -72,6 +74,9 @@ void MachineImpl::init_renderer()
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	main_window->focus_context();
 	set_clear_color(ColorFrame(RGB(0.1f, 0.1f, 0.1f), 0.1f)); // SETTINGS
+	
+	TextRender::load_shader();
+	Fonts::load_common_fonts();
 
 	panels = new PanelGroup();
 	panels->panels.push_back(std::make_unique<Easel>());
@@ -114,12 +119,25 @@ void MachineImpl::init_renderer()
 
 	import_file(FileSystem::workspace_path("ex/flag.png"));
 	//show_major_gridlines();
+
+	const Buffer& cpy = Fonts::roboto_regular->common_texture.buf;
+	std::shared_ptr<Image> img = std::make_shared<Image>();
+	img->buf.chpp = cpy.chpp;
+	img->buf.width = cpy.width;
+	img->buf.height = cpy.height;
+	img->buf.pxnew();
+	subbuffer_copy(img->buf, cpy);
+	img->gen_texture(TextureParams::linear);
+	easel()->set_canvas_image(std::move(img));
+	canvas_reset_camera();
 }
 
 void MachineImpl::destroy()
 {
 	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(panels);
+	TextRender::invalidate_shader();
+	Fonts::invalidate_common_fonts();
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 
@@ -351,7 +369,7 @@ void MachineImpl::import_file(const FilePath& filepath)
 {	
 	easel()->set_canvas_image(std::make_shared<Image>(filepath));
 	auto title = "Quasar - " + filepath.filename();
-	main_window->set_title(title.c_str());
+	main_window->set_title(title.c_str()); // LATER don't set title of window. put image filename in bottom status bar
 	canvas_reset_camera();
 }
 

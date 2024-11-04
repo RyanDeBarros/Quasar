@@ -8,6 +8,8 @@
 #include "user/GUI.h"
 #include "../render/Uniforms.h"
 #include "RoundRect.h"
+#include "../text/TextRender.h"
+#include "../text/CommonFonts.h"
 
 enum class GradientIndex : GLint
 {
@@ -68,6 +70,7 @@ enum
 	HSL_L_SLIDER,					// linear_lightness
 	HSL_L_SLIDER_CURSOR,			// circle_cursor
 	BACKGROUND,						// separate widget
+	TEXT_ALPHA,						// separate widget
 	_CPWC_COUNT
 };
 
@@ -142,6 +145,10 @@ void ColorPicker::render()
 		ur_wget(widget, HSL_L_SLIDER_CURSOR).draw();
 		break;
 	}
+
+
+
+	tr_wget(widget, TEXT_ALPHA).draw();
 }
 
 void ColorPicker::cp_render_gui()
@@ -462,6 +469,10 @@ void ColorPicker::send_vp(const glm::mat3& vp)
 	Uniforms::send_matrix3(linear_lightness_shader, "u_VP", vp);
 	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", vp);
 	Uniforms::send_matrix3(round_rect_shader, "u_VP", vp);
+
+	// TODO text shader data member, to be shared for all TextRenders in ColorPicker instance
+	Uniforms::send_matrix3(*TextRender::shader, "u_VP", vp);
+
 	sync_cp_widget_with_vp();
 }
 
@@ -668,6 +679,15 @@ void ColorPicker::initialize_widget()
 	rr_wget(widget, BACKGROUND).border_color = RGBA(HSV(0.7f, 0.5f, 0.5f).to_rgb(), 0.5f);
 	rr_wget(widget, BACKGROUND).fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.5f);
 	rr_wget(widget, BACKGROUND).update_all();
+
+	// ---------- BACKGROUND ----------
+	
+	widget.hobjs[TEXT_ALPHA] = new TextRender(Fonts::roboto_regular, "Alpha");
+	widget.wp_at(TEXT_ALPHA).transform.position.x = -1000;
+	widget.wp_at(TEXT_ALPHA).transform.position.y = -100;
+	widget.wp_at(TEXT_ALPHA).transform.scale.x = 10;
+	widget.wp_at(TEXT_ALPHA).transform.scale.y = 10;
+	//tr_wget(widget, TEXT_ALPHA).format.horizontal_align = TextRender::HorizontalAlign::CENTER;
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -1240,7 +1260,7 @@ void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, G
 	ur_wget(widget, control).set_attribute(2, glm::value_ptr(glm::vec4{ g1, g2, g3, g4 }));
 }
 
-void ColorPicker::sync_cp_widget_with_vp() const
+void ColorPicker::sync_cp_widget_with_vp()
 {
 	sync_single_cp_widget_transform_ur(PREVIEW);
 	sync_single_cp_widget_transform_ur(ALPHA_SLIDER);
@@ -1272,6 +1292,8 @@ void ColorPicker::sync_cp_widget_with_vp() const
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER);
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
 	rr_wget(widget, BACKGROUND).send_transform_under_parent(widget.parent);
+
+	tr_wget(widget, TEXT_ALPHA).setup_renderable(widget.parent);
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control) const

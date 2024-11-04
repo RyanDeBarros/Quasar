@@ -5,9 +5,9 @@
 #include "Macros.h"
 #include "user/Machine.h"
 
-bool IO_impl::read_file(const FilePath& filepath, std::string& content, std::ios_base::openmode mode)
+bool IO_impl::read_file(const FilePath& filepath, std::string& content)
 {
-	std::ifstream file(filepath.c_str(), mode);
+	std::ifstream file(filepath.c_str(), std::ios_base::in);
 	if (file)
 	{
 		std::ostringstream oss;
@@ -19,9 +19,25 @@ bool IO_impl::read_file(const FilePath& filepath, std::string& content, std::ios
 	return false;
 }
 
-bool IO_impl::read_template_file(const FilePath& filepath, std::string& content, const std::unordered_map<std::string, std::string>& tmplate, std::ios_base::openmode mode)
+bool IO_impl::read_file_uc(const FilePath& filepath, unsigned char*& content, size_t& content_length)
 {
-	if (!read_file(filepath, content, mode))
+	FILE* file;
+	if (fopen_s(&file, filepath.c_str(), "r") == 0 && file)
+	{
+		fseek(file, 0, SEEK_END);
+		content_length = ftell(file);
+		fseek(file, 0, SEEK_SET);
+		content = new unsigned char[content_length];
+		fread(content, content_length, 1, file);
+		fclose(file);
+		return true;
+	}
+	return false;
+}
+
+bool IO_impl::read_template_file(const FilePath& filepath, std::string& content, const std::unordered_map<std::string, std::string>& tmplate)
+{
+	if (!read_file(filepath, content))
 		return false;
 	for (const auto& [placeholder, value] : tmplate)
 	{

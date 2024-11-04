@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -169,7 +169,10 @@
     <ClCompile Include="src\edit\PixelBuffer.cpp" />
     <ClCompile Include="src\edit\PixelBufferPaths.cpp" />
     <ClCompile Include="src\Logger.cpp" />
+    <ClCompile Include="src\pipeline\text\CommonFonts.cpp" />
     <ClCompile Include="src\pipeline\text\Font.cpp" />
+    <ClCompile Include="src\pipeline\text\TextRender.cpp" />
+    <ClCompile Include="src\variety\UTF.cpp" />
     <ClCompile Include="src\pipeline\widgets\ColorPicker.cpp" />
     <ClCompile Include="src\pipeline\panels\Palette.cpp" />
     <ClCompile Include="src\pipeline\panels\Easel.cpp" />
@@ -204,7 +207,10 @@
     <ClInclude Include="src\edit\PixelBuffer.h" />
     <ClInclude Include="src\edit\PixelBufferPaths.h" />
     <ClInclude Include="src\Logger.h" />
+    <ClInclude Include="src\pipeline\text\CommonFonts.h" />
     <ClInclude Include="src\pipeline\text\Font.h" />
+    <ClInclude Include="src\pipeline\text\TextRender.h" />
+    <ClInclude Include="src\variety\UTF.h" />
     <ClInclude Include="src\pipeline\widgets\ColorPicker.h" />
     <ClInclude Include="src\pipeline\panels\Palette.h" />
     <ClInclude Include="src\pipeline\panels\Easel.h" />

@@ -5,7 +5,7 @@
 #include "../render/Uniforms.h"
 
 Palette::Palette()
-	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag")),
+	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", "32" } }), // TODO actually query the number of texture slots supported.
 	color_picker(Machine.palette_mb_handler, Machine.palette_key_handler) // LATER initialize panels early and put mb_handlers as data members of panels?
 {
 	static constexpr size_t num_quads = 1;

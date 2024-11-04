@@ -68,6 +68,21 @@ inline void gen_dynamic_vao(GLuint& vao, GLuint& vb, size_t vertex_count, unsign
 	unbind_vao_buffers();
 }
 
+inline void buffer_data(GLuint vao, GLuint vb, GLuint ib, size_t vertex_count, unsigned short vertex_stride, size_t index_count, const GLfloat* varr, const GLuint* iarr)
+{
+	bind_vao_buffers(vao, vb, ib);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, vertex_count * vertex_stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
+	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_count * sizeof(GLuint), iarr, GL_DYNAMIC_DRAW));
+	unbind_vao_buffers();
+}
+
+inline void buffer_data(GLuint vao, GLuint vb, size_t vertex_count, unsigned short vertex_stride, const GLfloat* varr)
+{
+	bind_vao_buffers(vao, vb);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, vertex_count * vertex_stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
+	unbind_vao_buffers();
+}
+
 inline void delete_vao_buffers(GLuint vao, GLuint vb, GLuint ib)
 {
 	QUASAR_GL(glDeleteBuffers(1, &vao));

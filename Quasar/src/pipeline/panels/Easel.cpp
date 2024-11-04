@@ -249,7 +249,7 @@ void Canvas::sync_transform()
 }
 
 Easel::Easel()
-	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag"))
+	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", "32" } }) // TODO actually query the number of texture slots supported.
 {
 	static constexpr size_t num_quads = 3;
 

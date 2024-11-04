@@ -66,3 +66,23 @@ inline const UnitMultiRenderable& umr_wget(const Widget& w, size_t i)
 {
 	return *w.get<WP_UnitMultiRenderable>(i)->umr;
 }
+
+template<typename Held>
+struct PH_IndexedRenderable : public PolyHolder<Held>
+{
+	std::unique_ptr<IndexedRenderable> ir;
+
+	PH_IndexedRenderable(Shader& shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
+};
+
+typedef PH_IndexedRenderable<WidgetPlacement> WP_IndexedRenderable;
+
+inline IndexedRenderable& ir_wget(Widget& w, size_t i)
+{
+	return *w.get<WP_IndexedRenderable>(i)->ir;
+}
+
+inline const IndexedRenderable& ir_wget(const Widget& w, size_t i)
+{
+	return *w.get<WP_IndexedRenderable>(i)->ir;
+}

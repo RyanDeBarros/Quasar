@@ -71,7 +71,11 @@ struct TextureParams
 	{
 		return min_filter == other.min_filter && mag_filter == other.mag_filter && wrap_s == other.wrap_s && wrap_t == other.wrap_t;
 	}
+
+	static const TextureParams linear;
 };
+
+inline const TextureParams TextureParams::linear = { MinFilter::Linear, MagFilter::Linear };
 
 inline void bind_texture_params(const TextureParams& params)
 {
