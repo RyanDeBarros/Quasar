@@ -470,8 +470,8 @@ void ColorPicker::send_vp(const glm::mat3& vp)
 	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", vp);
 	Uniforms::send_matrix3(round_rect_shader, "u_VP", vp);
 
-	// TODO text shader data member, to be shared for all TextRenders in ColorPicker instance
-	Uniforms::send_matrix3(*TextRender::shader, "u_VP", vp);
+	// TODO send mvp
+	Uniforms::send_matrix3(*ir_wget(widget, TEXT_ALPHA).shader, "u_VP", vp);
 
 	sync_cp_widget_with_vp();
 }
@@ -504,10 +504,10 @@ void ColorPicker::initialize_widget()
 
 	// ---------- GRAPHIC QUAD ----------
 
-	widget.hobjs[GRAPHIC_QUAD] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[GRAPHIC_QUAD_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[GRAPHIC_HUE_SLIDER] = new WP_UnitRenderable(linear_hue_shader);
-	widget.hobjs[GRAPHIC_HUE_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+	widget.hobjs[GRAPHIC_QUAD] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[GRAPHIC_QUAD_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
+	widget.hobjs[GRAPHIC_HUE_SLIDER] = new WP_UnitRenderable(&linear_hue_shader);
+	widget.hobjs[GRAPHIC_HUE_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
 
 	setup_rect_uvs(GRAPHIC_QUAD);
 	setup_gradient(GRAPHIC_QUAD, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::WHITE, (GLint)GradientIndex::GRAPHIC_QUAD);
@@ -529,10 +529,10 @@ void ColorPicker::initialize_widget()
 
 	// ---------- GRAPHIC WHEEL ----------
 
-	widget.hobjs[GRAPHIC_HUE_WHEEL] = new WP_UnitRenderable(hue_wheel_w_shader);
-	widget.hobjs[GRAPHIC_HUE_WHEEL_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[GRAPHIC_VALUE_SLIDER] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[GRAPHIC_VALUE_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+	widget.hobjs[GRAPHIC_HUE_WHEEL] = new WP_UnitRenderable(&hue_wheel_w_shader);
+	widget.hobjs[GRAPHIC_HUE_WHEEL_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
+	widget.hobjs[GRAPHIC_VALUE_SLIDER] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[GRAPHIC_VALUE_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
 
 	setup_rect_uvs(GRAPHIC_HUE_WHEEL);
 	send_graphic_wheel_value_to_uniform(1.0f);
@@ -555,12 +555,12 @@ void ColorPicker::initialize_widget()
 
 	// ---------- RGB SLIDERS ----------
 
-	widget.hobjs[RGB_R_SLIDER] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[RGB_R_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[RGB_G_SLIDER] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[RGB_G_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[RGB_B_SLIDER] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[RGB_B_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+	widget.hobjs[RGB_R_SLIDER] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[RGB_R_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
+	widget.hobjs[RGB_G_SLIDER] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[RGB_G_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
+	widget.hobjs[RGB_B_SLIDER] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[RGB_B_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
 
 	setup_rect_uvs(RGB_R_SLIDER);
 	setup_circle_cursor(RGB_R_SLIDER_CURSOR);
@@ -587,12 +587,12 @@ void ColorPicker::initialize_widget()
 
 	// ---------- HSV SLIDERS ----------
 
-	widget.hobjs[HSV_H_SLIDER] = new WP_UnitRenderable(linear_hue_shader);
-	widget.hobjs[HSV_H_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[HSV_S_SLIDER] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[HSV_S_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[HSV_V_SLIDER] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[HSV_V_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+	widget.hobjs[HSV_H_SLIDER] = new WP_UnitRenderable(&linear_hue_shader);
+	widget.hobjs[HSV_H_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
+	widget.hobjs[HSV_S_SLIDER] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[HSV_S_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
+	widget.hobjs[HSV_V_SLIDER] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[HSV_V_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
 
 	orient_progress_slider(HSV_H_SLIDER, Cardinal::RIGHT);
 	setup_circle_cursor(HSV_H_SLIDER_CURSOR);
@@ -618,12 +618,12 @@ void ColorPicker::initialize_widget()
 
 	// ---------- HSL SLIDERS ----------
 
-	widget.hobjs[HSL_H_SLIDER] = new WP_UnitRenderable(linear_hue_shader);
-	widget.hobjs[HSL_H_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[HSL_S_SLIDER] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[HSL_S_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
-	widget.hobjs[HSL_L_SLIDER] = new WP_UnitRenderable(linear_lightness_shader);
-	widget.hobjs[HSL_L_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+	widget.hobjs[HSL_H_SLIDER] = new WP_UnitRenderable(&linear_hue_shader);
+	widget.hobjs[HSL_H_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
+	widget.hobjs[HSL_S_SLIDER] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[HSL_S_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
+	widget.hobjs[HSL_L_SLIDER] = new WP_UnitRenderable(&linear_lightness_shader);
+	widget.hobjs[HSL_L_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
 
 	orient_progress_slider(HSL_H_SLIDER, Cardinal::RIGHT);
 	setup_circle_cursor(HSL_H_SLIDER_CURSOR);
@@ -647,8 +647,8 @@ void ColorPicker::initialize_widget()
 
 	// ---------- ALPHA SLIDER ----------
 	
-	widget.hobjs[ALPHA_SLIDER] = new WP_UnitRenderable(quad_shader);
-	widget.hobjs[ALPHA_SLIDER_CURSOR] = new WP_UnitRenderable(circle_cursor_shader);
+	widget.hobjs[ALPHA_SLIDER] = new WP_UnitRenderable(&quad_shader);
+	widget.hobjs[ALPHA_SLIDER_CURSOR] = new WP_UnitRenderable(&circle_cursor_shader);
 
 	setup_rect_uvs(ALPHA_SLIDER);
 	setup_circle_cursor(ALPHA_SLIDER_CURSOR);
@@ -661,7 +661,7 @@ void ColorPicker::initialize_widget()
 
 	// ---------- PREVIEW ----------
 	
-	widget.hobjs[PREVIEW] = new WP_UnitRenderable(quad_shader);
+	widget.hobjs[PREVIEW] = new WP_UnitRenderable(&quad_shader);
 	setup_rect_uvs(PREVIEW);
 	setup_gradient(PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW);
 	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, ColorFrame());
@@ -671,7 +671,7 @@ void ColorPicker::initialize_widget()
 
 	// ---------- BACKGROUND ----------
 
-	widget.hobjs[BACKGROUND] = new RoundRect(round_rect_shader);
+	widget.hobjs[BACKGROUND] = new RoundRect(&round_rect_shader);
 	widget.wp_at(BACKGROUND).transform.position.y = -55;
 	widget.wp_at(BACKGROUND).transform.scale = size;
 	rr_wget(widget, BACKGROUND).thickness = 0.5f;
@@ -682,7 +682,7 @@ void ColorPicker::initialize_widget()
 
 	// ---------- BACKGROUND ----------
 	
-	widget.hobjs[TEXT_ALPHA] = new TextRender(Fonts::roboto_regular, "Alpha");
+	widget.hobjs[TEXT_ALPHA] = new TextRender(Fonts::roboto_regular->get_font(32), "Alpha");
 	widget.wp_at(TEXT_ALPHA).transform.position.x = -1000;
 	widget.wp_at(TEXT_ALPHA).transform.position.y = -100;
 	//tr_wget(widget, TEXT_ALPHA).format.horizontal_align = TextRender::HorizontalAlign::CENTER;

@@ -27,7 +27,13 @@ namespace Fonts
 	static constexpr const char8_t* ALPHA_UPPERCASE = u8"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 }
 
-typedef std::unordered_map<std::pair<Codepoint, Codepoint>, int> KerningMap;
+struct Kerning
+{
+	typedef std::unordered_map<std::pair<Codepoint, Codepoint>, int> Map;
+	Map map;
+
+	Kerning(const FilePath& filepath);
+};
 
 struct Font
 {
@@ -52,18 +58,19 @@ struct Font
 	std::unordered_map<Codepoint, Glyph> glyphs;
 	stbtt_fontinfo font_info;
 	float font_size;
-	float scale = 0.0f;
+	float scale = 0.0f; // TODO is this used at all?
 	int ascent = 0, descent = 0, linegap = 0, baseline = 0;
 	int space_width = 0;
 	TextureParams texture_params;
 	Buffer common_bmp;
 	Image common_texture; // TODO replace common_bmp with common_texture's buffer
 	std::vector<Image*> cached_textures;
-	KerningMap kerning;
+	std::shared_ptr<Kerning> kerning = nullptr;
 
-	Font(const FilePath& filepath, float font_size, UTF::String common_buffer = Fonts::COMMON, TextureParams texture_params = TextureParams::linear, const FilePath& kerning_map = "");
+	Font(const FilePath& filepath, float font_size, UTF::String common_buffer = Fonts::COMMON, TextureParams texture_params = TextureParams::linear, const std::shared_ptr<Kerning>& kerning = nullptr);
 	Font(const Font&) = delete;
-	Font(Font&&) noexcept = delete;
+	Font(Font&&) noexcept = default;
+	Font& operator=(Font&&) noexcept = delete;
 	~Font();
 
 	bool cache(Codepoint codepoint);
@@ -84,3 +91,28 @@ constexpr bool carriage_return_2(Codepoint r, Codepoint n)
 {
 	return r == '\r' && n == '\n';
 }
+
+class FontRange
+{
+	std::unordered_map<float, Font> fonts;
+	FilePath font_filepath;
+	std::shared_ptr<Kerning> kerning = nullptr;
+	
+public:
+	FontRange(const FilePath& filepath, const FilePath& kerning_filepath = "") : font_filepath(filepath), kerning(std::make_shared<Kerning>(kerning_filepath)) {}
+	
+	bool construct_fontsize(float font_size, UTF::String common_buffer = Fonts::COMMON, TextureParams texture_params = TextureParams::linear)
+	{
+		auto iter = fonts.find(font_size);
+		if (iter != fonts.end())
+			return false;
+		fonts.emplace(font_size, Font(font_filepath, font_size, common_buffer, texture_params, kerning));
+		return true;
+	}
+
+	Font* get_font(float font_size)
+	{
+		auto iter = fonts.find(font_size);
+		return iter != fonts.end() ? &iter->second : nullptr; // TODO do something else when exact font_size is not found. Use closes font_size and return a scale multiplier to be used by TextRender
+	}
+};

@@ -18,7 +18,7 @@ private:
 	};
 public:
 
-	RoundRect(Shader& round_rect_shader);
+	RoundRect(Shader* round_rect_shader);
 	RoundRect(const RoundRect&) = delete;
 	RoundRect(RoundRect&&) noexcept = delete;
 

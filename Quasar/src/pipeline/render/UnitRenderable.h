@@ -10,18 +10,19 @@ struct UnitRenderable
 {
 	GLfloat* varr = nullptr;
 	GLuint vao = 0, vb = 0;
-	Shader& shader;
+	Shader* shader = nullptr;
 private:
 	unsigned short num_vertices;
 public:
 	unsigned short get_num_vertices() const { return num_vertices; }
 
-	UnitRenderable(Shader& shader, unsigned short num_vertices = 4);
+	UnitRenderable(Shader* shader, unsigned short num_vertices = 4);
 	UnitRenderable(const UnitRenderable&) = delete;
 	UnitRenderable(UnitRenderable&&) noexcept;
 	UnitRenderable& operator=(UnitRenderable&&) noexcept = delete;
 	~UnitRenderable();
 
+	void set_shader(Shader* shader);
 	void set_attribute(size_t attrib, const float* v) const;
 	void set_attribute_single_vertex(unsigned short vertex, size_t attrib, const float* v) const;
 	void get_attribute(unsigned short vertex, size_t attrib, float* v) const;
@@ -36,17 +37,18 @@ struct UnitMultiRenderable
 {
 	GLfloat* varr = nullptr;
 	GLuint vao = 0, vb = 0;
-	Shader& shader;
+	Shader* shader;
 	GLint* first;
 	GLsizei* count;
 	const unsigned short num_units;
 	const unsigned short unit_num_vertices;
 
-	UnitMultiRenderable(Shader& shader, unsigned short num_units, unsigned short unit_num_vertices = 4);
+	UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned short unit_num_vertices = 4);
 	UnitMultiRenderable(const UnitMultiRenderable&) = delete;
 	UnitMultiRenderable(UnitMultiRenderable&&) noexcept = delete;
 	~UnitMultiRenderable();
 
+	void set_shader(Shader* shader);
 	void set_attribute(unsigned short unit, size_t attrib, const float* v) const;
 	void set_attribute_single_vertex(unsigned short unit, unsigned short vertex, size_t attrib, const float* v) const;
 	void get_attribute(unsigned short unit, unsigned short vertex, size_t attrib, float* v) const;
@@ -61,13 +63,14 @@ struct IndexedRenderable
 	std::vector<GLfloat> varr;
 	std::vector<GLuint> iarr;
 	GLuint vao = 0, vb = 0, ib = 0;
-	Shader& shader;
+	Shader* shader;
 
-	IndexedRenderable(Shader& shader);
+	IndexedRenderable(Shader* shader);
 	IndexedRenderable(const IndexedRenderable&) = delete; // LATER copy/move semantics throughout project
 	IndexedRenderable(IndexedRenderable&&) noexcept = delete;
 	~IndexedRenderable();
 
+	void set_shader(Shader* shader);
 	void set_num_vertices(size_t num_vertices);
 	void push_back_vertices(size_t num_vertices);
 	void fill_iarr_with_quads(size_t num_quads);

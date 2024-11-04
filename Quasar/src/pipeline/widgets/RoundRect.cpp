@@ -2,7 +2,7 @@
 
 #include <glm/gtc/type_ptr.inl>
 
-RoundRect::RoundRect(Shader& round_rect_shader)
+RoundRect::RoundRect(Shader* round_rect_shader)
 	: WP_UnitRenderable(round_rect_shader)
 {
 }

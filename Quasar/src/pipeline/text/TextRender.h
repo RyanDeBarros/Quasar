@@ -7,10 +7,7 @@
 
 struct TextRender : public WP_IndexedRenderable // LATER rename WP_ to W_ ?
 {
-	static void load_shader();
-	static void invalidate_shader();
-	static Shader* shader; // TODO don't use static shader
-
+	Shader shader;
 	Font* font = nullptr;
 
 private:

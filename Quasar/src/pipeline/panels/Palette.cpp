@@ -17,7 +17,7 @@ Palette::Palette()
 	GLuint IARR[num_quads * 6]{
 		0, 1, 2, 2, 3, 0
 	};
-	gen_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
+	initialize_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 	
 	background.sync_texture_slot(-1.0f);
 	background.set_image(nullptr, 1, 1);

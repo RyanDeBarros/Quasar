@@ -5,30 +5,20 @@
 #include "variety/GLutility.h"
 #include "../render/Uniforms.h"
 
-Shader* TextRender::shader;
-
-void TextRender::load_shader()
-{
-	shader = new Shader(FileSystem::shader_path("text.vert"), FileSystem::shader_path("text.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", "32" } }); // TODO actually query the number of texture slots supported.
-}
-
-void TextRender::invalidate_shader()
-{
-	delete shader;
-	shader = nullptr;
-}
-
+// TODO actually query the number of texture slots supported.
 TextRender::TextRender(Font* font, const UTF::String& text)
-	: font(font), WP_IndexedRenderable(*shader)
+	: font(font), shader(FileSystem::shader_path("text.vert"), FileSystem::shader_path("text.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", "32" } }), WP_IndexedRenderable(nullptr)
 {
+	ir->set_shader(&shader);
 	set_text(text);
 	held.pivot.x = 0;
 	held.pivot.y = 1;
 }
 
 TextRender::TextRender(Font* font, UTF::String&& text)
-	: font(font), WP_IndexedRenderable(*shader)
+	: font(font), shader(FileSystem::shader_path("text.vert"), FileSystem::shader_path("text.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", "32" } }), WP_IndexedRenderable(nullptr)
 {
+	ir->set_shader(&shader);
 	set_text(std::move(text));
 	held.pivot.x = 0;
 	held.pivot.y = 1;
@@ -36,8 +26,8 @@ TextRender::TextRender(Font* font, UTF::String&& text)
 
 void TextRender::draw() const
 {
-	bind_shader(*shader);
-	Uniforms::send_4(*shader, "u_ForeColor", fore_color.as_vec());
+	bind_shader(shader);
+	Uniforms::send_4(shader, "u_ForeColor", fore_color.as_vec());
 	bind_texture(font->common_texture.tid, 0); // TODO bind all textures - draw ir in separate steps when exceeding MAX_TEXTURES.
 	ir->draw();
 }

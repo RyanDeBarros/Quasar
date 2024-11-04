@@ -32,7 +32,7 @@ struct PH_UnitRenderable : public PolyHolder<Held>
 {
 	std::unique_ptr<UnitRenderable> ur;
 
-	PH_UnitRenderable(Shader& shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
+	PH_UnitRenderable(Shader* shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
 };
 
 typedef PH_UnitRenderable<WidgetPlacement> WP_UnitRenderable;
@@ -52,7 +52,7 @@ struct PH_UnitMultiRenderable : public PolyHolder<Held>
 {
 	std::unique_ptr<UnitMultiRenderable> umr;
 
-	PH_UnitMultiRenderable(Shader& shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
+	PH_UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
 };
 
 typedef PH_UnitMultiRenderable<WidgetPlacement> WP_UnitMultiRenderable;
@@ -72,7 +72,7 @@ struct PH_IndexedRenderable : public PolyHolder<Held>
 {
 	std::unique_ptr<IndexedRenderable> ir;
 
-	PH_IndexedRenderable(Shader& shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
+	PH_IndexedRenderable(Shader* shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
 };
 
 typedef PH_IndexedRenderable<WidgetPlacement> WP_IndexedRenderable;

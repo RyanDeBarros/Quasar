@@ -75,7 +75,6 @@ void MachineImpl::init_renderer()
 	main_window->focus_context();
 	set_clear_color(ColorFrame(RGB(0.1f, 0.1f, 0.1f), 0.1f)); // SETTINGS
 	
-	TextRender::load_shader();
 	Fonts::load_common_fonts();
 
 	panels = new PanelGroup();
@@ -125,8 +124,6 @@ void MachineImpl::destroy()
 {
 	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(panels);
-	TextRender::invalidate_shader();
-	Fonts::invalidate_common_fonts();
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 

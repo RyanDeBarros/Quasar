@@ -53,7 +53,7 @@ static bool parse_kerning_line(const std::string& p0, const std::string& p1,
 	return true;
 }
 
-static void parse_kerning(const FilePath& filepath, KerningMap& kerning)
+static void parse_kerning(const FilePath& filepath, Kerning::Map& kerning)
 {
 	std::string content;
 	if (IO.read_file(filepath, content))
@@ -117,6 +117,12 @@ static void parse_kerning(const FilePath& filepath, KerningMap& kerning)
 	}
 }
 
+Kerning::Kerning(const FilePath& filepath)
+{
+	if (!filepath.empty())
+		parse_kerning(filepath, map);
+}
+
 Font::Glyph::Glyph(Font* font, int index, float scale, size_t buffer_pos)
 	: index(index), font(font), texture(nullptr), buffer_pos(buffer_pos)
 {
@@ -152,11 +158,9 @@ void Font::Glyph::render_on_bitmap_unique(const Buffer& buffer)
 	location = buffer.pixels;
 }
 
-Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer, TextureParams texture_params, const FilePath& kerning_map)
-	: font_size(font_size), font_info{}, texture_params(texture_params)
+Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer, TextureParams texture_params, const std::shared_ptr<Kerning>& kerning)
+	: font_size(font_size), font_info{}, texture_params(texture_params), kerning(kerning)
 {
-	if (!kerning_map.empty())
-		parse_kerning(kerning_map, kerning);
 	common_bmp.chpp = 1;
 
 	unsigned char* font_file = nullptr;
@@ -267,8 +271,8 @@ int Font::kerning_of(Codepoint c1, Codepoint c2, int g1, int g2, float sc) const
 {
 	if (g1 == 0)
 		return 0;
-	auto k = kerning.find({ c1, c2 });
-	if (k != kerning.end())
+	auto k = kerning->map.find({ c1, c2 });
+	if (k != kerning->map.end())
 		return static_cast<int>(roundf(k->second * scale * sc));
 	else
 		return static_cast<int>(roundf(stbtt_GetGlyphKernAdvance(&font_info, g1, g2) * scale * sc));

@@ -7,7 +7,7 @@
 Gridlines::Gridlines()
 	: shader(FileSystem::shader_path("gridlines.vert"), FileSystem::shader_path("gridlines.frag"))
 {
-	gen_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
+	initialize_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
 }
 
 Gridlines::~Gridlines()
@@ -273,7 +273,7 @@ Easel::Easel()
 		4, 5, 6, 6, 7, 4,
 		8, 9, 10, 10, 11, 8
 	};
-	gen_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
+	initialize_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 
 	background.sync_texture_slot(-1.0f);
 	canvas.checkerboard.sync_texture_slot(CHECKERBOARD_TSLOT);
