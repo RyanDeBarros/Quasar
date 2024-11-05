@@ -5,23 +5,45 @@
 #include "variety/GLutility.h"
 #include "../render/Uniforms.h"
 
-// TODO actually query the number of texture slots supported.
+static Shader text_shader_instance()
+{
+	return Shader(FileSystem::shader_path("text.vert"), FileSystem::shader_path("text.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } });
+}
+
 TextRender::TextRender(Font* font, const UTF::String& text)
-	: font(font), shader(FileSystem::shader_path("text.vert"), FileSystem::shader_path("text.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", "32" } }), WP_IndexedRenderable(nullptr)
+	: WP_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
 {
 	ir->set_shader(&shader);
 	set_text(text);
-	held.pivot.x = 0;
-	held.pivot.y = 1;
+	held.pivot = { 0, 1 };
 }
 
 TextRender::TextRender(Font* font, UTF::String&& text)
-	: font(font), shader(FileSystem::shader_path("text.vert"), FileSystem::shader_path("text.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", "32" } }), WP_IndexedRenderable(nullptr)
+	: WP_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
 {
 	ir->set_shader(&shader);
 	set_text(std::move(text));
-	held.pivot.x = 0;
-	held.pivot.y = 1;
+	held.pivot = { 0, 1 };
+}
+
+TextRender::TextRender(FontRange& frange, float font_size, const UTF::String& text)
+	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
+{
+	ir->set_shader(&shader);
+	float fmult = frange.get_font_and_multiplier(font_size, font);
+	held.transform.scale = { fmult, fmult };
+	set_text(text);
+	held.pivot = { 0, 1 };
+}
+
+TextRender::TextRender(FontRange& frange, float font_size, UTF::String&& text)
+	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
+{
+	ir->set_shader(&shader);
+	float fmult = frange.get_font_and_multiplier(font_size, font);
+	held.transform.scale = { fmult, fmult };
+	set_text(std::move(text));
+	held.pivot = { 0, 1 };
 }
 
 void TextRender::draw() const

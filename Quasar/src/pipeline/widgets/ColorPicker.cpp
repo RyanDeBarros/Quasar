@@ -677,13 +677,11 @@ void ColorPicker::initialize_widget()
 	rr_wget(widget, BACKGROUND).fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.5f);
 	rr_wget(widget, BACKGROUND).update_all();
 
-	// ---------- BACKGROUND ----------
-	Font* font;
-	float fmult = Fonts::roboto_regular->get_font_and_multiplier(80, font);
-	widget.hobjs[TEXT_ALPHA] = new TextRender(font, "Alpha\nhi\r\n\rkdjjhaskldfh");
+	// ---------- TEXT ----------
+
+	widget.hobjs[TEXT_ALPHA] = new TextRender(*Fonts::roboto_regular, 80, "Alpha\nhi\r\n\rkdjjhaskldfh");
 	widget.wp_at(TEXT_ALPHA).transform.position.x = -1000;
 	widget.wp_at(TEXT_ALPHA).transform.position.y = -100;
-	widget.wp_at(TEXT_ALPHA).transform.scale = { fmult, fmult };
 	tr_wget(widget, TEXT_ALPHA).format.horizontal_align = TextRender::HorizontalAlign::CENTER;
 	tr_wget(widget, TEXT_ALPHA).setup_renderable();
 }
@@ -1293,12 +1291,13 @@ void ColorPicker::sync_cp_widget_with_vp()
 	tr_wget(widget, TEXT_ALPHA).send_vp(vp);
 }
 
-void ColorPicker::sync_single_cp_widget_transform_ur(size_t control) const
+void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const
 {
 	if (widget.hobjs[control])
 	{
 		setup_vertex_positions(control);
-		ur_wget(widget, control).send_buffer(); // TODO don't send buffer, but call send_cpwc_buffer() after sync_single_cp_widget_transform_ur()
+		if (send_buffer)
+			ur_wget(widget, control).send_buffer();
 	}
 }
 

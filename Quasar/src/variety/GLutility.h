@@ -144,3 +144,15 @@ inline void unbind_shader()
 		_currently_bound_shader = 0;
 	}
 }
+
+struct GLConstants
+{
+	GLint max_texture_image_units;
+};
+
+inline GLConstants GLC{};
+
+inline void query_gl_constants()
+{
+	QUASAR_GL(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GLC.max_texture_image_units));
+}

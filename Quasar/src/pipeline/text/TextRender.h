@@ -16,6 +16,8 @@ private:
 public:
 	TextRender(Font* font, const UTF::String& text);
 	TextRender(Font* font, UTF::String&& text);
+	TextRender(FontRange& frange, float font_size, const UTF::String& text);
+	TextRender(FontRange& frange, float font_size, UTF::String&& text);
 	TextRender(const TextRender&) = delete;
 	TextRender(TextRender&&) noexcept = delete;
 

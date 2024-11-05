@@ -48,6 +48,7 @@ bool MachineImpl::create_main_window()
 	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height);
 	if (main_window)
 	{
+		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
 		main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,

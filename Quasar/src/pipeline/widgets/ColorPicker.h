@@ -9,7 +9,7 @@
 #include "edit/Color.h"
 #include "variety/Geometry.h"
 
-// TODO make ColorPicker inherit from PolyHolder<WidgetPlacement>
+// LATER make ColorPicker inherit from PolyHolder<WidgetPlacement>
 struct ColorPicker
 {
 	enum class State
@@ -127,7 +127,7 @@ private:
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
 	void sync_cp_widget_with_vp();
-	void sync_single_cp_widget_transform_ur(size_t control) const;
+	void sync_single_cp_widget_transform_ur(size_t control, bool send_buffer = true) const;
 	void send_cpwc_buffer(size_t control) const;
 	void set_circle_cursor_thickness(size_t cursor, float thickness) const;
 	void set_circle_cursor_value(size_t cursor, float value) const;
