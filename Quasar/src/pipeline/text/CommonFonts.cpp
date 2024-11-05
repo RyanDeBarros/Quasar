@@ -12,7 +12,8 @@ void Fonts::load_common_fonts()
 
 	for (int size : standard_sizes)
 	{
-		roboto_regular->construct_fontsize(float(size));
-		roboto_bolditalic->construct_fontsize(float(size));
+		TextureParams params = size < 17 ? TextureParams{} : TextureParams::linear;
+		roboto_regular		->construct_fontsize(float(size), Fonts::COMMON, params);
+		roboto_bolditalic	->construct_fontsize(float(size), Fonts::COMMON, params);
 	}
 }

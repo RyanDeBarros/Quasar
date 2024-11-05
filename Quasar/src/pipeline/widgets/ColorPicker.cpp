@@ -71,6 +71,13 @@ enum
 	HSL_L_SLIDER_CURSOR,			// circle_cursor
 	BACKGROUND,						// separate widget
 	TEXT_ALPHA,						// separate widget
+	TEXT_RED,						// separate widget
+	TEXT_GREEN,						// separate widget
+	TEXT_BLUE,						// separate widget
+	TEXT_HUE,						// separate widget
+	TEXT_SAT,						// separate widget
+	TEXT_VALUE,						// separate widget
+	TEXT_LIGHT,						// separate widget
 	_CPWC_COUNT
 };
 
@@ -145,10 +152,6 @@ void ColorPicker::render()
 		ur_wget(widget, HSL_L_SLIDER_CURSOR).draw();
 		break;
 	}
-
-
-
-	tr_wget(widget, TEXT_ALPHA).draw();
 }
 
 void ColorPicker::cp_render_gui()
@@ -242,23 +245,20 @@ void ColorPicker::cp_render_gui()
 		float imgui_sml_x = 97;
 		if (state == State::SLIDER_RGB)
 		{
+			tr_wget(widget, TEXT_RED).draw();
+			tr_wget(widget, TEXT_GREEN).draw();
+			tr_wget(widget, TEXT_BLUE).draw();
 			RGB rgb = get_color().rgb();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				bool mod = false;
 				float imgui_y = ImGui::GetCursorPosY();
 				int r = rgb.get_pixel_r(), g = rgb.get_pixel_g(), b = rgb.get_pixel_b();
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
-				ImGui::Text("Red");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add1));
 				mod |= ImGui::InputInt("##it-red", &r, 5, 10);
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
-				ImGui::Text("Green");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add2));
 				mod |= ImGui::InputInt("##it-green", &g, 5, 10);
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
-				ImGui::Text("Blue");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add3));
 				mod |= ImGui::InputInt("##it-blue", &b, 5, 10);
 				if (mod)
 					set_color(ColorFrame(RGB(r, g, b), alpha));
@@ -268,17 +268,11 @@ void ColorPicker::cp_render_gui()
 				bool mod = false;
 				float imgui_y = ImGui::GetCursorPosY();
 				float r = rgb.r * 100, g = rgb.g * 100, b = rgb.b * 100;
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
-				ImGui::Text("Red");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add1));
 				mod |= ImGui::InputFloat("##it-red", &r, 5, 10, "%.2f");
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
-				ImGui::Text("Green");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add2));
 				mod |= ImGui::InputFloat("##it-green", &g, 5, 10, "%.2f");
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
-				ImGui::Text("Blue");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add3));
 				mod |= ImGui::InputFloat("##it-blue", &b, 5, 10, "%.2f");
 				if (mod)
 					set_color(RGBA(r * 0.01f, g * 0.01f, b * 0.01f, alpha));
@@ -286,23 +280,20 @@ void ColorPicker::cp_render_gui()
 		}
 		else if (state == State::SLIDER_HSV)
 		{
+			tr_wget(widget, TEXT_HUE).draw();
+			tr_wget(widget, TEXT_SAT).draw();
+			tr_wget(widget, TEXT_VALUE).draw();
 			HSV hsv = get_color().hsv();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				bool mod = false;
 				float imgui_y = ImGui::GetCursorPosY();
 				int h = hsv.get_pixel_h(), s = hsv.get_pixel_s(), v = hsv.get_pixel_v();
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
-				ImGui::Text("Hue");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add1));
 				mod |= ImGui::InputInt("##it-hue", &h, 5, 10);
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
-				ImGui::Text("Sat");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add2));
 				mod |= ImGui::InputInt("##it-sat", &s, 5, 10);
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
-				ImGui::Text("Value");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add3));
 				mod |= ImGui::InputInt("##it-value", &v, 5, 10);
 				if (mod)
 					set_color(ColorFrame(HSV(h, s, v), alpha));
@@ -312,17 +303,11 @@ void ColorPicker::cp_render_gui()
 				bool mod = false;
 				float imgui_y = ImGui::GetCursorPosY();
 				float h = hsv.h * 100, s = hsv.s * 100, v = hsv.v * 100;
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
-				ImGui::Text("Hue");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add1));
 				mod |= ImGui::InputFloat("##it-hue", &h, 5, 10, "%.2f");
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
-				ImGui::Text("Sat");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add2));
 				mod |= ImGui::InputFloat("##it-sat", &s, 5, 10, "%.2f");
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
-				ImGui::Text("Value");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add3));
 				mod |= ImGui::InputFloat("##it-value", &v, 5, 10, "%.2f");
 				if (mod)
 					set_color(HSVA(h * 0.01f, s * 0.01f, v * 0.01f, alpha));
@@ -330,23 +315,20 @@ void ColorPicker::cp_render_gui()
 		}
 		else if (state == State::SLIDER_HSL)
 		{
+			tr_wget(widget, TEXT_HUE).draw();
+			tr_wget(widget, TEXT_SAT).draw();
+			tr_wget(widget, TEXT_LIGHT).draw();
 			HSL hsl = get_color().hsl();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				bool mod = false;
 				float imgui_y = ImGui::GetCursorPosY();
 				int h = hsl.get_pixel_h(), s = hsl.get_pixel_s(), l = hsl.get_pixel_l();
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
-				ImGui::Text("Hue");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add1));
 				mod |= ImGui::InputInt("##it-hue", &h, 5, 10);
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
-				ImGui::Text("Sat");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add2));
 				mod |= ImGui::InputInt("##it-sat", &s, 5, 10);
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
-				ImGui::Text("Light");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add3));
 				mod |= ImGui::InputInt("##it-light", &l, 5, 10);
 				if (mod)
 					set_color(ColorFrame(HSL(h, s, l), alpha));
@@ -356,30 +338,23 @@ void ColorPicker::cp_render_gui()
 				bool mod = false;
 				float imgui_y = ImGui::GetCursorPosY();
 				float h = hsl.h * 100, s = hsl.s * 100, l = hsl.l * 100;
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add1);
-				ImGui::Text("Hue");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add1));
 				mod |= ImGui::InputFloat("##it-hue", &h, 5, 10, "%.2f");
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add2);
-				ImGui::Text("Sat");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add2));
 				mod |= ImGui::InputFloat("##it-sat", &s, 5, 10, "%.2f");
-				ImGui::SetCursorPosY(imgui_y + imgui_y_add3);
-				ImGui::Text("Light");
-				ImGui::SameLine(imgui_sml_x);
+				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y + imgui_y_add3));
 				mod |= ImGui::InputFloat("##it-light", &l, 5, 10, "%.2f");
 				if (mod)
 					set_color(HSLA(h * 0.01f, s * 0.01f, l * 0.01f, alpha));
 			}
 		}
 		// alpha
+		tr_wget(widget, TEXT_ALPHA).draw();
 		if (txtfld_mode == TextFieldMode::NUMBER)
 		{
 			ColorFrame color = get_color();
 			int a = color.get_pixel_a();
-			ImGui::SetCursorPosY(480);
-			ImGui::Text("Alpha");
-			ImGui::SameLine(imgui_sml_x);
+			ImGui::SetCursorPos(ImVec2(imgui_sml_x, 480));
 			if (ImGui::InputInt("##it-alpha", &a, 5, 10))
 			{
 				color.set_pixel_a(a);
@@ -390,9 +365,7 @@ void ColorPicker::cp_render_gui()
 		{
 			ColorFrame color = get_color();
 			float a = color.alpha * 100;
-			ImGui::SetCursorPosY(480);
-			ImGui::Text("Alpha");
-			ImGui::SameLine(imgui_sml_x);
+			ImGui::SetCursorPos(ImVec2(imgui_sml_x, 480));
 			if (ImGui::InputFloat("##it-alpha", &a, 5, 10, "%.2f"))
 				set_color(ColorFrame(color.rgb(), a * 0.01f));
 		}
@@ -498,6 +471,13 @@ void ColorPicker::initialize_widget()
 	const float preview_y = -210;
 	const float preview_w = 80;
 	const float preview_h = 40;
+
+	const float left_text_x = -108;
+	const float text_sep = 70;
+	const float text1_y = 250;
+	const float text2_y = text1_y - text_sep;
+	const float text3_y = text2_y - text_sep;
+	const float text4_y = text3_y - text_sep;
 
 	// ---------- GRAPHIC QUAD ----------
 
@@ -679,11 +659,38 @@ void ColorPicker::initialize_widget()
 
 	// ---------- TEXT ----------
 
-	widget.hobjs[TEXT_ALPHA] = new TextRender(*Fonts::roboto_regular, 80, "Alpha\nhi\r\n\rkdjjhaskldfh");
-	widget.wp_at(TEXT_ALPHA).transform.position.x = -1000;
-	widget.wp_at(TEXT_ALPHA).transform.position.y = -100;
-	tr_wget(widget, TEXT_ALPHA).format.horizontal_align = TextRender::HorizontalAlign::CENTER;
-	tr_wget(widget, TEXT_ALPHA).setup_renderable();
+	// TODO rename FontRange variables to descriptive names rather than the names of the fonts. So "label1", for instance, instead of robot_regular.
+	widget.hobjs[TEXT_ALPHA] = new TextRender(*Fonts::roboto_regular, 20, "Alpha");
+	widget.wp_at(TEXT_ALPHA).transform.position.x = left_text_x;
+	widget.wp_at(TEXT_ALPHA).transform.position.y = text4_y;
+
+	widget.hobjs[TEXT_RED] = new TextRender(*Fonts::roboto_regular, 20, "Red");
+	widget.wp_at(TEXT_RED).transform.position.x = left_text_x;
+	widget.wp_at(TEXT_RED).transform.position.y = text1_y;
+
+	widget.hobjs[TEXT_GREEN] = new TextRender(*Fonts::roboto_regular, 20, "Green");
+	widget.wp_at(TEXT_GREEN).transform.position.x = left_text_x;
+	widget.wp_at(TEXT_GREEN).transform.position.y = text2_y;
+
+	widget.hobjs[TEXT_BLUE] = new TextRender(*Fonts::roboto_regular, 20, "Blue");
+	widget.wp_at(TEXT_BLUE).transform.position.x = left_text_x;
+	widget.wp_at(TEXT_BLUE).transform.position.y = text3_y;
+
+	widget.hobjs[TEXT_HUE] = new TextRender(*Fonts::roboto_regular, 20, "Hue");
+	widget.wp_at(TEXT_HUE).transform.position.x = left_text_x;
+	widget.wp_at(TEXT_HUE).transform.position.y = text1_y;
+
+	widget.hobjs[TEXT_SAT] = new TextRender(*Fonts::roboto_regular, 20, "Sat");
+	widget.wp_at(TEXT_SAT).transform.position.x = left_text_x;
+	widget.wp_at(TEXT_SAT).transform.position.y = text2_y;
+
+	widget.hobjs[TEXT_VALUE] = new TextRender(*Fonts::roboto_regular, 20, "Value");
+	widget.wp_at(TEXT_VALUE).transform.position.x = left_text_x;
+	widget.wp_at(TEXT_VALUE).transform.position.y = text3_y;
+
+	widget.hobjs[TEXT_LIGHT] = new TextRender(*Fonts::roboto_regular, 20, "Light");
+	widget.wp_at(TEXT_LIGHT).transform.position.x = left_text_x;
+	widget.wp_at(TEXT_LIGHT).transform.position.y = text3_y;
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -1289,6 +1296,13 @@ void ColorPicker::sync_cp_widget_with_vp()
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
 	rr_wget(widget, BACKGROUND).send_transform_under_parent(widget.parent);
 	tr_wget(widget, TEXT_ALPHA).send_vp(vp);
+	tr_wget(widget, TEXT_RED).send_vp(vp);
+	tr_wget(widget, TEXT_GREEN).send_vp(vp);
+	tr_wget(widget, TEXT_BLUE).send_vp(vp);
+	tr_wget(widget, TEXT_HUE).send_vp(vp);
+	tr_wget(widget, TEXT_SAT).send_vp(vp);
+	tr_wget(widget, TEXT_VALUE).send_vp(vp);
+	tr_wget(widget, TEXT_LIGHT).send_vp(vp);
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const

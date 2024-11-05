@@ -179,7 +179,7 @@ float TextRender::compute_batch(const Font::Glyph& glyph)
 
 void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t quad_index)
 {
-	// LATER baseline offset + to y. In file similar to .kern. Makes certain characters align to baseline better.
+	// TODO baseline offset + to y. In file similar to .kern. Makes certain characters align to baseline better.
 	FlatTransform local{ { float(x), float(y - glyph.ch_y0) }, { float(glyph.width), -float(glyph.height) } };
 	float left = local.position.x;
 	float right = local.position.x + local.scale.x;
