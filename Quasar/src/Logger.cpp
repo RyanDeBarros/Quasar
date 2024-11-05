@@ -4,6 +4,7 @@
 #include <chrono>
 
 // LATER translate OpenGL error codes
+// LATER submit_count to batch X amount of statements before flushing.
 
 Logger& Logger::specify_logfile(const char* filepath, bool append)
 {

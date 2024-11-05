@@ -12,7 +12,7 @@ void Fonts::load_common_fonts()
 
 	for (int size : standard_sizes)
 	{
-		roboto_regular->construct_fontsize(size);
-		roboto_bolditalic->construct_fontsize(size);
+		roboto_regular->construct_fontsize(float(size));
+		roboto_bolditalic->construct_fontsize(float(size));
 	}
 }

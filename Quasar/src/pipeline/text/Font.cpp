@@ -124,7 +124,7 @@ Kerning::Kerning(const FilePath& filepath)
 }
 
 Font::Glyph::Glyph(Font* font, int index, float scale, size_t buffer_pos)
-	: index(index), texture(nullptr), buffer_pos(buffer_pos)
+	: index(index), buffer_pos(buffer_pos)
 {
 	stbtt_GetGlyphHMetrics(&font->font_info, index, &advance_width, &left_bearing);
 	int ch_x0, ch_x1, ch_y1;
@@ -185,6 +185,8 @@ Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer,
 	while (iter)
 	{
 		int codepoint = iter.advance();
+		if (codepoint == ' ')
+			continue;
 		if (glyphs.find(codepoint) != glyphs.end())
 			continue;
 		int gIndex = stbtt_FindGlyphIndex(&font_info, codepoint);
@@ -208,20 +210,13 @@ Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer,
 			offset.pixels = common_texture.buf.pixels + glyph.buffer_pos;
 			glyph.render_on_bitmap_shared(*this, offset, 1, 1, 1, 1);
 		}
-		common_texture.buf = common_texture.buf;
 		common_texture.gen_texture(texture_params);
 		for (Codepoint codepoint : codepoints)
-			glyphs[codepoint].texture = &common_texture;
+			glyphs.find(codepoint)->second.texture = &common_texture;
 	}
-	auto space = glyphs.find(' ');
-	if (space == glyphs.end())
-	{
-		int space_advance_width, space_left_bearing;
-		stbtt_GetCodepointHMetrics(&font_info, ' ', &space_advance_width, &space_left_bearing);
-		space_width = static_cast<int>(roundf(space_advance_width * scale));
-	}
-	else
-		space_width = space->second.width;
+	int space_advance_width, space_left_bearing;
+	stbtt_GetCodepointHMetrics(&font_info, ' ', &space_advance_width, &space_left_bearing);
+	space_width = static_cast<int>(roundf(space_advance_width * scale));
 }
 
 Font::~Font()
@@ -309,6 +304,18 @@ Bounds Font::uvs(const Glyph& glyph) const
 		b.y2 = 1;
 	}
 	return b;
+}
+
+bool FontRange::construct_fontsize(float font_size, UTF::String common_buffer, TextureParams texture_params)
+{
+	if (font_size <= 0.0f)
+		return false;
+	auto iter = fonts.find(font_size);
+	if (iter != fonts.end())
+		return false;
+	Font tmp(font_filepath, font_size, common_buffer, texture_params, kerning);
+	fonts[font_size] = std::move(tmp);
+	return true;
 }
 
 float FontRange::get_font_and_multiplier(float font_size, Font*& font)

@@ -10,48 +10,53 @@ static Shader text_shader_instance()
 	return Shader(FileSystem::shader_path("text.vert"), FileSystem::shader_path("text.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } });
 }
 
+void TextRender::init()
+{
+	ir->set_shader(&shader);
+	held.pivot = { 0, 1 };
+	send_fore_color();
+}
+
 TextRender::TextRender(Font* font, const UTF::String& text)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
 {
-	ir->set_shader(&shader);
+	init();
 	set_text(text);
-	held.pivot = { 0, 1 };
 }
 
 TextRender::TextRender(Font* font, UTF::String&& text)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
 {
-	ir->set_shader(&shader);
+	init();
 	set_text(std::move(text));
-	held.pivot = { 0, 1 };
 }
 
 TextRender::TextRender(FontRange& frange, float font_size, const UTF::String& text)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
 {
-	ir->set_shader(&shader);
 	float fmult = frange.get_font_and_multiplier(font_size, font);
 	held.transform.scale = { fmult, fmult };
+	init();
 	set_text(text);
-	held.pivot = { 0, 1 };
 }
 
 TextRender::TextRender(FontRange& frange, float font_size, UTF::String&& text)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
 {
-	ir->set_shader(&shader);
 	float fmult = frange.get_font_and_multiplier(font_size, font);
 	held.transform.scale = { fmult, fmult };
+	init();
 	set_text(std::move(text));
-	held.pivot = { 0, 1 };
 }
 
 void TextRender::draw() const
 {
-	bind_shader(shader);
-	Uniforms::send_4(shader, "u_ForeColor", fore_color.as_vec());
-	bind_texture(font->common_texture.tid, 0); // TODO bind all textures - draw ir in separate steps when exceeding MAX_TEXTURES.
-	ir->draw();
+	for (const auto& batch : batches)
+	{
+		for (GLuint i = 0; i < batch.tids.size(); ++i)
+			bind_texture(batch.tids[i], i);
+		ir->draw(batch.index_count, batch.index_offset);
+	}
 }
 
 void TextRender::send_vp(const glm::mat3 vp) const
@@ -59,6 +64,12 @@ void TextRender::send_vp(const glm::mat3 vp) const
 	bind_shader(shader);
 	Uniforms::send_matrix3(shader, "u_MVP", vp * held.transform.matrix());
 	unbind_shader();
+}
+
+void TextRender::send_fore_color() const
+{
+	bind_shader(shader);
+	Uniforms::send_4(shader, "u_ForeColor", fore_color.as_vec());
 }
 
 void TextRender::update_text()
@@ -113,6 +124,8 @@ void TextRender::build_layout()
 
 void TextRender::setup_renderable()
 {
+	batches.clear();
+	current_batch = {};
 	ir->fill_iarr_with_quads(num_printable_glyphs);
 	ir->push_back_vertices(num_printable_glyphs * 4);
 	size_t quad_index = 0;
@@ -135,13 +148,34 @@ void TextRender::setup_renderable()
 			formatting.next_line(*this);
 		else if (font->cache(codepoint))
 		{
-			const Font::Glyph& glyph = font->glyphs[codepoint];
+			const Font::Glyph& glyph = font->glyphs.find(codepoint)->second;
 			formatting.kerning_advance_x(*this, glyph, codepoint);
 			add_glyph_to_ir(glyph, formatting.x, formatting.y, quad_index++);
 			formatting.advance_x(glyph.advance_width * font->scale * formatting.line.mul_x, codepoint);
 		}
 	}
+	if (current_batch.index_count != 0)
+		batches.push_back(current_batch);
 	ir->send_both_buffers_resized();
+}
+
+float TextRender::compute_batch(const Font::Glyph& glyph)
+{
+	GLuint tid = glyph.texture->buf.pixels ? glyph.texture->tid : font->common_texture.tid;
+	for (GLuint i = 0; i < current_batch.tids.size(); ++i)
+	{
+		if (current_batch.tids[i] == tid)
+			return float(i);
+	}
+	if (current_batch.tids.size() == GLC.max_texture_image_units)
+	{
+		batches.push_back(current_batch);
+		current_batch.index_offset += current_batch.index_count;
+		current_batch.index_count = 0;
+		current_batch.tids.clear();
+	}
+	current_batch.tids.push_back(tid);
+	return float(current_batch.tids.size() - 1);
 }
 
 void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t quad_index)
@@ -157,8 +191,7 @@ void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t 
 	ir->set_attribute_single_vertex(quad_index * 4 + 2, 0, glm::value_ptr(glm::vec2{ right, top }));
 	ir->set_attribute_single_vertex(quad_index * 4 + 3, 0, glm::value_ptr(glm::vec2{ left, top }));
 
-	//float tex_slot = ; // TODO tex_slot and binding correct texture slot. bind common texture to 0, and then increase until flushing at MAX_TEXTURES = 32 (for now).
-	float tex_slot = 0;
+	float tex_slot = compute_batch(glyph);
 	ir->set_attribute_single_vertex(quad_index * 4 + 0, 1, &tex_slot);
 	ir->set_attribute_single_vertex(quad_index * 4 + 1, 1, &tex_slot);
 	ir->set_attribute_single_vertex(quad_index * 4 + 2, 1, &tex_slot);
@@ -169,6 +202,8 @@ void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t 
 	ir->set_attribute_single_vertex(quad_index * 4 + 1, 2, glm::value_ptr(glm::vec2{ uvs.x2, uvs.y1 }));
 	ir->set_attribute_single_vertex(quad_index * 4 + 2, 2, glm::value_ptr(glm::vec2{ uvs.x2, uvs.y2 }));
 	ir->set_attribute_single_vertex(quad_index * 4 + 3, 2, glm::value_ptr(glm::vec2{ uvs.x1, uvs.y2 }));
+
+	current_batch.index_count += 6;
 }
 
 void TextRender::format_line(size_t line, LineFormattingInfo& line_formatting) const

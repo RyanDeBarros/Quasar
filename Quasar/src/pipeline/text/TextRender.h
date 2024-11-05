@@ -12,6 +12,8 @@ struct TextRender : public WP_IndexedRenderable // LATER rename WP_ to W_ ?
 
 private:
 	UTF::String text;
+	
+	void init();
 
 public:
 	TextRender(Font* font, const UTF::String& text);
@@ -91,18 +93,31 @@ public:
 	void set_text(UTF::String&& text_) { text = std::move(text_); update_text(); }
 
 	void send_vp(const glm::mat3 vp) const;
+	void send_fore_color() const;
 
 	Bounds get_bounds() const { return bounds; }
 	int outer_width() const { return std::max(bounds.inner_width, format.min_width); }
 	int outer_height() const { return std::max(bounds.inner_height, format.min_height); }
 
 private:
+	struct Batch
+	{
+		size_t index_count = 0;
+		size_t index_offset = 0;
+		std::vector<GLuint> tids;
+	};
+	std::vector<Batch> batches;
+	Batch current_batch;
+
 	void update_text();
 	size_t num_printable_glyphs = 0;
 	void build_layout();
+
 public:
 	void setup_renderable();
+
 private:
+	float compute_batch(const Font::Glyph& glyph);
 	void add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t quad_index);
 	void format_line(size_t line, LineFormattingInfo& line_formatting) const;
 	PageFormattingInfo format_page() const;

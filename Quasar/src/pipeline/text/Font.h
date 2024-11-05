@@ -50,26 +50,30 @@ struct Font
 
 		Glyph() = default;
 		Glyph(Font* font, int index, float scale, size_t buffer_pos);
+		Glyph(const Glyph&) = delete;
+		Glyph(Glyph&&) noexcept = default;
+		Glyph& operator=(Glyph&&) noexcept = delete;
 
 		void render_on_bitmap_shared(const Font& font, const Buffer& buffer, int left_padding, int right_padding, int bottom_padding, int top_padding);
 		void render_on_bitmap_unique(const Font& font, const Buffer& buffer);
 	};
 
 	std::unordered_map<Codepoint, Glyph> glyphs;
-	stbtt_fontinfo font_info;
-	float font_size;
+	stbtt_fontinfo font_info = {};
+	float font_size = 0.0f;
 	float scale = 0.0f;
 	int ascent = 0, descent = 0, linegap = 0, baseline = 0;
 	int space_width = 0;
-	TextureParams texture_params;
-	Image common_texture;
+	TextureParams texture_params = TextureParams::linear;
+	Image common_texture = {};
 	std::vector<Image*> cached_textures;
 	std::shared_ptr<Kerning> kerning = nullptr;
 
+	Font() = default;
 	Font(const FilePath& filepath, float font_size, UTF::String common_buffer = Fonts::COMMON, TextureParams texture_params = TextureParams::linear, const std::shared_ptr<Kerning>& kerning = nullptr);
 	Font(const Font&) = delete;
 	Font(Font&&) noexcept = default;
-	Font& operator=(Font&&) noexcept = delete;
+	Font& operator=(Font&&) noexcept = default;
 	~Font();
 
 	bool cache(Codepoint codepoint);
@@ -99,17 +103,9 @@ class FontRange
 	
 public:
 	FontRange(const FilePath& filepath, const FilePath& kerning_filepath = "") : font_filepath(filepath), kerning(std::make_shared<Kerning>(kerning_filepath)) {}
-	
-	bool construct_fontsize(float font_size, UTF::String common_buffer = Fonts::COMMON, TextureParams texture_params = TextureParams::linear)
-	{
-		if (font_size <= 0.0f)
-			return false;
-		auto iter = fonts.find(font_size);
-		if (iter != fonts.end())
-			return false;
-		fonts.emplace(font_size, Font(font_filepath, font_size, common_buffer, texture_params, kerning));
-		return true;
-	}
+	FontRange(const FontRange&) = delete;
+	FontRange(FontRange&&) noexcept = delete;
 
+	bool construct_fontsize(float font_size, UTF::String common_buffer = Fonts::COMMON, TextureParams texture_params = TextureParams::linear);
 	float get_font_and_multiplier(float font_size, Font*& font);
 };
