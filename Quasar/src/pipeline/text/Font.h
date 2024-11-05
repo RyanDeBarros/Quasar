@@ -44,7 +44,7 @@ struct Font
 		int width = 0, height = 0;
 		int ch_y0 = 0;
 		int advance_width = 0, left_bearing = 0;
-		std::shared_ptr<Image> texture = nullptr; // TODO weak_ptr ?
+		std::shared_ptr<Image> texture = nullptr;
 		size_t buffer_pos = -1;
 		unsigned char* location = nullptr;
 

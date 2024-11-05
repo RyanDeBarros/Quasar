@@ -85,10 +85,10 @@ void TextRender::build_layout()
 	num_printable_glyphs = 0;
 	bounds = {};
 	bounds_formatting.setup(*this);
-	auto iter1 = text.begin();
-	while (iter1)
+	auto iter = text.begin();
+	while (iter)
 	{
-		Codepoint codepoint = iter1.advance();
+		Codepoint codepoint = iter.advance();
 
 		if (codepoint == ' ')
 		{
@@ -100,10 +100,10 @@ void TextRender::build_layout()
 			bounds_formatting.advance_x(font->space_width * format.num_spaces_in_tab, 0);
 			++bounds_formatting.line_info.num_tabs;
 		}
-		else if (carriage_return_2(codepoint, iter1 ? iter1.codepoint() : 0))
+		else if (carriage_return_2(codepoint, iter ? iter.codepoint() : 0))
 		{
 			bounds_formatting.next_line(*this);
-			++iter1;
+			++iter;
 		}
 		else if (carriage_return_1(codepoint))
 		{
@@ -130,19 +130,19 @@ void TextRender::setup_renderable()
 	ir->push_back_vertices(num_printable_glyphs * 4);
 	size_t quad_index = 0;
 	formatting.setup(*this);
-	auto iter2 = text.begin(); // TODO define copy constructor for iter
-	while (iter2)
+	auto iter = text.begin();
+	while (iter)
 	{
-		Codepoint codepoint = iter2.advance();
+		Codepoint codepoint = iter.advance();
 
 		if (codepoint == ' ')
 			formatting.advance_x(font->space_width * formatting.line.space_mul_x, 0);
 		else if (codepoint == '\t')
 			formatting.advance_x(font->space_width * format.num_spaces_in_tab * formatting.line.space_mul_x, 0);
-		else if (carriage_return_2(codepoint, iter2 ? iter2.codepoint() : 0))
+		else if (carriage_return_2(codepoint, iter ? iter.codepoint() : 0))
 		{
 			formatting.next_line(*this);
-			++iter2;
+			++iter;
 		}
 		else if (carriage_return_1(codepoint))
 			formatting.next_line(*this);
@@ -179,7 +179,8 @@ float TextRender::compute_batch(const Font::Glyph& glyph)
 
 void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t quad_index)
 {
-	FlatTransform local{ { float(x), float(y - glyph.ch_y0) }, { float(glyph.width), -float(glyph.height) } }; // TODO baseline offset + to y. In file similar to .kern. Makes certain characters align to baseline better.
+	// LATER baseline offset + to y. In file similar to .kern. Makes certain characters align to baseline better.
+	FlatTransform local{ { float(x), float(y - glyph.ch_y0) }, { float(glyph.width), -float(glyph.height) } };
 	float left = local.position.x;
 	float right = local.position.x + local.scale.x;
 	float bottom = local.position.y;
