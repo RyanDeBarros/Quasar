@@ -678,10 +678,12 @@ void ColorPicker::initialize_widget()
 	rr_wget(widget, BACKGROUND).update_all();
 
 	// ---------- BACKGROUND ----------
-	
-	widget.hobjs[TEXT_ALPHA] = new TextRender(Fonts::roboto_regular->get_font(32), "Alpha\nhi\r\n\rkdjjhaskldfh");
+	Font* font;
+	float fmult = Fonts::roboto_regular->get_font_and_multiplier(80, font);
+	widget.hobjs[TEXT_ALPHA] = new TextRender(font, "Alpha\nhi\r\n\rkdjjhaskldfh");
 	widget.wp_at(TEXT_ALPHA).transform.position.x = -1000;
 	widget.wp_at(TEXT_ALPHA).transform.position.y = -100;
+	widget.wp_at(TEXT_ALPHA).transform.scale = { fmult, fmult };
 	tr_wget(widget, TEXT_ALPHA).format.horizontal_align = TextRender::HorizontalAlign::CENTER;
 	tr_wget(widget, TEXT_ALPHA).setup_renderable();
 }

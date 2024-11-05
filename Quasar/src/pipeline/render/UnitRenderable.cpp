@@ -291,7 +291,7 @@ void IndexedRenderable::get_attribute(size_t vertex, size_t attrib, float* v) co
 
 void IndexedRenderable::send_vertex_buffer() const
 {
-	// TODO extract to buffer_subdata()
+	// LATER extract to buffer_subdata()
 	bind_vao_buffers(vao, vb, ib);
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, varr.size() * sizeof(GLfloat), varr.data()));
 	unbind_vao_buffers();

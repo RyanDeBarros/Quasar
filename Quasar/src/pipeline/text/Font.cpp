@@ -124,7 +124,7 @@ Kerning::Kerning(const FilePath& filepath)
 }
 
 Font::Glyph::Glyph(Font* font, int index, float scale, size_t buffer_pos)
-	: index(index), font(font), texture(nullptr), buffer_pos(buffer_pos)
+	: index(index), texture(nullptr), buffer_pos(buffer_pos)
 {
 	stbtt_GetGlyphHMetrics(&font->font_info, index, &advance_width, &left_bearing);
 	int ch_x0, ch_x1, ch_y1;
@@ -133,10 +133,10 @@ Font::Glyph::Glyph(Font* font, int index, float scale, size_t buffer_pos)
 	height = ch_y1 - ch_y0;
 }
 
-void Font::Glyph::render_on_bitmap_shared(const Buffer& buffer, int left_padding, int right_padding, int bottom_padding, int top_padding)
+void Font::Glyph::render_on_bitmap_shared(const Font& font, const Buffer& buffer, int left_padding, int right_padding, int bottom_padding, int top_padding)
 {
 	unsigned char* temp = new unsigned char[width * height];
-	stbtt_MakeGlyphBitmap(&font->font_info, temp, width, height, width, font->scale, font->scale, index);
+	stbtt_MakeGlyphBitmap(&font.font_info, temp, width, height, width, font.scale, font.scale, index);
 	for (size_t row = 0; row < bottom_padding; ++row)
 		memset(buffer.pixels + row * buffer.width, 0, left_padding + width + right_padding);
 	for (size_t row = bottom_padding; row < bottom_padding + height; ++row)
@@ -152,16 +152,16 @@ void Font::Glyph::render_on_bitmap_shared(const Buffer& buffer, int left_padding
 	location = buffer.pixels;
 }
 
-void Font::Glyph::render_on_bitmap_unique(const Buffer& buffer)
+void Font::Glyph::render_on_bitmap_unique(const Font& font, const Buffer& buffer)
 {
-	stbtt_MakeGlyphBitmap(&font->font_info, buffer.pixels, width, height, width, font->scale, font->scale, index);
+	stbtt_MakeGlyphBitmap(&font.font_info, buffer.pixels, width, height, width, font.scale, font.scale, index);
 	location = buffer.pixels;
 }
 
 Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer, TextureParams texture_params, const std::shared_ptr<Kerning>& kerning)
 	: font_size(font_size), font_info{}, texture_params(texture_params), kerning(kerning)
 {
-	common_bmp.chpp = 1;
+	common_texture.buf.chpp = 1;
 
 	unsigned char* font_file = nullptr;
 	size_t font_filesize;
@@ -188,27 +188,27 @@ Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer,
 		if (glyphs.find(codepoint) != glyphs.end())
 			continue;
 		int gIndex = stbtt_FindGlyphIndex(&font_info, codepoint);
-		if (!gIndex) // TODO add warning/info logs throughout font/text code
+		if (!gIndex) // LATER add warning/info logs throughout font/text code
 			continue;
-		Glyph glyph(this, gIndex, scale, common_bmp.width);
-		common_bmp.width += glyph.width + size_t(2);
-		if (glyph.height > common_bmp.height)
-			common_bmp.height = glyph.height;
+		Glyph glyph(this, gIndex, scale, common_texture.buf.width);
+		common_texture.buf.width += glyph.width + size_t(2);
+		if (glyph.height > common_texture.buf.height)
+			common_texture.buf.height = glyph.height;
 		glyphs.insert({ codepoint, std::move(glyph) });
 		codepoints.push_back(codepoint);
 	}
-	common_bmp.height += 2;
-	if (common_bmp.width > 0)
+	common_texture.buf.height += 2;
+	if (common_texture.buf.width > 0)
 	{
-		common_bmp.pxnew();
-		Buffer offset = common_bmp;
+		common_texture.buf.pxnew();
+		Buffer offset = common_texture.buf;
 		for (Codepoint codepoint : codepoints)
 		{
 			Font::Glyph& glyph = glyphs[codepoint];
-			offset.pixels = common_bmp.pixels + glyph.buffer_pos;
-			glyph.render_on_bitmap_shared(offset, 1, 1, 1, 1);
+			offset.pixels = common_texture.buf.pixels + glyph.buffer_pos;
+			glyph.render_on_bitmap_shared(*this, offset, 1, 1, 1, 1);
 		}
-		common_texture.buf = common_bmp;
+		common_texture.buf = common_texture.buf;
 		common_texture.gen_texture(texture_params);
 		for (Codepoint codepoint : codepoints)
 			glyphs[codepoint].texture = &common_texture;
@@ -243,7 +243,7 @@ bool Font::cache(Codepoint codepoint)
 	bmp.height = glyph.height;
 	bmp.chpp = 1;
 	bmp.pxnew();
-	glyph.render_on_bitmap_unique(bmp);
+	glyph.render_on_bitmap_unique(*this, bmp);
 
 	Image* img = new Image();
 	img->buf = bmp;
@@ -296,10 +296,10 @@ Bounds Font::uvs(const Glyph& glyph) const
 	Bounds b{};
 	if (glyph.buffer_pos != size_t(-1))
 	{
-		b.x1 = static_cast<float>(glyph.buffer_pos + 1) / common_bmp.width;
-		b.x2 = static_cast<float>(glyph.buffer_pos + 1 + glyph.width) / common_bmp.width;
+		b.x1 = static_cast<float>(glyph.buffer_pos + 1) / common_texture.buf.width;
+		b.x2 = static_cast<float>(glyph.buffer_pos + 1 + glyph.width) / common_texture.buf.width;
 		b.y1 = 0.0f;
-		b.y2 = static_cast<float>(glyph.height) / common_bmp.height;
+		b.y2 = static_cast<float>(glyph.height) / common_texture.buf.height;
 	}
 	else
 	{
@@ -309,4 +309,41 @@ Bounds Font::uvs(const Glyph& glyph) const
 		b.y2 = 1;
 	}
 	return b;
+}
+
+float FontRange::get_font_and_multiplier(float font_size, Font*& font)
+{
+	if (fonts.empty())
+	{
+		font = nullptr;
+		return 0.0f;
+	}
+	auto iter = fonts.lower_bound(font_size);
+	if (iter == fonts.end())
+	{
+		auto prev = std::prev(iter);
+		font = &prev->second;
+		return font_size / prev->first;
+	}
+	if (iter->first == font_size)
+	{
+		font = &iter->second;
+		return 1.0f;
+	}
+	if (iter == fonts.begin())
+	{
+		font = &iter->second;
+		return font_size / iter->first;
+	}
+	auto prev = std::prev(iter);
+	if (std::abs(iter->first - font_size) < 1.5f * std::abs(prev->first - font_size))
+	{
+		font = &iter->second;
+		return font_size / iter->first;
+	}
+	else
+	{
+		font = &prev->second;
+		return font_size / prev->first;
+	}
 }

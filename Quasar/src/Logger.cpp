@@ -3,7 +3,7 @@
 #include <iostream>
 #include <chrono>
 
-// TODO translate OpenGL error codes
+// LATER translate OpenGL error codes
 
 Logger& Logger::specify_logfile(const char* filepath, bool append)
 {

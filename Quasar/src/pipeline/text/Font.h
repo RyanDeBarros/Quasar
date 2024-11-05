@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <map>
 
 #include <stb/stb_truetype.h>
 
@@ -45,25 +46,23 @@ struct Font
 		int advance_width = 0, left_bearing = 0;
 		Image* texture = nullptr;
 		size_t buffer_pos = -1;
-		Font* font = nullptr; // TODO is this needed?
 		unsigned char* location = nullptr;
 
 		Glyph() = default;
 		Glyph(Font* font, int index, float scale, size_t buffer_pos);
 
-		void render_on_bitmap_shared(const Buffer& buffer, int left_padding, int right_padding, int bottom_padding, int top_padding);
-		void render_on_bitmap_unique(const Buffer& buffer);
+		void render_on_bitmap_shared(const Font& font, const Buffer& buffer, int left_padding, int right_padding, int bottom_padding, int top_padding);
+		void render_on_bitmap_unique(const Font& font, const Buffer& buffer);
 	};
 
 	std::unordered_map<Codepoint, Glyph> glyphs;
 	stbtt_fontinfo font_info;
 	float font_size;
-	float scale = 0.0f; // TODO is this used at all?
+	float scale = 0.0f;
 	int ascent = 0, descent = 0, linegap = 0, baseline = 0;
 	int space_width = 0;
 	TextureParams texture_params;
-	Buffer common_bmp;
-	Image common_texture; // TODO replace common_bmp with common_texture's buffer
+	Image common_texture;
 	std::vector<Image*> cached_textures;
 	std::shared_ptr<Kerning> kerning = nullptr;
 
@@ -94,7 +93,7 @@ constexpr bool carriage_return_2(Codepoint r, Codepoint n)
 
 class FontRange
 {
-	std::unordered_map<float, Font> fonts;
+	std::map<float, Font> fonts;
 	FilePath font_filepath;
 	std::shared_ptr<Kerning> kerning = nullptr;
 	
@@ -103,6 +102,8 @@ public:
 	
 	bool construct_fontsize(float font_size, UTF::String common_buffer = Fonts::COMMON, TextureParams texture_params = TextureParams::linear)
 	{
+		if (font_size <= 0.0f)
+			return false;
 		auto iter = fonts.find(font_size);
 		if (iter != fonts.end())
 			return false;
@@ -110,9 +111,5 @@ public:
 		return true;
 	}
 
-	Font* get_font(float font_size)
-	{
-		auto iter = fonts.find(font_size);
-		return iter != fonts.end() ? &iter->second : nullptr; // TODO do something else when exact font_size is not found. Use closes font_size and return a scale multiplier to be used by TextRender
-	}
+	float get_font_and_multiplier(float font_size, Font*& font);
 };
