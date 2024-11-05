@@ -81,6 +81,9 @@ Image::Image(Image&& other) noexcept
 	: buf(other.buf), tid(other.tid)
 {
 	other.buf.pixels = nullptr;
+	other.buf.width = 0;
+	other.buf.height = 0;
+	other.buf.chpp = 0;
 	other.tid = 0;
 }
 

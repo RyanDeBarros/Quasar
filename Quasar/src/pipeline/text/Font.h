@@ -44,7 +44,7 @@ struct Font
 		int width = 0, height = 0;
 		int ch_y0 = 0;
 		int advance_width = 0, left_bearing = 0;
-		Image* texture = nullptr;
+		std::shared_ptr<Image> texture = nullptr; // TODO weak_ptr ?
 		size_t buffer_pos = -1;
 		unsigned char* location = nullptr;
 
@@ -52,7 +52,7 @@ struct Font
 		Glyph(Font* font, int index, float scale, size_t buffer_pos);
 		Glyph(const Glyph&) = delete;
 		Glyph(Glyph&&) noexcept = default;
-		Glyph& operator=(Glyph&&) noexcept = delete;
+		Glyph& operator=(Glyph&&) noexcept = default;
 
 		void render_on_bitmap_shared(const Font& font, const Buffer& buffer, int left_padding, int right_padding, int bottom_padding, int top_padding);
 		void render_on_bitmap_unique(const Font& font, const Buffer& buffer);
@@ -65,8 +65,8 @@ struct Font
 	int ascent = 0, descent = 0, linegap = 0, baseline = 0;
 	int space_width = 0;
 	TextureParams texture_params = TextureParams::linear;
-	Image common_texture = {};
-	std::vector<Image*> cached_textures;
+	std::shared_ptr<Image> common_texture = {};
+	std::vector<std::shared_ptr<Image>> cached_textures;
 	std::shared_ptr<Kerning> kerning = nullptr;
 
 	Font() = default;
@@ -74,7 +74,6 @@ struct Font
 	Font(const Font&) = delete;
 	Font(Font&&) noexcept = default;
 	Font& operator=(Font&&) noexcept = default;
-	~Font();
 
 	bool cache(Codepoint codepoint);
 	void cache_all(const Font& other);

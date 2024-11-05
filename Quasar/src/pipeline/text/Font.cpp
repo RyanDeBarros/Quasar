@@ -159,9 +159,9 @@ void Font::Glyph::render_on_bitmap_unique(const Font& font, const Buffer& buffer
 }
 
 Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer, TextureParams texture_params, const std::shared_ptr<Kerning>& kerning)
-	: font_size(font_size), font_info{}, texture_params(texture_params), kerning(kerning)
+	: font_size(font_size), font_info{}, texture_params(texture_params), kerning(kerning), common_texture(std::make_shared<Image>())
 {
-	common_texture.buf.chpp = 1;
+	common_texture->buf.chpp = 1;
 
 	unsigned char* font_file = nullptr;
 	size_t font_filesize;
@@ -192,37 +192,30 @@ Font::Font(const FilePath& filepath, float font_size, UTF::String common_buffer,
 		int gIndex = stbtt_FindGlyphIndex(&font_info, codepoint);
 		if (!gIndex) // LATER add warning/info logs throughout font/text code
 			continue;
-		Glyph glyph(this, gIndex, scale, common_texture.buf.width);
-		common_texture.buf.width += glyph.width + size_t(2);
-		if (glyph.height > common_texture.buf.height)
-			common_texture.buf.height = glyph.height;
-		glyphs.insert({ codepoint, std::move(glyph) });
+		Glyph glyph(this, gIndex, scale, common_texture->buf.width);
+		common_texture->buf.width += glyph.width + size_t(2);
+		if (glyph.height > common_texture->buf.height)
+			common_texture->buf.height = glyph.height;
+		glyph.texture = common_texture;
+		glyphs.emplace(codepoint, std::move(glyph));
 		codepoints.push_back(codepoint);
 	}
-	common_texture.buf.height += 2;
-	if (common_texture.buf.width > 0)
+	common_texture->buf.height += 2;
+	if (common_texture->buf.width > 0)
 	{
-		common_texture.buf.pxnew();
-		Buffer offset = common_texture.buf;
+		common_texture->buf.pxnew();
+		Buffer offset = common_texture->buf;
 		for (Codepoint codepoint : codepoints)
 		{
 			Font::Glyph& glyph = glyphs[codepoint];
-			offset.pixels = common_texture.buf.pixels + glyph.buffer_pos;
+			offset.pixels = common_texture->buf.pixels + glyph.buffer_pos;
 			glyph.render_on_bitmap_shared(*this, offset, 1, 1, 1, 1);
 		}
-		common_texture.gen_texture(texture_params);
-		for (Codepoint codepoint : codepoints)
-			glyphs.find(codepoint)->second.texture = &common_texture;
+		common_texture->gen_texture(texture_params);
 	}
 	int space_advance_width, space_left_bearing;
 	stbtt_GetCodepointHMetrics(&font_info, ' ', &space_advance_width, &space_left_bearing);
 	space_width = static_cast<int>(roundf(space_advance_width * scale));
-}
-
-Font::~Font()
-{
-	for (auto t : cached_textures)
-		delete t;
 }
 
 bool Font::cache(Codepoint codepoint)
@@ -240,12 +233,12 @@ bool Font::cache(Codepoint codepoint)
 	bmp.pxnew();
 	glyph.render_on_bitmap_unique(*this, bmp);
 
-	Image* img = new Image();
+	std::shared_ptr<Image> img = std::make_shared<Image>();
 	img->buf = bmp;
 	img->gen_texture();
 	glyph.texture = img;
-	cached_textures.push_back(img);
-	glyphs.insert({ codepoint, std::move(glyph) });
+	cached_textures.push_back(std::move(img));
+	glyphs.emplace(codepoint, std::move(glyph));
 	return true;
 }
 
@@ -276,7 +269,7 @@ int Font::kerning_of(Codepoint c1, Codepoint c2, int g1, int g2, float sc) const
 void Font::set_texture_params(TextureParams params)
 {
 	texture_params = params;
-	common_texture.update_texture_params(params);
+	common_texture->update_texture_params(params);
 	for (auto t : cached_textures)
 		t->update_texture_params(params);
 }
@@ -291,10 +284,10 @@ Bounds Font::uvs(const Glyph& glyph) const
 	Bounds b{};
 	if (glyph.buffer_pos != size_t(-1))
 	{
-		b.x1 = static_cast<float>(glyph.buffer_pos + 1) / common_texture.buf.width;
-		b.x2 = static_cast<float>(glyph.buffer_pos + 1 + glyph.width) / common_texture.buf.width;
+		b.x1 = static_cast<float>(glyph.buffer_pos + 1) / common_texture->buf.width;
+		b.x2 = static_cast<float>(glyph.buffer_pos + 1 + glyph.width) / common_texture->buf.width;
 		b.y1 = 0.0f;
-		b.y2 = static_cast<float>(glyph.height) / common_texture.buf.height;
+		b.y2 = static_cast<float>(glyph.height) / common_texture->buf.height;
 	}
 	else
 	{
@@ -313,8 +306,7 @@ bool FontRange::construct_fontsize(float font_size, UTF::String common_buffer, T
 	auto iter = fonts.find(font_size);
 	if (iter != fonts.end())
 		return false;
-	Font tmp(font_filepath, font_size, common_buffer, texture_params, kerning);
-	fonts[font_size] = std::move(tmp);
+	fonts.emplace(font_size, Font(font_filepath, font_size, common_buffer, texture_params, kerning));
 	return true;
 }
 

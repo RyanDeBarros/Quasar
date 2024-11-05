@@ -161,10 +161,9 @@ void TextRender::setup_renderable()
 
 float TextRender::compute_batch(const Font::Glyph& glyph)
 {
-	GLuint tid = glyph.texture->buf.pixels ? glyph.texture->tid : font->common_texture.tid;
 	for (GLuint i = 0; i < current_batch.tids.size(); ++i)
 	{
-		if (current_batch.tids[i] == tid)
+		if (current_batch.tids[i] == glyph.texture->tid)
 			return float(i);
 	}
 	if (current_batch.tids.size() == GLC.max_texture_image_units)
@@ -174,7 +173,7 @@ float TextRender::compute_batch(const Font::Glyph& glyph)
 		current_batch.index_count = 0;
 		current_batch.tids.clear();
 	}
-	current_batch.tids.push_back(tid);
+	current_batch.tids.push_back(glyph.texture->tid);
 	return float(current_batch.tids.size() - 1);
 }
 
