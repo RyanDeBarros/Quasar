@@ -28,8 +28,6 @@ ColorPicker::ColorPicker(MouseButtonHandler& parent_mb_handler, KeyHandler& pare
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
 	Widget(_W_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler)
 {
-	self.pivot.x = 1;
-	self.pivot.y = 0; // TODO pass in constructor
 	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(HSV(0.0f, 0.0f, 0.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::WHITE, ColorFrame(HSV(0.0f, 0.0f, 1.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::TRANSPARENT, ColorFrame(0));
@@ -48,7 +46,7 @@ void ColorPicker::render()
 {
 	process_mb_down_events();
 	ur_wget(*this, BACKGROUND).draw();
-	cp_render_gui();
+	cp_render_gui_back();
 	ur_wget(*this, ALPHA_SLIDER).draw();
 	ur_wget(*this, ALPHA_SLIDER_CURSOR).draw();
 	ur_wget(*this, PREVIEW).draw();
@@ -91,9 +89,10 @@ void ColorPicker::render()
 		ur_wget(*this, HSL_L_SLIDER_CURSOR).draw();
 		break;
 	}
+	cp_render_gui_front();
 }
 
-void ColorPicker::cp_render_gui()
+void ColorPicker::cp_render_gui_back()
 {
 	ImGui::SetNextWindowBgAlpha(0);
 	auto sz = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale();
@@ -188,9 +187,6 @@ void ColorPicker::cp_render_gui()
 		float imgui_sml_x = 97;
 		if (state == State::SLIDER_RGB)
 		{
-			tr_wget(*this, TEXT_RED).draw();
-			tr_wget(*this, TEXT_GREEN).draw();
-			tr_wget(*this, TEXT_BLUE).draw();
 			RGB rgb = get_color().rgb();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
@@ -221,9 +217,6 @@ void ColorPicker::cp_render_gui()
 		}
 		else if (state == State::SLIDER_HSV)
 		{
-			tr_wget(*this, TEXT_HUE).draw();
-			tr_wget(*this, TEXT_SAT).draw();
-			tr_wget(*this, TEXT_VALUE).draw();
 			HSV hsv = get_color().hsv();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
@@ -254,9 +247,6 @@ void ColorPicker::cp_render_gui()
 		}
 		else if (state == State::SLIDER_HSL)
 		{
-			tr_wget(*this, TEXT_HUE).draw();
-			tr_wget(*this, TEXT_SAT).draw();
-			tr_wget(*this, TEXT_LIGHT).draw();
 			HSL hsl = get_color().hsl();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
@@ -285,8 +275,6 @@ void ColorPicker::cp_render_gui()
 					set_color(HSLA(h * 0.01f, s * 0.01f, l * 0.01f, alpha));
 			}
 		}
-		// alpha
-		tr_wget(*this, TEXT_ALPHA).draw();
 		if (txtfld_mode == TextFieldMode::NUMBER)
 		{
 			ColorFrame color = get_color();
@@ -309,13 +297,31 @@ void ColorPicker::cp_render_gui()
 
 		set_state(to_state);
 		ImGui::End();
-
-
-
-
-
-		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
 	}
+}
+
+void ColorPicker::cp_render_gui_front()
+{
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
+	if (state == State::SLIDER_RGB)
+	{
+		tr_wget(*this, TEXT_RED).draw();
+		tr_wget(*this, TEXT_GREEN).draw();
+		tr_wget(*this, TEXT_BLUE).draw();
+	}
+	else if (state == State::SLIDER_HSV)
+	{
+		tr_wget(*this, TEXT_HUE).draw();
+		tr_wget(*this, TEXT_SAT).draw();
+		tr_wget(*this, TEXT_VALUE).draw();
+	}
+	else if (state == State::SLIDER_HSL)
+	{
+		tr_wget(*this, TEXT_HUE).draw();
+		tr_wget(*this, TEXT_SAT).draw();
+		tr_wget(*this, TEXT_LIGHT).draw();
+	}
+	tr_wget(*this, TEXT_ALPHA).draw();
 }
 
 void ColorPicker::cp_render_tab_button(State& to_state, State state, bool disable, const char* display) const
@@ -377,16 +383,16 @@ void ColorPicker::set_state(State _state)
 	}
 }
 
-void ColorPicker::send_vp(const glm::mat3& vp)
+void ColorPicker::send_vp(const glm::mat3& vp_)
 {
+	vp = vp_;
 	Uniforms::send_matrix3(quad_shader, "u_VP", vp);
 	Uniforms::send_matrix3(linear_hue_shader, "u_VP", vp);
 	Uniforms::send_matrix3(hue_wheel_w_shader, "u_VP", vp);
 	Uniforms::send_matrix3(linear_lightness_shader, "u_VP", vp);
 	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", vp);
 	Uniforms::send_matrix3(round_rect_shader, "u_VP", vp);
-	mvp = vp * self.transform.matrix();
-	sync_cp_widget_with_mvp();
+	sync_cp_widget_with_vp();
 }
 
 void ColorPicker::initialize_widget()
@@ -970,7 +976,7 @@ void ColorPicker::set_size(Scale size, bool sync)
 	wp_at(BACKGROUND).transform.scale = size;
 	rr_wget(*this, BACKGROUND).update_transform();
 	if (sync)
-		sync_cp_widget_with_mvp();
+		sync_cp_widget_with_vp();
 	//wp_at(BACKGROUND).transform.scale = size_ * Machine.inv_app_scale();
 }
 
@@ -1241,7 +1247,7 @@ void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, G
 	ur_wget(*this, control).set_attribute(2, glm::value_ptr(glm::vec4{ g1, g2, g3, g4 }));
 }
 
-void ColorPicker::sync_cp_widget_with_mvp()
+void ColorPicker::sync_cp_widget_with_vp()
 {
 	sync_single_cp_widget_transform_ur(PREVIEW);
 	sync_single_cp_widget_transform_ur(ALPHA_SLIDER);
@@ -1273,15 +1279,15 @@ void ColorPicker::sync_cp_widget_with_mvp()
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER);
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
 	rr_wget(*this, BACKGROUND).update_transform().ur->send_buffer(); // TODO make rr extend ur to use ur_wget directly ?
-	tr_wget(*this, TEXT_ALPHA).send_vp(mvp); // TODO matrix() on wp that uses pivot
-	tr_wget(*this, TEXT_RED).send_vp(mvp);
-	tr_wget(*this, TEXT_GREEN).send_vp(mvp);
-	tr_wget(*this, TEXT_BLUE).send_vp(mvp);
-	tr_wget(*this, TEXT_HUE).send_vp(mvp);
-	tr_wget(*this, TEXT_SAT).send_vp(mvp);
-	tr_wget(*this, TEXT_VALUE).send_vp(mvp);
-	tr_wget(*this, TEXT_LIGHT).send_vp(mvp);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp(mvp, self.transform);
+	tr_wget(*this, TEXT_ALPHA).send_vp(vp);
+	tr_wget(*this, TEXT_RED).send_vp(vp);
+	tr_wget(*this, TEXT_GREEN).send_vp(vp);
+	tr_wget(*this, TEXT_BLUE).send_vp(vp);
+	tr_wget(*this, TEXT_HUE).send_vp(vp);
+	tr_wget(*this, TEXT_SAT).send_vp(vp);
+	tr_wget(*this, TEXT_VALUE).send_vp(vp);
+	tr_wget(*this, TEXT_LIGHT).send_vp(vp);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp(vp, self.transform);
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const

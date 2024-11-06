@@ -27,6 +27,8 @@ struct Widget
 	const T* get(size_t i) const { return dynamic_cast<T*>(children[i]); }
 	WidgetPlacement& wp_at(size_t i) { return children[i]->self; }
 	const WidgetPlacement& wp_at(size_t i) const { return children[i]->self; }
+
+	glm::mat3 global_matrix() const { if (parent) return parent->global_matrix() * self.matrix(); else return self.matrix(); }
 };
 
 inline void detach_widget(Widget* parent, Widget* child)

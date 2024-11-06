@@ -137,6 +137,8 @@ struct WidgetPlacement
 
 	float interp_x(float t) const { return left() + t * transform.scale.x; }
 	float interp_y(float t) const { return bottom() + t * transform.scale.y; }
+
+	glm::mat3 matrix() const { return FlatTransform{ center_point(), transform.scale }.matrix(); }
 };
 
 struct ClippingRect

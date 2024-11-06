@@ -59,7 +59,6 @@ void Button::process()
 
 void Button::send_vp(const glm::mat3& vp, FlatTransform parent)
 {
-	// TODO held.matrix() that takes pivot into account. put the same in send_transform_under_parent(), so that only vp needs to be passed to Button::send_vp().
-	text().send_vp(vp * self.transform.matrix());
-	//bkg.update_transform().ur->send_buffer(); // TODO send_vp()
+	text().send_vp(vp * global_matrix());
+	bkg().update_transform().send_vp(vp * global_matrix());
 }

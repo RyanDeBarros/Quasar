@@ -30,7 +30,7 @@ public:
 
 private:
 	Position center;
-	glm::mat3 mvp;
+	glm::mat3 vp;
 	State last_graphic_state = State::GRAPHIC_QUAD;
 	enum class TextFieldMode
 	{
@@ -68,7 +68,8 @@ public:
 private:
 	void process_mb_down_events();
 
-	void cp_render_gui();
+	void cp_render_gui_back();
+	void cp_render_gui_front();
 	void cp_render_tab_button(State& to_state, State state, bool disable, const char* display) const;
 	void update_rgb_hex();
 
@@ -122,7 +123,7 @@ private:
 	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
-	void sync_cp_widget_with_mvp();
+	void sync_cp_widget_with_vp();
 	void sync_single_cp_widget_transform_ur(size_t control, bool send_buffer = true) const;
 	void send_cpwc_buffer(size_t control) const;
 	void set_circle_cursor_thickness(size_t cursor, float thickness) const;

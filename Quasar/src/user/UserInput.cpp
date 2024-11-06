@@ -3,7 +3,6 @@
 #include "Machine.h"
 #include "variety/Utils.h"
 
-// TODO cursor is changing when outside expected bounds ?
 void attach_canvas_controls()
 {
 	// Panning

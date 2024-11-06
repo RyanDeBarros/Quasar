@@ -62,7 +62,7 @@ void TextRender::draw() const
 void TextRender::send_vp(const glm::mat3 vp) const
 {
 	bind_shader(shader);
-	Uniforms::send_matrix3(shader, "u_MVP", vp * self.transform.matrix());
+	Uniforms::send_matrix3(shader, "u_MVP", vp * global_matrix());
 	unbind_shader();
 }
 
