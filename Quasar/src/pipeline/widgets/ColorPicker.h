@@ -9,8 +9,7 @@
 #include "edit/Color.h"
 #include "variety/Geometry.h"
 
-// LATER make ColorPicker inherit from PolyHolder<WidgetPlacement>
-struct ColorPicker
+struct ColorPicker : public Widget
 {
 	enum class State
 	{
@@ -28,8 +27,6 @@ public:
 	void set_state(State state);
 
 	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader, round_rect_shader;
-
-	Widget widget;
 
 private:
 	Position center;
@@ -132,4 +129,73 @@ private:
 	void set_circle_cursor_value(size_t cursor, float value) const;
 	float get_circle_cursor_value(size_t cursor) const;
 	void setup_circle_cursor(size_t cursor);
+
+private:
+	// LATER use UMR when possible
+	enum
+	{
+		// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
+		PREVIEW,						// quad
+		ALPHA_SLIDER,					// quad
+		ALPHA_SLIDER_CURSOR,			// circle_cursor
+		GRAPHIC_QUAD,					// quad
+		GRAPHIC_QUAD_CURSOR,			// circle_cursor
+		GRAPHIC_HUE_SLIDER,				// linear_hue
+		GRAPHIC_HUE_SLIDER_CURSOR,		// circle_cursor
+		GRAPHIC_HUE_WHEEL,				// hue_wheel
+		GRAPHIC_HUE_WHEEL_CURSOR,		// circle_cursor
+		GRAPHIC_VALUE_SLIDER,			// quad
+		GRAPHIC_VALUE_SLIDER_CURSOR,	// circle_cursor
+		RGB_R_SLIDER,					// quad
+		RGB_R_SLIDER_CURSOR,			// circle_cursor
+		RGB_G_SLIDER,					// quad
+		RGB_G_SLIDER_CURSOR,			// circle_cursor
+		RGB_B_SLIDER,					// quad
+		RGB_B_SLIDER_CURSOR,			// circle_cursor
+		HSV_H_SLIDER,					// quad
+		HSV_H_SLIDER_CURSOR,			// circle_cursor
+		HSV_S_SLIDER,					// quad
+		HSV_S_SLIDER_CURSOR,			// circle_cursor
+		HSV_V_SLIDER,					// quad
+		HSV_V_SLIDER_CURSOR,			// circle_cursor
+		HSL_H_SLIDER,					// quad
+		HSL_H_SLIDER_CURSOR,			// circle_cursor
+		HSL_S_SLIDER,					// quad
+		HSL_S_SLIDER_CURSOR,			// circle_cursor
+		HSL_L_SLIDER,					// linear_lightness
+		HSL_L_SLIDER_CURSOR,			// circle_cursor
+		BACKGROUND,						// separate widget
+		TEXT_ALPHA,						// separate widget
+		TEXT_RED,						// separate widget
+		TEXT_GREEN,						// separate widget
+		TEXT_BLUE,						// separate widget
+		TEXT_HUE,						// separate widget
+		TEXT_SAT,						// separate widget
+		TEXT_VALUE,						// separate widget
+		TEXT_LIGHT,						// separate widget
+		BUTTON_SWITCH_TXTFLD_MODE,		// separate widget
+		_W_COUNT
+	};
+
+	enum class GradientIndex : GLint
+	{
+		BLACK,
+		WHITE,
+		TRANSPARENT,
+		PREVIEW,
+		ALPHA_SLIDER,
+		GRAPHIC_QUAD,
+		GRAPHIC_VALUE_SLIDER,
+		RGB_R_SLIDER,
+		RGB_G_SLIDER,
+		RGB_B_SLIDER,
+		HSV_S_SLIDER_ZERO,
+		HSV_S_SLIDER_ONE,
+		HSV_V_SLIDER,
+		HSL_S_SLIDER_ZERO,
+		HSL_S_SLIDER_ONE,
+		_MAX_GRADIENT_COLORS
+	};
+
+	static void send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color);
 };
