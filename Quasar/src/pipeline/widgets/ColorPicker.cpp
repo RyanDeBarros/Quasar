@@ -196,6 +196,8 @@ void ColorPicker::cp_render_gui()
 		{
 			if (ImGui::Button("HEX"))
 			{
+				auto cpos = ImGui::GetCursorPos();
+				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y));
 				ImGui::OpenPopup("hex-popup");
 			}
 			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
@@ -472,9 +474,9 @@ void ColorPicker::initialize_widget()
 	const float preview_w = 80;
 	const float preview_h = 40;
 
-	const float left_text_x = -108;
+	const float left_text_x = -98;
 	const float text_sep = 70;
-	const float text1_y = 250;
+	const float text1_y = 238;
 	const float text2_y = text1_y - text_sep;
 	const float text3_y = text2_y - text_sep;
 	const float text4_y = text3_y - text_sep;
@@ -659,36 +661,51 @@ void ColorPicker::initialize_widget()
 
 	// ---------- TEXT ----------
 
-	// TODO rename FontRange variables to descriptive names rather than the names of the fonts. So "label1", for instance, instead of robot_regular.
-	widget.hobjs[TEXT_ALPHA] = new TextRender(*Fonts::roboto_regular, 20, "Alpha");
+	widget.hobjs[TEXT_ALPHA] = new TextRender(*Fonts::label_regular, 18, "Alpha");
+	widget.wp_at(TEXT_ALPHA).pivot.y = 0.5f;
+	tr_wget(widget, TEXT_ALPHA).setup_renderable();
 	widget.wp_at(TEXT_ALPHA).transform.position.x = left_text_x;
 	widget.wp_at(TEXT_ALPHA).transform.position.y = text4_y;
 
-	widget.hobjs[TEXT_RED] = new TextRender(*Fonts::roboto_regular, 20, "Red");
+	widget.hobjs[TEXT_RED] = new TextRender(*Fonts::label_regular, 18, "Red");
+	widget.wp_at(TEXT_RED).pivot.y = 0.5f;
+	tr_wget(widget, TEXT_RED).setup_renderable();
 	widget.wp_at(TEXT_RED).transform.position.x = left_text_x;
 	widget.wp_at(TEXT_RED).transform.position.y = text1_y;
 
-	widget.hobjs[TEXT_GREEN] = new TextRender(*Fonts::roboto_regular, 20, "Green");
+	widget.hobjs[TEXT_GREEN] = new TextRender(*Fonts::label_regular, 18, "Green");
+	widget.wp_at(TEXT_GREEN).pivot.y = 0.5f;
+	tr_wget(widget, TEXT_GREEN).setup_renderable();
 	widget.wp_at(TEXT_GREEN).transform.position.x = left_text_x;
 	widget.wp_at(TEXT_GREEN).transform.position.y = text2_y;
 
-	widget.hobjs[TEXT_BLUE] = new TextRender(*Fonts::roboto_regular, 20, "Blue");
+	widget.hobjs[TEXT_BLUE] = new TextRender(*Fonts::label_regular, 18, "Blue");
+	widget.wp_at(TEXT_BLUE).pivot.y = 0.5f;
+	tr_wget(widget, TEXT_BLUE).setup_renderable();
 	widget.wp_at(TEXT_BLUE).transform.position.x = left_text_x;
 	widget.wp_at(TEXT_BLUE).transform.position.y = text3_y;
 
-	widget.hobjs[TEXT_HUE] = new TextRender(*Fonts::roboto_regular, 20, "Hue");
+	widget.hobjs[TEXT_HUE] = new TextRender(*Fonts::label_regular, 18, "Hue");
+	widget.wp_at(TEXT_HUE).pivot.y = 0.5f;
+	tr_wget(widget, TEXT_HUE).setup_renderable();
 	widget.wp_at(TEXT_HUE).transform.position.x = left_text_x;
 	widget.wp_at(TEXT_HUE).transform.position.y = text1_y;
 
-	widget.hobjs[TEXT_SAT] = new TextRender(*Fonts::roboto_regular, 20, "Sat");
+	widget.hobjs[TEXT_SAT] = new TextRender(*Fonts::label_regular, 18, "Sat");
+	widget.wp_at(TEXT_SAT).pivot.y = 0.5f;
+	tr_wget(widget, TEXT_SAT).setup_renderable();
 	widget.wp_at(TEXT_SAT).transform.position.x = left_text_x;
 	widget.wp_at(TEXT_SAT).transform.position.y = text2_y;
 
-	widget.hobjs[TEXT_VALUE] = new TextRender(*Fonts::roboto_regular, 20, "Value");
+	widget.hobjs[TEXT_VALUE] = new TextRender(*Fonts::label_regular, 18, "Value");
+	widget.wp_at(TEXT_VALUE).pivot.y = 0.5f;
+	tr_wget(widget, TEXT_VALUE).setup_renderable();
 	widget.wp_at(TEXT_VALUE).transform.position.x = left_text_x;
 	widget.wp_at(TEXT_VALUE).transform.position.y = text3_y;
 
-	widget.hobjs[TEXT_LIGHT] = new TextRender(*Fonts::roboto_regular, 20, "Light");
+	widget.hobjs[TEXT_LIGHT] = new TextRender(*Fonts::label_regular, 18, "Light");
+	widget.wp_at(TEXT_LIGHT).pivot.y = 0.5f;
+	tr_wget(widget, TEXT_LIGHT).setup_renderable();
 	widget.wp_at(TEXT_LIGHT).transform.position.x = left_text_x;
 	widget.wp_at(TEXT_LIGHT).transform.position.y = text3_y;
 }

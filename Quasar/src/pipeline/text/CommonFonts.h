@@ -4,8 +4,8 @@
 
 namespace Fonts
 {
-	extern FontRange* roboto_regular;
-	extern FontRange* roboto_bolditalic;
+	extern FontRange* label_regular;
+	extern FontRange* label_bolditalic;
 
 	extern void load_common_fonts();
 }
