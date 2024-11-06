@@ -13,7 +13,7 @@ static Shader text_shader_instance()
 void TextRender::init()
 {
 	ir->set_shader(&shader);
-	held.pivot = { 0, 1 };
+	self.pivot = { 0, 1 };
 	send_fore_color();
 }
 
@@ -35,7 +35,7 @@ TextRender::TextRender(FontRange& frange, float font_size, const UTF::String& te
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
 {
 	float fmult = frange.get_font_and_multiplier(font_size, font);
-	held.transform.scale = { fmult, fmult };
+	self.transform.scale = { fmult, fmult };
 	init();
 	set_text(text);
 }
@@ -44,7 +44,7 @@ TextRender::TextRender(FontRange& frange, float font_size, UTF::String&& text)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
 {
 	float fmult = frange.get_font_and_multiplier(font_size, font);
-	held.transform.scale = { fmult, fmult };
+	self.transform.scale = { fmult, fmult };
 	init();
 	set_text(std::move(text));
 }
@@ -62,7 +62,7 @@ void TextRender::draw() const
 void TextRender::send_vp(const glm::mat3 vp) const
 {
 	bind_shader(shader);
-	Uniforms::send_matrix3(shader, "u_MVP", vp * held.transform.matrix());
+	Uniforms::send_matrix3(shader, "u_MVP", vp * self.transform.matrix());
 	unbind_shader();
 }
 
@@ -257,13 +257,13 @@ TextRender::PageFormattingInfo TextRender::format_page() const
 void TextRender::FormattingData::setup(const TextRender& text_render)
 {
 	line_height = text_render.font->line_height(text_render.format.line_spacing_mult);
-	startX = static_cast<int>(-text_render.held.pivot.x * text_render.outer_width());
+	startX = static_cast<int>(-text_render.self.pivot.x * text_render.outer_width());
 	row = 0;
 	prev_codepoint = 0;
 	text_render.format_line(row++, line);
 	x = startX + line.add_x;
 	page = text_render.format_page();
-	y = static_cast<int>(roundf(-text_render.font->baseline + (1.0f - text_render.held.pivot.y) * text_render.outer_height())) + text_render.bounds.top_ribbon - page.add_y;
+	y = static_cast<int>(roundf(-text_render.font->baseline + (1.0f - text_render.self.pivot.y) * text_render.outer_height())) + text_render.bounds.top_ribbon - page.add_y;
 }
 
 void TextRender::FormattingData::next_line(const TextRender& text_render)

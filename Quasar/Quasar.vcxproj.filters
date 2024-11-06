@@ -126,6 +126,9 @@
     <ClCompile Include="src\pipeline\text\CommonFonts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\pipeline\widgets\Button.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\variety\IO.h">
@@ -1131,6 +1134,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\pipeline\text\CommonFonts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\widgets\Button.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

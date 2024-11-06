@@ -6,36 +6,75 @@
 
 struct Widget
 {
-	FlatTransform parent;
-	std::vector<PolyHolder<WidgetPlacement>*> hobjs;
+	// TODO parent should be a PlacementHolder*, and there should be a global() call chain for WidgetPlacement. In addition, add a WidgetPlacement self.
+	Widget* parent = nullptr;
+	WidgetPlacement self;
+	std::vector<Widget*> children; // TODO use shared_ptr?
 
-	Widget(size_t null_length)
+	Widget(size_t null_length = 0)
 	{
 		for (size_t i = 0; i < null_length; ++i)
-			hobjs.push_back(nullptr);
+			children.push_back(nullptr);
 	}
-	Widget(std::vector<PolyHolder<WidgetPlacement>*>&& heap_hobjs) : hobjs(std::move(heap_hobjs)) {}
+	Widget(std::vector<Widget*>&& heap_children) : children(std::move(heap_children)) {}
 	Widget(const Widget&) = delete;
 	Widget(Widget&&) noexcept = delete;
-	~Widget() { for (auto ptr : hobjs) delete ptr; }
+	virtual ~Widget() { for (auto ptr : children) delete ptr; }
 
-	template<typename T>
-	T* get(size_t i) { return dynamic_cast<T*>(hobjs[i]); }
-	template<typename T>
-	const T* get(size_t i) const { return dynamic_cast<T*>(hobjs[i]); }
-	WidgetPlacement& wp_at(size_t i) { return hobjs[i]->held; }
-	const WidgetPlacement& wp_at(size_t i) const { return hobjs[i]->held; }
+	template<std::derived_from<Widget> T>
+	T* get(size_t i) { return dynamic_cast<T*>(children[i]); }
+	template<std::derived_from<Widget> T>
+	const T* get(size_t i) const { return dynamic_cast<T*>(children[i]); }
+	WidgetPlacement& wp_at(size_t i) { return children[i]->self; }
+	const WidgetPlacement& wp_at(size_t i) const { return children[i]->self; }
 };
 
-template<typename Held>
-struct PH_UnitRenderable : public PolyHolder<Held>
+inline void detach_widget(Widget* parent, Widget* child)
+{
+	if (parent && child)
+	{
+		auto iter = std::find(parent->children.begin(), parent->children.end(), child);
+		if (iter != parent->children.end())
+			parent->children.erase(iter);
+		child->parent = nullptr;
+	}
+}
+
+inline void attach_widget(Widget* parent, Widget* child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent && child)
+		{
+			parent->children.push_back(child);
+			child->parent = parent;
+		}
+	}
+}
+
+inline void assign_widget(Widget* parent, size_t pos, Widget* child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			parent->children[pos] = child;
+			child->parent = parent;
+		}
+	}
+	else if (parent)
+		parent->children[pos] = nullptr;
+
+}
+
+struct WP_UnitRenderable : public Widget
 {
 	std::unique_ptr<UnitRenderable> ur;
 
-	PH_UnitRenderable(Shader* shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
+	WP_UnitRenderable(Shader* shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
 };
-
-typedef PH_UnitRenderable<WidgetPlacement> WP_UnitRenderable;
 
 inline UnitRenderable& ur_wget(Widget& w, size_t i)
 {
@@ -47,15 +86,12 @@ inline const UnitRenderable& ur_wget(const Widget& w, size_t i)
 	return *w.get<WP_UnitRenderable>(i)->ur;
 }
 
-template<typename Held>
-struct PH_UnitMultiRenderable : public PolyHolder<Held>
+struct WP_UnitMultiRenderable : public Widget
 {
 	std::unique_ptr<UnitMultiRenderable> umr;
 
-	PH_UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
+	WP_UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
 };
-
-typedef PH_UnitMultiRenderable<WidgetPlacement> WP_UnitMultiRenderable;
 
 inline UnitMultiRenderable& umr_wget(Widget& w, size_t i)
 {
@@ -67,15 +103,12 @@ inline const UnitMultiRenderable& umr_wget(const Widget& w, size_t i)
 	return *w.get<WP_UnitMultiRenderable>(i)->umr;
 }
 
-template<typename Held>
-struct PH_IndexedRenderable : public PolyHolder<Held>
+struct WP_IndexedRenderable : public Widget
 {
 	std::unique_ptr<IndexedRenderable> ir;
 
-	PH_IndexedRenderable(Shader* shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
+	WP_IndexedRenderable(Shader* shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
 };
-
-typedef PH_IndexedRenderable<WidgetPlacement> WP_IndexedRenderable;
 
 inline IndexedRenderable& ir_wget(Widget& w, size_t i)
 {

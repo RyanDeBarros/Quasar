@@ -16,8 +16,8 @@ private:
 		CORNER_RADIUS,
 		THICKNESS,
 	};
-public:
 
+public:
 	RoundRect(Shader* round_rect_shader);
 	RoundRect(const RoundRect&) = delete;
 	RoundRect(RoundRect&&) noexcept = delete;
@@ -27,13 +27,14 @@ public:
 	float corner_radius = 0.0f;
 	float thickness = 0.0f;
 
-	void update_transform() const;
-	void send_transform_under_parent(FlatTransform parent) const;
-	void update_border_color() const;
-	void update_fill_color() const;
-	void update_corner_radius() const;
-	void update_thickness() const;
-	void update_all() const;
+	const RoundRect& update_transform() const;
+	const RoundRect& update_transform(const WidgetPlacement& wp) const;
+	const RoundRect& update_border_color() const;
+	const RoundRect& update_fill_color() const;
+	const RoundRect& update_corner_radius() const;
+	const RoundRect& update_thickness() const;
+	const RoundRect& update_all() const;
+	void send_vp(const glm::mat3& vp) const;
 };
 
 inline RoundRect& rr_wget(Widget& w, size_t i)

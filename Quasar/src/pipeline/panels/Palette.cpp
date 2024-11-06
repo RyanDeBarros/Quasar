@@ -59,8 +59,9 @@ void Palette::_send_view()
 	glm::mat3 cameraVP = vp_matrix();
 	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
 
-	color_picker.set_size(Scale{240, 420} * Machine.get_app_scale());
-	Position pos_rel{ 0.0f, 0.275f };
+	// TODO color picker should have pivot.y = 0, pivot.x = 1
+	color_picker.set_size(Scale{ 240, 420 });
+	Position pos_rel{ 0.0f, 0.1f };
 	Position ppos = pos_rel * glm::vec2{ bounds.clip().screen_w, bounds.clip().screen_h } * Machine.inv_app_scale();
 	auto test = bounds.clip().screen_w;
 	color_picker.set_position(ppos, to_screen_coordinates(ppos));

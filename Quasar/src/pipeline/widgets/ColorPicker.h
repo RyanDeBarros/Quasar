@@ -32,9 +32,8 @@ public:
 	Widget widget;
 
 private:
-	Scale size;
 	Position center;
-	glm::mat3 vp;
+	glm::mat3 mvp;
 	State last_graphic_state = State::GRAPHIC_QUAD;
 	enum class TextFieldMode
 	{
@@ -66,7 +65,7 @@ public:
 	void send_vp(const glm::mat3& vp);
 	ColorFrame get_color() const;
 	void set_color(ColorFrame);
-	void set_size(Scale size);
+	void set_size(Scale size, bool sync = false);
 	void set_position(Position world_pos, Position screen_pos);
 
 private:
@@ -126,7 +125,7 @@ private:
 	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
-	void sync_cp_widget_with_vp();
+	void sync_cp_widget_with_mvp();
 	void sync_single_cp_widget_transform_ur(size_t control, bool send_buffer = true) const;
 	void send_cpwc_buffer(size_t control) const;
 	void set_circle_cursor_thickness(size_t cursor, float thickness) const;

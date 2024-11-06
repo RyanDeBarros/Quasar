@@ -5,14 +5,14 @@
 UnitRenderable::UnitRenderable(Shader* shader, unsigned short num_vertices)
 	: shader(shader), num_vertices(num_vertices)
 {
-	varr = new GLfloat[num_vertices * shader->stride];
-	std::memset(varr, 0, size_t(num_vertices) * shader->stride * sizeof(GLfloat));
-
 	gen_dynamic_vao(vao, vb);
 	if (shader)
 	{
+		varr = new GLfloat[num_vertices * shader->stride];
+		std::memset(varr, 0, size_t(num_vertices) * shader->stride * sizeof(GLfloat));
 		buffer_data(vao, vb, num_vertices, shader->stride, varr);
 		attrib_pointers(shader->attributes, shader->stride);
+		send_buffer_resized();
 	}
 	unbind_vao_buffers();
 }
@@ -38,8 +38,12 @@ void UnitRenderable::set_shader(Shader* shader_)
 		attrib_new_pointers(shader->attributes, shader->stride, shader_->attributes, shader_->stride);
 	else
 		attrib_pointers(shader_->attributes, shader_->stride);
-	unbind_vao_buffers();
 	shader = shader_;
+	delete[] varr;
+	varr = new GLfloat[num_vertices * shader->stride];
+	std::memset(varr, 0, size_t(num_vertices) * shader->stride * sizeof(GLfloat));
+	send_buffer_resized();
+	unbind_vao_buffers();
 }
 
 void UnitRenderable::set_attribute(size_t attrib, const float* v) const
@@ -104,15 +108,14 @@ void UnitRenderable::set_num_vertices(unsigned short num_vertices_)
 UnitMultiRenderable::UnitMultiRenderable(Shader* _shader, unsigned short num_units, unsigned short unit_num_vertices)
 	: shader(_shader), num_units(num_units), unit_num_vertices(unit_num_vertices)
 {
-	auto num_vertices = num_units * unit_num_vertices;
-	varr = new GLfloat[num_vertices * shader->stride];
-	std::memset(varr, 0, size_t(num_vertices) * shader->stride * sizeof(GLfloat));
-	
 	gen_dynamic_vao(vao, vb);
 	if (shader)
 	{
-		buffer_data(vao, vb, num_vertices, shader->stride, varr);
+		auto num_vertices = num_units * unit_num_vertices;
+		varr = new GLfloat[num_vertices * shader->stride];
+		std::memset(varr, 0, size_t(num_vertices) * shader->stride * sizeof(GLfloat));
 		attrib_pointers(shader->attributes, shader->stride);
+		send_buffer_resized();
 	}
 	unbind_vao_buffers();
 
@@ -140,8 +143,13 @@ void UnitMultiRenderable::set_shader(Shader* shader_)
 		attrib_new_pointers(shader->attributes, shader->stride, shader_->attributes, shader_->stride);
 	else
 		attrib_pointers(shader_->attributes, shader_->stride);
-	unbind_vao_buffers();
 	shader = shader_;
+	auto num_vertices = num_units * unit_num_vertices;
+	delete[] varr;
+	varr = new GLfloat[num_vertices * shader->stride];
+	std::memset(varr, 0, size_t(num_vertices) * shader->stride * sizeof(GLfloat));
+	send_buffer_resized();
+	unbind_vao_buffers();
 }
 
 void UnitMultiRenderable::set_attribute(unsigned short unit, size_t attrib, const float* v) const
@@ -186,6 +194,11 @@ void UnitMultiRenderable::send_single_vertex(unsigned short unit, unsigned short
 	bind_vao_buffers(vao, vb);
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, (unit * unit_num_vertices + vertex) * shader->stride, shader->stride * sizeof(GLfloat), varr + (unit * unit_num_vertices + vertex) * shader->stride));
 	unbind_vao_buffers();
+}
+
+void UnitMultiRenderable::send_buffer_resized() const
+{
+	buffer_data(vao, vb, num_units * unit_num_vertices, shader->stride, varr);
 }
 
 void UnitMultiRenderable::draw(unsigned short num_units_to_draw) const

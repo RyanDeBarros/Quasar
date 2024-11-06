@@ -111,7 +111,9 @@ struct InputEventHandler
 
 	void remove_child(const InputEventHandler<Event>* child)
 	{
-		children.erase(std::find(children.begin(), children.end(), child));
+		auto iter = std::find(children.begin(), children.end(), child);
+		if (iter != children.end())
+			children.erase(iter);
 	}
 };
 

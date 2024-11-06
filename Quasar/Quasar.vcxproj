@@ -172,6 +172,7 @@
     <ClCompile Include="src\pipeline\text\CommonFonts.cpp" />
     <ClCompile Include="src\pipeline\text\Font.cpp" />
     <ClCompile Include="src\pipeline\text\TextRender.cpp" />
+    <ClCompile Include="src\pipeline\widgets\Button.cpp" />
     <ClCompile Include="src\variety\UTF.cpp" />
     <ClCompile Include="src\pipeline\widgets\ColorPicker.cpp" />
     <ClCompile Include="src\pipeline\panels\Palette.cpp" />
@@ -210,6 +211,7 @@
     <ClInclude Include="src\pipeline\text\CommonFonts.h" />
     <ClInclude Include="src\pipeline\text\Font.h" />
     <ClInclude Include="src\pipeline\text\TextRender.h" />
+    <ClInclude Include="src\pipeline\widgets\Button.h" />
     <ClInclude Include="src\variety\UTF.h" />
     <ClInclude Include="src\pipeline\widgets\ColorPicker.h" />
     <ClInclude Include="src\pipeline\panels\Palette.h" />

@@ -40,6 +40,7 @@ struct UnitMultiRenderable
 	Shader* shader;
 	GLint* first;
 	GLsizei* count;
+	// LATER variable num_units/unit_num_vertices
 	const unsigned short num_units;
 	const unsigned short unit_num_vertices;
 
@@ -55,6 +56,7 @@ struct UnitMultiRenderable
 	void send_buffer() const;
 	void send_single_unit(unsigned short unit) const;
 	void send_single_vertex(unsigned short unit, unsigned short vertex) const;
+	void send_buffer_resized() const;
 	void draw(unsigned short num_units_to_draw = -1) const;
 };
 

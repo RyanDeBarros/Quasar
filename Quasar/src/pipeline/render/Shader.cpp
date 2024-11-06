@@ -61,7 +61,7 @@ static GLuint load_program(const std::string& vertex_shader, const char* vertex_
 			}
 			else
 				LOG << LOG.error << LOG.start << "Shader linkage failed (vertex=\"" << vertex_filepath << "\", fragment=\"" << fragment_filepath << "\"): no program info log provided" << LOG.endl;
-			QUASAR_GL(glDeleteShader(shader));
+			QUASAR_GL(glDeleteProgram(shader));
 			shader = 0;
 		}
 	}
@@ -105,6 +105,44 @@ Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, c
 		QUASAR_ASSERT(false);
 	rid = load_program(vert, vertex_shader.c_str(), frag, fragment_shader.c_str());
 	setup();
+}
+
+Shader::Shader(const Shader& other)
+	: stride(other.stride), uniform_locations(other.uniform_locations), attributes(other.attributes), attribute_offsets(other.attribute_offsets)
+{
+	if (!other)
+		return;
+	GLint num_shaders;
+	QUASAR_GL(glGetProgramiv(other, GL_ATTACHED_SHADERS, &num_shaders));
+	if (num_shaders == 0)
+		return;
+	GLuint* shaders = new GLuint[num_shaders];
+	QUASAR_GL(glGetAttachedShaders(other, num_shaders, nullptr, shaders));
+	rid = glCreateProgram();
+	for (GLint i = 0; i < num_shaders; ++i)
+	{
+		QUASAR_GL(glAttachShader(rid, shaders[i]));
+	}
+	QUASAR_GL(glLinkProgram(rid));
+	QUASAR_GL(glValidateProgram(rid));
+	GLint result;
+	QUASAR_GL(glGetProgramiv(rid, GL_LINK_STATUS, &result));
+	if (result == GL_FALSE)
+	{
+		GLint length;
+		QUASAR_GL(glGetProgramiv(rid, GL_INFO_LOG_LENGTH, &length));
+		if (length)
+		{
+			GLchar* message = new GLchar[length];
+			QUASAR_GL(glGetProgramInfoLog(rid, length, &length, message));
+			LOG << LOG.error << LOG.start << "Shader copy linkage failed: " << message << LOG.endl;
+			delete[] message;
+		}
+		else
+			LOG << LOG.error << LOG.start << "Shader copy linkage failed: no program info log provided" << LOG.endl;
+		QUASAR_GL(glDeleteProgram(rid));
+		rid = 0;
+	}
 }
 
 Shader::Shader(Shader&& other) noexcept
