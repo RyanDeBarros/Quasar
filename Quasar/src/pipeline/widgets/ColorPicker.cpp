@@ -12,6 +12,49 @@
 #include "../text/CommonFonts.h"
 #include "Button.h"
 
+// ---------- LAYOUT ----------
+
+const float graphic_x = -15;
+const float graphic_y = 40;
+const float graphic_sx = 180;
+const float graphic_sy = 180;
+const float g_slider_x = 97.5f;
+const float g_slider_y = graphic_y;
+const float g_slider_w = 15;
+const float g_slider_h = 180;
+
+const float slider_sep = 70;
+const float slider_x = 0;
+const float slider1_y = graphic_y + graphic_sy * 0.5f;
+const float slider2_y = slider1_y - slider_sep;
+const float slider3_y = slider2_y - slider_sep;
+const float slider4_y = slider3_y - slider_sep;
+const float slider_w = 200;
+const float slider_h = 20;
+
+const float preview_x = 0;
+const float preview_y = slider4_y - 60;
+const float preview_w = 80;
+const float preview_h = 40;
+
+const float left_text_x = -98;
+const float text_sep = 70;
+const float text1_y = slider1_y - slider_h * 1.5f;
+const float text2_y = text1_y - text_sep;
+const float text3_y = text2_y - text_sep;
+const float text4_y = text3_y - text_sep;
+
+const float button_rgb_hex_code_x = -90;
+const float button_switch_txtfld_mode_x = 102;
+const float button_y = 160;
+const float button_scale = 0.9f;
+const float button_rgb_hex_code_w = 50;
+const float button_switch_txtfld_mode_w = 25;
+const float button_h = 30;
+
+constexpr RGBA button_highlight = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f);
+constexpr RGBA button_no_highlight = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
+
 void ColorPicker::send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color)
 {
 	Uniforms::send_4(shader, "u_GradientColors[0]", color.rgba().as_vec(), (GLint)index);
@@ -174,9 +217,9 @@ void ColorPicker::cp_render_gui_back()
 		if (state == State::SLIDER_RGB || state == State::SLIDER_HSV || state == State::SLIDER_HSL)
 			imgui_y += 41;
 		float imgui_y_1 = imgui_y + 45;
-		float imgui_y_2 = imgui_y_1 + 70 * Machine.get_app_scale().y; // TODO slider_sep. put as global constant
-		float imgui_y_3 = imgui_y_2 + 70 * Machine.get_app_scale().y;
-		float imgui_y_4 = imgui_y_3 + 70 * Machine.get_app_scale().y;
+		float imgui_y_2 = imgui_y_1 + slider_sep * Machine.get_app_scale().y;
+		float imgui_y_3 = imgui_y_2 + slider_sep * Machine.get_app_scale().y;
+		float imgui_y_4 = imgui_y_3 + slider_sep * Machine.get_app_scale().y;
 		float imgui_sml_x = 97;
 		if (state == State::SLIDER_RGB)
 		{
@@ -390,47 +433,6 @@ void ColorPicker::send_vp()
 
 void ColorPicker::initialize_widget()
 {
-	// LATER put in ColorPicker struct data member for access in cp_render_gui()
-	// ---------- COMMON CONSTANTS ----------
-
-	const float graphic_x = -15;
-	const float graphic_y = 40;
-	const float graphic_sx = 180;
-	const float graphic_sy = 180;
-	const float g_slider_x = 97.5f;
-	const float g_slider_y = graphic_y;
-	const float g_slider_w = 15;
-	const float g_slider_h = 180;
-
-	const float slider_sep = 70;
-	const float slider_x = 0;
-	const float slider1_y = graphic_y + graphic_sy * 0.5f;
-	const float slider2_y = slider1_y - slider_sep;
-	const float slider3_y = slider2_y - slider_sep;
-	const float slider4_y = slider3_y - slider_sep;
-	const float slider_w = 200;
-	const float slider_h = 20;
-	
-	const float preview_x = 0;
-	const float preview_y = slider4_y - 60;
-	const float preview_w = 80;
-	const float preview_h = 40;
-
-	const float left_text_x = -98;
-	const float text_sep = 70;
-	const float text1_y = slider1_y - slider_h * 1.5f;
-	const float text2_y = text1_y - text_sep;
-	const float text3_y = text2_y - text_sep;
-	const float text4_y = text3_y - text_sep;
-	
-	const float button_rgb_hex_code_x = -90;
-	const float button_switch_txtfld_mode_x = 102;
-	const float button_y = 160;
-	const float button_scale = 0.9f;
-	const float button_rgb_hex_code_w = 50;
-	const float button_switch_txtfld_mode_w = 25;
-	const float button_h = 30;
-
 	// ---------- GRAPHIC QUAD ----------
 
 	assign_widget(this, GRAPHIC_QUAD, new WP_UnitRenderable(&quad_shader));
@@ -439,7 +441,8 @@ void ColorPicker::initialize_widget()
 	assign_widget(this, GRAPHIC_HUE_SLIDER_CURSOR, new WP_UnitRenderable(&circle_cursor_shader));
 
 	setup_rect_uvs(GRAPHIC_QUAD);
-	setup_gradient(GRAPHIC_QUAD, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::WHITE, (GLint)GradientIndex::GRAPHIC_QUAD);
+	setup_gradient(GRAPHIC_QUAD, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK,
+		(GLint)GradientIndex::WHITE, (GLint)GradientIndex::GRAPHIC_QUAD);
 	send_graphic_quad_hue_to_uniform(0.0f);
 	setup_circle_cursor(GRAPHIC_QUAD_CURSOR);
 	orient_progress_slider(GRAPHIC_HUE_SLIDER, Cardinal::UP);
@@ -465,7 +468,8 @@ void ColorPicker::initialize_widget()
 	send_graphic_wheel_value_to_uniform(1.0f);
 	setup_circle_cursor(GRAPHIC_HUE_WHEEL_CURSOR);
 	setup_rect_uvs(GRAPHIC_VALUE_SLIDER);
-	setup_gradient(GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER);
+	setup_gradient(GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK,
+		(GLint)GradientIndex::GRAPHIC_VALUE_SLIDER, (GLint)GradientIndex::GRAPHIC_VALUE_SLIDER);
 	send_graphic_value_slider_hue_and_sat_to_uniform(0.0f, 0.0f);
 	setup_circle_cursor(GRAPHIC_VALUE_SLIDER_CURSOR);
 	set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, 0.0f);
@@ -489,15 +493,18 @@ void ColorPicker::initialize_widget()
 
 	setup_rect_uvs(RGB_R_SLIDER);
 	setup_circle_cursor(RGB_R_SLIDER_CURSOR);
-	setup_gradient(RGB_R_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_R_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_R_SLIDER);
+	setup_gradient(RGB_R_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_R_SLIDER,
+		(GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_R_SLIDER);
 	send_gradient_color_uniform(quad_shader, GradientIndex::RGB_R_SLIDER, RGB(0xFF0000));
 	setup_rect_uvs(RGB_G_SLIDER);
 	setup_circle_cursor(RGB_G_SLIDER_CURSOR);
-	setup_gradient(RGB_G_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_G_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_G_SLIDER);
+	setup_gradient(RGB_G_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_G_SLIDER,
+		(GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_G_SLIDER);
 	send_gradient_color_uniform(quad_shader, GradientIndex::RGB_G_SLIDER, RGB(0x00FF00));
 	setup_rect_uvs(RGB_B_SLIDER);
 	setup_circle_cursor(RGB_B_SLIDER_CURSOR);
-	setup_gradient(RGB_B_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_B_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_B_SLIDER);
+	setup_gradient(RGB_B_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_B_SLIDER,
+		(GLint)GradientIndex::BLACK, (GLint)GradientIndex::RGB_B_SLIDER);
 	send_gradient_color_uniform(quad_shader, GradientIndex::RGB_B_SLIDER, RGB(0x0000FF));
 
 	wp_at(RGB_R_SLIDER).transform.position.x = slider_x;
@@ -526,12 +533,14 @@ void ColorPicker::initialize_widget()
 	setup_circle_cursor(HSV_H_SLIDER_CURSOR);
 	setup_rect_uvs(HSV_S_SLIDER);
 	setup_circle_cursor(HSV_S_SLIDER_CURSOR);
-	setup_gradient(HSV_S_SLIDER, (GLint)GradientIndex::HSV_S_SLIDER_ZERO, (GLint)GradientIndex::HSV_S_SLIDER_ONE, (GLint)GradientIndex::HSV_S_SLIDER_ZERO, (GLint)GradientIndex::HSV_S_SLIDER_ONE);
+	setup_gradient(HSV_S_SLIDER, (GLint)GradientIndex::HSV_S_SLIDER_ZERO, (GLint)GradientIndex::HSV_S_SLIDER_ONE,
+		(GLint)GradientIndex::HSV_S_SLIDER_ZERO, (GLint)GradientIndex::HSV_S_SLIDER_ONE);
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ZERO, HSV(0.0f, 0.0f, 1.0f));
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_S_SLIDER_ONE, HSV(0.0f, 1.0f, 1.0f));
 	setup_rect_uvs(HSV_V_SLIDER);
 	setup_circle_cursor(HSV_V_SLIDER_CURSOR);
-	setup_gradient(HSV_V_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::HSV_V_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::HSV_V_SLIDER);
+	setup_gradient(HSV_V_SLIDER, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::HSV_V_SLIDER,
+		(GLint)GradientIndex::BLACK, (GLint)GradientIndex::HSV_V_SLIDER);
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSV_V_SLIDER, HSV(0.0f, 1.0f, 1.0f));
 
 	wp_at(HSV_H_SLIDER).transform.position.x = slider_x;
@@ -560,7 +569,8 @@ void ColorPicker::initialize_widget()
 	setup_circle_cursor(HSL_H_SLIDER_CURSOR);
 	setup_rect_uvs(HSL_S_SLIDER);
 	setup_circle_cursor(HSL_S_SLIDER_CURSOR);
-	setup_gradient(HSL_S_SLIDER, (GLint)GradientIndex::HSL_S_SLIDER_ZERO, (GLint)GradientIndex::HSL_S_SLIDER_ONE, (GLint)GradientIndex::HSL_S_SLIDER_ZERO, (GLint)GradientIndex::HSL_S_SLIDER_ONE);
+	setup_gradient(HSL_S_SLIDER, (GLint)GradientIndex::HSL_S_SLIDER_ZERO, (GLint)GradientIndex::HSL_S_SLIDER_ONE,
+		(GLint)GradientIndex::HSL_S_SLIDER_ZERO, (GLint)GradientIndex::HSL_S_SLIDER_ONE);
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ZERO, HSL(0.0f, 0.0f, 0.5f));
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ONE, HSL(0.0f, 1.0f, 0.5f));
 	orient_progress_slider(HSL_L_SLIDER, Cardinal::RIGHT);
@@ -586,7 +596,8 @@ void ColorPicker::initialize_widget()
 
 	setup_rect_uvs(ALPHA_SLIDER);
 	setup_circle_cursor(ALPHA_SLIDER_CURSOR);
-	setup_gradient(ALPHA_SLIDER, (GLint)GradientIndex::TRANSPARENT, (GLint)GradientIndex::ALPHA_SLIDER, (GLint)GradientIndex::TRANSPARENT, (GLint)GradientIndex::ALPHA_SLIDER);
+	setup_gradient(ALPHA_SLIDER, (GLint)GradientIndex::TRANSPARENT, (GLint)GradientIndex::ALPHA_SLIDER,
+		(GLint)GradientIndex::TRANSPARENT, (GLint)GradientIndex::ALPHA_SLIDER);
 	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, ColorFrame());
 
 	wp_at(ALPHA_SLIDER).transform.position.x = slider_x;
@@ -598,7 +609,8 @@ void ColorPicker::initialize_widget()
 	
 	assign_widget(this, PREVIEW, new WP_UnitRenderable(&quad_shader));
 	setup_rect_uvs(PREVIEW);
-	setup_gradient(PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW);
+	setup_gradient(PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW,
+		(GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW);
 	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, ColorFrame());
 	wp_at(PREVIEW).transform.position.x = preview_x;
 	wp_at(PREVIEW).transform.position.y = preview_y;
@@ -666,9 +678,6 @@ void ColorPicker::initialize_widget()
 	
 	// ---------- BUTTONS ----------
 
-	RGBA highlight = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f); // TODO put with other layout variables
-	RGBA no_highlight = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f); // TODO put with other layout variables
-
 	assign_widget(this, BUTTON_RGB_HEX_CODE, new Button(vp, {}, *Fonts::label_regular, 18, &round_rect_shader, mb_handler, "HEX"));
 	Button& b_rgb_hex_code = b_wget(*this, BUTTON_RGB_HEX_CODE);
 	b_rgb_hex_code.self.transform.position = { button_rgb_hex_code_x, button_y };
@@ -677,13 +686,13 @@ void ColorPicker::initialize_widget()
 	b_rgb_hex_code.bkg().thickness = 0.5f;
 	b_rgb_hex_code.bkg().corner_radius = 5;
 	b_rgb_hex_code.bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
-	b_rgb_hex_code.bkg().fill_color = no_highlight;
+	b_rgb_hex_code.bkg().fill_color = button_no_highlight;
 	b_rgb_hex_code.bkg().update_all();
 	// LATER cancel highlighting/cursor after clicking on button.
-	b_rgb_hex_code.on_hover_enter = [this, &b_rgb_hex_code, highlight]() {
+	b_rgb_hex_code.on_hover_enter = [this, &b_rgb_hex_code]() {
 		if (state == State::SLIDER_RGB && current_widget_control == -1)
 		{
-			b_rgb_hex_code.bkg().fill_color = highlight;
+			b_rgb_hex_code.bkg().fill_color = button_highlight;
 			b_rgb_hex_code.bkg().update_fill_color().send_buffer();
 			Machine.main_window->request_cursor(&wh_rgb_hex_button, StandardCursor::HAND);
 		}
@@ -692,10 +701,10 @@ void ColorPicker::initialize_widget()
 			b_rgb_hex_code.hovering = false;
 		}
 		};
-	b_rgb_hex_code.on_hover_exit = [this, &b_rgb_hex_code, no_highlight]() {
+	b_rgb_hex_code.on_hover_exit = [this, &b_rgb_hex_code]() {
 		if (state == State::SLIDER_RGB && current_widget_control == -1)
 		{
-			b_rgb_hex_code.bkg().fill_color = no_highlight;
+			b_rgb_hex_code.bkg().fill_color = button_no_highlight;
 			b_rgb_hex_code.bkg().update_fill_color().send_buffer();
 			Machine.main_window->release_cursor(&wh_rgb_hex_button);
 		}
@@ -709,12 +718,12 @@ void ColorPicker::initialize_widget()
 	b_switch_txtfld_mode.bkg().thickness = 0.5f;
 	b_switch_txtfld_mode.bkg().corner_radius = 5;
 	b_switch_txtfld_mode.bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
-	b_switch_txtfld_mode.bkg().fill_color = no_highlight;
+	b_switch_txtfld_mode.bkg().fill_color = button_no_highlight;
 	b_switch_txtfld_mode.bkg().update_all();
-	b_switch_txtfld_mode.on_hover_enter = [this, &b_switch_txtfld_mode, highlight]() {
+	b_switch_txtfld_mode.on_hover_enter = [this, &b_switch_txtfld_mode]() {
 		if (current_widget_control == -1)
 		{
-			b_switch_txtfld_mode.bkg().fill_color = highlight;
+			b_switch_txtfld_mode.bkg().fill_color = button_highlight;
 			b_switch_txtfld_mode.bkg().update_fill_color().send_buffer();
 			Machine.main_window->request_cursor(&wh_txtfld_mode_button, StandardCursor::HAND);
 		}
@@ -723,10 +732,10 @@ void ColorPicker::initialize_widget()
 			b_switch_txtfld_mode.hovering = false;
 		}
 		};
-	b_switch_txtfld_mode.on_hover_exit = [this, &b_switch_txtfld_mode, no_highlight]() {
+	b_switch_txtfld_mode.on_hover_exit = [this, &b_switch_txtfld_mode]() {
 		if (current_widget_control == -1)
 		{
-			b_switch_txtfld_mode.bkg().fill_color = no_highlight;
+			b_switch_txtfld_mode.bkg().fill_color = button_no_highlight;
 			b_switch_txtfld_mode.bkg().update_fill_color().send_buffer();
 			Machine.main_window->release_cursor(&wh_txtfld_mode_button);
 		}
@@ -1129,7 +1138,8 @@ void ColorPicker::update_display_colors()
 		set_circle_cursor_value(GRAPHIC_HUE_WHEEL_CURSOR, contrast_wb_value_simple_hue_and_sat(hsv.h, hsv.s));
 		send_cpwc_buffer(GRAPHIC_HUE_WHEEL_CURSOR);
 		send_graphic_value_slider_hue_and_sat_to_uniform(hsv.h, hsv.s);
-		set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hsv.h, hsv.v)); // LATER better contrast functions
+		// LATER better contrast functions
+		set_circle_cursor_value(GRAPHIC_VALUE_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hsv.h, hsv.v));
 		send_graphic_wheel_value_to_uniform(hsv.v);
 		send_cpwc_buffer(GRAPHIC_VALUE_SLIDER_CURSOR);
 	}
