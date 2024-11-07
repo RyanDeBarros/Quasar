@@ -27,6 +27,8 @@ public:
 	float corner_radius = 0.0f;
 	float thickness = 0.0f;
 
+	void draw() const;
+
 	const RoundRect& update_transform() const;
 	const RoundRect& update_border_color() const;
 	const RoundRect& update_fill_color() const;

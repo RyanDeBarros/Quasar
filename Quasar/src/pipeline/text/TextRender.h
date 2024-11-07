@@ -13,13 +13,13 @@ struct TextRender : public WP_IndexedRenderable // LATER rename WP_ to W_ ?
 private:
 	UTF::String text;
 	
-	void init();
+	void init(glm::vec2 pivot);
 
 public:
-	TextRender(Font* font, const UTF::String& text);
-	TextRender(Font* font, UTF::String&& text);
-	TextRender(FontRange& frange, float font_size, const UTF::String& text);
-	TextRender(FontRange& frange, float font_size, UTF::String&& text);
+	TextRender(Font* font, const UTF::String& text, glm::vec2 pivot = { 0.0f, 1.0f });
+	TextRender(Font* font, UTF::String&& text, glm::vec2 pivot = { 0.0f, 1.0f });
+	TextRender(FontRange& frange, float font_size, const UTF::String& text, glm::vec2 pivot = { 0.0f, 1.0f });
+	TextRender(FontRange& frange, float font_size, UTF::String&& text, glm::vec2 pivot = { 0.0f, 1.0f });
 	TextRender(const TextRender&) = delete;
 	TextRender(TextRender&&) noexcept = delete;
 

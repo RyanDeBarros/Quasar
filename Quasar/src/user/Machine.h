@@ -88,6 +88,7 @@ struct MachineImpl
 	
 	Position to_world_coordinates(Position screen_coordinates, const glm::mat3& inverse_vp) const;
 	Position to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const;
+	Position cursor_world_coordinates(const glm::mat3& inverse_vp) const;
 
 	// Panels
 	glm::vec2 easel_cursor_world_pos() const;

@@ -27,7 +27,8 @@ struct Rotation
 
 struct Scale : glm::vec2
 {
-	Scale(float x = 1.0f, float y = 1.0f) : glm::vec2(x, y) {}
+	Scale(float s = 1.0f) : glm::vec2(s) {}
+	Scale(float x, float y) : glm::vec2(x, y) {}
 	Scale(const glm::vec2& vec) : glm::vec2(vec) {}
 
 	Scale reciprocal() const { return { x ? 1.0f / x : 0.0f, y ? 1.0f / y : 0.0f }; }

@@ -18,7 +18,7 @@ void ColorPicker::send_gradient_color_uniform(const Shader& shader, GradientInde
 }
 
 // LATER maybe input handler connections should be made by parent, not child, so that there's no need to pass them in constructor.
-ColorPicker::ColorPicker(MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler)
+ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler)
 	: quad_shader(FileSystem::shader_path("gradients/quad.vert"), FileSystem::shader_path("gradients/quad.frag.tmpl"),
 		{ {"$MAX_GRADIENT_COLORS", std::to_string((int)GradientIndex::_MAX_GRADIENT_COLORS) } }),
 	linear_hue_shader(FileSystem::shader_path("gradients/linear_hue.vert"), FileSystem::shader_path("gradients/linear_hue.frag")),
@@ -26,7 +26,7 @@ ColorPicker::ColorPicker(MouseButtonHandler& parent_mb_handler, KeyHandler& pare
 	linear_lightness_shader(FileSystem::shader_path("gradients/linear_lightness.vert"), FileSystem::shader_path("gradients/linear_lightness.frag")),
 	circle_cursor_shader(FileSystem::shader_path("circle_cursor.vert"), FileSystem::shader_path("circle_cursor.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
-	Widget(_W_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler)
+	Widget(_W_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), vp(vp)
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(HSV(0.0f, 0.0f, 0.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::WHITE, ColorFrame(HSV(0.0f, 0.0f, 1.0f)));
@@ -45,7 +45,8 @@ ColorPicker::~ColorPicker()
 void ColorPicker::render()
 {
 	process_mb_down_events();
-	ur_wget(*this, BACKGROUND).draw();
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
+	rr_wget(*this, BACKGROUND).draw();
 	cp_render_gui_back();
 	ur_wget(*this, ALPHA_SLIDER).draw();
 	ur_wget(*this, ALPHA_SLIDER_CURSOR).draw();
@@ -385,12 +386,12 @@ void ColorPicker::set_state(State _state)
 
 void ColorPicker::send_vp()
 {
-	Uniforms::send_matrix3(quad_shader, "u_VP", vp);
-	Uniforms::send_matrix3(linear_hue_shader, "u_VP", vp);
-	Uniforms::send_matrix3(hue_wheel_w_shader, "u_VP", vp);
-	Uniforms::send_matrix3(linear_lightness_shader, "u_VP", vp);
-	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", vp);
-	Uniforms::send_matrix3(round_rect_shader, "u_VP", vp);
+	Uniforms::send_matrix3(quad_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(linear_hue_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(hue_wheel_w_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(linear_lightness_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(round_rect_shader, "u_VP", *vp);
 	sync_cp_widget_with_vp();
 }
 
@@ -663,13 +664,19 @@ void ColorPicker::initialize_widget()
 	wp_at(TEXT_LIGHT).transform.position.y = text3_y;
 	
 	// ---------- BUTTONS ----------
-	// LATER use Uniform Buffer Objects so as not to copy a shader a small number of times.
-	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, new Button({}, *Fonts::label_regular, 18, Shader(round_rect_shader), mb_handler, "Button"));
+
+	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, new Button(vp, {}, *Fonts::label_regular, 18, &round_rect_shader, mb_handler, "HEX"));
+	wp_at(BUTTON_SWITCH_TXTFLD_MODE).transform.position = { -50, 100 };
+	wp_at(BUTTON_SWITCH_TXTFLD_MODE).transform.scale = Scale(1);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().self.transform.scale = { 50, 30 };
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().thickness = 0.5f;
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().corner_radius = 10;
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.5f).to_rgb(), 0.8f);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.8f);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().corner_radius = 5;
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_all();
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).on_press = [](const MouseButtonEvent& m, Position pos) { LOG << "press at (" << pos.x << ", " << pos.y << ")" << LOG.endl; };
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).on_release = [](const MouseButtonEvent& m, Position pos) { LOG << "release at (" << pos.x << ", " << pos.y << ")" << LOG.endl; };
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).on_hover = [](Position pos) { LOG << "hover at (" << pos.x << ", " << pos.y << ")" << LOG.endl; };
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -680,7 +687,7 @@ void ColorPicker::connect_mouse_handlers()
 		{
 			if (current_widget_control < 0)
 			{
-				Position local_cursor_pos = local_of(Machine.palette_cursor_world_pos());
+				Position local_cursor_pos = local_of(Machine.cursor_world_coordinates(glm::inverse(*vp)));
 				if (wp_at(ALPHA_SLIDER).contains_point(local_cursor_pos))
 				{
 					take_over_cursor();
@@ -980,7 +987,7 @@ void ColorPicker::set_size(Scale size, bool sync)
 void ColorPicker::set_position(Position world_pos)
 {
 	self.transform.position = world_pos;
-	gui_center = Machine.to_screen_coordinates(world_pos, vp);
+	gui_center = Machine.to_screen_coordinates(world_pos, *vp);
 }
 
 void ColorPicker::mouse_handler_graphic_quad(Position local_cursor_pos)
@@ -1216,15 +1223,15 @@ void ColorPicker::sync_cp_widget_with_vp()
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER);
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
 	rr_wget(*this, BACKGROUND).update_transform().send_buffer();
-	tr_wget(*this, TEXT_ALPHA).send_vp(vp);
-	tr_wget(*this, TEXT_RED).send_vp(vp);
-	tr_wget(*this, TEXT_GREEN).send_vp(vp);
-	tr_wget(*this, TEXT_BLUE).send_vp(vp);
-	tr_wget(*this, TEXT_HUE).send_vp(vp);
-	tr_wget(*this, TEXT_SAT).send_vp(vp);
-	tr_wget(*this, TEXT_VALUE).send_vp(vp);
-	tr_wget(*this, TEXT_LIGHT).send_vp(vp);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp(vp);
+	tr_wget(*this, TEXT_ALPHA).send_vp(*vp);
+	tr_wget(*this, TEXT_RED).send_vp(*vp);
+	tr_wget(*this, TEXT_GREEN).send_vp(*vp);
+	tr_wget(*this, TEXT_BLUE).send_vp(*vp);
+	tr_wget(*this, TEXT_HUE).send_vp(*vp);
+	tr_wget(*this, TEXT_SAT).send_vp(*vp);
+	tr_wget(*this, TEXT_VALUE).send_vp(*vp);
+	tr_wget(*this, TEXT_LIGHT).send_vp(*vp);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp();
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const

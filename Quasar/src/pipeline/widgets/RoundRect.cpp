@@ -7,6 +7,11 @@ RoundRect::RoundRect(Shader* round_rect_shader)
 {
 }
 
+void RoundRect::draw() const
+{
+	ur->draw();
+}
+
 const RoundRect& RoundRect::update_transform() const
 {
 	auto gm = global_matrix();

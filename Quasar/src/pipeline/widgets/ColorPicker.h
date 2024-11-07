@@ -27,7 +27,7 @@ public:
 	void set_state(State state);
 
 	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader, round_rect_shader;
-	glm::mat3 vp;
+	glm::mat3* vp;
 
 private:
 	Position gui_center;
@@ -53,7 +53,7 @@ private:
 	int current_widget_control = -1;
 
 public:
-	ColorPicker(MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
+	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
 	ColorPicker(const ColorPicker&) = delete;
 	ColorPicker(ColorPicker&&) noexcept = delete;
 	~ColorPicker();

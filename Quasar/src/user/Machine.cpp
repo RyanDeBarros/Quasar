@@ -223,6 +223,11 @@ Position MachineImpl::to_screen_coordinates(Position world_coordinates, const gl
 	};
 }
 
+Position MachineImpl::cursor_world_coordinates(const glm::mat3& inverse_vp) const
+{
+	return to_world_coordinates(main_window->cursor_pos(), inverse_vp);
+}
+
 glm::vec2 MachineImpl::easel_cursor_world_pos() const
 {
 	return easel()->to_world_coordinates(main_window->cursor_pos());

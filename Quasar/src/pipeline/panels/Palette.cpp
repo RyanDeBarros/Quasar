@@ -6,7 +6,7 @@
 
 Palette::Palette()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
-	color_picker(Machine.palette_mb_handler, Machine.palette_key_handler) // LATER initialize panels early and put mb_handlers as data members of panels?
+	color_picker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler) // LATER initialize panels early and put mb_handlers as data members of panels?
 {
 	static constexpr size_t num_quads = 1;
 
@@ -56,10 +56,9 @@ void Palette::_send_view()
 	background.transform.scale = get_app_size();
 	background.sync_transform();
 	subsend_background_vao();
-	glm::mat3 cameraVP = vp_matrix();
-	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
+	vp = vp_matrix();
+	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
 
-	color_picker.vp = cameraVP;
 	Scale color_picker_size{ 240, 420 };
 	color_picker.set_size(color_picker_size);
 	color_picker.set_position({ 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * 0.5f - 25 });

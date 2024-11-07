@@ -10,43 +10,47 @@ static Shader text_shader_instance()
 	return Shader(FileSystem::shader_path("text.vert"), FileSystem::shader_path("text.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } });
 }
 
-void TextRender::init()
+void TextRender::init(glm::vec2 pivot)
 {
 	ir->set_shader(&shader);
-	self.pivot = { 0, 1 };
+	self.pivot = pivot;
 	send_fore_color();
 }
 
-TextRender::TextRender(Font* font, const UTF::String& text)
+TextRender::TextRender(Font* font, const UTF::String& text, glm::vec2 pivot)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
 {
-	init();
-	set_text(text);
+	init(pivot);
+	if (!text.empty())
+		set_text(text);
 }
 
-TextRender::TextRender(Font* font, UTF::String&& text)
+TextRender::TextRender(Font* font, UTF::String&& text, glm::vec2 pivot)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
 {
-	init();
-	set_text(std::move(text));
+	init(pivot);
+	if (!text.empty())
+		set_text(std::move(text));
 }
 
-TextRender::TextRender(FontRange& frange, float font_size, const UTF::String& text)
+TextRender::TextRender(FontRange& frange, float font_size, const UTF::String& text, glm::vec2 pivot)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
 {
 	float fmult = frange.get_font_and_multiplier(font_size, font);
 	self.transform.scale = { fmult, fmult };
-	init();
-	set_text(text);
+	init(pivot);
+	if (!text.empty())
+		set_text(text);
 }
 
-TextRender::TextRender(FontRange& frange, float font_size, UTF::String&& text)
+TextRender::TextRender(FontRange& frange, float font_size, UTF::String&& text, glm::vec2 pivot)
 	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
 {
 	float fmult = frange.get_font_and_multiplier(font_size, font);
 	self.transform.scale = { fmult, fmult };
-	init();
-	set_text(std::move(text));
+	init(pivot);
+	if (!text.empty())
+		set_text(std::move(text));
 }
 
 void TextRender::draw() const
