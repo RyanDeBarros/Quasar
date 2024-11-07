@@ -91,6 +91,26 @@ void Button::send_vp() const
 	text().send_vp(*vp);
 }
 
+void Button::process()
+{
+	if (is_hovered())
+	{
+		if (!hovering)
+		{
+			hovering = true;
+			on_hover_enter();
+		}
+	}
+	else
+	{
+		if (hovering)
+		{
+			hovering = false;
+			on_hover_exit();
+		}
+	}
+}
+
 bool Button::is_pressed(MouseButton mb) const
 {
 	if (mb == MouseButton::LEFT)

@@ -47,7 +47,7 @@ ColorPicker::~ColorPicker()
 
 void ColorPicker::render()
 {
-	process_mb_down_events();
+	process();
 	rr_wget(*this, BACKGROUND).draw();
 	cp_render_gui_back();
 	ur_wget(*this, ALPHA_SLIDER).draw();
@@ -93,6 +93,13 @@ void ColorPicker::render()
 		break;
 	}
 	cp_render_gui_front();
+}
+
+void ColorPicker::process()
+{
+	process_mb_down_events();
+	b_wget(*this, BUTTON_RGB_HEX_CODE).process();
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
 }
 
 void ColorPicker::cp_render_gui_back()
@@ -288,57 +295,9 @@ void ColorPicker::cp_render_gui_back()
 
 void ColorPicker::cp_render_gui_front()
 {
-	// TODO enact hover exit when clicking on button. perhaps move this to button, including the buffering logic.
-	// keep an internal hovered state, use process() to update it, and when that value changes, change the hovered state and call on_hover_enter() or on_hover_exit().
-	static RGBA highlight = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f); // TODO put with other layout variables
-	static RGBA no_highlight = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f); // TODO put with other layout variables
-	if (current_widget_control == -1)
-	{
-		RoundRect& bkg = b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg();
-		if (b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).is_hovered())
-		{
-			if (bkg.fill_color != highlight)
-			{
-				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = highlight;
-				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_fill_color().send_buffer();
-				Machine.main_window->request_cursor(&wh_txtfld_mode_button, StandardCursor::HAND);
-			}
-		}
-		else
-		{
-			if (bkg.fill_color != no_highlight)
-			{
-				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = no_highlight;
-				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_fill_color().send_buffer();
-				Machine.main_window->release_cursor(&wh_txtfld_mode_button);
-			}
-		}
-	}
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
 	if (state == State::SLIDER_RGB)
 	{
-		if (current_widget_control == -1)
-		{
-			RoundRect& bkg = b_wget(*this, BUTTON_RGB_HEX_CODE).bkg();
-			if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_hovered())
-			{
-				if (bkg.fill_color != highlight)
-				{
-					b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = highlight;
-					b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_fill_color().send_buffer();
-					Machine.main_window->request_cursor(&wh_rgb_hex_button, StandardCursor::HAND);
-				}
-			}
-			else
-			{
-				if (bkg.fill_color != no_highlight)
-				{
-					b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = no_highlight;
-					b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_fill_color().send_buffer();
-					Machine.main_window->release_cursor(&wh_rgb_hex_button);
-				}
-			}
-		}
 		b_wget(*this, BUTTON_RGB_HEX_CODE).draw();
 		tr_wget(*this, TEXT_RED).draw();
 		tr_wget(*this, TEXT_GREEN).draw();
@@ -707,37 +666,83 @@ void ColorPicker::initialize_widget()
 	
 	// ---------- BUTTONS ----------
 
+	RGBA highlight = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f); // TODO put with other layout variables
+	RGBA no_highlight = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f); // TODO put with other layout variables
+
 	assign_widget(this, BUTTON_RGB_HEX_CODE, new Button(vp, {}, *Fonts::label_regular, 18, &round_rect_shader, mb_handler, "HEX"));
-	wp_at(BUTTON_RGB_HEX_CODE).transform.position = { button_rgb_hex_code_x, button_y };
-	wp_at(BUTTON_RGB_HEX_CODE).transform.scale = Scale(button_scale);
-	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().self.transform.scale = { button_rgb_hex_code_w, button_h };
-	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().thickness = 0.5f;
-	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().corner_radius = 5;
-	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
-	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
-	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_all();
+	Button& b_rgb_hex_code = b_wget(*this, BUTTON_RGB_HEX_CODE);
+	b_rgb_hex_code.self.transform.position = { button_rgb_hex_code_x, button_y };
+	b_rgb_hex_code.self.transform.scale = Scale(button_scale);
+	b_rgb_hex_code.bkg().self.transform.scale = { button_rgb_hex_code_w, button_h };
+	b_rgb_hex_code.bkg().thickness = 0.5f;
+	b_rgb_hex_code.bkg().corner_radius = 5;
+	b_rgb_hex_code.bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
+	b_rgb_hex_code.bkg().fill_color = no_highlight;
+	b_rgb_hex_code.bkg().update_all();
+	// LATER cancel highlighting/cursor after clicking on button.
+	b_rgb_hex_code.on_hover_enter = [this, &b_rgb_hex_code, highlight]() {
+		if (state == State::SLIDER_RGB && current_widget_control == -1)
+		{
+			b_rgb_hex_code.bkg().fill_color = highlight;
+			b_rgb_hex_code.bkg().update_fill_color().send_buffer();
+			Machine.main_window->request_cursor(&wh_rgb_hex_button, StandardCursor::HAND);
+		}
+		else
+		{
+			b_rgb_hex_code.hovering = false;
+		}
+		};
+	b_rgb_hex_code.on_hover_exit = [this, &b_rgb_hex_code, no_highlight]() {
+		if (state == State::SLIDER_RGB && current_widget_control == -1)
+		{
+			b_rgb_hex_code.bkg().fill_color = no_highlight;
+			b_rgb_hex_code.bkg().update_fill_color().send_buffer();
+			Machine.main_window->release_cursor(&wh_rgb_hex_button);
+		}
+		};
 
 	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, new Button(vp, {}, *Fonts::label_bolditalic, 18, &round_rect_shader, mb_handler, "#"));
-	wp_at(BUTTON_SWITCH_TXTFLD_MODE).transform.position = { button_switch_txtfld_mode_x, button_y };
-	wp_at(BUTTON_SWITCH_TXTFLD_MODE).transform.scale = Scale(button_scale);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().self.transform.scale = { button_switch_txtfld_mode_w, button_h };
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().thickness = 0.5f;
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().corner_radius = 5;
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_all();
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).on_release = [this](const MouseButtonEvent& mb, Position) {
+	Button& b_switch_txtfld_mode = b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE);
+	b_switch_txtfld_mode.self.transform.position = { button_switch_txtfld_mode_x, button_y };
+	b_switch_txtfld_mode.self.transform.scale = Scale(button_scale);
+	b_switch_txtfld_mode.bkg().self.transform.scale = { button_switch_txtfld_mode_w, button_h };
+	b_switch_txtfld_mode.bkg().thickness = 0.5f;
+	b_switch_txtfld_mode.bkg().corner_radius = 5;
+	b_switch_txtfld_mode.bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
+	b_switch_txtfld_mode.bkg().fill_color = no_highlight;
+	b_switch_txtfld_mode.bkg().update_all();
+	b_switch_txtfld_mode.on_hover_enter = [this, &b_switch_txtfld_mode, highlight]() {
+		if (current_widget_control == -1)
+		{
+			b_switch_txtfld_mode.bkg().fill_color = highlight;
+			b_switch_txtfld_mode.bkg().update_fill_color().send_buffer();
+			Machine.main_window->request_cursor(&wh_txtfld_mode_button, StandardCursor::HAND);
+		}
+		else
+		{
+			b_switch_txtfld_mode.hovering = false;
+		}
+		};
+	b_switch_txtfld_mode.on_hover_exit = [this, &b_switch_txtfld_mode, no_highlight]() {
+		if (current_widget_control == -1)
+		{
+			b_switch_txtfld_mode.bkg().fill_color = no_highlight;
+			b_switch_txtfld_mode.bkg().update_fill_color().send_buffer();
+			Machine.main_window->release_cursor(&wh_txtfld_mode_button);
+		}
+		};
+	b_switch_txtfld_mode.on_release = [this, &b_switch_txtfld_mode](const MouseButtonEvent& mb, Position) {
 		if (mb.button == MouseButton::LEFT)
 		{
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				txtfld_mode = TextFieldMode::PERCENT;
-				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).text().set_text("%");
+				b_switch_txtfld_mode.text().set_text("%");
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
 				txtfld_mode = TextFieldMode::NUMBER;
-				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).text().set_text("#");
+				b_switch_txtfld_mode.text().set_text("#");
 			}
 		}
 		};

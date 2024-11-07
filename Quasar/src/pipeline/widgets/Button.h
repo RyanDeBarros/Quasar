@@ -27,6 +27,8 @@ public:
 	glm::mat3* vp;
 	std::function<void(const MouseButtonEvent&, Position)> on_press = [](const MouseButtonEvent&, Position) {};
 	std::function<void(const MouseButtonEvent&, Position)> on_release = [](const MouseButtonEvent&, Position) {};
+	std::function<void()> on_hover_enter = []() {};
+	std::function<void()> on_hover_exit = []() {}; // LATER define simple functor utility
 
 	Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, const UTF::String& text);
 	Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, UTF::String&& text);
@@ -38,8 +40,11 @@ public:
 
 	void draw() const;
 	void send_vp() const;
+	void process();
 	bool is_pressed(MouseButton mb) const;
 	bool is_hovered(Position* local_pos = nullptr) const;
+
+	bool hovering = false;
 
 	RoundRect& bkg() { return rr_wget(*this, BKG); }
 	const RoundRect& bkg() const { return rr_wget(*this, BKG); }
