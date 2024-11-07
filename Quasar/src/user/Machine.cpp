@@ -134,7 +134,7 @@ bool MachineImpl::should_exit() const
 	return main_window->should_close();
 }
 
-void MachineImpl::on_render() const
+void MachineImpl::on_render()
 {
 	canvas_update_panning();
 	main_window->new_frame();
@@ -413,7 +413,7 @@ void MachineImpl::canvas_end_panning()
 	{
 		panning_info.panning = false;
 		main_window->release_cursor(&panning_info.wh);
-		main_window->set_mouse_mode(MouseMode::VISIBLE);
+		main_window->release_mouse_mode(&panning_info.wh);
 	}
 }
 
@@ -425,11 +425,11 @@ void MachineImpl::canvas_cancel_panning()
 		canvas_position() = panning_info.initial_canvas_pos;
 		sync_canvas_transform();
 		main_window->release_cursor(&panning_info.wh);
-		main_window->set_mouse_mode(MouseMode::VISIBLE);
+		main_window->release_mouse_mode(&panning_info.wh);
 	}
 }
 
-void MachineImpl::canvas_update_panning() const
+void MachineImpl::canvas_update_panning()
 {
 	if (panning_info.panning)
 	{
@@ -445,8 +445,8 @@ void MachineImpl::canvas_update_panning() const
 		canvas_position() = pos;
 		sync_canvas_transform();
 
-		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel()->cursor_in_clipping())
-			main_window->set_mouse_mode(MouseMode::VIRTUAL);
+		if (!main_window->owns_mouse_mode(&panning_info.wh) && !easel()->cursor_in_clipping())
+			main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
 		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
 		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
 	}

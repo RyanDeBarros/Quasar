@@ -79,7 +79,7 @@ struct MachineImpl
 	void destroy();
 	void exit() const { main_window->request_close(); }
 	bool should_exit() const;
-	void on_render() const;
+	void on_render();
 	void mark();
 	void unmark();
 	Scale inv_app_scale() const;
@@ -128,7 +128,7 @@ struct MachineImpl
 	void canvas_begin_panning();
 	void canvas_end_panning();
 	void canvas_cancel_panning();
-	void canvas_update_panning() const;
+	void canvas_update_panning();
 	void canvas_zoom_by(float zoom);
 
 	// Edit menu

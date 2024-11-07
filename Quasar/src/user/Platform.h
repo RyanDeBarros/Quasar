@@ -189,7 +189,10 @@ typedef InputEventHandler<DisplayScaleEvent> DisplayScaleHandler;
 
 struct WindowHandle
 {
-	bool held = false;
+	unsigned char flags = 0;
+	
+	static const unsigned char OWN_CURSOR = 0b1;
+	static const unsigned char OWN_MOUSE_MODE = 0b10;
 };
 
 struct Cursor
@@ -251,7 +254,6 @@ struct Window
 	glm::vec2 pos_center_normalized(const glm::vec2& pos) const { return glm::vec2{ -0.5f * width() + pos.x, 0.5f * height() - pos.y }; }
 
 	MouseMode mouse_mode() const { return MouseMode(glfwGetInputMode(window, GLFW_CURSOR)); }
-	void set_mouse_mode(MouseMode mouse_mode) const { glfwSetInputMode(window, GLFW_CURSOR, int(mouse_mode)); }
 	bool raw_mouse_motion() const { return glfwGetInputMode(window, GLFW_RAW_MOUSE_MOTION) == GLFW_TRUE; }
 	void set_raw_mouse_motion(bool raw_mouse_motion) const
 	{ if (glfwRawMouseMotionSupported()) glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, raw_mouse_motion ? GLFW_TRUE : GLFW_FALSE); }
@@ -270,10 +272,17 @@ struct Window
 	bool is_super_pressed() const { return is_key_pressed(Key::LEFT_SUPER) || is_key_pressed(Key::RIGHT_SUPER); }
 	bool is_mouse_button_pressed(MouseButton mb) const { return glfwGetMouseButton(window, int(mb)) != int(IAction::RELEASE); }
 
-	void is_cursor_available(WindowHandle* owner);
+	bool is_cursor_available(const WindowHandle* owner) const;
+	bool owns_cursor(const WindowHandle* owner) const;
 	void request_cursor(WindowHandle* owner, Cursor&& cursor);
 	void release_cursor(WindowHandle* owner);
 	void eject_cursor();
+
+	bool is_mouse_mode_available(const WindowHandle* owner) const;
+	bool owns_mouse_mode(const WindowHandle* owner) const;
+	void request_mouse_mode(WindowHandle* owner, MouseMode mouse_mode);
+	void release_mouse_mode(WindowHandle* owner);
+	void eject_mouse_mode();
 
 private:
 	int pre_fullscreen_x = 0;
@@ -288,6 +297,10 @@ private:
 	const WindowHandle* cursor_owner = nullptr;
 	Cursor current_cursor;
 	Cursor prev_cursor;
+
+	const WindowHandle* mouse_mode_owner = nullptr;
+	MouseMode current_mouse_mode = MouseMode::VISIBLE;
+	MouseMode prev_mouse_mode = MouseMode::VISIBLE;
 
 	void destroy();
 };

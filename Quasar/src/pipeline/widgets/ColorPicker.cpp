@@ -937,7 +937,6 @@ void ColorPicker::process_mb_down_events()
 
 void ColorPicker::take_over_cursor()
 {
-	//Machine.main_window->set_mouse_mode(MouseMode::VIRTUAL); // TODO similar locking with mouse mode, though don't use here.
 	Machine.main_window->request_cursor(&wh_interactable, StandardCursor::CROSSHAIR);
 }
 
@@ -945,7 +944,6 @@ void ColorPicker::release_cursor()
 {
 	if (current_widget_control >= 0)
 	{
-		//Machine.main_window->set_mouse_mode(MouseMode::VISIBLE);
 		Machine.main_window->release_cursor(&wh_interactable);
 		current_widget_control = -1;
 	}
