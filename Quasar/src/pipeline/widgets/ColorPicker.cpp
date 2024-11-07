@@ -97,7 +97,7 @@ void ColorPicker::cp_render_gui_back()
 	ImGui::SetNextWindowBgAlpha(0);
 	auto sz = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale();
 	ImGui::SetNextWindowSize(ImVec2(sz.x, sz.y));
-	Position pos = center - Position{ 0.5f * sz.x, 0.9f * sz.y };
+	Position pos = gui_center - Position{ 0.5f * sz.x, 0.9f * sz.y };
 	ImGui::SetNextWindowPos({ pos.x, pos.y });
 
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar |
@@ -383,9 +383,8 @@ void ColorPicker::set_state(State _state)
 	}
 }
 
-void ColorPicker::send_vp(const glm::mat3& vp_)
+void ColorPicker::send_vp()
 {
-	vp = vp_;
 	Uniforms::send_matrix3(quad_shader, "u_VP", vp);
 	Uniforms::send_matrix3(linear_hue_shader, "u_VP", vp);
 	Uniforms::send_matrix3(hue_wheel_w_shader, "u_VP", vp);
@@ -681,8 +680,7 @@ void ColorPicker::connect_mouse_handlers()
 		{
 			if (current_widget_control < 0)
 			{
-				// TODO get_relative_pos on self, taking into account pivot ??
-				Position local_cursor_pos = self.transform.get_relative_pos(Machine.palette_cursor_world_pos());
+				Position local_cursor_pos = local_of(Machine.palette_cursor_world_pos());
 				if (wp_at(ALPHA_SLIDER).contains_point(local_cursor_pos))
 				{
 					take_over_cursor();
@@ -977,13 +975,12 @@ void ColorPicker::set_size(Scale size, bool sync)
 	rr_wget(*this, BACKGROUND).update_transform();
 	if (sync)
 		sync_cp_widget_with_vp();
-	//wp_at(BACKGROUND).transform.scale = size_ * Machine.inv_app_scale();
 }
 
-void ColorPicker::set_position(Position world_pos, Position screen_pos) // LATER pass one Position. Add coordinate functions to Machine.
+void ColorPicker::set_position(Position world_pos)
 {
 	self.transform.position = world_pos;
-	center = screen_pos; // TODO rename center to specify it is in screen coordinates
+	gui_center = Machine.to_screen_coordinates(world_pos, vp);
 }
 
 void ColorPicker::mouse_handler_alpha_slider(Position local_cursor_pos)
@@ -1278,7 +1275,7 @@ void ColorPicker::sync_cp_widget_with_vp()
 	sync_single_cp_widget_transform_ur(HSL_S_SLIDER_CURSOR);
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER);
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
-	rr_wget(*this, BACKGROUND).update_transform().ur->send_buffer(); // TODO make rr extend ur to use ur_wget directly ?
+	rr_wget(*this, BACKGROUND).update_transform().send_buffer();
 	tr_wget(*this, TEXT_ALPHA).send_vp(vp);
 	tr_wget(*this, TEXT_RED).send_vp(vp);
 	tr_wget(*this, TEXT_GREEN).send_vp(vp);

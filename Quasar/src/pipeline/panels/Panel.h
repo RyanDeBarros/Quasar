@@ -22,6 +22,7 @@ struct Panel
 	virtual void draw() = 0;
 	void render();
 	glm::mat3 vp_matrix() const;
+	glm::mat3 vp_matrix_inverse() const;
 	virtual void _send_view() = 0;
 	void send_view();
 
@@ -31,9 +32,9 @@ struct Panel
 	float get_app_height() const;
 	glm::vec2 get_app_cursor_pos() const;
 
-	glm::vec2 to_view_coordinates(const glm::vec2& screen_coordinates) const;
-	glm::vec2 to_world_coordinates(const glm::vec2& screen_coordinates) const;
-	glm::vec2 to_screen_coordinates(const glm::vec2& world_coordinates) const;
+	Position to_view_coordinates(Position screen_coordinates) const;
+	Position to_world_coordinates(Position screen_coordinates) const;
+	Position to_screen_coordinates(Position world_coordinates) const;
 };
 
 struct PanelGroup

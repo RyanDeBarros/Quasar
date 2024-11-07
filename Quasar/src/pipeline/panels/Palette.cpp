@@ -59,11 +59,10 @@ void Palette::_send_view()
 	glm::mat3 cameraVP = vp_matrix();
 	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
 
+	color_picker.vp = cameraVP;
 	Scale color_picker_size{ 240, 420 };
 	color_picker.set_size(color_picker_size);
-	Position ppos = glm::vec2{ 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * 0.5f - 25 };
-	auto test = bounds.clip().screen_w;
-	color_picker.set_position(ppos, to_screen_coordinates(ppos));
-	color_picker.send_vp(cameraVP);
+	color_picker.set_position({ 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * 0.5f - 25 });
+	color_picker.send_vp();
 	unbind_shader();
 }

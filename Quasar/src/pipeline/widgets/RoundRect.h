@@ -28,13 +28,12 @@ public:
 	float thickness = 0.0f;
 
 	const RoundRect& update_transform() const;
-	const RoundRect& update_transform(const WidgetPlacement& wp) const;
 	const RoundRect& update_border_color() const;
 	const RoundRect& update_fill_color() const;
 	const RoundRect& update_corner_radius() const;
 	const RoundRect& update_thickness() const;
 	const RoundRect& update_all() const;
-	void send_vp(const glm::mat3& vp) const;
+	void send_buffer() const;
 };
 
 inline RoundRect& rr_wget(Widget& w, size_t i)

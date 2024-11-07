@@ -198,6 +198,31 @@ void MachineImpl::set_clear_color(ColorFrame color)
 	QUASAR_GL(glClearColor(vec[0], vec[1], vec[2], vec[3]));
 }
 
+Position MachineImpl::to_world_coordinates(Position screen_coordinates, const glm::mat3& inverse_vp) const
+{
+	glm::vec3 ndc{
+		1.0f - 2.0f * (screen_coordinates.x / main_window->width()),
+		1.0f - 2.0f * (screen_coordinates.y / main_window->height()),
+		1.0f
+	};
+
+	glm::vec3 world_pos = inverse_vp * ndc;
+	if (world_pos.z != 0.0f)
+		world_pos / world_pos.z;
+
+	return { -world_pos.x, -world_pos.y };
+}
+
+Position MachineImpl::to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const
+{
+	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
+	glm::vec3 clip_space_pos = vp * world_pos;
+	return {
+		(1.0f + clip_space_pos.x) * 0.5f * Machine.main_window->width(),
+		(1.0f + clip_space_pos.y) * 0.5f * Machine.main_window->height()
+	};
+}
+
 glm::vec2 MachineImpl::easel_cursor_world_pos() const
 {
 	return easel()->to_world_coordinates(main_window->cursor_pos());

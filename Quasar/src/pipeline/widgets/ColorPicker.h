@@ -27,10 +27,10 @@ public:
 	void set_state(State state);
 
 	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader, round_rect_shader;
+	glm::mat3 vp;
 
 private:
-	Position center;
-	glm::mat3 vp;
+	Position gui_center;
 	State last_graphic_state = State::GRAPHIC_QUAD;
 	enum class TextFieldMode
 	{
@@ -59,12 +59,12 @@ public:
 	~ColorPicker();
 
 	void render();
-	void send_vp(const glm::mat3& vp);
+	void send_vp();
 	ColorFrame get_color() const;
 	void set_color(ColorFrame);
 	void set_size(Scale size, bool sync = false);
-	void set_position(Position world_pos, Position screen_pos);
-
+	void set_position(Position world_pos);
+	
 private:
 	void process_mb_down_events();
 
