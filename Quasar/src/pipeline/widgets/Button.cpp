@@ -57,7 +57,7 @@ void Button::process()
 	
 }
 
-void Button::send_vp(const glm::mat3& vp, FlatTransform parent)
+void Button::send_vp(const glm::mat3& vp) const
 {
 	text().send_vp(vp * global_matrix());
 	bkg().update_transform().send_buffer();

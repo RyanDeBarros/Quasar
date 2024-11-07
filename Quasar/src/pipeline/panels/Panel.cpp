@@ -54,7 +54,7 @@ void Panel::send_view()
 
 Position Panel::to_view_coordinates(Position screen_coordinates) const
 {
-	return Machine.to_world_coordinates(screen_coordinates, glm::inverse(pgroup->projection));
+	return -Machine.to_world_coordinates(screen_coordinates, glm::inverse(pgroup->projection));
 }
 
 Position Panel::to_world_coordinates(Position screen_coordinates) const

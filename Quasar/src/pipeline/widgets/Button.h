@@ -35,7 +35,7 @@ public:
 
 	void draw() const;
 	void process();
-	void send_vp(const glm::mat3& vp, FlatTransform parent);
+	void send_vp(const glm::mat3& vp) const;
 
 	RoundRect& bkg() { return rr_wget(*this, BKG); }
 	const RoundRect& bkg() const { return rr_wget(*this, BKG); }

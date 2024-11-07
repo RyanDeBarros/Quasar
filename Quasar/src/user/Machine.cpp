@@ -218,8 +218,8 @@ Position MachineImpl::to_screen_coordinates(Position world_coordinates, const gl
 	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
 	glm::vec3 clip_space_pos = vp * world_pos;
 	return {
-		(1.0f + clip_space_pos.x) * 0.5f * Machine.main_window->width(),
-		(1.0f + clip_space_pos.y) * 0.5f * Machine.main_window->height()
+		(1.0f + clip_space_pos.x) * 0.5f * main_window->width(),
+		(1.0f + clip_space_pos.y) * 0.5f * main_window->height()
 	};
 }
 

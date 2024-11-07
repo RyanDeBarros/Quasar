@@ -78,25 +78,10 @@ private:
 	void take_over_cursor() const;
 	void release_cursor();
 
-	void mouse_handler_alpha_slider(Position local_cursor_pos);
-
-	void mouse_handler_graphic_quad(Position local_cursor_pos);
-	void mouse_handler_graphic_hue_slider(Position local_cursor_pos);
-	
+	void mouse_handler_graphic_quad(Position local_cursor_pos);	
 	void mouse_handler_graphic_hue_wheel(Position local_cursor_pos);
-	void mouse_handler_graphic_value_slider(Position local_cursor_pos);
-
-	void mouse_handler_slider_rgb_r(Position local_cursor_pos);
-	void mouse_handler_slider_rgb_g(Position local_cursor_pos);
-	void mouse_handler_slider_rgb_b(Position local_cursor_pos);
-
-	void mouse_handler_slider_hsv_h(Position local_cursor_pos);
-	void mouse_handler_slider_hsv_s(Position local_cursor_pos);
-	void mouse_handler_slider_hsv_v(Position local_cursor_pos);
-
-	void mouse_handler_slider_hsl_h(Position local_cursor_pos);
-	void mouse_handler_slider_hsl_s(Position local_cursor_pos);
-	void mouse_handler_slider_hsl_l(Position local_cursor_pos);
+	void mouse_handler_horizontal_slider(size_t slider, size_t cursor, Position local_cursor_pos);
+	void mouse_handler_vertical_slider(size_t slider, size_t cursor, Position local_cursor_pos);
 
 	void move_slider_cursor_x_absolute(size_t control, size_t cursor, float absolute);
 	void move_slider_cursor_x_relative(size_t control, size_t cursor, float relative);

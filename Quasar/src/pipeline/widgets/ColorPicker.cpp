@@ -686,7 +686,7 @@ void ColorPicker::connect_mouse_handlers()
 					take_over_cursor();
 					current_widget_control = ALPHA_SLIDER_CURSOR;
 					mb.consumed = true;
-					mouse_handler_alpha_slider(local_cursor_pos);
+					mouse_handler_horizontal_slider(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, local_cursor_pos);
 				}
 				else if (state == State::GRAPHIC_QUAD)
 				{
@@ -702,7 +702,7 @@ void ColorPicker::connect_mouse_handlers()
 						take_over_cursor();
 						current_widget_control = GRAPHIC_HUE_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_graphic_hue_slider(local_cursor_pos);
+						mouse_handler_vertical_slider(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
 				else if (state == State::GRAPHIC_WHEEL)
@@ -719,7 +719,7 @@ void ColorPicker::connect_mouse_handlers()
 						take_over_cursor();
 						current_widget_control = GRAPHIC_VALUE_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_graphic_value_slider(local_cursor_pos);
+						mouse_handler_vertical_slider(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
 				else if (state == State::SLIDER_RGB)
@@ -729,21 +729,21 @@ void ColorPicker::connect_mouse_handlers()
 						take_over_cursor();
 						current_widget_control = RGB_R_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_rgb_r(local_cursor_pos);
+						mouse_handler_horizontal_slider(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(RGB_G_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = RGB_G_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_rgb_g(local_cursor_pos);
+						mouse_handler_horizontal_slider(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(RGB_B_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = RGB_B_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_rgb_b(local_cursor_pos);
+						mouse_handler_horizontal_slider(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
 				else if (state == State::SLIDER_HSV)
@@ -753,21 +753,21 @@ void ColorPicker::connect_mouse_handlers()
 						take_over_cursor();
 						current_widget_control = HSV_H_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_hsv_h(local_cursor_pos);
+						mouse_handler_horizontal_slider(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(HSV_S_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = HSV_S_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_hsv_s(local_cursor_pos);
+						mouse_handler_horizontal_slider(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(HSV_V_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = HSV_V_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_hsv_v(local_cursor_pos);
+						mouse_handler_horizontal_slider(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
 				else if (state == State::SLIDER_HSL)
@@ -777,21 +777,21 @@ void ColorPicker::connect_mouse_handlers()
 						take_over_cursor();
 						current_widget_control = HSL_H_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_hsl_h(local_cursor_pos);
+						mouse_handler_horizontal_slider(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(HSL_S_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = HSL_S_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_hsl_s(local_cursor_pos);
+						mouse_handler_horizontal_slider(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(HSL_L_SLIDER).contains_point(local_cursor_pos))
 					{
 						take_over_cursor();
 						current_widget_control = HSL_L_SLIDER_CURSOR;
 						mb.consumed = true;
-						mouse_handler_slider_hsl_l(local_cursor_pos);
+						mouse_handler_horizontal_slider(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
 
@@ -825,33 +825,33 @@ void ColorPicker::process_mb_down_events()
 
 	Position local_cursor_pos = self.transform.get_relative_pos(Machine.palette_cursor_world_pos());
 	if (current_widget_control == ALPHA_SLIDER_CURSOR)
-		mouse_handler_alpha_slider(local_cursor_pos);
+		mouse_handler_horizontal_slider(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == GRAPHIC_QUAD_CURSOR)
 		mouse_handler_graphic_quad(local_cursor_pos);
 	else if (current_widget_control == GRAPHIC_HUE_SLIDER_CURSOR)
-		mouse_handler_graphic_hue_slider(local_cursor_pos);
+		mouse_handler_vertical_slider(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == GRAPHIC_HUE_WHEEL_CURSOR)
 		mouse_handler_graphic_hue_wheel(local_cursor_pos);
 	else if (current_widget_control == GRAPHIC_VALUE_SLIDER_CURSOR)
-		mouse_handler_graphic_value_slider(local_cursor_pos);
+		mouse_handler_vertical_slider(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == RGB_R_SLIDER_CURSOR)
-		mouse_handler_slider_rgb_r(local_cursor_pos);
+		mouse_handler_horizontal_slider(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == RGB_G_SLIDER_CURSOR)
-		mouse_handler_slider_rgb_g(local_cursor_pos);
+		mouse_handler_horizontal_slider(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == RGB_B_SLIDER_CURSOR)
-		mouse_handler_slider_rgb_b(local_cursor_pos);
+		mouse_handler_horizontal_slider(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == HSV_H_SLIDER_CURSOR)
-		mouse_handler_slider_hsv_h(local_cursor_pos);
+		mouse_handler_horizontal_slider(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == HSV_S_SLIDER_CURSOR)
-		mouse_handler_slider_hsv_s(local_cursor_pos);
+		mouse_handler_horizontal_slider(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == HSV_V_SLIDER_CURSOR)
-		mouse_handler_slider_hsv_v(local_cursor_pos);
+		mouse_handler_horizontal_slider(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == HSL_H_SLIDER_CURSOR)
-		mouse_handler_slider_hsl_h(local_cursor_pos);
+		mouse_handler_horizontal_slider(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == HSL_S_SLIDER_CURSOR)
-		mouse_handler_slider_hsl_s(local_cursor_pos);
+		mouse_handler_horizontal_slider(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, local_cursor_pos);
 	else if (current_widget_control == HSL_L_SLIDER_CURSOR)
-		mouse_handler_slider_hsl_l(local_cursor_pos);
+		mouse_handler_horizontal_slider(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, local_cursor_pos);
 
 	if (current_widget_control >= 0)
 		update_display_colors();
@@ -983,22 +983,10 @@ void ColorPicker::set_position(Position world_pos)
 	gui_center = Machine.to_screen_coordinates(world_pos, vp);
 }
 
-void ColorPicker::mouse_handler_alpha_slider(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(ALPHA_SLIDER_CURSOR);
-}
-
 void ColorPicker::mouse_handler_graphic_quad(Position local_cursor_pos)
 {
 	wp_at(GRAPHIC_QUAD_CURSOR).transform.position = wp_at(GRAPHIC_QUAD).clamp_point(local_cursor_pos);
 	sync_single_cp_widget_transform_ur(GRAPHIC_QUAD_CURSOR);
-}
-
-void ColorPicker::mouse_handler_graphic_hue_slider(Position local_cursor_pos)
-{
-	move_slider_cursor_y_absolute(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos.y);
-	sync_single_cp_widget_transform_ur(GRAPHIC_HUE_SLIDER_CURSOR);
 }
 
 void ColorPicker::mouse_handler_graphic_hue_wheel(Position local_cursor_pos)
@@ -1007,64 +995,16 @@ void ColorPicker::mouse_handler_graphic_hue_wheel(Position local_cursor_pos)
 	sync_single_cp_widget_transform_ur(GRAPHIC_HUE_WHEEL_CURSOR);
 }
 
-void ColorPicker::mouse_handler_graphic_value_slider(Position local_cursor_pos)
+void ColorPicker::mouse_handler_horizontal_slider(size_t slider, size_t cursor, Position local_cursor_pos)
 {
-	move_slider_cursor_y_absolute(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos.y);
-	sync_single_cp_widget_transform_ur(GRAPHIC_VALUE_SLIDER_CURSOR);
+	move_slider_cursor_x_absolute(slider, cursor, local_cursor_pos.x);
+	sync_single_cp_widget_transform_ur(cursor);
 }
 
-void ColorPicker::mouse_handler_slider_rgb_r(Position local_cursor_pos)
+void ColorPicker::mouse_handler_vertical_slider(size_t slider, size_t cursor, Position local_cursor_pos)
 {
-	move_slider_cursor_x_absolute(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(RGB_R_SLIDER_CURSOR);
-}
-
-void ColorPicker::mouse_handler_slider_rgb_g(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(RGB_G_SLIDER_CURSOR);
-}
-
-void ColorPicker::mouse_handler_slider_rgb_b(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(RGB_B_SLIDER_CURSOR);
-}
-
-void ColorPicker::mouse_handler_slider_hsv_h(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(HSV_H_SLIDER_CURSOR);
-}
-
-void ColorPicker::mouse_handler_slider_hsv_s(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(HSV_S_SLIDER_CURSOR);
-}
-
-void ColorPicker::mouse_handler_slider_hsv_v(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(HSV_V_SLIDER_CURSOR);
-}
-
-void ColorPicker::mouse_handler_slider_hsl_h(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(HSL_H_SLIDER_CURSOR);
-}
-
-void ColorPicker::mouse_handler_slider_hsl_s(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(HSL_S_SLIDER_CURSOR);
-}
-
-void ColorPicker::mouse_handler_slider_hsl_l(Position local_cursor_pos)
-{
-	move_slider_cursor_x_absolute(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, local_cursor_pos.x);
-	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
+	move_slider_cursor_y_absolute(slider, cursor, local_cursor_pos.y);
+	sync_single_cp_widget_transform_ur(cursor);
 }
 
 void ColorPicker::move_slider_cursor_x_absolute(size_t control, size_t cursor, float absolute)
@@ -1284,7 +1224,7 @@ void ColorPicker::sync_cp_widget_with_vp()
 	tr_wget(*this, TEXT_SAT).send_vp(vp);
 	tr_wget(*this, TEXT_VALUE).send_vp(vp);
 	tr_wget(*this, TEXT_LIGHT).send_vp(vp);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp(vp, self.transform);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp(vp);
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const
