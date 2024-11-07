@@ -83,9 +83,6 @@ namespace Mods
 	};
 }
 
-extern GLFWcursor* create_cursor(StandardCursor standard_cursor);
-extern GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot);
-
 struct InputEvent
 {
 	mutable bool consumed = false;
@@ -190,6 +187,24 @@ struct DisplayScaleEvent : public InputEvent
 
 typedef InputEventHandler<DisplayScaleEvent> DisplayScaleHandler;
 
+struct WindowHandle
+{
+	bool held = false;
+};
+
+struct Cursor
+{
+	GLFWcursor* cursor = nullptr;
+
+	Cursor() = default;
+	Cursor(StandardCursor standard_cursor);
+	Cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot);
+	Cursor(const Cursor&) = delete;
+	Cursor(Cursor&&) noexcept;
+	Cursor& operator=(Cursor&&) noexcept;
+	~Cursor();
+};
+
 struct Window
 {
 	GLFWwindow* window = nullptr;
@@ -203,14 +218,13 @@ struct Window
 	WindowMaximizeHandler root_window_maximize;
 	DisplayScaleHandler root_display_scale;
 
-	Window(const char* title, int width, int height, bool enable_gui = true, ImFontAtlas* gui_font_atlas = nullptr, GLFWcursor* cursor = nullptr);
+	Window(const char* title, int width, int height, bool enable_gui = true, ImFontAtlas* gui_font_atlas = nullptr, Cursor&& cursor = Cursor());
 	Window(const Window&) = delete;
 	Window(Window&&) noexcept = delete;
 	~Window();
 
 	operator bool() const { return window != nullptr; }
 
-	void set_cursor(GLFWcursor* cursor) const;
 	void set_width(int width) const;
 	void set_height(int height) const;
 	void set_size(int width, int height) const;
@@ -256,7 +270,10 @@ struct Window
 	bool is_super_pressed() const { return is_key_pressed(Key::LEFT_SUPER) || is_key_pressed(Key::RIGHT_SUPER); }
 	bool is_mouse_button_pressed(MouseButton mb) const { return glfwGetMouseButton(window, int(mb)) != int(IAction::RELEASE); }
 
-	void override_gui_cursor_change(bool _override) const;
+	void is_cursor_available(WindowHandle* owner);
+	void request_cursor(WindowHandle* owner, Cursor&& cursor);
+	void release_cursor(WindowHandle* owner);
+	void eject_cursor();
 
 private:
 	int pre_fullscreen_x = 0;
@@ -268,6 +285,10 @@ private:
 
 	KeyHandler window_maximizer;
 	
+	const WindowHandle* cursor_owner = nullptr;
+	Cursor current_cursor;
+	Cursor prev_cursor;
+
 	void destroy();
 };
 

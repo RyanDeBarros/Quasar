@@ -125,6 +125,7 @@ void MachineImpl::destroy()
 {
 	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(panels);
+	main_window->release_cursor(&panning_info.wh);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 
@@ -402,8 +403,7 @@ void MachineImpl::canvas_begin_panning()
 		panning_info.initial_canvas_pos = canvas_position();
 		panning_info.initial_cursor_pos = easel()->get_app_cursor_pos();
 		panning_info.panning = true;
-		main_window->override_gui_cursor_change(true);
-		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
+		main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
 	}
 }
 
@@ -412,8 +412,7 @@ void MachineImpl::canvas_end_panning()
 	if (panning_info.panning)
 	{
 		panning_info.panning = false;
-		main_window->override_gui_cursor_change(false);
-		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
+		main_window->release_cursor(&panning_info.wh);
 		main_window->set_mouse_mode(MouseMode::VISIBLE);
 	}
 }
@@ -425,8 +424,7 @@ void MachineImpl::canvas_cancel_panning()
 		panning_info.panning = false;
 		canvas_position() = panning_info.initial_canvas_pos;
 		sync_canvas_transform();
-		main_window->override_gui_cursor_change(false);
-		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
+		main_window->release_cursor(&panning_info.wh);
 		main_window->set_mouse_mode(MouseMode::VISIBLE);
 	}
 }

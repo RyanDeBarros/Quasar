@@ -22,6 +22,7 @@ struct ColorPicker : public Widget
 
 private:
 	State state = State::GRAPHIC_QUAD;
+
 public:
 	State get_state() const { return state; }
 	void set_state(State state);
@@ -50,6 +51,10 @@ private:
 	bool imgui_takeover_mb = false;
 	bool imgui_takeover_key = false;
 	
+	WindowHandle wh_interactable;
+	WindowHandle wh_rgb_hex_button;
+	WindowHandle wh_txtfld_mode_button;
+
 	int current_widget_control = -1;
 
 public:
@@ -75,7 +80,7 @@ private:
 
 	void initialize_widget();
 	void connect_mouse_handlers();
-	void take_over_cursor() const;
+	void take_over_cursor();
 	void release_cursor();
 
 	void mouse_handler_graphic_quad(Position local_cursor_pos);	
@@ -116,7 +121,6 @@ private:
 	float get_circle_cursor_value(size_t cursor) const;
 	void setup_circle_cursor(size_t cursor);
 
-private:
 	// LATER use UMR when possible
 	enum
 	{

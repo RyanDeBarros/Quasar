@@ -27,6 +27,8 @@ struct RGB
 	constexpr RGB(int r, int g, int b) : r(std::clamp(r, 0, 255) * inv255), g(std::clamp(g, 0, 255) * inv255), b(std::clamp(b, 0, 255) * inv255) {}
 	constexpr RGB(float r, float g, float b) : r(std::clamp(r, 0.0f, 1.0f)), g(std::clamp(g, 0.0f, 1.0f)), b(std::clamp(b, 0.0f, 1.0f)) {}
 	constexpr RGB(unsigned int hex) : r(hex_to_byte<2>(hex) * inv255), g(hex_to_byte<1>(hex) * inv255), b(hex_to_byte<0>(hex) * inv255) {}
+	
+	constexpr bool operator==(const RGB&) const = default;
 
 	constexpr glm::ivec3 pixel3() const { return { get_pixel_r(), get_pixel_g(), get_pixel_b() }; }
 	constexpr int get_pixel_r() const { return roundi(r * 255); }
@@ -50,6 +52,8 @@ struct HSV
 	constexpr HSV(int h, int s, int v) : h(std::clamp(h, 0, 359) * inv359), s(std::clamp(s, 0, 255) * inv255), v(std::clamp(v, 0, 255) * inv255) {}
 	constexpr HSV(float h, float s, float v) : h(std::clamp(h, 0.0f, 1.0f)), s(std::clamp(s, 0.0f, 1.0f)), v(std::clamp(v, 0.0f, 1.0f)) {}
 
+	constexpr bool operator==(const HSV&) const = default;
+
 	constexpr glm::ivec3 pixel3() const { return { get_pixel_h(), get_pixel_s(), get_pixel_v() }; }
 	constexpr int get_pixel_h() const { return roundi(h * 359); }
 	constexpr int get_pixel_s() const { return roundi(s * 255); }
@@ -71,6 +75,8 @@ struct HSL
 	constexpr HSL() : h(0.0f), s(0.0f), l(0.0f) {}
 	constexpr HSL(int h, int s, int l) : h(std::clamp(h, 0, 359) * inv359), s(std::clamp(s, 0, 255) * inv255), l(std::clamp(l, 0, 255) * inv255) {}
 	constexpr HSL(float h, float s, float l) : h(std::clamp(h, 0.0f, 1.0f)), s(std::clamp(s, 0.0f, 1.0f)), l(std::clamp(l, 0.0f, 1.0f)) {}
+
+	constexpr bool operator==(const HSL&) const = default;
 
 	constexpr glm::ivec3 pixel3() const { return { get_pixel_h(), get_pixel_s(), get_pixel_l() }; }
 	constexpr int get_pixel_h() const { return roundi(h * 359); }
@@ -235,6 +241,8 @@ struct RGBA
 	constexpr RGBA(float r, float g, float b, float a) : rgb(r, g, b), alpha(std::clamp(a, 0.0f, 1.0f)) {}
 	constexpr RGBA(int r, int g, int b, int a) : rgb(r, g, b), alpha(std::clamp(a, 0, 255) * inv255) {}
 
+	constexpr bool operator==(const RGBA&) const = default;
+
 	glm::vec4 as_vec() const { return { rgb.r, rgb.g, rgb.b, alpha }; }
 
 	constexpr int get_pixel_r() const { return rgb.get_pixel_r(); }
@@ -258,6 +266,8 @@ struct HSVA
 	constexpr HSVA(float h, float s, float v, float a) : hsv(h, s, v), alpha(std::clamp(a, 0.0f, 1.0f)) {}
 	constexpr HSVA(int h, int s, int v, int a) : hsv(h, s, v), alpha(std::clamp(a, 0, 255) * inv255) {}
 
+	constexpr bool operator==(const HSVA&) const = default;
+
 	glm::vec4 as_vec() const { return { hsv.h, hsv.s, hsv.v, alpha}; }
 
 	constexpr int get_pixel_h() const { return hsv.get_pixel_h(); }
@@ -279,6 +289,8 @@ struct HSLA
 	constexpr HSLA(HSL hsl, int alpha) : hsl(hsl), alpha(std::clamp(alpha, 0, 255) * inv255) {}
 	constexpr HSLA(float h, float s, float l, float a) : hsl(h, s, l), alpha(std::clamp(a, 0.0f, 1.0f)) {}
 	constexpr HSLA(int h, int s, int l, int a) : hsl(h, s, l), alpha(std::clamp(a, 0, 255) * inv255) {}
+
+	constexpr bool operator==(const HSLA&) const = default;
 
 	glm::vec4 as_vec() const { return { hsl.h, hsl.s, hsl.l, alpha }; }
 
@@ -314,6 +326,8 @@ public:
 	constexpr ColorFrame(HSVA hsva) : alpha(hsva.alpha) { set_hsv(hsva.hsv); }
 	constexpr ColorFrame(HSLA hsla) : alpha(hsla.alpha) { set_hsl(hsla.hsl); }
 
+	constexpr bool operator==(const ColorFrame&) const = default;
+
 	constexpr RGB rgb() const { return _rgb; }
 	constexpr HSV hsv() const { return _hsv; }
 	constexpr HSL hsl() const { return _hsl; }
@@ -332,11 +346,15 @@ public:
 struct RedGreen
 {
 	float r = 0.0f, g = 0.0f;
+
+	constexpr bool operator==(const RedGreen&) const = default;
 };
 
 struct GrayScale
 {
 	float v = 0.0f;
+
+	constexpr bool operator==(const GrayScale&) const = default;
 };
 
 extern float contrast_wb_value_simple_hue(float hue);

@@ -40,6 +40,9 @@ ColorPicker::~ColorPicker()
 {
 	parent_mb_handler.remove_child(&mb_handler);
 	parent_key_handler.remove_child(&key_handler);
+	Machine.main_window->release_cursor(&wh_interactable);
+	Machine.main_window->release_cursor(&wh_rgb_hex_button);
+	Machine.main_window->release_cursor(&wh_txtfld_mode_button);
 }
 
 void ColorPicker::render()
@@ -285,38 +288,56 @@ void ColorPicker::cp_render_gui_back()
 
 void ColorPicker::cp_render_gui_front()
 {
-	if (b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).is_hovered())
+	// TODO enact hover exit when clicking on button. perhaps move this to button, including the buffering logic.
+	// keep an internal hovered state, use process() to update it, and when that value changes, change the hovered state and call on_hover_enter() or on_hover_exit().
+	static RGBA highlight = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f); // TODO put with other layout variables
+	static RGBA no_highlight = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f); // TODO put with other layout variables
+	if (current_widget_control == -1)
 	{
-		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f); // TODO put colors in constexpr in cpp
-		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_fill_color().send_buffer();
-		Machine.main_window->set_cursor(create_cursor(StandardCursor::HAND));
-		Machine.main_window->override_gui_cursor_change(true); // LATER on_press, cancel this highlighting
-	}
-	else
-	{
-		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
-		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_fill_color().send_buffer();
-		Machine.main_window->set_cursor(create_cursor(StandardCursor::ARROW)); // TODO prev cursor
-		Machine.main_window->override_gui_cursor_change(false);
+		RoundRect& bkg = b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg();
+		if (b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).is_hovered())
+		{
+			if (bkg.fill_color != highlight)
+			{
+				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = highlight;
+				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_fill_color().send_buffer();
+				Machine.main_window->request_cursor(&wh_txtfld_mode_button, StandardCursor::HAND);
+			}
+		}
+		else
+		{
+			if (bkg.fill_color != no_highlight)
+			{
+				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = no_highlight;
+				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_fill_color().send_buffer();
+				Machine.main_window->release_cursor(&wh_txtfld_mode_button);
+			}
+		}
 	}
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
 	if (state == State::SLIDER_RGB)
 	{
-		if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_hovered())
+		if (current_widget_control == -1)
 		{
-			b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f);
-			b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_fill_color().send_buffer();
-			Machine.main_window->set_cursor(create_cursor(StandardCursor::HAND));
-			Machine.main_window->override_gui_cursor_change(true);
-			// TODO implement "lock" on cursor change, where a void* can be set as owner. When nullptr, imgui can use it.
-			// Thus, when classes want to change cursor, they must first query if they own the cursor.
-		}
-		else
-		{
-			b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
-			b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_fill_color().send_buffer();
-			Machine.main_window->set_cursor(create_cursor(StandardCursor::ARROW)); // TODO prev cursor
-			Machine.main_window->override_gui_cursor_change(false);
+			RoundRect& bkg = b_wget(*this, BUTTON_RGB_HEX_CODE).bkg();
+			if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_hovered())
+			{
+				if (bkg.fill_color != highlight)
+				{
+					b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = highlight;
+					b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_fill_color().send_buffer();
+					Machine.main_window->request_cursor(&wh_rgb_hex_button, StandardCursor::HAND);
+				}
+			}
+			else
+			{
+				if (bkg.fill_color != no_highlight)
+				{
+					b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = no_highlight;
+					b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_fill_color().send_buffer();
+					Machine.main_window->release_cursor(&wh_rgb_hex_button);
+				}
+			}
 		}
 		b_wget(*this, BUTTON_RGB_HEX_CODE).draw();
 		tr_wget(*this, TEXT_RED).draw();
@@ -726,7 +747,9 @@ void ColorPicker::connect_mouse_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
-		if (mb.action == IAction::PRESS && mb.button == MouseButton::LEFT)
+		if (mb.button != MouseButton::LEFT)
+			return;
+		if (mb.action == IAction::PRESS)
 		{
 			if (current_widget_control < 0)
 			{
@@ -851,8 +874,8 @@ void ColorPicker::connect_mouse_handlers()
 		}
 		else if (mb.action == IAction::RELEASE)
 		{
-			release_cursor();
 			mb.consumed = true;
+			release_cursor();
 		}
 	};
 	mb_handler.children.push_back(&imgui_mb_handler);
@@ -907,11 +930,10 @@ void ColorPicker::process_mb_down_events()
 		update_display_colors();
 }
 
-void ColorPicker::take_over_cursor() const
+void ColorPicker::take_over_cursor()
 {
-	//Machine.main_window->set_mouse_mode(MouseMode::VIRTUAL);
-	Machine.main_window->override_gui_cursor_change(true);
-	Machine.main_window->set_cursor(create_cursor(StandardCursor::CROSSHAIR));
+	//Machine.main_window->set_mouse_mode(MouseMode::VIRTUAL); // TODO similar locking with mouse mode, though don't use here.
+	Machine.main_window->request_cursor(&wh_interactable, StandardCursor::CROSSHAIR);
 }
 
 void ColorPicker::release_cursor()
@@ -919,8 +941,7 @@ void ColorPicker::release_cursor()
 	if (current_widget_control >= 0)
 	{
 		//Machine.main_window->set_mouse_mode(MouseMode::VISIBLE);
-		Machine.main_window->override_gui_cursor_change(false);
-		Machine.main_window->set_cursor(create_cursor(StandardCursor::ARROW));
+		Machine.main_window->release_cursor(&wh_interactable);
 		current_widget_control = -1;
 	}
 }

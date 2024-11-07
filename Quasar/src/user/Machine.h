@@ -59,6 +59,9 @@ struct MachineImpl
 		Position initial_cursor_pos{};
 		Position initial_canvas_pos{};
 		bool panning = false;
+	private:
+		friend MachineImpl;
+		WindowHandle wh;
 	} panning_info;
 	struct
 	{

@@ -29,8 +29,9 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 			Position local_cursor_pos;
 			if (is_hovered(&local_cursor_pos))
 			{
+				if (is_pressed(m.button))
+					m.consumed = true;
 				on_release(m, local_cursor_pos);
-				m.consumed = true;
 			}
 			if (m.button == MouseButton::LEFT)
 				left_pressed = false;
