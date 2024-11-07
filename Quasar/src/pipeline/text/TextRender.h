@@ -89,6 +89,7 @@ public:
 
 	void draw() const;
 
+	// LATER add capability to buffer text "formatting" and "bounds_formatting" so that they don't need to be calculated every time in dynamic text.
 	void set_text(const UTF::String& text_) { text = text_; update_text(); }
 	void set_text(UTF::String&& text_) { text = std::move(text_); update_text(); }
 

@@ -12,7 +12,7 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 		if (m.action == IAction::PRESS)
 		{
 			Position local_cursor_pos;
-			if (contains_cursor(local_cursor_pos))
+			if (is_hovered(&local_cursor_pos))
 			{
 				on_press(m, local_cursor_pos);
 				m.consumed = true;
@@ -27,7 +27,7 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 		else if (m.action == IAction::RELEASE)
 		{
 			Position local_cursor_pos;
-			if (contains_cursor(local_cursor_pos))
+			if (is_hovered(&local_cursor_pos))
 			{
 				on_release(m, local_cursor_pos);
 				m.consumed = true;
@@ -43,12 +43,6 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 	self = wp;
 	text().format.horizontal_align = TextRender::HorizontalAlign::CENTER;
 	text().format.vertical_align = TextRender::VerticalAlign::MIDDLE;
-}
-
-bool Button::contains_cursor(Position& pos) const
-{
-	pos = bkg().local_of(Machine.cursor_world_coordinates(glm::inverse(*vp)));
-	return on_interval(pos.x, -0.5f, 0.5f) && on_interval(pos.y, -0.5f, 0.5f);
 }
 
 Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, const UTF::String& txt)
@@ -90,13 +84,6 @@ void Button::draw() const
 	text().draw();
 }
 
-void Button::process() const
-{
-	Position local_cursor_pos;
-	if (contains_cursor(local_cursor_pos))
-		on_hover(local_cursor_pos);	
-}
-
 void Button::send_vp() const
 {
 	bkg().update_transform().send_buffer();
@@ -113,4 +100,12 @@ bool Button::is_pressed(MouseButton mb) const
 		return right_pressed;
 	else
 		return false;
+}
+
+bool Button::is_hovered(Position* local_pos) const
+{
+	Position pos = bkg().local_of(Machine.cursor_world_coordinates(glm::inverse(*vp)));
+	if (local_pos)
+		*local_pos = pos;
+	return on_interval(pos.x, -0.5f, 0.5f) && on_interval(pos.y, -0.5f, 0.5f);
 }

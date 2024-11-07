@@ -122,21 +122,20 @@ void ColorPicker::cp_render_gui_back()
 		}
 		if (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL)
 		{
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
 			if (ImGui::BeginTabBar("cp-sub-tb"))
 			{
 				cp_render_tab_button(to_state, State::GRAPHIC_QUAD, state == State::GRAPHIC_QUAD, "QUAD");
 				cp_render_tab_button(to_state, State::GRAPHIC_WHEEL, state == State::GRAPHIC_WHEEL, "WHEEL");
 				ImGui::EndTabBar();
 			}
-			ImGui::SameLine();
 		}
 		else if (state == State::SLIDER_RGB)
 		{
-			b_wget(*this, BUTTON_RGB_HEX_CODE).process();
 			if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_pressed(MouseButton::LEFT))
 			{
 				auto cpos = ImGui::GetCursorPos();
-				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 40));
+				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 35));
 				ImGui::OpenPopup("hex-popup");
 			}
 			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
@@ -158,30 +157,11 @@ void ColorPicker::cp_render_gui_back()
 				}
 				ImGui::EndPopup();
 			}
-			ImGui::SameLine();
-		}
-		if (txtfld_mode == TextFieldMode::NUMBER)
-		{
-			float buttonWidth = ImGui::CalcTextSize("#").x + ImGui::GetStyle().FramePadding.x * 2;
-			ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth - ImGui::GetStyle().WindowPadding.x);
-			if (ImGui::Button("#"))
-			{
-				txtfld_mode = TextFieldMode::PERCENT;
-			}
-		}
-		else if (txtfld_mode == TextFieldMode::PERCENT)
-		{
-			float buttonWidth = ImGui::CalcTextSize("%").x + ImGui::GetStyle().FramePadding.x * 2;
-			ImGui::SetCursorPosX(ImGui::GetWindowWidth() - buttonWidth - ImGui::GetStyle().WindowPadding.x);
-			if (ImGui::Button("%"))
-			{
-				txtfld_mode = TextFieldMode::NUMBER;
-			}
 		}
 
 		float alpha = get_color().alpha;
 		float imgui_y = ImGui::GetCursorPosY();
-		if (state == State::SLIDER_RGB)
+		if (state == State::SLIDER_RGB || state == State::SLIDER_HSV || state == State::SLIDER_HSL)
 			imgui_y += 41;
 		float imgui_y_1 = imgui_y + 45;
 		float imgui_y_2 = imgui_y_1 + 70 * Machine.get_app_scale().y; // TODO slider_sep. put as global constant
@@ -305,8 +285,39 @@ void ColorPicker::cp_render_gui_back()
 
 void ColorPicker::cp_render_gui_front()
 {
+	if (b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).is_hovered())
+	{
+		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f); // TODO put colors in constexpr in cpp
+		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_fill_color().send_buffer();
+		Machine.main_window->set_cursor(create_cursor(StandardCursor::HAND));
+		Machine.main_window->override_gui_cursor_change(true); // LATER on_press, cancel this highlighting
+	}
+	else
+	{
+		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
+		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_fill_color().send_buffer();
+		Machine.main_window->set_cursor(create_cursor(StandardCursor::ARROW)); // TODO prev cursor
+		Machine.main_window->override_gui_cursor_change(false);
+	}
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
 	if (state == State::SLIDER_RGB)
 	{
+		if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_hovered())
+		{
+			b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f);
+			b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_fill_color().send_buffer();
+			Machine.main_window->set_cursor(create_cursor(StandardCursor::HAND));
+			Machine.main_window->override_gui_cursor_change(true);
+			// TODO implement "lock" on cursor change, where a void* can be set as owner. When nullptr, imgui can use it.
+			// Thus, when classes want to change cursor, they must first query if they own the cursor.
+		}
+		else
+		{
+			b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
+			b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_fill_color().send_buffer();
+			Machine.main_window->set_cursor(create_cursor(StandardCursor::ARROW)); // TODO prev cursor
+			Machine.main_window->override_gui_cursor_change(false);
+		}
 		b_wget(*this, BUTTON_RGB_HEX_CODE).draw();
 		tr_wget(*this, TEXT_RED).draw();
 		tr_wget(*this, TEXT_GREEN).draw();
@@ -433,10 +444,12 @@ void ColorPicker::initialize_widget()
 	const float text4_y = text3_y - text_sep;
 	
 	const float button_rgb_hex_code_x = -90;
-	const float button_rgb_hex_code_y = 157;
-	const float button_rgb_hex_code_scale = 0.9f;
+	const float button_switch_txtfld_mode_x = 102;
+	const float button_y = 160;
+	const float button_scale = 0.9f;
 	const float button_rgb_hex_code_w = 50;
-	const float button_rgb_hex_code_h = 30;
+	const float button_switch_txtfld_mode_w = 25;
+	const float button_h = 30;
 
 	// ---------- GRAPHIC QUAD ----------
 
@@ -674,14 +687,39 @@ void ColorPicker::initialize_widget()
 	// ---------- BUTTONS ----------
 
 	assign_widget(this, BUTTON_RGB_HEX_CODE, new Button(vp, {}, *Fonts::label_regular, 18, &round_rect_shader, mb_handler, "HEX"));
-	wp_at(BUTTON_RGB_HEX_CODE).transform.position = { button_rgb_hex_code_x, button_rgb_hex_code_y };
-	wp_at(BUTTON_RGB_HEX_CODE).transform.scale = Scale(button_rgb_hex_code_scale);
-	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().self.transform.scale = { button_rgb_hex_code_w, button_rgb_hex_code_h };
+	wp_at(BUTTON_RGB_HEX_CODE).transform.position = { button_rgb_hex_code_x, button_y };
+	wp_at(BUTTON_RGB_HEX_CODE).transform.scale = Scale(button_scale);
+	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().self.transform.scale = { button_rgb_hex_code_w, button_h };
 	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().thickness = 0.5f;
 	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().corner_radius = 5;
 	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
 	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
 	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_all();
+
+	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, new Button(vp, {}, *Fonts::label_bolditalic, 18, &round_rect_shader, mb_handler, "#"));
+	wp_at(BUTTON_SWITCH_TXTFLD_MODE).transform.position = { button_switch_txtfld_mode_x, button_y };
+	wp_at(BUTTON_SWITCH_TXTFLD_MODE).transform.scale = Scale(button_scale);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().self.transform.scale = { button_switch_txtfld_mode_w, button_h };
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().thickness = 0.5f;
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().corner_radius = 5;
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_all();
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).on_release = [this](const MouseButtonEvent& mb, Position) {
+		if (mb.button == MouseButton::LEFT)
+		{
+			if (txtfld_mode == TextFieldMode::NUMBER)
+			{
+				txtfld_mode = TextFieldMode::PERCENT;
+				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).text().set_text("%");
+			}
+			else if (txtfld_mode == TextFieldMode::PERCENT)
+			{
+				txtfld_mode = TextFieldMode::NUMBER;
+				b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).text().set_text("#");
+			}
+		}
+		};
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -1237,6 +1275,7 @@ void ColorPicker::sync_cp_widget_with_vp()
 	tr_wget(*this, TEXT_VALUE).send_vp(*vp);
 	tr_wget(*this, TEXT_LIGHT).send_vp(*vp);
 	b_wget(*this, BUTTON_RGB_HEX_CODE).send_vp();
+	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp();
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const
