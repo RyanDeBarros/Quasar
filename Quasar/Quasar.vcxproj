@@ -180,7 +180,7 @@
     <ClCompile Include="src\pipeline\render\FlatSprite.cpp" />
     <ClCompile Include="src\pipeline\panels\Panel.cpp" />
     <ClCompile Include="src\pipeline\render\Uniforms.cpp" />
-    <ClCompile Include="src\pipeline\render\UnitRenderable.cpp" />
+    <ClCompile Include="src\pipeline\render\Renderable.cpp" />
     <ClCompile Include="src\pipeline\widgets\RoundRect.cpp" />
     <ClCompile Include="src\user\GUI.cpp" />
     <ClCompile Include="src\user\Machine.cpp" />
@@ -219,7 +219,7 @@
     <ClInclude Include="src\pipeline\render\FlatSprite.h" />
     <ClInclude Include="src\pipeline\panels\Panel.h" />
     <ClInclude Include="src\pipeline\render\Uniforms.h" />
-    <ClInclude Include="src\pipeline\render\UnitRenderable.h" />
+    <ClInclude Include="src\pipeline\render\Renderable.h" />
     <ClInclude Include="src\pipeline\widgets\RoundRect.h" />
     <ClInclude Include="src\pipeline\widgets\Widgets.h" />
     <ClInclude Include="src\user\Preferences.h" />

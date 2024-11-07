@@ -29,6 +29,10 @@ namespace UTF
 		String(const char16_t* str) : str(encode(std::u16string(str))) {}
 		String(const char32_t* str) : str(encode(std::u32string(str))) {}
 		String() = default;
+		String(const String&) = default;
+		String(String&&) noexcept = default;
+		String& operator=(const String&) = default;
+		String& operator=(String&&) noexcept = default;
 
 		class Iterator
 		{
@@ -37,6 +41,10 @@ namespace UTF
 
 			friend class UTF::String;
 			Iterator(const String& string, size_t i) : string(string), i(i) {}
+			Iterator(const Iterator&) = default;
+			Iterator(Iterator&&) noexcept = default;
+			Iterator& operator=(const Iterator&) = default;
+			Iterator& operator=(Iterator&&) noexcept = default;
 
 		public:
 			int codepoint() const;

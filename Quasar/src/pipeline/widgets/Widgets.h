@@ -2,7 +2,7 @@
 
 #include "variety/Geometry.h"
 #include "variety/Utils.h"
-#include "../render/UnitRenderable.h"
+#include "../render/Renderable.h"
 
 struct WidgetPlacement
 {

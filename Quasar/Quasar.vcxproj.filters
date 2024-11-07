@@ -114,7 +114,7 @@
     <ClCompile Include="src\pipeline\render\Uniforms.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\render\UnitRenderable.cpp">
+    <ClCompile Include="src\pipeline\render\Renderable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\pipeline\widgets\RoundRect.cpp">
@@ -1118,7 +1118,7 @@
     <ClInclude Include="src\pipeline\render\Uniforms.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\render\UnitRenderable.h">
+    <ClInclude Include="src\pipeline\render\Renderable.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\pipeline\widgets\RoundRect.h">

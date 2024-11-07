@@ -77,7 +77,7 @@ Cursor::Cursor(Cursor&& other) noexcept
 
 Cursor& Cursor::operator=(Cursor&& other) noexcept
 {
-	if (this != &other) // TODO add more safeguards in project
+	if (this != &other)
 	{
 		glfwDestroyCursor(cursor);
 		cursor = other.cursor;
