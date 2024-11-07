@@ -59,6 +59,9 @@ struct MachineImpl
 		Position initial_cursor_pos{};
 		Position initial_canvas_pos{};
 		bool panning = false;
+	private:
+		friend MachineImpl;
+		WindowHandle wh;
 	} panning_info;
 	struct
 	{
@@ -76,7 +79,7 @@ struct MachineImpl
 	void destroy();
 	void exit() const { main_window->request_close(); }
 	bool should_exit() const;
-	void on_render() const;
+	void on_render();
 	void mark();
 	void unmark();
 	Scale inv_app_scale() const;
@@ -85,6 +88,10 @@ struct MachineImpl
 	void set_clear_color(ColorFrame color);
 
 	ClippingRect main_window_clip() const { return ClippingRect(0, 0, main_window->width(), main_window->height()); }
+	
+	Position to_world_coordinates(Position screen_coordinates, const glm::mat3& inverse_vp) const;
+	Position to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const;
+	Position cursor_world_coordinates(const glm::mat3& inverse_vp) const;
 
 	// Panels
 	glm::vec2 easel_cursor_world_pos() const;
@@ -121,7 +128,7 @@ struct MachineImpl
 	void canvas_begin_panning();
 	void canvas_end_panning();
 	void canvas_cancel_panning();
-	void canvas_update_panning() const;
+	void canvas_update_panning();
 	void canvas_zoom_by(float zoom);
 
 	// Edit menu

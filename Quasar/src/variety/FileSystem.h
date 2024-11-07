@@ -13,6 +13,10 @@ public:
 	FilePath(std::string&& path) : path(std::move(path)) { to_unix_format(); }
 	FilePath& operator=(const char* path_) { path = path_ ? path_ : ""; to_unix_format(); return *this; }
 	FilePath& operator=(std::string&& path_) { path = std::move(path_); to_unix_format(); return *this; }
+	FilePath(const FilePath&) = default;
+	FilePath(FilePath&&) noexcept = default;
+	FilePath& operator=(const FilePath&) = default;
+	FilePath& operator=(FilePath&&) = default;
 
 	bool operator==(const FilePath& other) const { return path == other.path; }
 	FilePath operator/(const FilePath& relative) const
@@ -67,6 +71,16 @@ struct FileSystem
 	static FilePath resources_path(const FilePath& relative)
 	{
 		return relative.is_relative() ? resources_root / relative : relative;
+	}
+
+	static FilePath shader_path(const FilePath& relative)
+	{
+		return relative.is_relative() ? resources_root / "shaders/" / relative : relative;
+	}
+
+	static FilePath font_path(const FilePath& relative)
+	{
+		return relative.is_relative() ? resources_root / "fonts/" / relative : relative;
 	}
 
 	static FilePath workspace_path(const FilePath& relative)

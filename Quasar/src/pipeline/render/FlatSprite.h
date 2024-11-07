@@ -4,6 +4,8 @@
 #include "edit/Color.h"
 #include "edit/Image.h"
 
+// LATER use renderables here
+
 struct FlatSprite
 {
 	static constexpr unsigned char NUM_VERTICES = 4;

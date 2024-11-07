@@ -24,9 +24,6 @@
     <ClCompile Include="src\Macros.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\Shader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="vendor\glm\detail\glm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -75,9 +72,6 @@
     <ClCompile Include="src\user\GUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\FlatSprite.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\variety\FileSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -93,19 +87,46 @@
     <ClCompile Include="src\pipeline\panels\Easel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\ColorPicker.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\pipeline\panels\Panel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\pipeline\UnitRenderable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\edit\Color.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\Uniforms.cpp">
+    <ClCompile Include="src\Logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\text\Font.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\text\TextRender.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\variety\UTF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\widgets\ColorPicker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\render\FlatSprite.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\render\Uniforms.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\render\Renderable.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\widgets\RoundRect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\render\Shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\text\CommonFonts.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\widgets\Button.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -114,9 +135,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Macros.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pipeline\Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="vendor\glm\detail\_features.hpp">
@@ -1052,9 +1070,6 @@
     <ClInclude Include="src\user\GUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\FlatSprite.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\variety\FileSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1076,22 +1091,52 @@
     <ClInclude Include="src\pipeline\panels\Easel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\ColorPicker.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\pipeline\panels\Panel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\UnitRenderable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pipeline\Widgets.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\pipeline\Uniforms.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\user\UserInput.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\text\Font.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\text\TextRender.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\variety\UTF.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\widgets\ColorPicker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\render\FlatSprite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\render\Uniforms.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\render\Renderable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\widgets\RoundRect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\widgets\Widgets.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\render\Shader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\stb\stb_truetype.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\text\CommonFonts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\widgets\Button.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

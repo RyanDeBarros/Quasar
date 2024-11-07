@@ -2,11 +2,11 @@
 
 #include "user/Machine.h"
 #include "variety/GLutility.h"
-#include "../Uniforms.h"
+#include "../render/Uniforms.h"
 
 Palette::Palette()
-	: sprite_shader(FileSystem::resources_path("flatsprite.vert"), FileSystem::resources_path("flatsprite.frag")),
-	color_picker(Machine.palette_mb_handler, Machine.palette_key_handler) // LATER initialize panels early and put mb_handlers as data members of panels?
+	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
+	color_picker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler) // LATER initialize panels early and put mb_handlers as data members of panels?
 {
 	static constexpr size_t num_quads = 1;
 
@@ -17,7 +17,7 @@ Palette::Palette()
 	GLuint IARR[num_quads * 6]{
 		0, 1, 2, 2, 3, 0
 	};
-	gen_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
+	initialize_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
 	
 	background.sync_texture_slot(-1.0f);
 	background.set_image(nullptr, 1, 1);
@@ -56,14 +56,12 @@ void Palette::_send_view()
 	background.transform.scale = get_app_size();
 	background.sync_transform();
 	subsend_background_vao();
-	glm::mat3 cameraVP = vp_matrix();
-	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
+	vp = vp_matrix();
+	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
 
-	color_picker.size = Scale{ 240, 420 } * Machine.get_app_scale();
-	Position pos_rel{ 0.0f, 0.275f };
-	Position ppos = pos_rel * glm::vec2{ bounds.clip().screen_w, bounds.clip().screen_h } * Machine.inv_app_scale();
-	auto test = bounds.clip().screen_w;
-	color_picker.set_position(ppos, to_screen_coordinates(ppos));
-	color_picker.send_vp(cameraVP);
+	Scale color_picker_size{ 240, 420 };
+	color_picker.set_size(color_picker_size);
+	color_picker.set_position({ 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * 0.5f - 25 });
+	color_picker.send_vp();
 	unbind_shader();
 }

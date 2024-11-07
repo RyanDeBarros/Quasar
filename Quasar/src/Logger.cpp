@@ -3,6 +3,9 @@
 #include <iostream>
 #include <chrono>
 
+// LATER translate OpenGL error codes
+// LATER submit_count to batch X amount of statements before flushing.
+
 Logger& Logger::specify_logfile(const char* filepath, bool append)
 {
 	file.close();
@@ -333,4 +336,39 @@ Logger& Logger::operator<<(const std::string_view& str)
 {
 	stream << str;
 	return *this;
+}
+
+Logger& operator<<(Logger&, glm::vec2 v)
+{
+	return LOG << "(" << v.x << ", " << v.y << ")";
+}
+
+Logger& operator<<(Logger&, glm::vec3 v)
+{
+	return LOG << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+}
+
+Logger& operator<<(Logger&, glm::vec4 v)
+{
+	return LOG << "(" << v.x << ", " << v.y << ", " << v.z << ", " << v.w << ")";
+}
+
+Logger& operator<<(Logger&, const glm::mat2& m)
+{
+	return LOG << "[(" << m[0][0] << ", " << m[0][1] << ") | (" << m[1][0] << ", " << m[1][1] << ")]";
+}
+
+Logger& operator<<(Logger&, const glm::mat3& m)
+{
+	return LOG << "[(" << m[0][0] << ", " << m[0][1] << ", " << m[0][2] << ") | ("
+		<< m[1][0] << ", " << m[1][1] << ", " << m[1][2] << ") | ("
+		<< m[2][0] << ", " << m[2][1] << ", " << m[2][2] << ")]";
+}
+
+Logger& operator<<(Logger&, const glm::mat4& m)
+{
+	return LOG << "[(" << m[0][0] << ", " << m[0][1] << ", " << m[0][2] << ", " << m[0][3] << ") | ("
+		<< m[1][0] << ", " << m[1][1] << ", " << m[1][2] << ", " << m[1][3] << ") | ("
+		<< m[2][0] << ", " << m[2][1] << ", " << m[2][2] << ", " << m[2][3] << ") | ("
+		<< m[3][0] << ", " << m[3][1] << ", " << m[3][2] << ", " << m[3][3] << ")]";
 }

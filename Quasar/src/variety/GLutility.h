@@ -25,6 +25,15 @@ inline void attrib_pointers(const std::vector<unsigned short> attrib_lengths, un
 	}
 }
 
+inline void attrib_new_pointers(const std::vector<unsigned short> old_attrib_lengths, unsigned short old_stride, const std::vector<unsigned short> new_attrib_lengths, unsigned short new_stride)
+{
+	for (GLuint i = GLuint(new_attrib_lengths.size()); i < old_attrib_lengths.size(); ++i)
+	{
+		QUASAR_GL(glDisableVertexAttribArray(i));
+	}
+	attrib_pointers(new_attrib_lengths, new_stride);
+}
+
 inline void bind_vao_buffers(GLuint vao, GLuint vb, GLuint ib)
 {
 	QUASAR_GL(glBindVertexArray(vao));
@@ -45,27 +54,57 @@ inline void unbind_vao_buffers()
 	QUASAR_GL(glBindVertexArray(0));
 }
 
-inline void gen_dynamic_vao(GLuint& vao, GLuint& vb, GLuint& ib, size_t vertex_count, unsigned short vertex_stride, size_t index_count,
-	const GLfloat* varr, const GLuint* iarr, const std::vector<unsigned short>& attributes)
+inline void gen_dynamic_vao(GLuint& vao, GLuint& vb, GLuint& ib, bool bind = false)
 {
 	QUASAR_GL(glGenVertexArrays(1, &vao));
 	QUASAR_GL(glGenBuffers(1, &vb));
 	QUASAR_GL(glGenBuffers(1, &ib));
-	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, vertex_count * vertex_stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
-	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_count * sizeof(GLuint), iarr, GL_DYNAMIC_DRAW));
-	attrib_pointers(attributes, vertex_stride);
-	unbind_vao_buffers();
+	if (bind)
+		bind_vao_buffers(vao, vb, ib);
 }
 
-inline void gen_dynamic_vao(GLuint& vao, GLuint& vb, size_t vertex_count, unsigned short vertex_stride, const GLfloat* varr, const std::vector<unsigned short>& attributes)
+inline void gen_dynamic_vao(GLuint& vao, GLuint& vb, bool bind = false)
 {
 	QUASAR_GL(glGenVertexArrays(1, &vao));
 	QUASAR_GL(glGenBuffers(1, &vb));
+	if (bind)
+		bind_vao_buffers(vao, vb);
+}
+
+inline void buffer_data(GLuint vao, GLuint vb, GLuint ib, size_t vertex_count, unsigned short vertex_stride, size_t index_count, const GLfloat* varr, const GLuint* iarr, bool unbind = false)
+{
+	bind_vao_buffers(vao, vb, ib);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, vertex_count * vertex_stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
+	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_count * sizeof(GLuint), iarr, GL_DYNAMIC_DRAW));
+	if (unbind)
+		unbind_vao_buffers();
+}
+
+inline void buffer_data(GLuint vao, GLuint vb, size_t vertex_count, unsigned short vertex_stride, const GLfloat* varr, bool unbind = false)
+{
 	bind_vao_buffers(vao, vb);
 	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, vertex_count * vertex_stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
+	if (unbind)
+		unbind_vao_buffers();
+}
+
+inline void initialize_dynamic_vao(GLuint& vao, GLuint& vb, GLuint& ib, size_t vertex_count, unsigned short vertex_stride, size_t index_count,
+	const GLfloat* varr, const GLuint* iarr, const std::vector<unsigned short>& attributes, bool unbind = true)
+{
+	gen_dynamic_vao(vao, vb, ib);
+	buffer_data(vao, vb, ib, vertex_count, vertex_stride, index_count, varr, iarr);
 	attrib_pointers(attributes, vertex_stride);
-	unbind_vao_buffers();
+	if (unbind)
+		unbind_vao_buffers();
+}
+
+inline void initialize_dynamic_vao(GLuint& vao, GLuint& vb, size_t vertex_count, unsigned short vertex_stride, const GLfloat* varr, const std::vector<unsigned short>& attributes, bool unbind = true)
+{
+	gen_dynamic_vao(vao, vb);
+	buffer_data(vao, vb, vertex_count, vertex_stride, varr);
+	attrib_pointers(attributes, vertex_stride);
+	if (unbind)
+		unbind_vao_buffers();
 }
 
 inline void delete_vao_buffers(GLuint vao, GLuint vb, GLuint ib)
@@ -104,4 +143,16 @@ inline void unbind_shader()
 		QUASAR_GL(glUseProgram(0));
 		_currently_bound_shader = 0;
 	}
+}
+
+struct GLConstants
+{
+	GLint max_texture_image_units;
+};
+
+inline GLConstants GLC{};
+
+inline void query_gl_constants()
+{
+	QUASAR_GL(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &GLC.max_texture_image_units));
 }

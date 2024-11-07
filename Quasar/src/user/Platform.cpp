@@ -6,20 +6,6 @@
 #include "Machine.h"
 #include "GUI.h"
 
-GLFWcursor* create_cursor(StandardCursor standard_cursor)
-{
-	return glfwCreateStandardCursor(int(standard_cursor));
-}
-
-GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot)
-{
-	GLFWimage image{};
-	image.pixels = rgba_pixels;
-	image.width = width;
-	image.height = height;
-	return glfwCreateCursor(&image, xhot, yhot);
-}
-
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
 	auto win = Windows[window];
@@ -69,7 +55,43 @@ static void display_scale_callback(GLFWwindow* window, float x_scale, float y_sc
 	win->root_display_scale.on_callback(event);
 }
 
-Window::Window(const char* title, int width, int height, bool enable_gui, ImFontAtlas* gui_font_atlas, GLFWcursor* cursor)
+Cursor::Cursor(StandardCursor standard_cursor)
+	: cursor(glfwCreateStandardCursor(int(standard_cursor)))
+{
+}
+
+Cursor::Cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot)
+{
+	GLFWimage image{};
+	image.pixels = rgba_pixels;
+	image.width = width;
+	image.height = height;
+	cursor = glfwCreateCursor(&image, xhot, yhot);
+}
+
+Cursor::Cursor(Cursor&& other) noexcept
+	: cursor(other.cursor)
+{
+	other.cursor = nullptr;
+}
+
+Cursor& Cursor::operator=(Cursor&& other) noexcept
+{
+	if (this != &other)
+	{
+		glfwDestroyCursor(cursor);
+		cursor = other.cursor;
+		other.cursor = nullptr;
+	}
+	return *this;
+}
+
+Cursor::~Cursor()
+{
+	glfwDestroyCursor(cursor);
+}
+
+Window::Window(const char* title, int width, int height, bool enable_gui, ImFontAtlas* gui_font_atlas, Cursor&& cursor)
 {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
@@ -101,8 +123,17 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 	glfwSetWindowContentScaleCallback(window, display_scale_callback);
 	// LATER use better input system than callback vectors. Instead, use input hierarchy that can consume input events at different nodes.
 
-	if (cursor)
-		glfwSetCursor(window, cursor);
+	if (cursor.cursor)
+	{
+		glfwSetCursor(window, cursor.cursor);
+		current_cursor = std::move(cursor);
+	}
+	else
+	{
+		current_cursor = StandardCursor::ARROW;
+	}
+	prev_cursor = StandardCursor::ARROW;
+
 
 	if (enable_gui)
 	{
@@ -215,13 +246,101 @@ void Window::set_maximized(bool maximized_)
 		toggle_maximized();
 }
 
-void Window::override_gui_cursor_change(bool _override) const
+bool Window::is_cursor_available(const WindowHandle* owner) const
 {
-	ImGui::SetCurrentContext(gui_context);
-	if (_override)
+	return owner && (!cursor_owner || cursor_owner == owner);
+}
+
+bool Window::owns_cursor(const WindowHandle* owner) const
+{
+	return owner == cursor_owner;
+}
+
+void Window::request_cursor(WindowHandle* owner, Cursor&& cursor)
+{
+	if (!owner)
+		return;
+	if (!cursor_owner || owner == cursor_owner)
+	{
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+		cursor_owner = owner;
+		prev_cursor = std::move(current_cursor);
+		current_cursor = std::move(cursor);
+		glfwSetCursor(window, current_cursor.cursor);
+		owner->flags |= WindowHandle::OWN_CURSOR;
+	}
 	else
+		owner->flags &= ~WindowHandle::OWN_CURSOR;
+}
+
+void Window::release_cursor(WindowHandle* owner)
+{
+	if (owner && owner == cursor_owner)
+	{
+		owner->flags &= ~WindowHandle::OWN_CURSOR;
+		cursor_owner = nullptr;
+		current_cursor = std::move(prev_cursor);
+		glfwSetCursor(window, current_cursor.cursor);
 		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+	}
+}
+
+void Window::eject_cursor()
+{
+	if (cursor_owner)
+	{
+		cursor_owner = nullptr;
+		current_cursor = std::move(prev_cursor);
+		glfwSetCursor(window, current_cursor.cursor);
+		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
+	}
+}
+
+bool Window::is_mouse_mode_available(const WindowHandle* owner) const
+{
+	return owner && (!mouse_mode_owner || mouse_mode_owner == owner);
+}
+
+bool Window::owns_mouse_mode(const WindowHandle* owner) const
+{
+	return owner == mouse_mode_owner;
+}
+
+void Window::request_mouse_mode(WindowHandle* owner, MouseMode mouse_mode)
+{
+	if (!owner)
+		return;
+	if (!mouse_mode_owner || owner == mouse_mode_owner)
+	{
+		mouse_mode_owner = owner;
+		prev_mouse_mode = current_mouse_mode;
+		current_mouse_mode = mouse_mode;
+		glfwSetInputMode(window, GLFW_CURSOR, int(current_mouse_mode));
+		owner->flags |= WindowHandle::OWN_MOUSE_MODE;
+	}
+	else
+		owner->flags &= ~WindowHandle::OWN_MOUSE_MODE;
+}
+
+void Window::release_mouse_mode(WindowHandle* owner)
+{
+	if (owner && owner == mouse_mode_owner)
+	{
+		owner->flags &= ~WindowHandle::OWN_MOUSE_MODE;
+		mouse_mode_owner = nullptr;
+		current_mouse_mode = prev_mouse_mode;
+		glfwSetInputMode(window, GLFW_CURSOR, int(current_mouse_mode));
+	}
+}
+
+void Window::eject_mouse_mode()
+{
+	if (mouse_mode_owner)
+	{
+		mouse_mode_owner = nullptr;
+		current_mouse_mode = prev_mouse_mode;
+		glfwSetInputMode(window, GLFW_CURSOR, int(current_mouse_mode));
+	}
 }
 
 void Window::destroy()
@@ -234,11 +353,6 @@ void Window::destroy()
 		glfwDestroyWindow(window);
 		window = nullptr;
 	}
-}
-
-void Window::set_cursor(GLFWcursor* cursor) const
-{
-	glfwSetCursor(window, cursor);
 }
 
 void Window::set_width(int width) const

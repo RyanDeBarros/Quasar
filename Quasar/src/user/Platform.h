@@ -83,9 +83,6 @@ namespace Mods
 	};
 }
 
-extern GLFWcursor* create_cursor(StandardCursor standard_cursor);
-extern GLFWcursor* create_cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot);
-
 struct InputEvent
 {
 	mutable bool consumed = false;
@@ -111,7 +108,9 @@ struct InputEventHandler
 
 	void remove_child(const InputEventHandler<Event>* child)
 	{
-		children.erase(std::find(children.begin(), children.end(), child));
+		auto iter = std::find(children.begin(), children.end(), child);
+		if (iter != children.end())
+			children.erase(iter);
 	}
 };
 
@@ -188,6 +187,27 @@ struct DisplayScaleEvent : public InputEvent
 
 typedef InputEventHandler<DisplayScaleEvent> DisplayScaleHandler;
 
+struct WindowHandle
+{
+	unsigned char flags = 0;
+	
+	static const unsigned char OWN_CURSOR = 0b1;
+	static const unsigned char OWN_MOUSE_MODE = 0b10;
+};
+
+struct Cursor
+{
+	GLFWcursor* cursor = nullptr;
+
+	Cursor() = default;
+	Cursor(StandardCursor standard_cursor);
+	Cursor(unsigned char* rgba_pixels, int width, int height, int xhot, int yhot);
+	Cursor(const Cursor&) = delete;
+	Cursor(Cursor&&) noexcept;
+	Cursor& operator=(Cursor&&) noexcept;
+	~Cursor();
+};
+
 struct Window
 {
 	GLFWwindow* window = nullptr;
@@ -201,14 +221,13 @@ struct Window
 	WindowMaximizeHandler root_window_maximize;
 	DisplayScaleHandler root_display_scale;
 
-	Window(const char* title, int width, int height, bool enable_gui = true, ImFontAtlas* gui_font_atlas = nullptr, GLFWcursor* cursor = nullptr);
+	Window(const char* title, int width, int height, bool enable_gui = true, ImFontAtlas* gui_font_atlas = nullptr, Cursor&& cursor = Cursor());
 	Window(const Window&) = delete;
 	Window(Window&&) noexcept = delete;
 	~Window();
 
 	operator bool() const { return window != nullptr; }
 
-	void set_cursor(GLFWcursor* cursor) const;
 	void set_width(int width) const;
 	void set_height(int height) const;
 	void set_size(int width, int height) const;
@@ -235,7 +254,6 @@ struct Window
 	glm::vec2 pos_center_normalized(const glm::vec2& pos) const { return glm::vec2{ -0.5f * width() + pos.x, 0.5f * height() - pos.y }; }
 
 	MouseMode mouse_mode() const { return MouseMode(glfwGetInputMode(window, GLFW_CURSOR)); }
-	void set_mouse_mode(MouseMode mouse_mode) const { glfwSetInputMode(window, GLFW_CURSOR, int(mouse_mode)); }
 	bool raw_mouse_motion() const { return glfwGetInputMode(window, GLFW_RAW_MOUSE_MOTION) == GLFW_TRUE; }
 	void set_raw_mouse_motion(bool raw_mouse_motion) const
 	{ if (glfwRawMouseMotionSupported()) glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, raw_mouse_motion ? GLFW_TRUE : GLFW_FALSE); }
@@ -254,7 +272,17 @@ struct Window
 	bool is_super_pressed() const { return is_key_pressed(Key::LEFT_SUPER) || is_key_pressed(Key::RIGHT_SUPER); }
 	bool is_mouse_button_pressed(MouseButton mb) const { return glfwGetMouseButton(window, int(mb)) != int(IAction::RELEASE); }
 
-	void override_gui_cursor_change(bool _override) const;
+	bool is_cursor_available(const WindowHandle* owner) const;
+	bool owns_cursor(const WindowHandle* owner) const;
+	void request_cursor(WindowHandle* owner, Cursor&& cursor);
+	void release_cursor(WindowHandle* owner);
+	void eject_cursor();
+
+	bool is_mouse_mode_available(const WindowHandle* owner) const;
+	bool owns_mouse_mode(const WindowHandle* owner) const;
+	void request_mouse_mode(WindowHandle* owner, MouseMode mouse_mode);
+	void release_mouse_mode(WindowHandle* owner);
+	void eject_mouse_mode();
 
 private:
 	int pre_fullscreen_x = 0;
@@ -266,6 +294,14 @@ private:
 
 	KeyHandler window_maximizer;
 	
+	const WindowHandle* cursor_owner = nullptr;
+	Cursor current_cursor;
+	Cursor prev_cursor;
+
+	const WindowHandle* mouse_mode_owner = nullptr;
+	MouseMode current_mouse_mode = MouseMode::VISIBLE;
+	MouseMode prev_mouse_mode = MouseMode::VISIBLE;
+
 	void destroy();
 };
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 #include <sstream>
 #include <fstream>
 
@@ -100,3 +102,10 @@ public:
 };
 
 inline Logger& LOG = Logger::instance();
+
+extern Logger& operator<<(Logger&, glm::vec2);
+extern Logger& operator<<(Logger&, glm::vec3);
+extern Logger& operator<<(Logger&, glm::vec4);
+extern Logger& operator<<(Logger&, const glm::mat2&);
+extern Logger& operator<<(Logger&, const glm::mat3&);
+extern Logger& operator<<(Logger&, const glm::mat4&);

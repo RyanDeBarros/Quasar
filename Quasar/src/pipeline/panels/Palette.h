@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Panel.h"
-#include "../FlatSprite.h"
-#include "../Shader.h"
-#include "../ColorPicker.h"
+#include "../render/FlatSprite.h"
+#include "../render/Shader.h"
+#include "../widgets/ColorPicker.h"
 
 struct Palette : public Panel
 {
@@ -11,8 +11,8 @@ struct Palette : public Panel
 	SharedFlatSprite background;
 	GLuint vao = 0, vb = 0, ib = 0;
 	Shader sprite_shader;
-
-	ColorPicker color_picker; // use internal vao
+	glm::mat3 vp;
+	ColorPicker color_picker;
 
 	Palette();
 	Palette(const Palette&) = delete;

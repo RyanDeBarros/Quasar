@@ -7,6 +7,8 @@
 #include "pipeline/panels/Panel.h"
 #include "pipeline/panels/Easel.h"
 #include "pipeline/panels/Palette.h"
+#include "pipeline/text/TextRender.h"
+#include "pipeline/text/CommonFonts.h"
 #include "variety/GLutility.h"
 #include "variety/Utils.h"
 
@@ -46,6 +48,7 @@ bool MachineImpl::create_main_window()
 	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height);
 	if (main_window)
 	{
+		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
 		main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
@@ -72,6 +75,8 @@ void MachineImpl::init_renderer()
 	QUASAR_GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 	main_window->focus_context();
 	set_clear_color(ColorFrame(RGB(0.1f, 0.1f, 0.1f), 0.1f)); // SETTINGS
+	
+	Fonts::load_common_fonts();
 
 	panels = new PanelGroup();
 	panels->panels.push_back(std::make_unique<Easel>());
@@ -120,6 +125,7 @@ void MachineImpl::destroy()
 {
 	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(panels);
+	main_window->release_cursor(&panning_info.wh);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 
@@ -128,7 +134,7 @@ bool MachineImpl::should_exit() const
 	return main_window->should_close();
 }
 
-void MachineImpl::on_render() const
+void MachineImpl::on_render()
 {
 	canvas_update_panning();
 	main_window->new_frame();
@@ -191,6 +197,36 @@ void MachineImpl::set_clear_color(ColorFrame color)
 {
 	auto vec = color.rgba().as_vec();
 	QUASAR_GL(glClearColor(vec[0], vec[1], vec[2], vec[3]));
+}
+
+Position MachineImpl::to_world_coordinates(Position screen_coordinates, const glm::mat3& inverse_vp) const
+{
+	glm::vec3 ndc{
+		1.0f - 2.0f * (screen_coordinates.x / main_window->width()),
+		1.0f - 2.0f * (screen_coordinates.y / main_window->height()),
+		1.0f
+	};
+
+	glm::vec3 world_pos = inverse_vp * ndc;
+	if (world_pos.z != 0.0f)
+		world_pos / world_pos.z;
+
+	return { -world_pos.x, -world_pos.y };
+}
+
+Position MachineImpl::to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const
+{
+	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
+	glm::vec3 clip_space_pos = vp * world_pos;
+	return {
+		(1.0f + clip_space_pos.x) * 0.5f * main_window->width(),
+		(1.0f + clip_space_pos.y) * 0.5f * main_window->height()
+	};
+}
+
+Position MachineImpl::cursor_world_coordinates(const glm::mat3& inverse_vp) const
+{
+	return to_world_coordinates(main_window->cursor_pos(), inverse_vp);
 }
 
 glm::vec2 MachineImpl::easel_cursor_world_pos() const
@@ -351,7 +387,7 @@ void MachineImpl::import_file(const FilePath& filepath)
 {	
 	easel()->set_canvas_image(std::make_shared<Image>(filepath));
 	auto title = "Quasar - " + filepath.filename();
-	main_window->set_title(title.c_str());
+	main_window->set_title(title.c_str()); // LATER don't set title of window. put image filename in bottom status bar
 	canvas_reset_camera();
 }
 
@@ -367,8 +403,7 @@ void MachineImpl::canvas_begin_panning()
 		panning_info.initial_canvas_pos = canvas_position();
 		panning_info.initial_cursor_pos = easel()->get_app_cursor_pos();
 		panning_info.panning = true;
-		main_window->override_gui_cursor_change(true);
-		main_window->set_cursor(create_cursor(StandardCursor::RESIZE_OMNI));
+		main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
 	}
 }
 
@@ -377,9 +412,8 @@ void MachineImpl::canvas_end_panning()
 	if (panning_info.panning)
 	{
 		panning_info.panning = false;
-		main_window->override_gui_cursor_change(false);
-		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
-		main_window->set_mouse_mode(MouseMode::VISIBLE);
+		main_window->release_cursor(&panning_info.wh);
+		main_window->release_mouse_mode(&panning_info.wh);
 	}
 }
 
@@ -390,13 +424,12 @@ void MachineImpl::canvas_cancel_panning()
 		panning_info.panning = false;
 		canvas_position() = panning_info.initial_canvas_pos;
 		sync_canvas_transform();
-		main_window->override_gui_cursor_change(false);
-		main_window->set_cursor(create_cursor(StandardCursor::ARROW));
-		main_window->set_mouse_mode(MouseMode::VISIBLE);
+		main_window->release_cursor(&panning_info.wh);
+		main_window->release_mouse_mode(&panning_info.wh);
 	}
 }
 
-void MachineImpl::canvas_update_panning() const
+void MachineImpl::canvas_update_panning()
 {
 	if (panning_info.panning)
 	{
@@ -412,8 +445,8 @@ void MachineImpl::canvas_update_panning() const
 		canvas_position() = pos;
 		sync_canvas_transform();
 
-		if (main_window->mouse_mode() != MouseMode::VIRTUAL && !easel()->cursor_in_clipping())
-			main_window->set_mouse_mode(MouseMode::VIRTUAL);
+		if (!main_window->owns_mouse_mode(&panning_info.wh) && !easel()->cursor_in_clipping())
+			main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
 		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
 		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
 	}

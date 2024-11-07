@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -169,20 +169,26 @@
     <ClCompile Include="src\edit\PixelBuffer.cpp" />
     <ClCompile Include="src\edit\PixelBufferPaths.cpp" />
     <ClCompile Include="src\Logger.cpp" />
-    <ClCompile Include="src\pipeline\ColorPicker.cpp" />
+    <ClCompile Include="src\pipeline\text\CommonFonts.cpp" />
+    <ClCompile Include="src\pipeline\text\Font.cpp" />
+    <ClCompile Include="src\pipeline\text\TextRender.cpp" />
+    <ClCompile Include="src\pipeline\widgets\Button.cpp" />
+    <ClCompile Include="src\variety\UTF.cpp" />
+    <ClCompile Include="src\pipeline\widgets\ColorPicker.cpp" />
     <ClCompile Include="src\pipeline\panels\Palette.cpp" />
     <ClCompile Include="src\pipeline\panels\Easel.cpp" />
-    <ClCompile Include="src\pipeline\FlatSprite.cpp" />
+    <ClCompile Include="src\pipeline\render\FlatSprite.cpp" />
     <ClCompile Include="src\pipeline\panels\Panel.cpp" />
-    <ClCompile Include="src\pipeline\Uniforms.cpp" />
-    <ClCompile Include="src\pipeline\UnitRenderable.cpp" />
+    <ClCompile Include="src\pipeline\render\Uniforms.cpp" />
+    <ClCompile Include="src\pipeline\render\Renderable.cpp" />
+    <ClCompile Include="src\pipeline\widgets\RoundRect.cpp" />
     <ClCompile Include="src\user\GUI.cpp" />
     <ClCompile Include="src\user\Machine.cpp" />
     <ClCompile Include="src\variety\FileSystem.cpp" />
     <ClCompile Include="src\variety\IO.cpp" />
     <ClCompile Include="src\Macros.cpp" />
     <ClCompile Include="src\Quasar.cpp" />
-    <ClCompile Include="src\pipeline\Shader.cpp" />
+    <ClCompile Include="src\pipeline\render\Shader.cpp" />
     <ClCompile Include="src\user\Platform.cpp" />
     <ClCompile Include="src\user\UserInput.cpp" />
     <ClCompile Include="vendor\glm\detail\glm.cpp" />
@@ -202,14 +208,20 @@
     <ClInclude Include="src\edit\PixelBuffer.h" />
     <ClInclude Include="src\edit\PixelBufferPaths.h" />
     <ClInclude Include="src\Logger.h" />
-    <ClInclude Include="src\pipeline\ColorPicker.h" />
+    <ClInclude Include="src\pipeline\text\CommonFonts.h" />
+    <ClInclude Include="src\pipeline\text\Font.h" />
+    <ClInclude Include="src\pipeline\text\TextRender.h" />
+    <ClInclude Include="src\pipeline\widgets\Button.h" />
+    <ClInclude Include="src\variety\UTF.h" />
+    <ClInclude Include="src\pipeline\widgets\ColorPicker.h" />
     <ClInclude Include="src\pipeline\panels\Palette.h" />
     <ClInclude Include="src\pipeline\panels\Easel.h" />
-    <ClInclude Include="src\pipeline\FlatSprite.h" />
+    <ClInclude Include="src\pipeline\render\FlatSprite.h" />
     <ClInclude Include="src\pipeline\panels\Panel.h" />
-    <ClInclude Include="src\pipeline\Uniforms.h" />
-    <ClInclude Include="src\pipeline\UnitRenderable.h" />
-    <ClInclude Include="src\pipeline\Widgets.h" />
+    <ClInclude Include="src\pipeline\render\Uniforms.h" />
+    <ClInclude Include="src\pipeline\render\Renderable.h" />
+    <ClInclude Include="src\pipeline\widgets\RoundRect.h" />
+    <ClInclude Include="src\pipeline\widgets\Widgets.h" />
     <ClInclude Include="src\user\Preferences.h" />
     <ClInclude Include="src\user\UserInput.h" />
     <ClInclude Include="src\variety\FileSystem.h" />
@@ -222,7 +234,7 @@
     <ClInclude Include="src\edit\Image.h" />
     <ClInclude Include="src\variety\IO.h" />
     <ClInclude Include="src\Macros.h" />
-    <ClInclude Include="src\pipeline\Shader.h" />
+    <ClInclude Include="src\pipeline\render\Shader.h" />
     <ClInclude Include="src\variety\Utils.h" />
     <ClInclude Include="src\user\Platform.h" />
     <ClInclude Include="vendor\glm\common.hpp" />
@@ -524,6 +536,7 @@
     <ClInclude Include="vendor\imgui\imstb_truetype.h" />
     <ClInclude Include="vendor\stb\stb_image.h" />
     <ClInclude Include="vendor\stb\stb_image_write.h" />
+    <ClInclude Include="vendor\stb\stb_truetype.h" />
     <ClInclude Include="vendor\tinyfd\more_dialogs\tinyfd_moredialogs.h" />
     <ClInclude Include="vendor\tinyfd\tinyfiledialogs.h" />
     <ClInclude Include="vendor\toml\toml.hpp" />

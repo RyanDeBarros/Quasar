@@ -41,53 +41,30 @@ glm::mat3 Panel::vp_matrix() const
 	return pgroup->projection * view.camera();
 }
 
+glm::mat3 Panel::vp_matrix_inverse() const
+{
+	return view.matrix() * glm::inverse(pgroup->projection);
+}
+
 void Panel::send_view()
 {
 	view.position = to_view_coordinates(bounds.clip().center_point());
 	_send_view();
 }
 
-glm::vec2 Panel::to_view_coordinates(const glm::vec2& screen_coordinates) const
+Position Panel::to_view_coordinates(Position screen_coordinates) const
 {
-	glm::vec3 ndc{};
-	ndc.x = 1.0f - 2.0f * (screen_coordinates.x / Machine.main_window->width());
-	ndc.y = 1.0f - 2.0f * (screen_coordinates.y / Machine.main_window->height());
-	ndc.z = 1.0f;
-
-	glm::mat3 invVP = glm::inverse(pgroup->projection);
-	glm::vec3 view_pos = invVP * ndc;
-
-	if (view_pos.z != 0.0f)
-		view_pos / view_pos.z;
-
-	return glm::vec2{ view_pos.x, view_pos.y };
-
+	return -Machine.to_world_coordinates(screen_coordinates, glm::inverse(pgroup->projection));
 }
 
-glm::vec2 Panel::to_world_coordinates(const glm::vec2& screen_coordinates) const
+Position Panel::to_world_coordinates(Position screen_coordinates) const
 {
-	glm::vec3 ndc{};
-	ndc.x = 1.0f - 2.0f * (screen_coordinates.x / Machine.main_window->width());
-	ndc.y = 1.0f - 2.0f * (screen_coordinates.y / Machine.main_window->height());
-	ndc.z = 1.0f;
-
-	glm::mat3 invVP = glm::inverse(vp_matrix());
-	glm::vec3 world_pos = invVP * ndc;
-
-	if (world_pos.z != 0.0f)
-		world_pos / world_pos.z;
-
-	return -glm::vec2{ world_pos.x, world_pos.y };
+	return Machine.to_world_coordinates(screen_coordinates, vp_matrix_inverse());
 }
 
-glm::vec2 Panel::to_screen_coordinates(const glm::vec2& world_coordinates) const
+Position Panel::to_screen_coordinates(Position world_coordinates) const
 {
-	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
-	glm::vec3 clip_space_pos = vp_matrix() * world_pos;
-	glm::vec2 screen_coo{};
-	screen_coo.x = (1.0f + clip_space_pos.x) * 0.5f * Machine.main_window->width();
-	screen_coo.y = (1.0f + clip_space_pos.y) * 0.5f * Machine.main_window->height();
-	return screen_coo;
+	return Machine.to_screen_coordinates(world_coordinates, vp_matrix());
 }
 
 void PanelGroup::sync_panels()

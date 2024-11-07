@@ -14,4 +14,6 @@ This project uses the following libraries:
 - **tinyfiledialogs**
 - **marzer/tomlplusplus**
 
+Additionally, assets such as fonts are also used.
+
 For the actual licensing information, refer to the Licenses folder.

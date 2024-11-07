@@ -38,7 +38,6 @@ int main()
 			break;
 		Machine.on_render();
 	}
-
 	Machine.destroy();
 	glfwTerminate();
 	return 0;

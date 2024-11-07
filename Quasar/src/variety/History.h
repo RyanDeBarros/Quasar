@@ -38,6 +38,8 @@ class ActionHistory
 
 public:
 	ActionHistory(size_t tracking_length = 100) : tracking_length(tracking_length) {}
+	ActionHistory(const ActionHistory&) = delete;
+	ActionHistory(ActionHistory&&) noexcept = delete;
 
 	void execute(std::shared_ptr<ActionBase>&& action)
 	{
