@@ -44,7 +44,7 @@ struct Transform
 
 	Transform inverse() const
 	{
-		return { -position, -rotation, 1.0f / scale };
+		return { -position / scale, -rotation, 1.0f / scale };
 	}
 
 	glm::mat3 matrix() const
@@ -68,7 +68,7 @@ struct FlatTransform
 	
 	FlatTransform inverse() const
 	{
-		return { -position, 1.0f / scale };
+		return { -position / scale, 1.0f / scale };
 	}
 
 	glm::mat3 matrix() const

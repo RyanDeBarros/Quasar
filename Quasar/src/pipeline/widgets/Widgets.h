@@ -48,7 +48,7 @@ struct WidgetPlacement
 	float interp_y(float t) const { return bottom() + t * transform.scale.y; }
 
 	glm::mat3 matrix() const { return FlatTransform{ center_point(), transform.scale }.matrix(); }
-	WidgetPlacement inverse() const { return { transform.inverse(), { 1.0f - pivot.x, 1.0f - pivot.y } }; }
+	glm::mat3 inverse_matrix() const { return FlatTransform{ -center_point() / transform.scale, 1.0f / transform.scale }.matrix(); }
 };
 
 inline float wp_left(const glm::mat3& global) { return global[2][0] - 0.5f * global[0][0]; }
@@ -80,7 +80,7 @@ struct Widget
 	const WidgetPlacement& wp_at(size_t i) const { return children[i]->self; }
 
 	glm::mat3 global_matrix() const { if (parent) return parent->global_matrix() * self.matrix(); else return self.matrix(); }
-	glm::mat3 global_matrix_inverse() const { if (parent) return self.inverse().matrix() * parent->global_matrix_inverse(); else return self.inverse().matrix(); }
+	glm::mat3 global_matrix_inverse() const { if (parent) return self.inverse_matrix() * parent->global_matrix_inverse(); else return self.inverse_matrix(); }
 	Position global_of(Position local) const { glm::vec3 g = global_matrix() * glm::vec3(local, 1.0f); return { g.x, g.y }; }
 	Position local_of(Position global) const { glm::vec3 l = global_matrix_inverse() * glm::vec3(global, 1.0f); return { l.x, l.y }; }
 };

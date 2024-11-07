@@ -15,9 +15,11 @@ struct Button : public Widget
 	
 private:
 	Shader* bkg_shader;
-	MouseButtonHandler& parent;
+	MouseButtonHandler& parent_mbh;
 	MouseButtonHandler handler;
-	bool pressed = false;
+	bool left_pressed = false;
+	bool middle_pressed = false;
+	bool right_pressed = false;
 
 	void init(const WidgetPlacement& wp, TextRender* text, RoundRect* bkg);
 	bool contains_cursor(Position& pos) const;
@@ -28,10 +30,10 @@ public:
 	std::function<void(const MouseButtonEvent&, Position)> on_release = [](const MouseButtonEvent&, Position) {};
 	std::function<void(Position)> on_hover = [](Position) {};
 
-	Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent, const UTF::String& text);
-	Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent, UTF::String&& text);
-	Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent, const UTF::String& text);
-	Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent, UTF::String&& text);
+	Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, const UTF::String& text);
+	Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, UTF::String&& text);
+	Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent_mbh, const UTF::String& text);
+	Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent_mbh, UTF::String&& text);
 	Button(const Button&) = delete;
 	Button(Button&&) noexcept = delete;
 	~Button();
@@ -39,7 +41,7 @@ public:
 	void draw() const;
 	void process() const;
 	void send_vp() const;
-	bool is_pressed() const { return pressed; }
+	bool is_pressed(MouseButton mb) const;
 
 	RoundRect& bkg() { return rr_wget(*this, BKG); }
 	const RoundRect& bkg() const { return rr_wget(*this, BKG); }

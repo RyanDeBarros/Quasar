@@ -159,6 +159,7 @@ private:
 		TEXT_SAT,						// separate widget
 		TEXT_VALUE,						// separate widget
 		TEXT_LIGHT,						// separate widget
+		BUTTON_RGB_HEX_CODE,			// separate widget
 		BUTTON_SWITCH_TXTFLD_MODE,		// separate widget
 		_W_COUNT
 	};

@@ -45,7 +45,6 @@ ColorPicker::~ColorPicker()
 void ColorPicker::render()
 {
 	process_mb_down_events();
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
 	rr_wget(*this, BACKGROUND).draw();
 	cp_render_gui_back();
 	ur_wget(*this, ALPHA_SLIDER).draw();
@@ -133,10 +132,11 @@ void ColorPicker::cp_render_gui_back()
 		}
 		else if (state == State::SLIDER_RGB)
 		{
-			if (ImGui::Button("HEX"))
+			b_wget(*this, BUTTON_RGB_HEX_CODE).process();
+			if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_pressed(MouseButton::LEFT))
 			{
 				auto cpos = ImGui::GetCursorPos();
-				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y));
+				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 40));
 				ImGui::OpenPopup("hex-popup");
 			}
 			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
@@ -181,6 +181,8 @@ void ColorPicker::cp_render_gui_back()
 
 		float alpha = get_color().alpha;
 		float imgui_y = ImGui::GetCursorPosY();
+		if (state == State::SLIDER_RGB)
+			imgui_y += 41;
 		float imgui_y_1 = imgui_y + 45;
 		float imgui_y_2 = imgui_y_1 + 70 * Machine.get_app_scale().y; // TODO slider_sep. put as global constant
 		float imgui_y_3 = imgui_y_2 + 70 * Machine.get_app_scale().y;
@@ -303,9 +305,9 @@ void ColorPicker::cp_render_gui_back()
 
 void ColorPicker::cp_render_gui_front()
 {
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
 	if (state == State::SLIDER_RGB)
 	{
+		b_wget(*this, BUTTON_RGB_HEX_CODE).draw();
 		tr_wget(*this, TEXT_RED).draw();
 		tr_wget(*this, TEXT_GREEN).draw();
 		tr_wget(*this, TEXT_BLUE).draw();
@@ -429,6 +431,12 @@ void ColorPicker::initialize_widget()
 	const float text2_y = text1_y - text_sep;
 	const float text3_y = text2_y - text_sep;
 	const float text4_y = text3_y - text_sep;
+	
+	const float button_rgb_hex_code_x = -90;
+	const float button_rgb_hex_code_y = 157;
+	const float button_rgb_hex_code_scale = 0.9f;
+	const float button_rgb_hex_code_w = 50;
+	const float button_rgb_hex_code_h = 30;
 
 	// ---------- GRAPHIC QUAD ----------
 
@@ -665,25 +673,22 @@ void ColorPicker::initialize_widget()
 	
 	// ---------- BUTTONS ----------
 
-	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, new Button(vp, {}, *Fonts::label_regular, 18, &round_rect_shader, mb_handler, "HEX"));
-	wp_at(BUTTON_SWITCH_TXTFLD_MODE).transform.position = { -50, 100 };
-	wp_at(BUTTON_SWITCH_TXTFLD_MODE).transform.scale = Scale(1);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().self.transform.scale = { 50, 30 };
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().thickness = 0.5f;
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().corner_radius = 5;
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_all();
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).on_press = [](const MouseButtonEvent& m, Position pos) { LOG << "press at (" << pos.x << ", " << pos.y << ")" << LOG.endl; };
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).on_release = [](const MouseButtonEvent& m, Position pos) { LOG << "release at (" << pos.x << ", " << pos.y << ")" << LOG.endl; };
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).on_hover = [](Position pos) { LOG << "hover at (" << pos.x << ", " << pos.y << ")" << LOG.endl; };
+	assign_widget(this, BUTTON_RGB_HEX_CODE, new Button(vp, {}, *Fonts::label_regular, 18, &round_rect_shader, mb_handler, "HEX"));
+	wp_at(BUTTON_RGB_HEX_CODE).transform.position = { button_rgb_hex_code_x, button_rgb_hex_code_y };
+	wp_at(BUTTON_RGB_HEX_CODE).transform.scale = Scale(button_rgb_hex_code_scale);
+	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().self.transform.scale = { button_rgb_hex_code_w, button_rgb_hex_code_h };
+	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().thickness = 0.5f;
+	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().corner_radius = 5;
+	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
+	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
+	b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_all();
 }
 
 void ColorPicker::connect_mouse_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
-		if (mb.action == IAction::PRESS)
+		if (mb.action == IAction::PRESS && mb.button == MouseButton::LEFT)
 		{
 			if (current_widget_control < 0)
 			{
@@ -1231,7 +1236,7 @@ void ColorPicker::sync_cp_widget_with_vp()
 	tr_wget(*this, TEXT_SAT).send_vp(*vp);
 	tr_wget(*this, TEXT_VALUE).send_vp(*vp);
 	tr_wget(*this, TEXT_LIGHT).send_vp(*vp);
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp();
+	b_wget(*this, BUTTON_RGB_HEX_CODE).send_vp();
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const

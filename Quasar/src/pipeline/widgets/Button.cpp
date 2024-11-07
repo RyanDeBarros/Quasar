@@ -7,23 +7,37 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 	children.resize(_W_COUNT);
 	assign_widget(this, TEXT, txt);
 	assign_widget(this, BKG, bkg);
-	parent.children.push_back(&handler);
+	parent_mbh.children.push_back(&handler);
 	handler.callback = [this](const MouseButtonEvent& m) {
-		Position local_cursor_pos;
-		if (contains_cursor(local_cursor_pos))
+		if (m.action == IAction::PRESS)
 		{
-			if (m.action == IAction::PRESS)
+			Position local_cursor_pos;
+			if (contains_cursor(local_cursor_pos))
 			{
 				on_press(m, local_cursor_pos);
 				m.consumed = true;
-				pressed = true;
+				if (m.button == MouseButton::LEFT)
+					left_pressed = true;
+				else if (m.button == MouseButton::MIDDLE)
+					middle_pressed = true;
+				else if (m.button == MouseButton::RIGHT)
+					right_pressed = true;
 			}
-			else if (m.action == IAction::RELEASE)
+		}
+		else if (m.action == IAction::RELEASE)
+		{
+			Position local_cursor_pos;
+			if (contains_cursor(local_cursor_pos))
 			{
 				on_release(m, local_cursor_pos);
 				m.consumed = true;
-				pressed = false;
 			}
+			if (m.button == MouseButton::LEFT)
+				left_pressed = false;
+			else if (m.button == MouseButton::MIDDLE)
+				middle_pressed = false;
+			else if (m.button == MouseButton::RIGHT)
+				right_pressed = false;
 		}
 		};
 	self = wp;
@@ -33,33 +47,33 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 
 bool Button::contains_cursor(Position& pos) const
 {
-	pos = local_of(Machine.cursor_world_coordinates(glm::inverse(*vp)));
-	return bkg().self.contains_point(pos);
+	pos = bkg().local_of(Machine.cursor_world_coordinates(glm::inverse(*vp)));
+	return on_interval(pos.x, -0.5f, 0.5f) && on_interval(pos.y, -0.5f, 0.5f);
 }
 
-Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent, const UTF::String& txt)
-	: bkg_shader(bkg_shader), parent(parent), vp(vp)
+Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, const UTF::String& txt)
+	: bkg_shader(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
 	init(wp, new TextRender(font, "", { 0.5f, 0.5f }), new RoundRect(this->bkg_shader));
 	text().set_text(txt);
 }
 
-Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent, UTF::String&& txt)
-	: bkg_shader(bkg_shader), parent(parent), vp(vp)
+Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, UTF::String&& txt)
+	: bkg_shader(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
 	init(wp, new TextRender(font, "", { 0.5f, 0.5f }), new RoundRect(this->bkg_shader));
 	text().set_text(std::move(txt));
 }
 
-Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent, const UTF::String& txt)
-	: bkg_shader(bkg_shader), parent(parent), vp(vp)
+Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent_mbh, const UTF::String& txt)
+	: bkg_shader(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
 	init(wp, new TextRender(frange, font_size, "", { 0.5f, 0.5f }), new RoundRect(this->bkg_shader));
 	text().set_text(txt);
 }
 
-Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent, UTF::String&& txt)
-	: bkg_shader(bkg_shader), parent(parent), vp(vp)
+Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent_mbh, UTF::String&& txt)
+	: bkg_shader(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
 	init(wp, new TextRender(frange, font_size, "", { 0.5f, 0.5f }), new RoundRect(this->bkg_shader));
 	text().set_text(std::move(txt));
@@ -67,7 +81,7 @@ Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, floa
 
 Button::~Button()
 {
-	parent.remove_child(&handler);
+	parent_mbh.remove_child(&handler);
 }
 
 void Button::draw() const
@@ -80,11 +94,23 @@ void Button::process() const
 {
 	Position local_cursor_pos;
 	if (contains_cursor(local_cursor_pos))
-		on_hover(local_cursor_pos);
+		on_hover(local_cursor_pos);	
 }
 
 void Button::send_vp() const
 {
 	bkg().update_transform().send_buffer();
 	text().send_vp(*vp);
+}
+
+bool Button::is_pressed(MouseButton mb) const
+{
+	if (mb == MouseButton::LEFT)
+		return left_pressed;
+	else if (mb == MouseButton::MIDDLE)
+		return middle_pressed;
+	else if (mb == MouseButton::RIGHT)
+		return right_pressed;
+	else
+		return false;
 }

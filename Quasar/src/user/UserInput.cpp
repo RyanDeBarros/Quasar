@@ -10,14 +10,20 @@ void attach_canvas_controls()
 		if (mb.button == MouseButton::MIDDLE)
 		{
 			if (mb.action == IAction::PRESS && Machine.cursor_in_easel())
+			{
+				mb.consumed = true;
 				Machine.canvas_begin_panning();
+			}
 			else if (mb.action == IAction::RELEASE)
 				Machine.canvas_end_panning();
 		}
 		else if (mb.button == MouseButton::LEFT)
 		{
 			if (mb.action == IAction::PRESS && Machine.cursor_in_easel() && Machine.main_window->is_key_pressed(Key::SPACE))
+			{
+				mb.consumed = true;
 				Machine.canvas_begin_panning();
+			}
 			else if (mb.action == IAction::RELEASE)
 				Machine.canvas_end_panning();
 		}
@@ -25,7 +31,10 @@ void attach_canvas_controls()
 	// Zooming
 	Machine.easel_scroll_handler.callback = [](const ScrollEvent& s) {
 		if (Machine.cursor_in_easel() && !Machine.panning_info.panning)
+		{
 			Machine.canvas_zoom_by(s.yoff);
+			s.consumed = true;
+		}
 		};
 }
 
@@ -37,11 +46,13 @@ void attach_global_user_controls()
 			switch (k.key)
 			{
 			case Key::ROW0:
+				k.consumed = true;
 				Machine.canvas_reset_camera();
 				break;
 			case Key::Z:
 				if (Machine.main_window->is_ctrl_pressed())
 				{
+					k.consumed = true;
 					if (Machine.main_window->is_shift_pressed())
 						Machine.redo();
 					else
@@ -50,19 +61,31 @@ void attach_global_user_controls()
 				break;
 			case Key::N:
 				if (Machine.main_window->is_ctrl_pressed())
+				{
+					k.consumed = true;
 					Machine.new_file();
+				}
 				break;
 			case Key::O:
 				if (Machine.main_window->is_ctrl_pressed())
+				{
+					k.consumed = true;
 					Machine.open_file();
+				}
 				break;
 			case Key::I:
 				if (Machine.main_window->is_ctrl_pressed())
+				{
+					k.consumed = true;
 					Machine.import_file();
+				}
 				break;
 			case Key::E:
 				if (Machine.main_window->is_ctrl_pressed())
+				{
+					k.consumed = true;
 					Machine.export_file();
+				}
 				break;
 			case Key::S:
 				if (Machine.main_window->is_ctrl_pressed())
@@ -70,15 +93,25 @@ void attach_global_user_controls()
 					if (Machine.main_window->is_shift_pressed())
 					{
 						if (!Machine.main_window->is_alt_pressed())
+						{
+							k.consumed = true;
 							Machine.save_file_as();
+						}
 					}
 					else if (Machine.main_window->is_alt_pressed())
+					{
+						k.consumed = true;
 						Machine.save_file_copy();
+					}
 					else
+					{
+						k.consumed = true;
 						Machine.save_file();
+					}
 				}
 				break;
 			case Key::G:
+				k.consumed = true;
 				if (Machine.main_window->is_shift_pressed())
 				{
 					if (Machine.major_gridlines_visible())
@@ -95,7 +128,12 @@ void attach_global_user_controls()
 				}
 				break;
 			case Key::ESCAPE:
-				Machine.canvas_cancel_panning();
+				if (Machine.panning_info.panning)
+				{
+					k.consumed = true;
+					Machine.canvas_cancel_panning();
+				}
+				break;
 			}
 		}
 		};
@@ -108,11 +146,18 @@ void attach_global_user_controls()
 			static const size_t num_quasar_formats = 1;
 			static const char* quasar_formats[num_quasar_formats] = { ".qua" };
 			if (filepath.has_any_extension(image_formats, num_image_formats))
+			{
+				pd.consumed = true;
+				Machine.main_window->focus();
 				Machine.import_file(filepath);
+			}
 			else if (filepath.has_any_extension(quasar_formats, num_quasar_formats))
+			{
+				pd.consumed = true;
+				Machine.main_window->focus();
 				Machine.open_file(filepath);
+			}
 			// LATER note no error popup otherwise?
 		}
-		Machine.main_window->focus();
 		};
 }
