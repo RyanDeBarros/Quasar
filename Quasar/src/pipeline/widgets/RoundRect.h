@@ -32,8 +32,8 @@ public:
 	const RoundRect& update_transform() const;
 	const RoundRect& update_border_color() const;
 	const RoundRect& update_fill_color() const;
-	const RoundRect& update_corner_radius() const;
-	const RoundRect& update_thickness() const;
+	const RoundRect& update_corner_radius(float scale = 1.0f) const;
+	const RoundRect& update_thickness(float scale = 1.0f) const;
 	const RoundRect& update_all() const;
 	void send_buffer() const;
 };

@@ -32,8 +32,8 @@ struct MachineImpl
 		constexpr static int initial_width = 2160;
 		constexpr static int initial_height = 1440;
 		constexpr static int initial_menu_panel_height = 32;
-		constexpr static int initial_brush_panel_width = 432;
-		constexpr static int initial_palette_panel_width = 432;
+		constexpr static int initial_brush_panel_width = 380;
+		constexpr static int initial_palette_panel_width = 380;
 		constexpr static int initial_views_panel_height = 288;
 		int menu_panel_height = initial_menu_panel_height;
 		int brush_panel_width = initial_brush_panel_width;

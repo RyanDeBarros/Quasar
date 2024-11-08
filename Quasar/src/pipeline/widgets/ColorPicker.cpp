@@ -155,7 +155,6 @@ void ColorPicker::process()
 
 void ColorPicker::cp_render_gui_back()
 {
-	const float w_scale1d = (self.transform.scale.x + self.transform.scale.y + std::max(self.transform.scale.x, self.transform.scale.y)) / 3.0f;
 	ImGui::SetNextWindowBgAlpha(0);
 	auto sz = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
 	ImGui::SetNextWindowSize(ImVec2(sz.x, sz.y));
@@ -173,7 +172,7 @@ void ColorPicker::cp_render_gui_back()
 	if (ImGui::Begin("-", nullptr, window_flags))
 	{
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
-		ImGui::SetWindowFontScale(w_scale1d * font_window_scale);
+		ImGui::SetWindowFontScale(scale1d() * font_window_scale);
 		imgui_takeover_mb = false;
 		imgui_takeover_key = false;
 		if (state == State::SLIDER_RGB)
@@ -181,7 +180,7 @@ void ColorPicker::cp_render_gui_back()
 			if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_pressed(MouseButton::LEFT))
 			{
 				auto cpos = ImGui::GetCursorPos();
-				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 90 * self.transform.scale.y));
+				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 88 * self.transform.scale.y));
 				ImGui::OpenPopup("hex-popup");
 			}
 			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
@@ -205,7 +204,7 @@ void ColorPicker::cp_render_gui_back()
 
 		float alpha = get_color().alpha;
 		const float imgui_slider_w = 200;
-		const float imgui_y_1 = 147 * self.transform.scale.y;
+		const float imgui_y_1 = 145 * self.transform.scale.y;
 		const float imgui_y_2 = imgui_y_1 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
 		const float imgui_y_3 = imgui_y_2 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
 		const float imgui_y_4 = imgui_y_3 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
@@ -438,7 +437,6 @@ void ColorPicker::set_state(State _state)
 		state = _state;
 		set_color(pre_color);
 
-		// TODO create ToggleButtonGroup widget. Use 2 such widgets here
 		tb_wget(*this, BUTTON_QUAD).deselect();
 		tb_wget(*this, BUTTON_WHEEL).deselect();
 		tb_wget(*this, BUTTON_GRAPHIC).deselect();
@@ -685,7 +683,7 @@ void ColorPicker::initialize_widget()
 	// ---------- BACKGROUND ----------
 
 	assign_widget(this, BACKGROUND, new RoundRect(&round_rect_shader));
-	rr_wget(*this, BACKGROUND).thickness = 0.5f;
+	rr_wget(*this, BACKGROUND).thickness = 0.25f;
 	rr_wget(*this, BACKGROUND).corner_radius = 10;
 	rr_wget(*this, BACKGROUND).border_color = RGBA(HSV(0.7f, 0.5f, 0.5f).to_rgb(), 0.5f);
 	rr_wget(*this, BACKGROUND).fill_color = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.5f);
@@ -1387,6 +1385,20 @@ void ColorPicker::sync_cp_widget_with_vp()
 	sync_single_cp_widget_transform_ur(HSL_S_SLIDER_CURSOR);
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER);
 	sync_single_cp_widget_transform_ur(HSL_L_SLIDER_CURSOR);
+	float sc = scale1d();
+	if (cached_scale1d != sc)
+	{
+		cached_scale1d = sc;
+		rr_wget(*this, BACKGROUND).update_corner_radius(sc).update_thickness(sc);
+		b_wget(*this, BUTTON_RGB_HEX_CODE).bkg().update_corner_radius(sc).update_thickness(sc);
+		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).bkg().update_corner_radius(sc).update_thickness(sc);
+		b_wget(*this, BUTTON_QUAD).bkg().update_corner_radius(sc).update_thickness(sc);
+		b_wget(*this, BUTTON_WHEEL).bkg().update_corner_radius(sc).update_thickness(sc);
+		b_wget(*this, BUTTON_GRAPHIC).bkg().update_corner_radius(sc).update_thickness(sc);
+		b_wget(*this, BUTTON_RGB_SLIDER).bkg().update_corner_radius(sc).update_thickness(sc);
+		b_wget(*this, BUTTON_HSV_SLIDER).bkg().update_corner_radius(sc).update_thickness(sc);
+		b_wget(*this, BUTTON_HSL_SLIDER).bkg().update_corner_radius(sc).update_thickness(sc);
+	}
 	rr_wget(*this, BACKGROUND).update_transform().send_buffer();
 	tr_wget(*this, TEXT_ALPHA).send_vp(*vp);
 	tr_wget(*this, TEXT_RED).send_vp(*vp);

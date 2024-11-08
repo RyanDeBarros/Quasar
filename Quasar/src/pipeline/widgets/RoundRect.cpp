@@ -40,15 +40,17 @@ const RoundRect& RoundRect::update_fill_color() const
 	return *this;
 }
 
-const RoundRect& RoundRect::update_corner_radius() const
+const RoundRect& RoundRect::update_corner_radius(float scale) const
 {
-	ur->set_attribute(CORNER_RADIUS, &corner_radius);
+	scale *= corner_radius;
+	ur->set_attribute(CORNER_RADIUS, &scale);
 	return *this;
 }
 
-const RoundRect& RoundRect::update_thickness() const
+const RoundRect& RoundRect::update_thickness(float scale) const
 {
-	ur->set_attribute(THICKNESS, &thickness);
+	scale *= thickness;
+	ur->set_attribute(THICKNESS, &scale);
 	return *this;
 }
 

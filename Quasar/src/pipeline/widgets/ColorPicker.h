@@ -121,6 +121,8 @@ private:
 	float get_circle_cursor_value(size_t cursor) const;
 	void setup_circle_cursor(size_t cursor);
 
+	float cached_scale1d = 0.0f;
+
 	// LATER use UMR when possible
 	enum
 	{

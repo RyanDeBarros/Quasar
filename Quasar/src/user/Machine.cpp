@@ -186,7 +186,7 @@ void MachineImpl::set_app_scale(Scale scale) const
 {
 	app_inverse_scale = 1.0f / scale;
 	panels->set_projection();
-	float scale1d = (scale.x + scale.y + std::max(scale.x, scale.y)) / 3.0f;
+	float scale1d = mean2d1d(scale.x, scale.y);
 	static const float gui_scale_factor = 1.25f; // SETTINGS
 	float gui_scale = scale1d * gui_scale_factor;
 	ImGui::GetStyle().ScaleAllSizes(gui_scale);

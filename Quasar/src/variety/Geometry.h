@@ -159,3 +159,8 @@ enum class Cardinal
 	LEFT,
 	DOWN
 };
+
+constexpr float mean2d1d(float a, float b)
+{
+	return (a + b + std::max(a, b)) / 3.0f;
+}

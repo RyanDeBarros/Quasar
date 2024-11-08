@@ -83,6 +83,8 @@ struct Widget
 	glm::mat3 global_matrix_inverse() const { if (parent) return self.inverse_matrix() * parent->global_matrix_inverse(); else return self.inverse_matrix(); }
 	Position global_of(Position local) const { glm::vec3 g = global_matrix() * glm::vec3(local, 1.0f); return { g.x, g.y }; }
 	Position local_of(Position global) const { glm::vec3 l = global_matrix_inverse() * glm::vec3(global, 1.0f); return { l.x, l.y }; }
+
+	float scale1d() const { return mean2d1d(self.transform.scale.x, self.transform.scale.y); }
 };
 
 inline void detach_widget(Widget* parent, Widget* child)
