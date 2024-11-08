@@ -6,7 +6,7 @@
 
 #include "user/Platform.h"
 #include "Widgets.h"
-#include "edit/Color.h"
+#include "edit/color/Color.h"
 #include "variety/Geometry.h"
 
 struct ColorPicker : public Widget
@@ -166,6 +166,8 @@ private:
 		TEXT_LIGHT,						// separate widget
 		BUTTON_RGB_HEX_CODE,			// separate widget
 		BUTTON_SWITCH_TXTFLD_MODE,		// separate widget
+		BUTTON_QUAD,					// separate widget
+		BUTTON_WHEEL,					// separate widget
 		_W_COUNT
 	};
 

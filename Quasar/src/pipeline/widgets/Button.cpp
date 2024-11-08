@@ -7,7 +7,8 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 	children.resize(_W_COUNT);
 	assign_widget(this, TEXT, txt);
 	assign_widget(this, BKG, bkg);
-	parent_mbh.children.push_back(&handler);
+	if (parent_mbh)
+		parent_mbh->children.push_back(&handler);
 	handler.callback = [this](const MouseButtonEvent& m) {
 		if (m.action == IAction::PRESS)
 		{
@@ -46,28 +47,28 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 	text().format.vertical_align = TextRender::VerticalAlign::MIDDLE;
 }
 
-Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, const UTF::String& txt)
+Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler* parent_mbh, const UTF::String& txt)
 	: bkg_shader(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
 	init(wp, new TextRender(font, "", { 0.5f, 0.5f }), new RoundRect(this->bkg_shader));
 	text().set_text(txt);
 }
 
-Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler& parent_mbh, UTF::String&& txt)
+Button::Button(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler* parent_mbh, UTF::String&& txt)
 	: bkg_shader(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
 	init(wp, new TextRender(font, "", { 0.5f, 0.5f }), new RoundRect(this->bkg_shader));
 	text().set_text(std::move(txt));
 }
 
-Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent_mbh, const UTF::String& txt)
+Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler* parent_mbh, const UTF::String& txt)
 	: bkg_shader(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
 	init(wp, new TextRender(frange, font_size, "", { 0.5f, 0.5f }), new RoundRect(this->bkg_shader));
 	text().set_text(txt);
 }
 
-Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler& parent_mbh, UTF::String&& txt)
+Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler* parent_mbh, UTF::String&& txt)
 	: bkg_shader(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
 	init(wp, new TextRender(frange, font_size, "", { 0.5f, 0.5f }), new RoundRect(this->bkg_shader));
@@ -76,7 +77,8 @@ Button::Button(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, floa
 
 Button::~Button()
 {
-	parent_mbh.remove_child(&handler);
+	if (parent_mbh)
+		parent_mbh->remove_child(&handler);
 }
 
 void Button::draw() const
@@ -129,4 +131,71 @@ bool Button::is_hovered(Position* local_pos) const
 	if (local_pos)
 		*local_pos = pos;
 	return on_interval(pos.x, -0.5f, 0.5f) && on_interval(pos.y, -0.5f, 0.5f);
+}
+
+StandardButton::StandardButton(const StandardButtonArgs& args)
+	: Button(args.vp, { args.transform }, args.frange, args.font_size, args.rr_shader, args.mb_parent, args.text), normal_fill(args.normal_fill)
+{
+	prev_fill = &normal_fill;
+	bkg().self.transform.scale = args.bkg_size;
+	bkg().thickness = args.thickness;
+	bkg().corner_radius = args.corner_radius;
+	bkg().border_color = args.border_color;
+	bkg().fill_color = args.normal_fill;
+	bkg().update_all();
+	// LATER cancel highlighting/cursor after clicking on button.
+	on_hover_enter = [this, is_hoverable = args.is_hoverable]() {
+		if (is_hoverable())
+		{
+			bkg().fill_color = hover_fill;
+			bkg().update_fill_color().send_buffer();
+			Machine.main_window->request_cursor(&wh, StandardCursor::HAND);
+		}
+		else
+			hovering = false;
+		};
+	on_hover_exit = [this, is_hoverable = args.is_hoverable]() {
+		bkg().fill_color = *prev_fill;
+		bkg().update_fill_color().send_buffer();
+		Machine.main_window->release_cursor(&wh);
+		};
+}
+
+ToggleButton::ToggleButton(const StandardButtonArgs& args)
+	: StandardButton(args)
+{
+	on_release = [this](const MouseButtonEvent& mb, Position pos) {
+		if (!selected)
+		{
+			if (is_selectable(mb, pos))
+				select(mb, pos);
+		}
+		else
+		{
+			if (is_deselectable(mb, pos))
+				deselect(mb, pos);
+		}
+		};
+}
+
+void ToggleButton::select(const MouseButtonEvent& mb, Position local_pos)
+{
+	if (selected) return;
+	bkg().fill_color = select_fill;
+	bkg().update_fill_color().send_buffer();
+	prev_fill = &select_fill;
+	selected = true;
+	Machine.main_window->release_cursor(&wh);
+	on_select(mb, local_pos);
+}
+
+void ToggleButton::deselect(const MouseButtonEvent& mb, Position local_pos)
+{
+	if (!selected) return;
+	bkg().fill_color = normal_fill;
+	bkg().update_fill_color().send_buffer();
+	prev_fill = &normal_fill;
+	selected = false;
+	Machine.main_window->release_cursor(&wh);
+	on_deselect(mb, local_pos);
 }

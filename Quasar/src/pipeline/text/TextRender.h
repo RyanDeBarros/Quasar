@@ -2,7 +2,7 @@
 
 #include "Font.h"
 #include "../render/Renderable.h"
-#include "edit/Color.h"
+#include "edit/color/Color.h"
 #include "../widgets/Widgets.h"
 
 struct TextRender : public WP_IndexedRenderable // LATER rename WP_ to W_ ?

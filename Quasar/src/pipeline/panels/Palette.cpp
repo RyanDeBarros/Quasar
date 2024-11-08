@@ -8,6 +8,7 @@ Palette::Palette()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
 	color_picker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler) // LATER initialize panels early and put mb_handlers as data members of panels?
 {
+	color_picker.self.transform.scale = Scale(1.5f);
 	static constexpr size_t num_quads = 1;
 
 	varr = new GLfloat[num_quads * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
@@ -61,7 +62,8 @@ void Palette::_send_view()
 
 	Scale color_picker_size{ 240, 420 };
 	color_picker.set_size(color_picker_size);
-	color_picker.set_position({ 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * 0.5f - 25 });
+	//color_picker.set_position({ 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * 0.5f - 25 });
+	color_picker.set_position({ -100, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * 0.5f - 200 });
 	color_picker.send_vp();
 	unbind_shader();
 }

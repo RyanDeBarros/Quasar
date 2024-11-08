@@ -155,7 +155,15 @@ struct MouseButtonEvent : public InputEvent
 	MouseButtonEvent(int button, int action, int mods) : button(MouseButton(button)), action(IAction(action)), mods(mods) {}
 	MouseButtonEvent(MouseButton button, IAction action, int mods) : button(button), action(action), mods(mods) {}
 	bool operator==(const MouseButtonEvent&) const = default;
+
+	static const MouseButtonEvent LEFT_CLICK;
+	static const MouseButtonEvent RIGHT_CLICK;
+	static const MouseButtonEvent MIDDLE_CLICK;
 };
+
+inline const MouseButtonEvent MouseButtonEvent::LEFT_CLICK = MouseButtonEvent(MouseButton::LEFT, IAction::RELEASE, 0);
+inline const MouseButtonEvent MouseButtonEvent::RIGHT_CLICK = MouseButtonEvent(MouseButton::RIGHT, IAction::RELEASE, 0);
+inline const MouseButtonEvent MouseButtonEvent::MIDDLE_CLICK = MouseButtonEvent(MouseButton::MIDDLE, IAction::RELEASE, 0);
 
 typedef InputEventHandler<MouseButtonEvent> MouseButtonHandler;
 

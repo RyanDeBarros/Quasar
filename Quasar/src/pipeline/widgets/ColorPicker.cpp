@@ -1,9 +1,10 @@
 #include "ColorPicker.h"
 
 #include <glm/gtc/type_ptr.inl>
+#include <imgui/imgui_internal.h>
 
 #include "variety/GLutility.h"
-#include "edit/Color.h"
+#include "edit/color/Color.h"
 #include "user/Machine.h"
 #include "user/GUI.h"
 #include "../render/Uniforms.h"
@@ -51,9 +52,6 @@ const float button_scale = 0.9f;
 const float button_rgb_hex_code_w = 50;
 const float button_switch_txtfld_mode_w = 25;
 const float button_h = 30;
-
-constexpr RGBA button_highlight = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f);
-constexpr RGBA button_no_highlight = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
 
 void ColorPicker::send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color)
 {
@@ -143,14 +141,18 @@ void ColorPicker::process()
 	process_mb_down_events();
 	b_wget(*this, BUTTON_RGB_HEX_CODE).process();
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
+	b_wget(*this, BUTTON_QUAD).process();
+	b_wget(*this, BUTTON_WHEEL).process();
 }
 
 void ColorPicker::cp_render_gui_back()
 {
+	const float w_scale1d = (self.transform.scale.x + self.transform.scale.y + std::max(self.transform.scale.x, self.transform.scale.y)) / 3.0f;
 	ImGui::SetNextWindowBgAlpha(0);
-	auto sz = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale();
+	auto sz = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
 	ImGui::SetNextWindowSize(ImVec2(sz.x, sz.y));
-	Position pos = gui_center - Position{ 0.5f * sz.x, 0.9f * sz.y };
+	Position pos = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, 0.5f }), *vp);
+	pos.y = Machine.main_window->height() - pos.y;
 	ImGui::SetNextWindowPos({ pos.x, pos.y });
 
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar |
@@ -162,6 +164,8 @@ void ColorPicker::cp_render_gui_back()
 		ImGuiWindowFlags_NoBackground;
 	if (ImGui::Begin("-", nullptr, window_flags))
 	{
+		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
+		ImGui::SetWindowFontScale(w_scale1d * font_window_scale);
 		State to_state = state;
 		imgui_takeover_mb = false;
 		imgui_takeover_key = false;
@@ -173,22 +177,12 @@ void ColorPicker::cp_render_gui_back()
 			cp_render_tab_button(to_state, State::SLIDER_HSL, state == State::SLIDER_HSL, "HSL");
 			ImGui::EndTabBar();
 		}
-		if (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL)
-		{
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5);
-			if (ImGui::BeginTabBar("cp-sub-tb"))
-			{
-				cp_render_tab_button(to_state, State::GRAPHIC_QUAD, state == State::GRAPHIC_QUAD, "QUAD");
-				cp_render_tab_button(to_state, State::GRAPHIC_WHEEL, state == State::GRAPHIC_WHEEL, "WHEEL");
-				ImGui::EndTabBar();
-			}
-		}
-		else if (state == State::SLIDER_RGB)
+		if (state == State::SLIDER_RGB)
 		{
 			if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_pressed(MouseButton::LEFT))
 			{
 				auto cpos = ImGui::GetCursorPos();
-				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 35));
+				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 35 * self.transform.scale.y));
 				ImGui::OpenPopup("hex-popup");
 			}
 			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
@@ -202,7 +196,7 @@ void ColorPicker::cp_render_gui_back()
 					ImGui::Text("RGB hex code");
 					ImGui::Text("#");
 					ImGui::SameLine();
-					ImGui::SetNextItemWidth(90);
+					ImGui::SetNextItemWidth(90 * self.transform.scale.x);
 					ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size);
 					update_rgb_hex();
 					imgui_takeover_mb = true;
@@ -215,12 +209,12 @@ void ColorPicker::cp_render_gui_back()
 		float alpha = get_color().alpha;
 		float imgui_y = ImGui::GetCursorPosY();
 		if (state == State::SLIDER_RGB || state == State::SLIDER_HSV || state == State::SLIDER_HSL)
-			imgui_y += 41;
-		float imgui_y_1 = imgui_y + 45;
-		float imgui_y_2 = imgui_y_1 + slider_sep * Machine.get_app_scale().y;
-		float imgui_y_3 = imgui_y_2 + slider_sep * Machine.get_app_scale().y;
-		float imgui_y_4 = imgui_y_3 + slider_sep * Machine.get_app_scale().y;
-		float imgui_sml_x = 97;
+			imgui_y += 41 * self.transform.scale.y;
+		float imgui_y_1 = imgui_y + 45 * self.transform.scale.y;
+		float imgui_y_2 = imgui_y_1 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
+		float imgui_y_3 = imgui_y_2 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
+		float imgui_y_4 = imgui_y_3 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
+		float imgui_sml_x = 97 * self.transform.scale.x;
 		if (state == State::SLIDER_RGB)
 		{
 			RGB rgb = get_color().rgb();
@@ -332,6 +326,7 @@ void ColorPicker::cp_render_gui_back()
 		}
 
 		set_state(to_state);
+		ImGui::SetWindowFontScale(font_window_scale);
 		ImGui::End();
 	}
 }
@@ -339,7 +334,17 @@ void ColorPicker::cp_render_gui_back()
 void ColorPicker::cp_render_gui_front()
 {
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
-	if (state == State::SLIDER_RGB)
+	if (state == State::GRAPHIC_QUAD)
+	{
+		b_wget(*this, BUTTON_QUAD).draw();
+		b_wget(*this, BUTTON_WHEEL).draw();
+	}
+	else if (state == State::GRAPHIC_WHEEL)
+	{
+		b_wget(*this, BUTTON_QUAD).draw();
+		b_wget(*this, BUTTON_WHEEL).draw();
+	}
+	else if (state == State::SLIDER_RGB)
 	{
 		b_wget(*this, BUTTON_RGB_HEX_CODE).draw();
 		tr_wget(*this, TEXT_RED).draw();
@@ -407,9 +412,15 @@ void ColorPicker::set_state(State _state)
 	if (_state != state)
 	{
 		if (_state == State::GRAPHIC_QUAD)
+		{
+			tb_wget(*this, BUTTON_QUAD).select();
 			last_graphic_state = State::GRAPHIC_QUAD;
+		}
 		else if (_state == State::GRAPHIC_WHEEL)
+		{
+			tb_wget(*this, BUTTON_WHEEL).select();
 			last_graphic_state = State::GRAPHIC_WHEEL;
+		}
 		else if (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL)
 			last_graphic_state = state;
 
@@ -678,83 +689,65 @@ void ColorPicker::initialize_widget()
 	
 	// ---------- BUTTONS ----------
 
-	assign_widget(this, BUTTON_RGB_HEX_CODE, new Button(vp, {}, *Fonts::label_regular, 18, &round_rect_shader, mb_handler, "HEX"));
-	Button& b_rgb_hex_code = b_wget(*this, BUTTON_RGB_HEX_CODE);
-	b_rgb_hex_code.self.transform.position = { button_rgb_hex_code_x, button_y };
-	b_rgb_hex_code.self.transform.scale = Scale(button_scale);
-	b_rgb_hex_code.bkg().self.transform.scale = { button_rgb_hex_code_w, button_h };
-	b_rgb_hex_code.bkg().thickness = 0.5f;
-	b_rgb_hex_code.bkg().corner_radius = 5;
-	b_rgb_hex_code.bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
-	b_rgb_hex_code.bkg().fill_color = button_no_highlight;
-	b_rgb_hex_code.bkg().update_all();
-	// LATER cancel highlighting/cursor after clicking on button.
-	b_rgb_hex_code.on_hover_enter = [this, &b_rgb_hex_code]() {
-		if (state == State::SLIDER_RGB && current_widget_control == -1)
-		{
-			b_rgb_hex_code.bkg().fill_color = button_highlight;
-			b_rgb_hex_code.bkg().update_fill_color().send_buffer();
-			Machine.main_window->request_cursor(&wh_rgb_hex_button, StandardCursor::HAND);
-		}
-		else
-		{
-			b_rgb_hex_code.hovering = false;
-		}
-		};
-	b_rgb_hex_code.on_hover_exit = [this, &b_rgb_hex_code]() {
-		if (state == State::SLIDER_RGB && current_widget_control == -1)
-		{
-			b_rgb_hex_code.bkg().fill_color = button_no_highlight;
-			b_rgb_hex_code.bkg().update_fill_color().send_buffer();
-			Machine.main_window->release_cursor(&wh_rgb_hex_button);
-		}
-		};
-
-	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, new Button(vp, {}, *Fonts::label_bolditalic, 18, &round_rect_shader, mb_handler, "#"));
-	Button& b_switch_txtfld_mode = b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE);
-	b_switch_txtfld_mode.self.transform.position = { button_switch_txtfld_mode_x, button_y };
-	b_switch_txtfld_mode.self.transform.scale = Scale(button_scale);
-	b_switch_txtfld_mode.bkg().self.transform.scale = { button_switch_txtfld_mode_w, button_h };
-	b_switch_txtfld_mode.bkg().thickness = 0.5f;
-	b_switch_txtfld_mode.bkg().corner_radius = 5;
-	b_switch_txtfld_mode.bkg().border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
-	b_switch_txtfld_mode.bkg().fill_color = button_no_highlight;
-	b_switch_txtfld_mode.bkg().update_all();
-	b_switch_txtfld_mode.on_hover_enter = [this, &b_switch_txtfld_mode]() {
-		if (current_widget_control == -1)
-		{
-			b_switch_txtfld_mode.bkg().fill_color = button_highlight;
-			b_switch_txtfld_mode.bkg().update_fill_color().send_buffer();
-			Machine.main_window->request_cursor(&wh_txtfld_mode_button, StandardCursor::HAND);
-		}
-		else
-		{
-			b_switch_txtfld_mode.hovering = false;
-		}
-		};
-	b_switch_txtfld_mode.on_hover_exit = [this, &b_switch_txtfld_mode]() {
-		if (current_widget_control == -1)
-		{
-			b_switch_txtfld_mode.bkg().fill_color = button_no_highlight;
-			b_switch_txtfld_mode.bkg().update_fill_color().send_buffer();
-			Machine.main_window->release_cursor(&wh_txtfld_mode_button);
-		}
-		};
-	b_switch_txtfld_mode.on_release = [this, &b_switch_txtfld_mode](const MouseButtonEvent& mb, Position) {
+	StandardButtonArgs sba{};
+	sba.vp = vp;
+	sba.transform = { { button_rgb_hex_code_x, button_y }, Scale(button_scale) };
+	sba.bkg_size = { button_rgb_hex_code_w, button_h };
+	sba.rr_shader = &round_rect_shader;
+	sba.mb_parent = &mb_handler;
+	sba.text = "HEX";
+	sba.is_hoverable = [this]() { return state == State::SLIDER_RGB && current_widget_control == -1; };
+	assign_widget(this, BUTTON_RGB_HEX_CODE, new StandardButton(sba));
+	
+	sba.text = "#";
+	sba.transform.position.x = button_switch_txtfld_mode_x;
+	sba.bkg_size.x = button_switch_txtfld_mode_w;
+	sba.is_hoverable = [this]() { return current_widget_control == -1; };
+	StandardButton* b_switch_txtfld_mode = new StandardButton(sba);
+	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, b_switch_txtfld_mode);
+	b_switch_txtfld_mode->on_release = [this, b_switch_txtfld_mode](const MouseButtonEvent& mb, Position) {
 		if (mb.button == MouseButton::LEFT)
 		{
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				txtfld_mode = TextFieldMode::PERCENT;
-				b_switch_txtfld_mode.text().set_text("%");
+				b_switch_txtfld_mode->text().set_text("%");
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
 				txtfld_mode = TextFieldMode::NUMBER;
-				b_switch_txtfld_mode.text().set_text("#");
+				b_switch_txtfld_mode->text().set_text("#");
 			}
 		}
 		};
+
+	sba.text = "QUAD";
+	sba.transform.position = { -200, 0 };
+	sba.bkg_size = { 100, 50 };
+	sba.is_hoverable = [this]() { return (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL) && current_widget_control == -1; };
+	ToggleButton* tb_quad = new ToggleButton(sba);
+	assign_widget(this, BUTTON_QUAD, tb_quad);
+	tb_quad->is_selectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	tb_quad->is_deselectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	
+	sba.text = "WHEEL";
+	sba.transform.position = { -200 + 100 + 10, 0 };
+	sba.bkg_size = { 100, 50 };
+	sba.is_hoverable = [this]() { return (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL) && current_widget_control == -1; };
+	ToggleButton* tb_wheel = new ToggleButton(sba);
+	assign_widget(this, BUTTON_WHEEL, tb_wheel);
+	tb_wheel->is_selectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	tb_wheel->is_deselectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+
+	tb_quad->on_select = [this, tb_wheel](const MouseButtonEvent& mb, Position p) {
+		tb_wheel->deselect(mb, p);
+		state = State::GRAPHIC_QUAD;
+		};
+	tb_wheel->on_select = [this, tb_quad](const MouseButtonEvent& mb, Position p) {
+		tb_quad->deselect(mb, p);
+		state = State::GRAPHIC_WHEEL;
+		};
+	tb_quad->select();
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -1310,6 +1303,8 @@ void ColorPicker::sync_cp_widget_with_vp()
 	tr_wget(*this, TEXT_LIGHT).send_vp(*vp);
 	b_wget(*this, BUTTON_RGB_HEX_CODE).send_vp();
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp();
+	b_wget(*this, BUTTON_QUAD).send_vp();
+	b_wget(*this, BUTTON_WHEEL).send_vp();
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const

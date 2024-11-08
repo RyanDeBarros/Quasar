@@ -6,7 +6,7 @@ void Panel::render()
 {
 	if (visible)
 	{
-		bounds.clip().scissor();
+		//bounds.clip().scissor(); // TODO uncomment
 		draw();
 	}
 }
@@ -38,17 +38,17 @@ glm::vec2 Panel::get_app_cursor_pos() const
 
 glm::mat3 Panel::vp_matrix() const
 {
-	return pgroup->projection * view.camera();
+	return pgroup->projection * glm::mat3{ { 1, 0, 0 }, { 0, 1, 0 }, { -view.x, -view.y, 1 } };
 }
 
 glm::mat3 Panel::vp_matrix_inverse() const
 {
-	return view.matrix() * glm::inverse(pgroup->projection);
+	return glm::mat3{ { 1, 0, 0 }, { 0, 1, 0 }, { view.x, view.y, 1 } } * glm::inverse(pgroup->projection);
 }
 
 void Panel::send_view()
 {
-	view.position = to_view_coordinates(bounds.clip().center_point());
+	view = to_view_coordinates(bounds.clip().center_point());
 	_send_view();
 }
 

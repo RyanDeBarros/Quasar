@@ -1,8 +1,8 @@
 #pragma once
 
 #include "variety/Geometry.h"
-#include "edit/Color.h"
-#include "edit/Image.h"
+#include "edit/color/Color.h"
+#include "edit/image/Image.h"
 
 // LATER use renderables here
 

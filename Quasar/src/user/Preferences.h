@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-#include "edit/Color.h"
+#include "edit/color/Color.h"
 
 struct WorkspacePreferences
 {
