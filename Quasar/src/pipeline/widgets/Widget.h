@@ -126,7 +126,6 @@ inline void assign_widget(Widget* parent, size_t pos, Widget* child)
 	}
 	else if (parent)
 		parent->children[pos] = nullptr;
-
 }
 
 struct W_UnitRenderable : public Widget

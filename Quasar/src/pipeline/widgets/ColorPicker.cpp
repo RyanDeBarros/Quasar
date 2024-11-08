@@ -140,17 +140,17 @@ void ColorPicker::render()
 void ColorPicker::process()
 {
 	process_mb_down_events();
-	b_wget(*this, BUTTON_GRAPHIC).process();
-	b_wget(*this, BUTTON_RGB_SLIDER).process();
-	b_wget(*this, BUTTON_HSV_SLIDER).process();
-	b_wget(*this, BUTTON_HSL_SLIDER).process();
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
+	b_t_wget(*this, BUTTON_GRAPHIC).process();
+	b_t_wget(*this, BUTTON_RGB_SLIDER).process();
+	b_t_wget(*this, BUTTON_HSV_SLIDER).process();
+	b_t_wget(*this, BUTTON_HSL_SLIDER).process();
+	b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
 	if (state == State::SLIDER_RGB)
-		b_wget(*this, BUTTON_RGB_HEX_CODE).process();
+		b_t_wget(*this, BUTTON_RGB_HEX_CODE).process();
 	else if (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL)
 	{
-		b_wget(*this, BUTTON_QUAD).process();
-		b_wget(*this, BUTTON_WHEEL).process();
+		b_t_wget(*this, BUTTON_QUAD).process();
+		b_t_wget(*this, BUTTON_WHEEL).process();
 	}
 }
 
@@ -349,24 +349,24 @@ void ColorPicker::cp_render_gui_back()
 
 void ColorPicker::cp_render_gui_front()
 {
-	b_wget(*this, BUTTON_GRAPHIC).draw();
-	b_wget(*this, BUTTON_RGB_SLIDER).draw();
-	b_wget(*this, BUTTON_HSV_SLIDER).draw();
-	b_wget(*this, BUTTON_HSL_SLIDER).draw();
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
+	b_t_wget(*this, BUTTON_GRAPHIC).draw();
+	b_t_wget(*this, BUTTON_RGB_SLIDER).draw();
+	b_t_wget(*this, BUTTON_HSV_SLIDER).draw();
+	b_t_wget(*this, BUTTON_HSL_SLIDER).draw();
+	b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
 	if (state == State::GRAPHIC_QUAD)
 	{
-		b_wget(*this, BUTTON_QUAD).draw();
-		b_wget(*this, BUTTON_WHEEL).draw();
+		b_t_wget(*this, BUTTON_QUAD).draw();
+		b_t_wget(*this, BUTTON_WHEEL).draw();
 	}
 	else if (state == State::GRAPHIC_WHEEL)
 	{
-		b_wget(*this, BUTTON_QUAD).draw();
-		b_wget(*this, BUTTON_WHEEL).draw();
+		b_t_wget(*this, BUTTON_QUAD).draw();
+		b_t_wget(*this, BUTTON_WHEEL).draw();
 	}
 	else if (state == State::SLIDER_RGB)
 	{
-		b_wget(*this, BUTTON_RGB_HEX_CODE).draw();
+		b_t_wget(*this, BUTTON_RGB_HEX_CODE).draw();
 		tr_wget(*this, TEXT_RED).draw();
 		tr_wget(*this, TEXT_GREEN).draw();
 		tr_wget(*this, TEXT_BLUE).draw();
@@ -440,48 +440,48 @@ void ColorPicker::set_state(State _state)
 		state = _state;
 		set_color(pre_color);
 
-		tb_wget(*this, BUTTON_QUAD).deselect();
-		tb_wget(*this, BUTTON_WHEEL).deselect();
-		tb_wget(*this, BUTTON_GRAPHIC).deselect();
-		tb_wget(*this, BUTTON_RGB_SLIDER).deselect();
-		tb_wget(*this, BUTTON_HSV_SLIDER).deselect();
-		tb_wget(*this, BUTTON_HSL_SLIDER).deselect();
+		tb_t_wget(*this, BUTTON_QUAD).deselect();
+		tb_t_wget(*this, BUTTON_WHEEL).deselect();
+		tb_t_wget(*this, BUTTON_GRAPHIC).deselect();
+		tb_t_wget(*this, BUTTON_RGB_SLIDER).deselect();
+		tb_t_wget(*this, BUTTON_HSV_SLIDER).deselect();
+		tb_t_wget(*this, BUTTON_HSL_SLIDER).deselect();
 		if (state == State::GRAPHIC_QUAD)
 		{
-			tb_wget(*this, BUTTON_QUAD).select();
-			tb_wget(*this, BUTTON_GRAPHIC).select();
-			b_wget(*this, BUTTON_QUAD).enabled = true;
-			b_wget(*this, BUTTON_WHEEL).enabled = true;
-			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
+			tb_t_wget(*this, BUTTON_QUAD).select();
+			tb_t_wget(*this, BUTTON_GRAPHIC).select();
+			b_t_wget(*this, BUTTON_QUAD).enabled = true;
+			b_t_wget(*this, BUTTON_WHEEL).enabled = true;
+			b_t_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
 		}
 		else if (state == State::GRAPHIC_WHEEL)
 		{
-			tb_wget(*this, BUTTON_WHEEL).select();
-			tb_wget(*this, BUTTON_GRAPHIC).select();
-			b_wget(*this, BUTTON_QUAD).enabled = true;
-			b_wget(*this, BUTTON_WHEEL).enabled = true;
-			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
+			tb_t_wget(*this, BUTTON_WHEEL).select();
+			tb_t_wget(*this, BUTTON_GRAPHIC).select();
+			b_t_wget(*this, BUTTON_QUAD).enabled = true;
+			b_t_wget(*this, BUTTON_WHEEL).enabled = true;
+			b_t_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
 		}
 		else if (state == State::SLIDER_RGB)
 		{
-			tb_wget(*this, BUTTON_RGB_SLIDER).select();
-			b_wget(*this, BUTTON_QUAD).enabled = false;
-			b_wget(*this, BUTTON_WHEEL).enabled = false;
-			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = true;
+			tb_t_wget(*this, BUTTON_RGB_SLIDER).select();
+			b_t_wget(*this, BUTTON_QUAD).enabled = false;
+			b_t_wget(*this, BUTTON_WHEEL).enabled = false;
+			b_t_wget(*this, BUTTON_RGB_HEX_CODE).enabled = true;
 		}
 		else if (state == State::SLIDER_HSV)
 		{
-			tb_wget(*this, BUTTON_HSV_SLIDER).select();
-			b_wget(*this, BUTTON_QUAD).enabled = false;
-			b_wget(*this, BUTTON_WHEEL).enabled = false;
-			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
+			tb_t_wget(*this, BUTTON_HSV_SLIDER).select();
+			b_t_wget(*this, BUTTON_QUAD).enabled = false;
+			b_t_wget(*this, BUTTON_WHEEL).enabled = false;
+			b_t_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
 		}
 		else if (state == State::SLIDER_HSL)
 		{
-			tb_wget(*this, BUTTON_HSL_SLIDER).select();
-			b_wget(*this, BUTTON_QUAD).enabled = false;
-			b_wget(*this, BUTTON_WHEEL).enabled = false;
-			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
+			tb_t_wget(*this, BUTTON_HSL_SLIDER).select();
+			b_t_wget(*this, BUTTON_QUAD).enabled = false;
+			b_t_wget(*this, BUTTON_WHEEL).enabled = false;
+			b_t_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
 		}
 	}
 }
@@ -752,9 +752,7 @@ void ColorPicker::initialize_widget()
 	sba.pivot = { 0, 1 };
 	sba.text = "HEX";
 	sba.is_hoverable = [this]() { return state == State::SLIDER_RGB && current_widget_control == -1; };
-	sba.on_select = [this](StandardTButton& b, const MouseButtonEvent& mb, Position) {
-		showing_hex_popup = !showing_hex_popup;
-		};
+	sba.on_select = [this](StandardTButton& b, const MouseButtonEvent& mb, Position) { showing_hex_popup = !showing_hex_popup; };
 	assign_widget(this, BUTTON_RGB_HEX_CODE, new StandardTButton(sba)); // LATER use single toggle button for HEX instead?
 	
 	sba.text = "#";
@@ -784,71 +782,45 @@ void ColorPicker::initialize_widget()
 	tba.pivot = { 0, 1 };
 	tba.text = "QUAD";
 	tba.transform = { { button_left_x, button_top_y_2 }, { 60, button_h } };
-	//tba.is_hoverable = [this]() { return (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL) && current_widget_control == -1; };
-	ToggleTButton* tb_quad = new ToggleTButton(tba);
-	assign_widget(this, BUTTON_QUAD, tb_quad);
-	//tb_quad->is_selectable = [is_hoverable = tba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
-	tb_quad->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::GRAPHIC_QUAD; };
+	tba.is_hoverable = [this]() { return (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL) && current_widget_control == -1; };
+	tba.is_deselectable = [this](ToggleTButton&, const MouseButtonEvent&, Position) { return state != State::GRAPHIC_QUAD; };
+	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent& mb, Position p) { set_state(State::GRAPHIC_QUAD); };
+	assign_widget(this, BUTTON_QUAD, new ToggleTButton(tba));
+	tb_t_wget(*this, BUTTON_QUAD).select();
 	
 	tba.text = "WHEEL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
-	ToggleTButton* tb_wheel = new ToggleTButton(tba);
-	assign_widget(this, BUTTON_WHEEL, tb_wheel);
-	//tb_wheel->is_selectable = [is_hoverable = tba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
-	tb_wheel->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::GRAPHIC_WHEEL; };
-
-	tb_quad->on_select = [this, tb_wheel](const MouseButtonEvent& mb, Position p) {
-		set_state(State::GRAPHIC_QUAD);
-		};
-	tb_wheel->on_select = [this, tb_quad](const MouseButtonEvent& mb, Position p) {
-		set_state(State::GRAPHIC_WHEEL);
-		};
-	tb_quad->select();
+	tba.is_deselectable = [this](ToggleTButton&, const MouseButtonEvent&, Position) { return state != State::GRAPHIC_WHEEL; };
+	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent& mb, Position p) { set_state(State::GRAPHIC_WHEEL); };
+	assign_widget(this, BUTTON_WHEEL, new ToggleTButton(tba));
 
 	tba.text = "GRAPHIC";
 	tba.transform.position = { button_left_x, button_top_y_1 };
 	tba.transform.scale.x = 72;
-	//tba.is_hoverable = [this]() { return current_widget_control == -1; };
-	ToggleTButton* tb_graphic = new ToggleTButton(tba);
-	assign_widget(this, BUTTON_GRAPHIC, tb_graphic);
-	//tb_graphic->is_selectable = [is_hoverable = tba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
-	tb_graphic->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::GRAPHIC_QUAD && state != State::GRAPHIC_WHEEL; };
+	tba.is_hoverable = [this]() { return current_widget_control == -1; };
+	tba.is_deselectable = [this](ToggleTButton&, const MouseButtonEvent&, Position) { return state != State::GRAPHIC_QUAD && state != State::GRAPHIC_WHEEL; };
+	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent& mb, Position p) { set_state(last_graphic_state); };
+	assign_widget(this, BUTTON_GRAPHIC, new ToggleTButton(tba));
 
 	tba.text = "RGB";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.transform.scale.x = 45;
-	ToggleTButton* tb_rgb = new ToggleTButton(tba);
-	assign_widget(this, BUTTON_RGB_SLIDER, tb_rgb);
-	//tb_rgb->is_selectable = [is_hoverable = tba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
-	tb_rgb->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::SLIDER_RGB; };
+	tba.is_deselectable = [this](ToggleTButton&, const MouseButtonEvent&, Position) { return state != State::SLIDER_RGB; };
+	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent& mb, Position p) { set_state(State::SLIDER_RGB); };
+	assign_widget(this, BUTTON_RGB_SLIDER, new ToggleTButton(tba));
 
 	tba.text = "HSV";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
-	ToggleTButton* tb_hsv = new ToggleTButton(tba);
-	assign_widget(this, BUTTON_HSV_SLIDER, tb_hsv);
-	//tb_hsv->is_selectable = [is_hoverable = tba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
-	tb_hsv->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::SLIDER_HSV; };
+	tba.is_deselectable = [this](ToggleTButton&, const MouseButtonEvent&, Position) { return state != State::SLIDER_HSV; };
+	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent& mb, Position p) { set_state(State::SLIDER_HSV); };
+	assign_widget(this, BUTTON_HSV_SLIDER, new ToggleTButton(tba));
 
 	tba.text = "HSL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
-	ToggleTButton* tb_hsl = new ToggleTButton(tba);
-	assign_widget(this, BUTTON_HSL_SLIDER, tb_hsl);
-	//tb_hsl->is_selectable = [is_hoverable = sba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
-	tb_hsl->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::SLIDER_HSL; };
-
-	tb_graphic->on_select = [this, tb_rgb, tb_hsv, tb_hsl](const MouseButtonEvent& mb, Position p) {
-		set_state(last_graphic_state);
-		};
-	tb_rgb->on_select = [this, tb_graphic, tb_hsv, tb_hsl](const MouseButtonEvent& mb, Position p) {
-		set_state(State::SLIDER_RGB);
-		};
-	tb_hsv->on_select = [this, tb_graphic, tb_rgb, tb_hsl](const MouseButtonEvent& mb, Position p) {
-		set_state(State::SLIDER_HSV);
-		};
-	tb_hsl->on_select = [this, tb_graphic, tb_rgb, tb_hsv](const MouseButtonEvent& mb, Position p) {
-		set_state(State::SLIDER_HSL);
-		};
-	tb_graphic->select();
+	tba.is_deselectable = [this](ToggleTButton&, const MouseButtonEvent&, Position) { return state != State::SLIDER_HSL; };
+	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent& mb, Position p) { set_state(State::SLIDER_HSL); };
+	assign_widget(this, BUTTON_HSL_SLIDER, new ToggleTButton(tba));
+	tb_t_wget(*this, BUTTON_GRAPHIC).select();
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -1398,14 +1370,14 @@ void ColorPicker::sync_cp_widget_with_vp()
 	{
 		cached_scale1d = sc;
 		rr_wget(*this, BACKGROUND).update_corner_radius(sc).update_thickness(sc);
-		b_wget(*this, BUTTON_RGB_HEX_CODE).update_corner_radius(sc).update_thickness(sc);
-		b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).update_corner_radius(sc).update_thickness(sc);
-		b_wget(*this, BUTTON_QUAD).update_corner_radius(sc).update_thickness(sc);
-		b_wget(*this, BUTTON_WHEEL).update_corner_radius(sc).update_thickness(sc);
-		b_wget(*this, BUTTON_GRAPHIC).update_corner_radius(sc).update_thickness(sc);
-		b_wget(*this, BUTTON_RGB_SLIDER).update_corner_radius(sc).update_thickness(sc);
-		b_wget(*this, BUTTON_HSV_SLIDER).update_corner_radius(sc).update_thickness(sc);
-		b_wget(*this, BUTTON_HSL_SLIDER).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_RGB_HEX_CODE).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_QUAD).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_WHEEL).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_GRAPHIC).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_RGB_SLIDER).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_HSV_SLIDER).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_HSL_SLIDER).update_corner_radius(sc).update_thickness(sc);
 	}
 	rr_wget(*this, BACKGROUND).update_transform().send_buffer();
 	tr_wget(*this, TEXT_ALPHA).send_vp(*vp);
@@ -1416,14 +1388,14 @@ void ColorPicker::sync_cp_widget_with_vp()
 	tr_wget(*this, TEXT_SAT).send_vp(*vp);
 	tr_wget(*this, TEXT_VALUE).send_vp(*vp);
 	tr_wget(*this, TEXT_LIGHT).send_vp(*vp);
-	b_wget(*this, BUTTON_RGB_HEX_CODE).send_vp();
-	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp();
-	b_wget(*this, BUTTON_QUAD).send_vp();
-	b_wget(*this, BUTTON_WHEEL).send_vp();
-	b_wget(*this, BUTTON_GRAPHIC).send_vp();
-	b_wget(*this, BUTTON_RGB_SLIDER).send_vp();
-	b_wget(*this, BUTTON_HSV_SLIDER).send_vp();
-	b_wget(*this, BUTTON_HSL_SLIDER).send_vp();
+	b_t_wget(*this, BUTTON_RGB_HEX_CODE).send_vp();
+	b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp();
+	b_t_wget(*this, BUTTON_QUAD).send_vp();
+	b_t_wget(*this, BUTTON_WHEEL).send_vp();
+	b_t_wget(*this, BUTTON_GRAPHIC).send_vp();
+	b_t_wget(*this, BUTTON_RGB_SLIDER).send_vp();
+	b_t_wget(*this, BUTTON_HSV_SLIDER).send_vp();
+	b_t_wget(*this, BUTTON_HSL_SLIDER).send_vp();
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const

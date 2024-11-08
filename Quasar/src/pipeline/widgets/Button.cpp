@@ -157,7 +157,7 @@ StandardTButton::StandardTButton(const StandardTButtonArgs& args)
 		else
 			hovering = false;
 		};
-	on_hover_exit = [this, is_hoverable = args.is_hoverable]() {
+	on_hover_exit = [this]() {
 		send_state(ButtonGState::NORMAL);
 		Machine.main_window->release_cursor(&wh);
 		};
@@ -167,16 +167,21 @@ StandardTButton::StandardTButton(const StandardTButtonArgs& args)
 		};
 	on_release = [this](const MouseButtonEvent& mb, Position pos) {
 		if (is_selectable(*this, mb, pos))
-		{
-			send_state(ButtonGState::NORMAL);
-			hovering = false;
-			on_select(*this, mb, pos);
-		}
+			select(mb, pos);
 		};
+}
+
+void StandardTButton::select(const MouseButtonEvent& mb, Position local_pos)
+{
+	send_state(ButtonGState::NORMAL);
+	hovering = false;
+	on_select(*this, mb, local_pos);
 }
 
 void StandardTButton::send_state(ButtonGState _state)
 {
+	if (state == _state)
+		return;
 	state = _state;
 	if (state == ButtonGState::NORMAL)
 	{
@@ -213,64 +218,103 @@ void StandardTButton::send_state(ButtonGState _state)
 }
 
 ToggleTButton::ToggleTButton(const ToggleTButtonArgs& args)
-	: TButton(args.vp, { args.transform, args.pivot }, args.frange, args.font_size, args.rr_shader, args.mb_parent, args.text), normal_fill(args.normal_fill)
+	: TButton(args.vp, { args.transform, args.pivot }, args.frange, args.font_size, args.rr_shader, args.mb_parent, args.text),
+	g_normal(args.normal), g_hovered(args.hovered), g_pressed(args.pressed), g_disabled(args.disabled),
+	is_hoverable(args.is_hoverable), is_selectable(args.is_selectable), on_select(args.on_select), is_deselectable(args.is_deselectable), on_deselect(args.on_deselect)
 {
-	prev_fill = &normal_fill;
 	thickness = args.thickness;
 	corner_radius = args.corner_radius;
-	border_color = args.border_color;
-	fill_color = args.normal_fill;
 	update_all();
-	on_hover_enter = [this, is_hoverable = args.is_hoverable]() {
+	send_state(ButtonGState::NORMAL);
+	on_hover_enter = [this]() {
 		if (is_hoverable())
 		{
-			fill_color = hover_fill;
-			update_fill_color().send_buffer();
+			send_state(ButtonGState::HOVERED);
 			Machine.main_window->request_cursor(&wh, StandardCursor::HAND);
 		}
 		else
 			hovering = false;
 		};
-	on_hover_exit = [this, is_hoverable = args.is_hoverable]() {
-		fill_color = *prev_fill;
-		update_fill_color().send_buffer();
+	on_hover_exit = [this]() {
+		if (selected)
+			send_state(ButtonGState::PRESSED);
+		else
+			send_state(ButtonGState::NORMAL);
+		Machine.main_window->release_cursor(&wh);
+		};
+	on_press = [this](const MouseButtonEvent& mb, Position pos) {
+		send_state(ButtonGState::PRESSED);
 		Machine.main_window->release_cursor(&wh);
 		};
 	on_release = [this](const MouseButtonEvent& mb, Position pos) {
-		if (is_hovered())
+		if (selected)
 		{
-			if (!selected)
-			{
-				if (is_selectable(mb, pos))
-					select(mb, pos);
-			}
-			else
-			{
-				if (is_deselectable(mb, pos))
-					deselect(mb, pos);
-			}
+			if (is_deselectable(*this, mb, pos))
+				deselect(mb, pos);
+		}
+		else
+		{
+			if (is_selectable(*this, mb, pos))
+				select(mb, pos);
 		}
 		};
 }
 
 void ToggleTButton::select(const MouseButtonEvent& mb, Position local_pos)
 {
-	if (selected) return;
+	if (selected)
+		return;
 	selected = true;
-	fill_color = select_fill;
-	update_fill_color().send_buffer();
-	prev_fill = &select_fill;
-	Machine.main_window->release_cursor(&wh);
-	on_select(mb, local_pos);
+	send_state(ButtonGState::PRESSED);
+	hovering = false;
+	on_select(*this, mb, local_pos);
 }
 
 void ToggleTButton::deselect(const MouseButtonEvent& mb, Position local_pos)
 {
-	if (!selected) return;
+	if (!selected)
+		return;
 	selected = false;
-	fill_color = normal_fill;
-	update_fill_color().send_buffer();
-	prev_fill = &normal_fill;
-	Machine.main_window->release_cursor(&wh);
-	on_deselect(mb, local_pos);
+	send_state(ButtonGState::NORMAL);
+	hovering = false;
+	on_deselect(*this, mb, local_pos);
+}
+
+void ToggleTButton::send_state(ButtonGState _state)
+{
+	if (state == _state)
+		return;
+	state = _state;
+	if (state == ButtonGState::NORMAL)
+	{
+		border_color = g_normal.border;
+		fill_color = g_normal.fill;
+		update_fill_color().update_border_color().send_buffer();
+		text().fore_color = g_normal.text_color;
+		text().send_fore_color();
+	}
+	else if (state == ButtonGState::HOVERED)
+	{
+		border_color = g_hovered.border;
+		fill_color = g_hovered.fill;
+		update_fill_color().update_border_color().send_buffer();
+		text().fore_color = g_hovered.text_color;
+		text().send_fore_color();
+	}
+	else if (state == ButtonGState::PRESSED)
+	{
+		border_color = g_pressed.border;
+		fill_color = g_pressed.fill;
+		update_fill_color().update_border_color().send_buffer();
+		text().fore_color = g_pressed.text_color;
+		text().send_fore_color();
+	}
+	else if (state == ButtonGState::DISABLED)
+	{
+		border_color = g_disabled.border;
+		fill_color = g_disabled.fill;
+		update_fill_color().update_border_color().send_buffer();
+		text().fore_color = g_disabled.text_color;
+		text().send_fore_color();
+	}
 }

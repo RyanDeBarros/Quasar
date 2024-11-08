@@ -23,8 +23,8 @@ protected:
 
 public:
 	bool enabled = true;
-protected:
 
+protected:
 	WindowHandle wh;
 
 	void init(const WidgetPlacement& wp, TextRender* text);
@@ -54,22 +54,23 @@ public:
 	const TextRender& text() const { return tr_wget(*this, TEXT); }
 };
 
-inline TButton& b_wget(Widget& w, size_t i)
+inline TButton& b_t_wget(Widget& w, size_t i)
 {
 	return *w.get<TButton>(i);
 }
 
-inline const TButton& b_wget(const Widget& w, size_t i)
+inline const TButton& b_t_wget(const Widget& w, size_t i)
 {
 	return *w.get<TButton>(i);
 }
 
-enum class ButtonGState
+enum class ButtonGState : char
 {
 	NORMAL,
 	HOVERED,
 	PRESSED,
-	DISABLED
+	DISABLED,
+	_NONE
 };
 
 struct TButtonGDesign
@@ -93,6 +94,7 @@ struct StandardTButtonArgs
 	FlatTransform transform = {};
 	float thickness = 0.5f;
 	float corner_radius = 5.0f;
+
 	TButtonGDesign normal = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f) };
 	TButtonGDesign hovered = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f) };
 	TButtonGDesign pressed = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.3f, 0.5f).to_rgb(), 0.9f) };
@@ -105,8 +107,8 @@ struct StandardTButtonArgs
 
 struct StandardTButton : public TButton
 {
-	ButtonGState state = ButtonGState::NORMAL;
 	TButtonGDesign g_normal, g_hovered, g_pressed, g_disabled;
+	ButtonGState state = ButtonGState::_NONE;
 
 	std::function<bool()> is_hoverable;
 	std::function<bool(StandardTButton&, const MouseButtonEvent&, Position)> is_selectable;
@@ -114,19 +116,23 @@ struct StandardTButton : public TButton
 	
 	StandardTButton(const StandardTButtonArgs& args);
 
+	void select(const MouseButtonEvent& mb = MouseButtonEvent::LEFT_CLICK, Position local_pos = {});
+
 	void send_state(ButtonGState _state);
 	// LATER implement disabled gstate
 };
 
-inline StandardTButton& sb_wget(Widget& w, size_t i)
+inline StandardTButton& sb_t_wget(Widget& w, size_t i)
 {
 	return *w.get<StandardTButton>(i);
 }
 
-inline const StandardTButton& sb_wget(const Widget& w, size_t i)
+inline const StandardTButton& sb_t_wget(const Widget& w, size_t i)
 {
 	return *w.get<StandardTButton>(i);
 }
+
+struct ToggleTButton;
 
 struct ToggleTButtonArgs
 {
@@ -140,44 +146,53 @@ struct ToggleTButtonArgs
 	FlatTransform transform = {};
 	float thickness = 0.5f;
 	float corner_radius = 5.0f;
-	RGBA border_color = RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f);
-	RGBA normal_fill = RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f);
+
+	TButtonGDesign normal = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f) };
+	TButtonGDesign hovered = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f) };
+	TButtonGDesign pressed = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.3f, 0.5f).to_rgb(), 0.9f) };
+	TButtonGDesign disabled = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f) };
+
 	std::function<bool()> is_hoverable = []() { return true; };
+	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_selectable = [](ToggleTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_select = [](ToggleTButton&, const MouseButtonEvent&, Position) {};
+	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_deselectable = [](ToggleTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_deselect = [](ToggleTButton&, const MouseButtonEvent&, Position) {};
 };
 
 struct ToggleTButton : public TButton
 {
-	RGBA normal_fill;
-	RGBA hover_fill = RGBA(HSV(0.7f, 0.1f, 0.5f).to_rgb(), 0.9f);
-	RGBA select_fill = RGBA(HSV(0.7f, 0.3f, 0.5f).to_rgb(), 0.9f);
-
-protected:
-	RGBA* prev_fill = nullptr;
-public:
-
-	std::function<bool(const MouseButtonEvent&, Position)> is_selectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
-	std::function<void(const MouseButtonEvent&, Position)> on_select = [](const MouseButtonEvent&, Position) {};
-	std::function<bool(const MouseButtonEvent&, Position)> is_deselectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
-	std::function<void(const MouseButtonEvent&, Position)> on_deselect = [](const MouseButtonEvent&, Position) {};
+	TButtonGDesign g_normal, g_hovered, g_pressed, g_disabled;
+	ButtonGState state = ButtonGState::_NONE;
 
 private:
 	bool selected = false;
+
 public:
+	std::function<bool()> is_hoverable;
+	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_selectable;
+	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_select;
+	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_deselectable;
+	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_deselect;
 
 	ToggleTButton(const ToggleTButtonArgs& args);
 
 	void select(const MouseButtonEvent& mb = MouseButtonEvent::LEFT_CLICK, Position local_pos = {});
 	void deselect(const MouseButtonEvent& mb = MouseButtonEvent::LEFT_CLICK, Position local_pos = {});
+
+	void send_state(ButtonGState _state);
+	// LATER implement disabled gstate
 };
 
-inline ToggleTButton& tb_wget(Widget& w, size_t i)
+inline ToggleTButton& tb_t_wget(Widget& w, size_t i)
 {
 	return *w.get<ToggleTButton>(i);
 }
 
-inline const ToggleTButton& tb_wget(const Widget& w, size_t i)
+inline const ToggleTButton& tb_t_wget(const Widget& w, size_t i)
 {
 	return *w.get<ToggleTButton>(i);
 }
 
-// LATER IButton, StandardIButton, ToggleIButton for image buttons.
+// TODO Toggle Button group. NOT a widget.
+
+// LATER IButton, StandardIButton, ToggleIButton for image buttons. Use b_i_wget, sb_i_wget, and tb_i_wget.
