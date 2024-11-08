@@ -76,7 +76,6 @@ private:
 
 	void cp_render_gui_back();
 	void cp_render_gui_front();
-	void cp_render_tab_button(State& to_state, State state, bool disable, const char* display) const;
 	void update_rgb_hex();
 
 	void initialize_widget();
@@ -168,6 +167,10 @@ private:
 		BUTTON_SWITCH_TXTFLD_MODE,		// separate widget
 		BUTTON_QUAD,					// separate widget
 		BUTTON_WHEEL,					// separate widget
+		BUTTON_GRAPHIC,					// separate widget
+		BUTTON_RGB_SLIDER,				// separate widget
+		BUTTON_HSV_SLIDER,				// separate widget
+		BUTTON_HSL_SLIDER,				// separate widget
 		_W_COUNT
 	};
 

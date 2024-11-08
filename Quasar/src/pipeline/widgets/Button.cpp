@@ -15,8 +15,11 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 			Position local_cursor_pos;
 			if (is_hovered(&local_cursor_pos))
 			{
-				on_press(m, local_cursor_pos);
-				m.consumed = true;
+				if (enabled)
+				{
+					m.consumed = true;
+					on_press(m, local_cursor_pos);
+				}
 				if (m.button == MouseButton::LEFT)
 					left_pressed = true;
 				else if (m.button == MouseButton::MIDDLE)
@@ -28,11 +31,13 @@ void Button::init(const WidgetPlacement& wp, TextRender* txt, RoundRect* bkg)
 		else if (m.action == IAction::RELEASE)
 		{
 			Position local_cursor_pos;
-			if (is_hovered(&local_cursor_pos))
+			if (enabled && is_hovered(&local_cursor_pos))
 			{
 				if (is_pressed(m.button))
+				{
 					m.consumed = true;
-				on_release(m, local_cursor_pos);
+					on_release(m, local_cursor_pos);
+				}
 			}
 			if (m.button == MouseButton::LEFT)
 				left_pressed = false;
@@ -95,6 +100,7 @@ void Button::send_vp() const
 
 void Button::process()
 {
+	if (!enabled) return;
 	if (is_hovered())
 	{
 		if (!hovering)
@@ -165,15 +171,18 @@ ToggleButton::ToggleButton(const StandardButtonArgs& args)
 	: StandardButton(args)
 {
 	on_release = [this](const MouseButtonEvent& mb, Position pos) {
-		if (!selected)
+		if (is_hovered())
 		{
-			if (is_selectable(mb, pos))
-				select(mb, pos);
-		}
-		else
-		{
-			if (is_deselectable(mb, pos))
-				deselect(mb, pos);
+			if (!selected)
+			{
+				if (is_selectable(mb, pos))
+					select(mb, pos);
+			}
+			else
+			{
+				if (is_deselectable(mb, pos))
+					deselect(mb, pos);
+			}
 		}
 		};
 }
@@ -181,10 +190,10 @@ ToggleButton::ToggleButton(const StandardButtonArgs& args)
 void ToggleButton::select(const MouseButtonEvent& mb, Position local_pos)
 {
 	if (selected) return;
+	selected = true;
 	bkg().fill_color = select_fill;
 	bkg().update_fill_color().send_buffer();
 	prev_fill = &select_fill;
-	selected = true;
 	Machine.main_window->release_cursor(&wh);
 	on_select(mb, local_pos);
 }
@@ -192,10 +201,10 @@ void ToggleButton::select(const MouseButtonEvent& mb, Position local_pos)
 void ToggleButton::deselect(const MouseButtonEvent& mb, Position local_pos)
 {
 	if (!selected) return;
+	selected = false;
 	bkg().fill_color = normal_fill;
 	bkg().update_fill_color().send_buffer();
 	prev_fill = &normal_fill;
-	selected = false;
 	Machine.main_window->release_cursor(&wh);
 	on_deselect(mb, local_pos);
 }

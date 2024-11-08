@@ -38,7 +38,7 @@ const float preview_y = slider4_y - 60;
 const float preview_w = 80;
 const float preview_h = 40;
 
-const float left_text_x = -98;
+const float left_text_x = -94;
 const float text_sep = 70;
 const float text1_y = slider1_y - slider_h * 1.5f;
 const float text2_y = text1_y - text_sep;
@@ -46,7 +46,7 @@ const float text3_y = text2_y - text_sep;
 const float text4_y = text3_y - text_sep;
 
 const float button_rgb_hex_code_x = -90;
-const float button_switch_txtfld_mode_x = 102;
+const float button_switch_txtfld_mode_x = 101;
 const float button_y = 160;
 const float button_scale = 0.9f;
 const float button_rgb_hex_code_w = 50;
@@ -139,10 +139,18 @@ void ColorPicker::render()
 void ColorPicker::process()
 {
 	process_mb_down_events();
-	b_wget(*this, BUTTON_RGB_HEX_CODE).process();
+	b_wget(*this, BUTTON_GRAPHIC).process();
+	b_wget(*this, BUTTON_RGB_SLIDER).process();
+	b_wget(*this, BUTTON_HSV_SLIDER).process();
+	b_wget(*this, BUTTON_HSL_SLIDER).process();
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
-	b_wget(*this, BUTTON_QUAD).process();
-	b_wget(*this, BUTTON_WHEEL).process();
+	if (state == State::SLIDER_RGB)
+		b_wget(*this, BUTTON_RGB_HEX_CODE).process();
+	else if (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL)
+	{
+		b_wget(*this, BUTTON_QUAD).process();
+		b_wget(*this, BUTTON_WHEEL).process();
+	}
 }
 
 void ColorPicker::cp_render_gui_back()
@@ -166,31 +174,20 @@ void ColorPicker::cp_render_gui_back()
 	{
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
 		ImGui::SetWindowFontScale(w_scale1d * font_window_scale);
-		State to_state = state;
 		imgui_takeover_mb = false;
 		imgui_takeover_key = false;
-		if (ImGui::BeginTabBar("cp-main-tb"))
-		{
-			cp_render_tab_button(to_state, last_graphic_state, state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL, "GRAPHIC");
-			cp_render_tab_button(to_state, State::SLIDER_RGB, state == State::SLIDER_RGB, "RGB");
-			cp_render_tab_button(to_state, State::SLIDER_HSV, state == State::SLIDER_HSV, "HSV");
-			cp_render_tab_button(to_state, State::SLIDER_HSL, state == State::SLIDER_HSL, "HSL");
-			ImGui::EndTabBar();
-		}
 		if (state == State::SLIDER_RGB)
 		{
 			if (b_wget(*this, BUTTON_RGB_HEX_CODE).is_pressed(MouseButton::LEFT))
 			{
 				auto cpos = ImGui::GetCursorPos();
-				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 35 * self.transform.scale.y));
+				ImGui::SetNextWindowPos(ImVec2(pos.x + cpos.x, pos.y + cpos.y + 90 * self.transform.scale.y));
 				ImGui::OpenPopup("hex-popup");
 			}
 			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
 			{
 				if (Machine.main_window->is_key_pressed(Key::ESCAPE))
-				{
 					ImGui::CloseCurrentPopup();
-				}
 				else
 				{
 					ImGui::Text("RGB hex code");
@@ -207,14 +204,12 @@ void ColorPicker::cp_render_gui_back()
 		}
 
 		float alpha = get_color().alpha;
-		float imgui_y = ImGui::GetCursorPosY();
-		if (state == State::SLIDER_RGB || state == State::SLIDER_HSV || state == State::SLIDER_HSL)
-			imgui_y += 41 * self.transform.scale.y;
-		float imgui_y_1 = imgui_y + 45 * self.transform.scale.y;
-		float imgui_y_2 = imgui_y_1 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
-		float imgui_y_3 = imgui_y_2 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
-		float imgui_y_4 = imgui_y_3 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
-		float imgui_sml_x = 97 * self.transform.scale.x;
+		const float imgui_slider_w = 200;
+		const float imgui_y_1 = 147 * self.transform.scale.y;
+		const float imgui_y_2 = imgui_y_1 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
+		const float imgui_y_3 = imgui_y_2 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
+		const float imgui_y_4 = imgui_y_3 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
+		const float imgui_sml_x = 120 * self.transform.scale.x;
 		if (state == State::SLIDER_RGB)
 		{
 			RGB rgb = get_color().rgb();
@@ -223,10 +218,13 @@ void ColorPicker::cp_render_gui_back()
 				bool mod = false;
 				int r = rgb.get_pixel_r(), g = rgb.get_pixel_g(), b = rgb.get_pixel_b();
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_1));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-red", &r, 5, 10);
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_2));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-green", &g, 5, 10);
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_3));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-blue", &b, 5, 10);
 				if (mod)
 					set_color(ColorFrame(RGB(r, g, b), alpha));
@@ -236,10 +234,13 @@ void ColorPicker::cp_render_gui_back()
 				bool mod = false;
 				float r = rgb.r * 100, g = rgb.g * 100, b = rgb.b * 100;
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_1));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-red", &r, 5, 10, "%.2f");
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_2));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-green", &g, 5, 10, "%.2f");
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_3));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-blue", &b, 5, 10, "%.2f");
 				if (mod)
 					set_color(RGBA(r * 0.01f, g * 0.01f, b * 0.01f, alpha));
@@ -253,10 +254,13 @@ void ColorPicker::cp_render_gui_back()
 				bool mod = false;
 				int h = hsv.get_pixel_h(), s = hsv.get_pixel_s(), v = hsv.get_pixel_v();
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_1));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-hue", &h, 5, 10);
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_2));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-sat", &s, 5, 10);
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_3));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-value", &v, 5, 10);
 				if (mod)
 					set_color(ColorFrame(HSV(h, s, v), alpha));
@@ -266,10 +270,13 @@ void ColorPicker::cp_render_gui_back()
 				bool mod = false;
 				float h = hsv.h * 100, s = hsv.s * 100, v = hsv.v * 100;
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_1));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-hue", &h, 5, 10, "%.2f");
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_2));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-sat", &s, 5, 10, "%.2f");
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_3));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-value", &v, 5, 10, "%.2f");
 				if (mod)
 					set_color(HSVA(h * 0.01f, s * 0.01f, v * 0.01f, alpha));
@@ -283,10 +290,13 @@ void ColorPicker::cp_render_gui_back()
 				bool mod = false;
 				int h = hsl.get_pixel_h(), s = hsl.get_pixel_s(), l = hsl.get_pixel_l();
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_1));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-hue", &h, 5, 10);
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_2));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-sat", &s, 5, 10);
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_3));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-light", &l, 5, 10);
 				if (mod)
 					set_color(ColorFrame(HSL(h, s, l), alpha));
@@ -296,10 +306,13 @@ void ColorPicker::cp_render_gui_back()
 				bool mod = false;
 				float h = hsl.h * 100, s = hsl.s * 100, l = hsl.l * 100;
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_1));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-hue", &h, 5, 10, "%.2f");
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_2));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-sat", &s, 5, 10, "%.2f");
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_3));
+				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-light", &l, 5, 10, "%.2f");
 				if (mod)
 					set_color(HSLA(h * 0.01f, s * 0.01f, l * 0.01f, alpha));
@@ -310,6 +323,7 @@ void ColorPicker::cp_render_gui_back()
 			ColorFrame color = get_color();
 			int a = color.get_pixel_a();
 			ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_4)); 
+			ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 			if (ImGui::InputInt("##it-alpha", &a, 5, 10))
 			{
 				color.set_pixel_a(a);
@@ -321,11 +335,11 @@ void ColorPicker::cp_render_gui_back()
 			ColorFrame color = get_color();
 			float a = color.alpha * 100;
 			ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_4));
+			ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 			if (ImGui::InputFloat("##it-alpha", &a, 5, 10, "%.2f"))
 				set_color(ColorFrame(color.rgb(), a * 0.01f));
 		}
 
-		set_state(to_state);
 		ImGui::SetWindowFontScale(font_window_scale);
 		ImGui::End();
 	}
@@ -333,6 +347,10 @@ void ColorPicker::cp_render_gui_back()
 
 void ColorPicker::cp_render_gui_front()
 {
+	b_wget(*this, BUTTON_GRAPHIC).draw();
+	b_wget(*this, BUTTON_RGB_SLIDER).draw();
+	b_wget(*this, BUTTON_HSV_SLIDER).draw();
+	b_wget(*this, BUTTON_HSL_SLIDER).draw();
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).draw();
 	if (state == State::GRAPHIC_QUAD)
 	{
@@ -364,16 +382,6 @@ void ColorPicker::cp_render_gui_front()
 		tr_wget(*this, TEXT_LIGHT).draw();
 	}
 	tr_wget(*this, TEXT_ALPHA).draw();
-}
-
-void ColorPicker::cp_render_tab_button(State& to_state, State state, bool disable, const char* display) const
-{
-	if (disable)
-		ImGui::BeginDisabled();
-	if (ImGui::TabItemButton(display))
-		to_state = state;
-	if (disable)
-		ImGui::EndDisabled();
 }
 
 static bool is_hex(char c)
@@ -413,21 +421,67 @@ void ColorPicker::set_state(State _state)
 	{
 		if (_state == State::GRAPHIC_QUAD)
 		{
-			tb_wget(*this, BUTTON_QUAD).select();
 			last_graphic_state = State::GRAPHIC_QUAD;
 		}
 		else if (_state == State::GRAPHIC_WHEEL)
 		{
-			tb_wget(*this, BUTTON_WHEEL).select();
 			last_graphic_state = State::GRAPHIC_WHEEL;
 		}
 		else if (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL)
+		{
+
 			last_graphic_state = state;
+		}
 
 		release_cursor();
 		ColorFrame pre_color = get_color();
 		state = _state;
 		set_color(pre_color);
+
+		// TODO create ToggleButtonGroup widget. Use 2 such widgets here
+		tb_wget(*this, BUTTON_QUAD).deselect();
+		tb_wget(*this, BUTTON_WHEEL).deselect();
+		tb_wget(*this, BUTTON_GRAPHIC).deselect();
+		tb_wget(*this, BUTTON_RGB_SLIDER).deselect();
+		tb_wget(*this, BUTTON_HSV_SLIDER).deselect();
+		tb_wget(*this, BUTTON_HSL_SLIDER).deselect();
+		if (state == State::GRAPHIC_QUAD)
+		{
+			tb_wget(*this, BUTTON_QUAD).select();
+			tb_wget(*this, BUTTON_GRAPHIC).select();
+			b_wget(*this, BUTTON_QUAD).enabled = true;
+			b_wget(*this, BUTTON_WHEEL).enabled = true;
+			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
+		}
+		else if (state == State::GRAPHIC_WHEEL)
+		{
+			tb_wget(*this, BUTTON_WHEEL).select();
+			tb_wget(*this, BUTTON_GRAPHIC).select();
+			b_wget(*this, BUTTON_QUAD).enabled = true;
+			b_wget(*this, BUTTON_WHEEL).enabled = true;
+			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
+		}
+		else if (state == State::SLIDER_RGB)
+		{
+			tb_wget(*this, BUTTON_RGB_SLIDER).select();
+			b_wget(*this, BUTTON_QUAD).enabled = false;
+			b_wget(*this, BUTTON_WHEEL).enabled = false;
+			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = true;
+		}
+		else if (state == State::SLIDER_HSV)
+		{
+			tb_wget(*this, BUTTON_HSV_SLIDER).select();
+			b_wget(*this, BUTTON_QUAD).enabled = false;
+			b_wget(*this, BUTTON_WHEEL).enabled = false;
+			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
+		}
+		else if (state == State::SLIDER_HSL)
+		{
+			tb_wget(*this, BUTTON_HSL_SLIDER).select();
+			b_wget(*this, BUTTON_QUAD).enabled = false;
+			b_wget(*this, BUTTON_WHEEL).enabled = false;
+			b_wget(*this, BUTTON_RGB_HEX_CODE).enabled = false;
+		}
 	}
 }
 
@@ -722,32 +776,73 @@ void ColorPicker::initialize_widget()
 		};
 
 	sba.text = "QUAD";
-	sba.transform.position = { -200, 0 };
-	sba.bkg_size = { 100, 50 };
-	sba.is_hoverable = [this]() { return (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL) && current_widget_control == -1; };
+	sba.transform.position = { -86, 160 };
+	sba.bkg_size = { 60, button_h };
+	//sba.is_hoverable = [this]() { return (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL) && current_widget_control == -1; };
 	ToggleButton* tb_quad = new ToggleButton(sba);
 	assign_widget(this, BUTTON_QUAD, tb_quad);
-	tb_quad->is_selectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
-	tb_quad->is_deselectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	//tb_quad->is_selectable = [is_hoverable = sba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
+	tb_quad->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::GRAPHIC_QUAD; };
 	
 	sba.text = "WHEEL";
-	sba.transform.position = { -200 + 100 + 10, 0 };
-	sba.bkg_size = { 100, 50 };
-	sba.is_hoverable = [this]() { return (state == State::GRAPHIC_QUAD || state == State::GRAPHIC_WHEEL) && current_widget_control == -1; };
+	sba.transform.position.x += sba.bkg_size.x;
 	ToggleButton* tb_wheel = new ToggleButton(sba);
 	assign_widget(this, BUTTON_WHEEL, tb_wheel);
-	tb_wheel->is_selectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
-	tb_wheel->is_deselectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	//tb_wheel->is_selectable = [is_hoverable = sba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
+	tb_wheel->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::GRAPHIC_WHEEL; };
 
 	tb_quad->on_select = [this, tb_wheel](const MouseButtonEvent& mb, Position p) {
-		tb_wheel->deselect(mb, p);
-		state = State::GRAPHIC_QUAD;
+		set_state(State::GRAPHIC_QUAD);
 		};
 	tb_wheel->on_select = [this, tb_quad](const MouseButtonEvent& mb, Position p) {
-		tb_quad->deselect(mb, p);
-		state = State::GRAPHIC_WHEEL;
+		set_state(State::GRAPHIC_WHEEL);
 		};
 	tb_quad->select();
+
+	sba.text = "GRAPHIC";
+	sba.transform.position = { -77, 190 };
+	sba.bkg_size.x = 80;
+	//sba.is_hoverable = [this]() { return current_widget_control == -1; };
+	ToggleButton* tb_graphic = new ToggleButton(sba);
+	assign_widget(this, BUTTON_GRAPHIC, tb_graphic);
+	//tb_graphic->is_selectable = [is_hoverable = sba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
+	tb_graphic->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::GRAPHIC_QUAD && state != State::GRAPHIC_WHEEL; };
+
+	sba.text = "RGB";
+	sba.transform.position.x += sba.bkg_size.x * 0.5f + 25;
+	sba.bkg_size.x = 50;
+	ToggleButton* tb_rgb = new ToggleButton(sba);
+	assign_widget(this, BUTTON_RGB_SLIDER, tb_rgb);
+	//tb_rgb->is_selectable = [is_hoverable = sba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
+	tb_rgb->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::SLIDER_RGB; };
+
+	sba.text = "HSV";
+	sba.transform.position.x += sba.bkg_size.x + 1;
+	ToggleButton* tb_hsv = new ToggleButton(sba);
+	assign_widget(this, BUTTON_HSV_SLIDER, tb_hsv);
+	//tb_hsv->is_selectable = [is_hoverable = sba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
+	tb_hsv->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::SLIDER_HSV; };
+
+	sba.text = "HSL";
+	sba.transform.position.x += sba.bkg_size.x + 1;
+	ToggleButton* tb_hsl = new ToggleButton(sba);
+	assign_widget(this, BUTTON_HSL_SLIDER, tb_hsl);
+	//tb_hsl->is_selectable = [is_hoverable = sba.is_hoverable](const MouseButtonEvent&, Position) { return is_hoverable(); };
+	tb_hsl->is_deselectable = [this](const MouseButtonEvent&, Position) { return state != State::SLIDER_HSL; };
+
+	tb_graphic->on_select = [this, tb_rgb, tb_hsv, tb_hsl](const MouseButtonEvent& mb, Position p) {
+		set_state(last_graphic_state);
+		};
+	tb_rgb->on_select = [this, tb_graphic, tb_hsv, tb_hsl](const MouseButtonEvent& mb, Position p) {
+		set_state(State::SLIDER_RGB);
+		};
+	tb_hsv->on_select = [this, tb_graphic, tb_rgb, tb_hsl](const MouseButtonEvent& mb, Position p) {
+		set_state(State::SLIDER_HSV);
+		};
+	tb_hsl->on_select = [this, tb_graphic, tb_rgb, tb_hsv](const MouseButtonEvent& mb, Position p) {
+		set_state(State::SLIDER_HSL);
+		};
+	tb_graphic->select();
 }
 
 void ColorPicker::connect_mouse_handlers()
@@ -1305,6 +1400,10 @@ void ColorPicker::sync_cp_widget_with_vp()
 	b_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp();
 	b_wget(*this, BUTTON_QUAD).send_vp();
 	b_wget(*this, BUTTON_WHEEL).send_vp();
+	b_wget(*this, BUTTON_GRAPHIC).send_vp();
+	b_wget(*this, BUTTON_RGB_SLIDER).send_vp();
+	b_wget(*this, BUTTON_HSV_SLIDER).send_vp();
+	b_wget(*this, BUTTON_HSL_SLIDER).send_vp();
 }
 
 void ColorPicker::sync_single_cp_widget_transform_ur(size_t control, bool send_buffer) const

@@ -24,6 +24,10 @@ protected:
 
 	bool hovering = false;
 
+public:
+	bool enabled = true;
+protected:
+
 	WindowHandle wh;
 
 	void init(const WidgetPlacement& wp, TextRender* text, RoundRect* bkg);
@@ -107,9 +111,9 @@ inline const StandardButton& sb_wget(const Widget& w, size_t i)
 struct ToggleButton : public StandardButton
 {
 	RGBA select_fill = RGBA(HSV(0.7f, 0.3f, 0.5f).to_rgb(), 0.9f);
-	std::function<bool(const MouseButtonEvent&, Position)> is_selectable = [](const MouseButtonEvent&, Position) { return true; };
+	std::function<bool(const MouseButtonEvent&, Position)> is_selectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
 	std::function<void(const MouseButtonEvent&, Position)> on_select = [](const MouseButtonEvent&, Position) {};
-	std::function<bool(const MouseButtonEvent&, Position)> is_deselectable = [](const MouseButtonEvent&, Position) { return true; };
+	std::function<bool(const MouseButtonEvent&, Position)> is_deselectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
 	std::function<void(const MouseButtonEvent&, Position)> on_deselect = [](const MouseButtonEvent&, Position) {};
 
 private:
