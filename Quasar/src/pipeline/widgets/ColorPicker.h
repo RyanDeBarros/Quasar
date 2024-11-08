@@ -49,11 +49,11 @@ private:
 	KeyHandler key_handler;
 	
 	bool imgui_takeover_mb = false;
-	bool imgui_takeover_key = false;
+	bool imgui_takeover_key = false; // LATER are these imgui_takeover data members necessary?
+
+	bool showing_hex_popup = false;
 	
 	WindowHandle wh_interactable;
-	WindowHandle wh_rgb_hex_button;
-	WindowHandle wh_txtfld_mode_button;
 
 	int current_widget_control = -1;
 

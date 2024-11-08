@@ -3,11 +3,11 @@
 #include <glm/gtc/type_ptr.inl>
 
 RoundRect::RoundRect(Shader* round_rect_shader)
-	: WP_UnitRenderable(round_rect_shader)
+	: W_UnitRenderable(round_rect_shader)
 {
 }
 
-void RoundRect::draw() const
+void RoundRect::draw()
 {
 	ur->draw();
 }

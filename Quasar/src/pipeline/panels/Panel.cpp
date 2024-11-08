@@ -6,7 +6,7 @@ void Panel::render()
 {
 	if (visible)
 	{
-		bounds.clip().scissor();
+		//bounds.clip().scissor(); // TODO uncomment
 		draw();
 	}
 }

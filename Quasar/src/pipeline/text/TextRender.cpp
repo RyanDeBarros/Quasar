@@ -18,7 +18,7 @@ void TextRender::init(glm::vec2 pivot)
 }
 
 TextRender::TextRender(Font* font, const UTF::String& text, glm::vec2 pivot)
-	: WP_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
+	: W_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
 {
 	init(pivot);
 	if (!text.empty())
@@ -26,7 +26,7 @@ TextRender::TextRender(Font* font, const UTF::String& text, glm::vec2 pivot)
 }
 
 TextRender::TextRender(Font* font, UTF::String&& text, glm::vec2 pivot)
-	: WP_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
+	: W_IndexedRenderable(nullptr), shader(text_shader_instance()), font(font)
 {
 	init(pivot);
 	if (!text.empty())
@@ -34,7 +34,7 @@ TextRender::TextRender(Font* font, UTF::String&& text, glm::vec2 pivot)
 }
 
 TextRender::TextRender(FontRange& frange, float font_size, const UTF::String& text, glm::vec2 pivot)
-	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
+	: W_IndexedRenderable(nullptr), shader(text_shader_instance())
 {
 	float fmult = frange.get_font_and_multiplier(font_size, font);
 	self.transform.scale = { fmult, fmult };
@@ -44,7 +44,7 @@ TextRender::TextRender(FontRange& frange, float font_size, const UTF::String& te
 }
 
 TextRender::TextRender(FontRange& frange, float font_size, UTF::String&& text, glm::vec2 pivot)
-	: WP_IndexedRenderable(nullptr), shader(text_shader_instance())
+	: W_IndexedRenderable(nullptr), shader(text_shader_instance())
 {
 	float fmult = frange.get_font_and_multiplier(font_size, font);
 	self.transform.scale = { fmult, fmult };
@@ -53,7 +53,7 @@ TextRender::TextRender(FontRange& frange, float font_size, UTF::String&& text, g
 		set_text(std::move(text));
 }
 
-void TextRender::draw() const
+void TextRender::draw()
 {
 	for (const auto& batch : batches)
 	{

@@ -254,7 +254,10 @@ struct RGBA
 	constexpr void set_pixel_b(int b) { rgb.set_pixel_b(b); }
 	constexpr void set_pixel_a(int a) { alpha = std::clamp(a, 0, 255) * inv255; }
 
+	static const RGBA WHITE;
 };
+
+inline const RGBA RGBA::WHITE = RGBA(1.0f, 1.0f, 1.0f, 1.0f);
 
 struct HSVA
 {

@@ -72,6 +72,8 @@ struct Widget
 	Widget(Widget&&) noexcept = delete;
 	virtual ~Widget() { for (auto ptr : children) delete ptr; }
 
+	virtual void draw() {}
+
 	template<std::derived_from<Widget> T>
 	T* get(size_t i) { return dynamic_cast<T*>(children[i]); }
 	template<std::derived_from<Widget> T>
@@ -127,53 +129,53 @@ inline void assign_widget(Widget* parent, size_t pos, Widget* child)
 
 }
 
-struct WP_UnitRenderable : public Widget
+struct W_UnitRenderable : public Widget
 {
 	std::unique_ptr<UnitRenderable> ur;
 
-	WP_UnitRenderable(Shader* shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
+	W_UnitRenderable(Shader* shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
 };
 
 inline UnitRenderable& ur_wget(Widget& w, size_t i)
 {
-	return *w.get<WP_UnitRenderable>(i)->ur;
+	return *w.get<W_UnitRenderable>(i)->ur;
 }
 
 inline const UnitRenderable& ur_wget(const Widget& w, size_t i)
 {
-	return *w.get<WP_UnitRenderable>(i)->ur;
+	return *w.get<W_UnitRenderable>(i)->ur;
 }
 
-struct WP_UnitMultiRenderable : public Widget
+struct W_UnitMultiRenderable : public Widget
 {
 	std::unique_ptr<UnitMultiRenderable> umr;
 
-	WP_UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
+	W_UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
 };
 
 inline UnitMultiRenderable& umr_wget(Widget& w, size_t i)
 {
-	return *w.get<WP_UnitMultiRenderable>(i)->umr;
+	return *w.get<W_UnitMultiRenderable>(i)->umr;
 }
 
 inline const UnitMultiRenderable& umr_wget(const Widget& w, size_t i)
 {
-	return *w.get<WP_UnitMultiRenderable>(i)->umr;
+	return *w.get<W_UnitMultiRenderable>(i)->umr;
 }
 
-struct WP_IndexedRenderable : public Widget
+struct W_IndexedRenderable : public Widget
 {
 	std::unique_ptr<IndexedRenderable> ir;
 
-	WP_IndexedRenderable(Shader* shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
+	W_IndexedRenderable(Shader* shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
 };
 
 inline IndexedRenderable& ir_wget(Widget& w, size_t i)
 {
-	return *w.get<WP_IndexedRenderable>(i)->ir;
+	return *w.get<W_IndexedRenderable>(i)->ir;
 }
 
 inline const IndexedRenderable& ir_wget(const Widget& w, size_t i)
 {
-	return *w.get<WP_IndexedRenderable>(i)->ir;
+	return *w.get<W_IndexedRenderable>(i)->ir;
 }

@@ -10,7 +10,7 @@ struct UnitRenderable
 {
 	GLfloat* varr = nullptr;
 	GLuint vao = 0, vb = 0;
-	Shader* shader = nullptr;
+	Shader* shader = nullptr; // LATER std::shared_ptr for shaders?
 private:
 	unsigned short num_vertices;
 public:

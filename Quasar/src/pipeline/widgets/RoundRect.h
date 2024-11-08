@@ -3,7 +3,7 @@
 #include "Widget.h"
 #include "edit/color/Color.h"
 
-struct RoundRect : public WP_UnitRenderable
+struct RoundRect : public W_UnitRenderable
 {
 private:
 	enum : size_t
@@ -27,7 +27,7 @@ public:
 	float corner_radius = 0.0f;
 	float thickness = 0.0f;
 
-	void draw() const;
+	virtual void draw() override;
 
 	const RoundRect& update_transform() const;
 	const RoundRect& update_border_color() const;
