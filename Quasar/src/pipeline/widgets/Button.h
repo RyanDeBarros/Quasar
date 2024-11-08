@@ -178,6 +178,7 @@ public:
 
 	void select(const MouseButtonEvent& mb = MouseButtonEvent::LEFT_CLICK, Position local_pos = {});
 	void deselect(const MouseButtonEvent& mb = MouseButtonEvent::LEFT_CLICK, Position local_pos = {});
+	void unclick();
 
 	void send_state(ButtonGState _state);
 	// LATER implement disabled gstate
@@ -194,5 +195,20 @@ inline const ToggleTButton& tb_t_wget(const Widget& w, size_t i)
 }
 
 // TODO Toggle Button group. NOT a widget.
+
+class ToggleTButtonGroup
+{
+	std::unordered_map<size_t, ToggleTButton*> buttons;
+	size_t current_btn = -1;
+
+public:
+	ToggleTButtonGroup() = default;
+	ToggleTButtonGroup(const ToggleTButtonGroup&) = delete;
+	ToggleTButtonGroup(ToggleTButtonGroup&&) noexcept = delete;
+	
+	void init(std::unordered_map<size_t, ToggleTButton*>&& buttons, size_t starting_btn);
+	void select(size_t btn);
+	void draw();
+};
 
 // LATER IButton, StandardIButton, ToggleIButton for image buttons. Use b_i_wget, sb_i_wget, and tb_i_wget.

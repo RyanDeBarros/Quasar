@@ -153,6 +153,8 @@ StandardTButton::StandardTButton(const StandardTButtonArgs& args)
 		{
 			send_state(ButtonGState::HOVERED);
 			Machine.main_window->request_cursor(&wh, StandardCursor::HAND);
+			if (!(wh.flags & WindowHandle::OWN_CURSOR))
+				hovering = false;
 		}
 		else
 			hovering = false;
@@ -231,6 +233,8 @@ ToggleTButton::ToggleTButton(const ToggleTButtonArgs& args)
 		{
 			send_state(ButtonGState::HOVERED);
 			Machine.main_window->request_cursor(&wh, StandardCursor::HAND);
+			if (!(wh.flags & WindowHandle::OWN_CURSOR))
+				hovering = false;
 		}
 		else
 			hovering = false;
@@ -251,11 +255,15 @@ ToggleTButton::ToggleTButton(const ToggleTButtonArgs& args)
 		{
 			if (is_deselectable(*this, mb, pos))
 				deselect(mb, pos);
+			else
+				unclick();
 		}
 		else
 		{
 			if (is_selectable(*this, mb, pos))
 				select(mb, pos);
+			else
+				unclick();
 		}
 		};
 }
@@ -278,6 +286,15 @@ void ToggleTButton::deselect(const MouseButtonEvent& mb, Position local_pos)
 	send_state(ButtonGState::NORMAL);
 	hovering = false;
 	on_deselect(*this, mb, local_pos);
+}
+
+void ToggleTButton::unclick()
+{
+	if (selected)
+		send_state(ButtonGState::PRESSED);
+	else
+		send_state(ButtonGState::NORMAL);
+	hovering = false;
 }
 
 void ToggleTButton::send_state(ButtonGState _state)
@@ -317,4 +334,33 @@ void ToggleTButton::send_state(ButtonGState _state)
 		text().fore_color = g_disabled.text_color;
 		text().send_fore_color();
 	}
+}
+
+void ToggleTButtonGroup::init(std::unordered_map<size_t, ToggleTButton*>&& _buttons, size_t starting_btn)
+{
+	buttons = std::move(_buttons);
+	for (auto iter = buttons.begin(); iter != buttons.end(); ++iter)
+		iter->second->is_deselectable = [](ToggleTButton&, const MouseButtonEvent&, Position) { return false; };
+	current_btn = starting_btn;
+	buttons.find(current_btn)->second->select();
+}
+
+void ToggleTButtonGroup::select(size_t btn)
+{
+	if (btn != current_btn)
+	{
+		auto iter = buttons.find(btn);
+		if (iter != buttons.end())
+		{
+			buttons.find(current_btn)->second->deselect();
+			iter->second->select();
+			current_btn = btn;
+		}
+	}
+}
+
+void ToggleTButtonGroup::draw()
+{
+	for (auto iter = buttons.begin(); iter != buttons.end(); ++iter)
+		iter->second->draw();
 }

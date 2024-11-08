@@ -99,6 +99,16 @@ public:
 
 	Logger& operator<<(const std::string& str);
 	Logger& operator<<(const std::string_view& str);
+
+private:
+	struct _bool_display
+	{
+		bool as_word = false;
+	} bool_display_impl;
+
+public:
+	_bool_display& bool_display(bool as_word) { bool_display_impl.as_word = as_word; return bool_display_impl; }
+	Logger& operator<<(_bool_display& bool_display);
 };
 
 inline Logger& LOG = Logger::instance();

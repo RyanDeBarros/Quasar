@@ -232,7 +232,10 @@ Logger& Logger::operator<<(const void* x)
 
 Logger& Logger::operator<<(bool x)
 {
-	stream << x;
+	if (bool_display_impl.as_word)
+		stream << (x ? "true" : "false");
+	else
+		stream << x;
 	return *this;
 }
 
@@ -335,6 +338,11 @@ Logger& Logger::operator<<(const std::string& str)
 Logger& Logger::operator<<(const std::string_view& str)
 {
 	stream << str;
+	return *this;
+}
+
+Logger& Logger::operator<<(_bool_display& bool_display)
+{
 	return *this;
 }
 

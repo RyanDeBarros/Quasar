@@ -8,16 +8,17 @@
 #include "Widget.h"
 #include "edit/color/Color.h"
 #include "variety/Geometry.h"
+#include "Button.h"
 
 struct ColorPicker : public Widget
 {
 	enum class State
 	{
-		GRAPHIC_QUAD,
-		GRAPHIC_WHEEL,
-		SLIDER_RGB,
-		SLIDER_HSV,
-		SLIDER_HSL,
+		GRAPHIC_QUAD = 0b1,
+		GRAPHIC_WHEEL = 0b10,
+		SLIDER_RGB = 0b100,
+		SLIDER_HSV = 0b1000,
+		SLIDER_HSL = 0b10000
 	};
 
 private:
@@ -51,6 +52,8 @@ private:
 	bool imgui_takeover_mb = false;
 	bool imgui_takeover_key = false; // LATER are these imgui_takeover data members necessary?
 
+	ToggleTButtonGroup main_tab_bar;
+	ToggleTButtonGroup sub_tab_bar;
 	bool showing_hex_popup = false;
 	
 	WindowHandle wh_interactable;
@@ -124,7 +127,7 @@ private:
 	float cached_scale1d = 0.0f;
 
 	// LATER use UMR when possible
-	enum
+	enum : size_t
 	{
 		// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
 		PREVIEW,						// quad
@@ -198,3 +201,11 @@ private:
 
 	static void send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color);
 };
+
+inline int operator|(ColorPicker::State a, ColorPicker::State b) { return int(a) | int(b); }
+inline int operator|(int a, ColorPicker::State b) { return a | int(b); }
+inline int operator|(ColorPicker::State a, int b) { return int(a) | b; }
+inline int operator&(ColorPicker::State a, ColorPicker::State b) { return int(a) & int(b); }
+inline int operator&(int a, ColorPicker::State b) { return a & int(b); }
+inline int operator&(ColorPicker::State a, int b) { return int(a) & b; }
+inline int operator~(ColorPicker::State a) { return ~int(a); }
