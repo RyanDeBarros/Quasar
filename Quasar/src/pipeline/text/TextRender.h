@@ -3,7 +3,7 @@
 #include "Font.h"
 #include "../render/Renderable.h"
 #include "edit/color/Color.h"
-#include "../widgets/Widgets.h"
+#include "../widgets/Widget.h"
 
 struct TextRender : public WP_IndexedRenderable // LATER rename WP_ to W_ ?
 {

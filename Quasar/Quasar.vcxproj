@@ -225,7 +225,7 @@
     <ClInclude Include="src\pipeline\render\Uniforms.h" />
     <ClInclude Include="src\pipeline\render\Renderable.h" />
     <ClInclude Include="src\pipeline\widgets\RoundRect.h" />
-    <ClInclude Include="src\pipeline\widgets\Widgets.h" />
+    <ClInclude Include="src\pipeline\widgets\Widget.h" />
     <ClInclude Include="src\user\Preferences.h" />
     <ClInclude Include="src\user\UserInput.h" />
     <ClInclude Include="src\variety\FileSystem.h" />
