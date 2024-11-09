@@ -3,14 +3,16 @@
 #include "user/Machine.h"
 #include "variety/GLutility.h"
 #include "../render/Uniforms.h"
+#include "../widgets/ColorPicker.h"
+#include "../widgets/ColorPalette.h"
 
 Palette::Palette()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
-	color_picker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler) // LATER initialize panels early and put mb_handlers as data members of panels?
+	widget(_W_COUNT)
 {
-	color_picker.self.transform.scale = Scale(0.9f);
-	static constexpr size_t num_quads = 1;
+	initialize_widget();
 
+	static constexpr size_t num_quads = 1;
 	varr = new GLfloat[num_quads * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
 	background.varr = varr;
 	background.initialize_varr();
@@ -38,11 +40,25 @@ void Palette::draw()
 	// background
 	bind_vao_buffers(vao, vb, ib);
 	QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
-	// color picker
-	color_picker.render();
+	// widget
+	render_widget();
 	// unbind
 	unbind_vao_buffers();
 	unbind_shader();
+}
+
+void Palette::render_widget()
+{
+	cpk_wget(widget, COLOR_PICKER).draw();
+	cpl_wget(widget, COLOR_PALETTE).draw();
+}
+
+void Palette::initialize_widget()
+{
+	assign_widget(&widget, COLOR_PICKER, new ColorPicker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
+	widget.wp_at(COLOR_PICKER).transform.scale = Scale(0.9f);
+
+	assign_widget(&widget, COLOR_PALETTE, new ColorPalette());
 }
 
 void Palette::subsend_background_vao() const
@@ -61,8 +77,8 @@ void Palette::_send_view()
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
 
 	Scale color_picker_size{ 240, 420 };
-	color_picker.set_size(color_picker_size);
-	color_picker.set_position({ 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * color_picker.self.transform.scale.y * 0.5f - 20 });
-	color_picker.send_vp();
+	cpk_wget(widget, COLOR_PICKER).set_size(color_picker_size);
+	widget.wp_at(COLOR_PICKER).transform.position = { 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * widget.wp_at(COLOR_PICKER).transform.scale.y * 0.5f - 20 };
+	cpk_wget(widget, COLOR_PICKER).send_vp();
 	unbind_shader();
 }

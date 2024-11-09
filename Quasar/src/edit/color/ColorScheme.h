@@ -56,5 +56,5 @@ struct ColorScheme
 {
 	std::vector<ColorSubscheme> subschemes;
 	
-	static const size_t MAX_SUBSCHEMES = 8;
+	static const size_t MAX_SUBSCHEMES = 16;
 };

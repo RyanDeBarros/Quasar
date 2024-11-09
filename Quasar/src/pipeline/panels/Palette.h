@@ -3,7 +3,7 @@
 #include "Panel.h"
 #include "../render/FlatSprite.h"
 #include "../render/Shader.h"
-#include "../widgets/ColorPicker.h"
+#include "../widgets/Widget.h"
 
 struct Palette : public Panel
 {
@@ -12,7 +12,8 @@ struct Palette : public Panel
 	GLuint vao = 0, vb = 0, ib = 0;
 	Shader sprite_shader;
 	glm::mat3 vp;
-	ColorPicker color_picker;
+
+	Widget widget;
 
 	Palette();
 	Palette(const Palette&) = delete;
@@ -20,8 +21,17 @@ struct Palette : public Panel
 	~Palette();
 
 	void subsend_background_vao() const;
-
 	void _send_view() override;
-
 	void draw() override;
+	void render_widget();
+
+private:
+	void initialize_widget();
+
+	enum : size_t
+	{
+		COLOR_PICKER,
+		COLOR_PALETTE,
+		_W_COUNT
+	};
 };

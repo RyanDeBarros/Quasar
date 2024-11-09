@@ -32,7 +32,7 @@ public:
 	glm::mat3* vp;
 
 private:
-	Position gui_center;
+	FlatTransform gui_transform;
 	State last_graphic_state = State::GRAPHIC_QUAD;
 	enum class TextFieldMode
 	{
@@ -66,13 +66,12 @@ public:
 	ColorPicker(ColorPicker&&) noexcept = delete;
 	~ColorPicker();
 
-	void render();
+	void draw() override;
 	void process();
 	void send_vp();
 	ColorFrame get_color() const;
 	void set_color(ColorFrame);
 	void set_size(Scale size, bool sync = false);
-	void set_position(Position world_pos);
 	
 private:
 	void process_mb_down_events();
@@ -82,7 +81,7 @@ private:
 	void update_rgb_hex();
 
 	void initialize_widget();
-	void connect_mouse_handlers();
+	void connect_input_handlers();
 	void take_over_cursor();
 	void release_cursor();
 
@@ -116,8 +115,8 @@ private:
 	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
-	void sync_cp_widget_with_vp();
-	void sync_single_cp_widget_transform_ur(size_t control, bool send_buffer = true) const;
+	void sync_widget_with_vp();
+	void sync_single_standard_ur_transform(size_t control, bool send_buffer = true) const;
 	void send_cpwc_buffer(size_t control) const;
 	void set_circle_cursor_thickness(size_t cursor, float thickness) const;
 	void set_circle_cursor_value(size_t cursor, float value) const;
@@ -201,6 +200,16 @@ private:
 
 	static void send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color);
 };
+
+inline ColorPicker& cpk_wget(Widget& w, size_t i)
+{
+	return *w.get<ColorPicker>(i);
+}
+
+inline const ColorPicker& cpk_wget(const Widget& w, size_t i)
+{
+	return *w.get<ColorPicker>(i);
+}
 
 inline int operator|(ColorPicker::State a, ColorPicker::State b) { return int(a) | int(b); }
 inline int operator|(int a, ColorPicker::State b) { return a | int(b); }
