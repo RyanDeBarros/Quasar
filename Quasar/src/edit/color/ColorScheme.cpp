@@ -24,6 +24,8 @@ void ColorSubscheme::remove(size_t i)
 
 size_t ColorSubscheme::insert(ColorFrame color, Sort sort)
 {
+	if (colors.size() >= MAX_COLORS)
+		return -1;
 	this->sort(sort);
 	// TODO test that this works
 	auto iter = std::lower_bound(colors.begin(), colors.end(), color, [this](ColorFrame a, ColorFrame b) { return predicate(a, b); });
@@ -57,22 +59,106 @@ size_t ColorSubscheme::first_index_of(ColorFrame color)
 
 bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 {
-	// TODO
 	switch (_sort.policy)
 	{
 	case SortingPolicy::HUE:
 	{
 		HSV ac = a.hsv(), bc = b.hsv();
-		if (compare(ac.h, bc.h))
-			return true;
-		else if (compare(bc.h, ac.h))
-			return false;
-		else if (compare(bc.s, ac.s))
-			return true;
-		else if (compare(ac.s, bc.s))
-			return false;
-		else
+		if (ac.h != bc.h)
+			return compare(ac.h, bc.h);
+		if (ac.s != bc.s)
+			return compare(bc.s, ac.s);
+		if (ac.v != bc.v)
 			return compare(bc.v, ac.v);
+		return compare(b.alpha, a.alpha);
+	}
+	case SortingPolicy::SAT_HSV:
+	{
+		HSV ac = a.hsv(), bc = b.hsv();
+		if (ac.s != bc.s)
+			return compare(ac.s, bc.s);
+		if (ac.h != bc.h)
+			return compare(ac.h, bc.h);
+		if (ac.v != bc.v)
+			return compare(bc.v, ac.v);
+		return compare(b.alpha, a.alpha);
+	}
+	case SortingPolicy::SAT_HSL:
+	{
+		HSL ac = a.hsl(), bc = b.hsl();
+		if (ac.s != bc.s)
+			return compare(ac.s, bc.s);
+		if (ac.h != bc.h)
+			return compare(ac.h, bc.h);
+		if (ac.l != bc.l)
+			return compare(bc.l, ac.l);
+		return compare(b.alpha, a.alpha);
+	}
+	case SortingPolicy::VALUE:
+	{
+		HSV ac = a.hsv(), bc = b.hsv();
+		if (ac.v != bc.v)
+			return compare(bc.v, ac.v);
+		if (ac.h != bc.h)
+			return compare(ac.h, bc.h);
+		if (ac.s != bc.s)
+			return compare(ac.s, bc.s);
+		return compare(b.alpha, a.alpha);
+	}
+	case SortingPolicy::LIGHT:
+	{
+		HSL ac = a.hsl(), bc = b.hsl();
+		if (ac.l != bc.l)
+			return compare(bc.l, ac.l);
+		if (ac.h != bc.h)
+			return compare(ac.h, bc.h);
+		if (ac.s != bc.s)
+			return compare(ac.s, bc.s);
+		return compare(b.alpha, a.alpha);
+	}
+	case SortingPolicy::RED:
+	{
+		RGB ac = a.rgb(), bc = b.rgb();
+		if (ac.r != bc.r)
+			return compare(bc.r, ac.r);
+		if (ac.g != bc.g)
+			return compare(ac.g, bc.g);
+		if (ac.b != bc.b)
+			return compare(ac.b, bc.b);
+		return compare(b.alpha, a.alpha);
+	}
+	case SortingPolicy::GREEN:
+	{
+		RGB ac = a.rgb(), bc = b.rgb();
+		if (ac.g != bc.g)
+			return compare(bc.g, ac.g);
+		if (ac.b != bc.b)
+			return compare(ac.b, bc.b);
+		if (ac.r != bc.r)
+			return compare(ac.r, bc.r);
+		return compare(b.alpha, a.alpha);
+	}
+	case SortingPolicy::BLUE:
+	{
+		RGB ac = a.rgb(), bc = b.rgb();
+		if (ac.b != bc.b)
+			return compare(bc.b, ac.b);
+		if (ac.r != bc.r)
+			return compare(ac.r, bc.r);
+		if (ac.g != bc.g)
+			return compare(ac.g, bc.g);
+		return compare(b.alpha, a.alpha);
+	}
+	case SortingPolicy::ALPHA:
+	{
+		HSV ac = a.hsv(), bc = b.hsv();
+		if (a.alpha != b.alpha)
+			return compare(b.alpha, a.alpha);
+		if (ac.h != bc.h)
+			return compare(ac.h, bc.h);
+		if (ac.s != bc.s)
+			return compare(bc.s, ac.s);
+		return compare(bc.v, ac.v);
 	}
 	default:
 		return true;

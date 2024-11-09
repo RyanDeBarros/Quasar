@@ -11,6 +11,8 @@ class ColorSubscheme
 public:
 	ColorSubscheme() = default;
 
+	static const size_t MAX_COLORS = 256;
+
 	std::string name;
 
 	enum class SortingPolicy : char
@@ -23,7 +25,8 @@ public:
 		LIGHT,
 		RED,
 		GREEN,
-		BLUE
+		BLUE,
+		ALPHA
 	};
 	struct Sort
 	{
@@ -52,4 +55,6 @@ private:
 struct ColorScheme
 {
 	std::vector<ColorSubscheme> subschemes;
+	
+	static const size_t MAX_SUBSCHEMES = 8;
 };
