@@ -6,12 +6,7 @@
 
 struct ColorSubpalette : public Widget
 {
-	static const size_t COL_COUNT = 8;
-	static const size_t ROW_COUNT = 8;
-
 	std::shared_ptr<ColorSubscheme> subscheme = nullptr;
-
-	WidgetPlacement square_wp = { { {}, Scale(24) }};
 
 	ColorSubpalette();
 	ColorSubpalette(const ColorSubpalette&) = delete;
@@ -21,6 +16,8 @@ struct ColorSubpalette : public Widget
 	void reload_subscheme();
 	virtual void draw() override;
 	void sync_with_palette();
+
+	static WidgetPlacement square_wp(size_t i);
 
 	enum : size_t
 	{
@@ -61,6 +58,13 @@ class ColorPalette : public Widget
 	size_t subpalette_index_in_widget(size_t pos) const;
 
 public:
+	static const size_t COL_COUNT = 8;
+	static const size_t ROW_COUNT = 8;
+	static inline const float SQUARE_SEP = 30.0f;
+	static inline const Scale SQUARE_SIZE = Scale(24);
+	static inline const float GRID_WIDTH = COL_COUNT * (SQUARE_SEP - SQUARE_SIZE.x) + COL_COUNT * SQUARE_SIZE.x;
+	static inline const WidgetPlacement GRID_WP = { { {}, Scale(GRID_WIDTH) } };
+
 	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
 	ColorPalette(const ColorPalette&) = delete;
 	ColorPalette(ColorPalette&&) noexcept = delete;
@@ -81,7 +85,7 @@ private:
 
 	enum : size_t
 	{
-		GRID,
+		BLACK_GRID,
 		SUBPALETTE_START
 	};
 };

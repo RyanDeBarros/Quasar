@@ -10,9 +10,9 @@ class ColorSubscheme
 
 public:
 	ColorSubscheme() = default;
-	ColorSubscheme(const ColorSubscheme&) = delete;
-	ColorSubscheme(ColorSubscheme&&) noexcept = delete;
-
+	ColorSubscheme(const std::vector<RGBA>& colors) : colors(colors) {}
+	ColorSubscheme(std::vector<RGBA>&& colors) noexcept : colors(std::move(colors)) {}
+	
 	const std::vector<RGBA>& get_colors() const { return colors; }
 
 	static const size_t MAX_COLORS = 64;
@@ -54,7 +54,7 @@ public:
 	void move(size_t from, size_t to);
 
 private:
-	bool(*compare)(float, float);
+	bool(*compare)(float, float) = nullptr;
 };
 
 struct ColorScheme
