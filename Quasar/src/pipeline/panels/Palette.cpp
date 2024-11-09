@@ -58,7 +58,8 @@ void Palette::initialize_widget()
 	assign_widget(&widget, COLOR_PICKER, new ColorPicker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
 	widget.wp_at(COLOR_PICKER).transform.scale = Scale(0.9f);
 
-	assign_widget(&widget, COLOR_PALETTE, new ColorPalette());
+	assign_widget(&widget, COLOR_PALETTE, new ColorPalette(&vp, Machine.palette_mb_handler, Machine.palette_key_handler));
+	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(0.9f);
 }
 
 void Palette::subsend_background_vao() const
@@ -80,5 +81,9 @@ void Palette::_send_view()
 	cpk_wget(widget, COLOR_PICKER).set_size(color_picker_size);
 	widget.wp_at(COLOR_PICKER).transform.position = { 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * widget.wp_at(COLOR_PICKER).transform.scale.y * 0.5f - 20 };
 	cpk_wget(widget, COLOR_PICKER).send_vp();
+
+	//widget.wp_at(COLOR_PALETTE).transform.position = { 0, -bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y * 0.5f };
+	widget.wp_at(COLOR_PALETTE).transform.position = { 0, -200 };
+	cpl_wget(widget, COLOR_PALETTE).send_vp();
 	unbind_shader();
 }

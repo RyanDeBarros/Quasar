@@ -6,7 +6,30 @@
 
 struct ColorSubpalette : public Widget
 {
+	static const size_t COL_COUNT = 8;
+	static const size_t ROW_COUNT = 8;
 
+	std::shared_ptr<ColorSubscheme> subscheme = nullptr;
+
+	WidgetPlacement square_wp = { { {}, Scale(24) }};
+
+	ColorSubpalette();
+	ColorSubpalette(const ColorSubpalette&) = delete;
+	ColorSubpalette(ColorSubpalette&&) noexcept = delete;
+	
+	void init(Shader* color_square_shader);
+	void reload_subscheme();
+	virtual void draw() override;
+	void sync_with_palette();
+
+	enum : size_t
+	{
+		SQUARES,
+		PRIMARY_SELECTOR,
+		ALTERNATE_SELECTOR,
+		HOVER_SELECTOR,
+		_W_COUNT
+	};
 };
 
 inline ColorSubpalette& cspl_wget(Widget& w, size_t i)
@@ -22,6 +45,10 @@ inline const ColorSubpalette& cspl_wget(const Widget& w, size_t i)
 class ColorPalette : public Widget
 {
 	ColorScheme scheme;
+	size_t current_subscheme = 0;
+
+	Shader color_square_shader;
+	Shader grid_shader;
 	glm::mat3* vp;
 
 	MouseButtonHandler& parent_mb_handler;
@@ -29,49 +56,34 @@ class ColorPalette : public Widget
 	KeyHandler& parent_key_handler;
 	KeyHandler key_handler;
 
+	ColorSubpalette& get_subpalette(size_t pos);
+	const ColorSubpalette& get_subpalette(size_t pos) const;
+	size_t subpalette_index_in_widget(size_t pos) const;
+
 public:
 	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
 	ColorPalette(const ColorPalette&) = delete;
 	ColorPalette(ColorPalette&&) noexcept = delete;
 	~ColorPalette();
 
-	void draw() override;
+	virtual void draw() override;
 	void send_vp();
 	void import_color_scheme(const ColorScheme& color_scheme);
 	void import_color_scheme(ColorScheme&& color_scheme);
+	void new_subpalette();
+	void delete_subpalette(size_t pos);
+	size_t num_subpalettes() const;
 
 private:
-	void initialize_widget();
 	void connect_input_handlers();
-
 	void import_color_scheme();
-
 	void sync_widget_with_vp();
 
 	enum : size_t
 	{
-		PRIMARY_SELECTOR,
-		ALTERNATE_SELECTOR,
-		HOVER_SELECTOR,
-		SUBPALETTE_1,
-		SUBPALETTE_2,
-		SUBPALETTE_3,
-		SUBPALETTE_4,
-		SUBPALETTE_5,
-		SUBPALETTE_6,
-		SUBPALETTE_7,
-		SUBPALETTE_8,
-		SUBPALETTE_9,
-		SUBPALETTE_10,
-		SUBPALETTE_11,
-		SUBPALETTE_12,
-		SUBPALETTE_13,
-		SUBPALETTE_14,
-		SUBPALETTE_15,
-		SUBPALETTE_16,
-		_W_COUNT // TODO add un-user-editable FREQUENT_SUBPALETTE for most frequently used colors.
+		GRID,
+		SUBPALETTE_START
 	};
-
 };
 
 inline ColorPalette& cpl_wget(Widget& w, size_t i)

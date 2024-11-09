@@ -1,6 +1,6 @@
 #include "ColorScheme.h"
 
-ColorFrame* ColorSubscheme::at(size_t i)
+RGBA* ColorSubscheme::at(size_t i)
 {
 	if (i < colors.size())
 		return &colors[i];
@@ -8,7 +8,7 @@ ColorFrame* ColorSubscheme::at(size_t i)
 		return nullptr;
 }
 
-const ColorFrame* ColorSubscheme::at(size_t i) const
+const RGBA* ColorSubscheme::at(size_t i) const
 {
 	if (i < colors.size())
 		return &colors[i];
@@ -22,13 +22,13 @@ void ColorSubscheme::remove(size_t i)
 		colors.erase(colors.begin() + i);
 }
 
-size_t ColorSubscheme::insert(ColorFrame color, Sort sort)
+size_t ColorSubscheme::insert(RGBA color, Sort sort)
 {
 	if (colors.size() >= MAX_COLORS)
 		return -1;
 	this->sort(sort);
 	// TODO test that this works
-	auto iter = std::lower_bound(colors.begin(), colors.end(), color, [this](ColorFrame a, ColorFrame b) { return predicate(a, b); });
+	auto iter = std::lower_bound(colors.begin(), colors.end(), color, [this](RGBA a, RGBA b) { return predicate(a, b); });
 	auto index = iter - colors.begin();
 	colors.insert(iter, color);
 	return index;
@@ -45,25 +45,25 @@ void ColorSubscheme::sort(Sort sort)
 	if (sort.policy == SortingPolicy::NONE)
 		return;
 	compare = sort.topfirst ? &greater : &less;
-	std::sort(colors.begin(), colors.end(), [this](ColorFrame a, ColorFrame b) { return predicate(a, b); });
+	std::sort(colors.begin(), colors.end(), [this](RGBA a, RGBA b) { return predicate(a, b); });
 }
 
-size_t ColorSubscheme::first_index_of(ColorFrame color)
+size_t ColorSubscheme::first_index_of(RGBA color)
 {
-	auto iter = std::lower_bound(colors.begin(), colors.end(), color, [this](ColorFrame a, ColorFrame b) { return predicate(a, b); });
+	auto iter = std::lower_bound(colors.begin(), colors.end(), color, [this](RGBA a, RGBA b) { return predicate(a, b); });
 	if (iter == colors.end() || *iter != color)
 		return -1;
 	else
 		return iter - colors.begin();
 }
 
-bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
+bool ColorSubscheme::predicate(RGBA a, RGBA b)
 {
 	switch (_sort.policy)
 	{
 	case SortingPolicy::HUE:
 	{
-		HSV ac = a.hsv(), bc = b.hsv();
+		HSV ac = a.rgb.to_hsv(), bc = b.rgb.to_hsv();
 		if (ac.h != bc.h)
 			return compare(ac.h, bc.h);
 		if (ac.s != bc.s)
@@ -74,7 +74,7 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	case SortingPolicy::SAT_HSV:
 	{
-		HSV ac = a.hsv(), bc = b.hsv();
+		HSV ac = a.rgb.to_hsv(), bc = b.rgb.to_hsv();
 		if (ac.s != bc.s)
 			return compare(ac.s, bc.s);
 		if (ac.h != bc.h)
@@ -85,7 +85,7 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	case SortingPolicy::SAT_HSL:
 	{
-		HSL ac = a.hsl(), bc = b.hsl();
+		HSL ac = a.rgb.to_hsl(), bc = b.rgb.to_hsl();
 		if (ac.s != bc.s)
 			return compare(ac.s, bc.s);
 		if (ac.h != bc.h)
@@ -96,7 +96,7 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	case SortingPolicy::VALUE:
 	{
-		HSV ac = a.hsv(), bc = b.hsv();
+		HSV ac = a.rgb.to_hsv(), bc = b.rgb.to_hsv();
 		if (ac.v != bc.v)
 			return compare(bc.v, ac.v);
 		if (ac.h != bc.h)
@@ -107,7 +107,7 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	case SortingPolicy::LIGHT:
 	{
-		HSL ac = a.hsl(), bc = b.hsl();
+		HSL ac = a.rgb.to_hsl(), bc = b.rgb.to_hsl();
 		if (ac.l != bc.l)
 			return compare(bc.l, ac.l);
 		if (ac.h != bc.h)
@@ -118,7 +118,7 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	case SortingPolicy::RED:
 	{
-		RGB ac = a.rgb(), bc = b.rgb();
+		RGB ac = a.rgb, bc = b.rgb;
 		if (ac.r != bc.r)
 			return compare(bc.r, ac.r);
 		if (ac.g != bc.g)
@@ -129,7 +129,7 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	case SortingPolicy::GREEN:
 	{
-		RGB ac = a.rgb(), bc = b.rgb();
+		RGB ac = a.rgb, bc = b.rgb;
 		if (ac.g != bc.g)
 			return compare(bc.g, ac.g);
 		if (ac.b != bc.b)
@@ -140,7 +140,7 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	case SortingPolicy::BLUE:
 	{
-		RGB ac = a.rgb(), bc = b.rgb();
+		RGB ac = a.rgb, bc = b.rgb;
 		if (ac.b != bc.b)
 			return compare(bc.b, ac.b);
 		if (ac.r != bc.r)
@@ -151,7 +151,7 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	case SortingPolicy::ALPHA:
 	{
-		HSV ac = a.hsv(), bc = b.hsv();
+		HSV ac = a.rgb.to_hsv(), bc = b.rgb.to_hsv();
 		if (a.alpha != b.alpha)
 			return compare(b.alpha, a.alpha);
 		if (ac.h != bc.h)
@@ -162,5 +162,15 @@ bool ColorSubscheme::predicate(ColorFrame a, ColorFrame b)
 	}
 	default:
 		return true;
+	}
+}
+
+void ColorSubscheme::move(size_t from, size_t to)
+{
+	if (from < colors.size() && to < colors.size())
+	{
+		RGBA c = colors[from];
+		colors.erase(colors.begin() + from);
+		colors.insert(colors.begin() + to, c);
 	}
 }

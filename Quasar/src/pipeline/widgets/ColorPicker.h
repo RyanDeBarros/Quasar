@@ -66,7 +66,7 @@ public:
 	ColorPicker(ColorPicker&&) noexcept = delete;
 	~ColorPicker();
 
-	void draw() override;
+	virtual void draw() override;
 	void process();
 	void send_vp();
 	ColorFrame get_color() const;

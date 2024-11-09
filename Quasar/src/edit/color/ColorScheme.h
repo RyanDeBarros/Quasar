@@ -6,12 +6,16 @@
 
 class ColorSubscheme
 {
-	std::vector<ColorFrame> colors;
+	std::vector<RGBA> colors;
 
 public:
 	ColorSubscheme() = default;
+	ColorSubscheme(const ColorSubscheme&) = delete;
+	ColorSubscheme(ColorSubscheme&&) noexcept = delete;
 
-	static const size_t MAX_COLORS = 256;
+	const std::vector<RGBA>& get_colors() const { return colors; }
+
+	static const size_t MAX_COLORS = 64;
 
 	std::string name;
 
@@ -40,13 +44,14 @@ private:
 	Sort _sort = { SortingPolicy::NONE, true };
 public:
 
-	ColorFrame* at(size_t i);
-	const ColorFrame* at(size_t i) const;
+	RGBA* at(size_t i);
+	const RGBA* at(size_t i) const;
 	void remove(size_t i);
-	size_t insert(ColorFrame color, Sort sort = { SortingPolicy::NONE, true });
+	size_t insert(RGBA color, Sort sort = { SortingPolicy::NONE, true });
 	void sort(Sort sort);
-	size_t first_index_of(ColorFrame color);
-	bool predicate(ColorFrame a, ColorFrame b);
+	size_t first_index_of(RGBA color);
+	bool predicate(RGBA a, RGBA b);
+	void move(size_t from, size_t to);
 
 private:
 	bool(*compare)(float, float);
@@ -54,7 +59,5 @@ private:
 
 struct ColorScheme
 {
-	std::vector<ColorSubscheme> subschemes;
-	
-	static const size_t MAX_SUBSCHEMES = 16;
+	std::vector<std::shared_ptr<ColorSubscheme>> subschemes;
 };

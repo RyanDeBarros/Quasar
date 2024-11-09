@@ -100,6 +100,15 @@ inline void detach_widget(Widget* parent, Widget* child)
 	}
 }
 
+inline void detach_widget(Widget* parent, size_t child_pos)
+{
+	if (parent && child_pos < parent->children.size())
+	{
+		parent->children[child_pos]->parent = nullptr;
+		parent->children.erase(parent->children.begin() + child_pos);
+	}
+}
+
 inline void attach_widget(Widget* parent, Widget* child)
 {
 	if (child)

@@ -1082,6 +1082,8 @@ void ColorPicker::set_color(ColorFrame color)
 		sync_single_standard_ur_transform(HSL_L_SLIDER_CURSOR);
 	}
 	update_display_colors();
+
+	// TODO here is where an action would be submitted (capturing the color from last action, and the current new color) to the action history.
 }
 
 void ColorPicker::set_size(Scale size, bool sync)
