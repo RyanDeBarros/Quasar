@@ -10,6 +10,10 @@ struct ColorSubpalette : public Widget
 	int scroll_offset = 0;
 	int current_hover_index = -1;
 	WidgetPlacement hover_wp;
+	int current_primary_index = 0;
+	WidgetPlacement primary_wp;
+	int current_alternate_index = 0;
+	WidgetPlacement alternate_wp;
 
 	ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader);
 	ColorSubpalette(const ColorSubpalette&) = delete;
@@ -19,19 +23,26 @@ struct ColorSubpalette : public Widget
 	virtual void draw() override;
 	void draw_selectors();
 	void sync_hover_selector();
+	void sync_primary_selector();
+	void sync_alternate_selector();
 	void sync_with_palette();
 	void process();
+	bool check_primary();
+	bool check_alternate();
 
 	void scroll_by(int delta);
 	WidgetPlacement square_wp(int i) const;
 	int first_square() const;
 	int num_squares_visible() const;
+	Position cursor_world_pos() const;
 
 	enum : size_t
 	{
 		SQUARES,
-		PRIMARY_SELECTOR,
-		ALTERNATE_SELECTOR,
+		PRIMARY_SELECTOR_B,
+		PRIMARY_SELECTOR_F,
+		ALTERNATE_SELECTOR_B,
+		ALTERNATE_SELECTOR_F,
 		HOVER_SELECTOR,
 		_W_COUNT
 	};

@@ -920,8 +920,11 @@ void ColorPicker::connect_input_handlers()
 		}
 		else if (mb.action == IAction::RELEASE)
 		{
-			mb.consumed = true;
-			release_cursor();
+			if (current_widget_control >= 0)
+			{
+				mb.consumed = true;
+				release_cursor();
+			}
 		}
 	};
 	mb_handler.children.push_back(&imgui_mb_handler);

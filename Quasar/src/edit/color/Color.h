@@ -262,9 +262,11 @@ struct RGBA
 	constexpr HSLA to_hsla() const;
 
 	static const RGBA WHITE;
+	static const RGBA BLACK;
 };
 
 inline const RGBA RGBA::WHITE = RGBA(1.0f, 1.0f, 1.0f, 1.0f);
+inline const RGBA RGBA::BLACK = RGBA(0.0f, 0.0f, 0.0f, 1.0f);
 
 struct HSVA
 {

@@ -12,14 +12,33 @@ ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_re
 	assign_widget(this, SQUARES, new W_IndexedRenderable(color_square_shader));
 	
 	assign_widget(this, HOVER_SELECTOR, new W_UnitRenderable(outline_rect_shader));
-	UnitRenderable& ur = ur_wget(*this, HOVER_SELECTOR);
-	ur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
-	ur.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }));
-	ur.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }));
-	ur.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }));
-	ur.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }));
-	ur.send_buffer();
-	// TODO setup HOVER_SELECTOR
+	UnitRenderable& hur = ur_wget(*this, HOVER_SELECTOR);
+	hur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
+	hur.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }));
+	hur.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }));
+	hur.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }));
+	hur.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }));
+	hur.send_buffer();
+
+	assign_widget(this, PRIMARY_SELECTOR_B, new W_UnitRenderable(color_square_shader, 3));
+	UnitRenderable& pbur = ur_wget(*this, PRIMARY_SELECTOR_B);
+	pbur.set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec()));
+	pbur.send_buffer();
+
+	assign_widget(this, PRIMARY_SELECTOR_F, new W_UnitRenderable(color_square_shader, 3));
+	UnitRenderable& pfur = ur_wget(*this, PRIMARY_SELECTOR_F);
+	pfur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
+	pfur.send_buffer();
+
+	assign_widget(this, ALTERNATE_SELECTOR_B, new W_UnitRenderable(color_square_shader, 3));
+	UnitRenderable& abur = ur_wget(*this, ALTERNATE_SELECTOR_B);
+	abur.set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec()));
+	abur.send_buffer();
+
+	assign_widget(this, ALTERNATE_SELECTOR_F, new W_UnitRenderable(color_square_shader, 3));
+	UnitRenderable& afur = ur_wget(*this, ALTERNATE_SELECTOR_F);
+	afur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
+	afur.send_buffer();
 }
 
 void ColorSubpalette::reload_subscheme()
@@ -40,6 +59,18 @@ void ColorSubpalette::draw()
 
 void ColorSubpalette::draw_selectors()
 {
+	int first = first_square();
+	int end = first + num_squares_visible();
+	if (current_alternate_index >= first && current_alternate_index < end)
+	{
+		ur_wget(*this, ALTERNATE_SELECTOR_B).draw();
+		ur_wget(*this, ALTERNATE_SELECTOR_F).draw();
+	}
+	if (current_primary_index >= first && current_primary_index < end)
+	{
+		ur_wget(*this, PRIMARY_SELECTOR_B).draw();
+		ur_wget(*this, PRIMARY_SELECTOR_F).draw();
+	}
 	if (current_hover_index >= 0)
 		ur_wget(*this, HOVER_SELECTOR).draw();
 }
@@ -52,6 +83,36 @@ void ColorSubpalette::sync_hover_selector()
 	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.top() }));
 	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.top() }));
 	ur.send_buffer();
+}
+
+void ColorSubpalette::sync_primary_selector()
+{
+	const UnitRenderable& ubr = ur_wget(*this, PRIMARY_SELECTOR_B);
+	ubr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() }));
+	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + 14, primary_wp.top() }));
+	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() - 14 }));
+	ubr.send_buffer();
+
+	const UnitRenderable& ufr = ur_wget(*this, PRIMARY_SELECTOR_F);
+	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + 2.8f, primary_wp.top() - 2.8f }));
+	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + 8, primary_wp.top() - 2.8f }));
+	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + 2.8f, primary_wp.top() - 8 }));
+	ufr.send_buffer();
+}
+
+void ColorSubpalette::sync_alternate_selector()
+{
+	const UnitRenderable& ubr = ur_wget(*this, ALTERNATE_SELECTOR_B);
+	ubr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() }));
+	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - 14, alternate_wp.top() }));
+	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() - 14 }));
+	ubr.send_buffer();
+
+	const UnitRenderable& ufr = ur_wget(*this, ALTERNATE_SELECTOR_F);
+	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - 2.8f, alternate_wp.top() - 2.8f }));
+	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - 8, alternate_wp.top() - 2.8f }));
+	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - 2.8f, alternate_wp.top() - 8 }));
+	ufr.send_buffer();
 }
 
 void ColorSubpalette::sync_with_palette()
@@ -79,8 +140,9 @@ void ColorSubpalette::process()
 {
 	current_hover_index = -1;
 	WidgetPlacement global;
-	Position cursor_pos = Machine.to_world_coordinates(Machine.main_window->cursor_pos(), glm::inverse(*dynamic_cast<ColorPalette*>(parent)->vp));
+	Position cursor_pos = cursor_world_pos();
 	int end_square = first_square() + num_squares_visible();
+	// TODO non-iterative formula for determining i. this is a waste of performance. remember that i must be a valid color index, and some cells may be empty.
 	for (int i = first_square(); i < end_square; ++i)
 	{
 		global = square_wp(i).relative_to(parent->self.transform);
@@ -92,14 +154,65 @@ void ColorSubpalette::process()
 				hover_wp = global;
 				sync_hover_selector();
 			}
+			return;
 		}
 	}
+}
+
+bool ColorSubpalette::check_primary()
+{
+	WidgetPlacement global;
+	Position cursor_pos = cursor_world_pos();
+	int end_square = first_square() + num_squares_visible();
+	// TODO non-iterative formula for determining i. this is a waste of performance. remember that i must be a valid color index, and some cells may be empty.
+	for (int i = first_square(); i < end_square; ++i)
+	{
+		global = square_wp(i).relative_to(parent->self.transform);
+		if (global.contains_point(cursor_pos))
+		{
+			current_primary_index = i;
+			if (primary_wp != global)
+			{
+				primary_wp = global;
+				sync_primary_selector();
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ColorSubpalette::check_alternate()
+{
+	WidgetPlacement global;
+	Position cursor_pos = cursor_world_pos();
+	int end_square = first_square() + num_squares_visible();
+	// TODO non-iterative formula for determining i. this is a waste of performance. remember that i must be a valid color index, and some cells may be empty.
+	for (int i = first_square(); i < end_square; ++i)
+	{
+		global = square_wp(i).relative_to(parent->self.transform);
+		if (global.contains_point(cursor_pos))
+		{
+			current_alternate_index = i;
+			if (alternate_wp != global)
+			{
+				alternate_wp = global;
+				sync_alternate_selector();
+			}
+			return true;
+		}
+	}
+	return false;
 }
 
 void ColorSubpalette::scroll_by(int delta)
 {
 	scroll_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - ColorPalette::ROW_COUNT));
 	sync_with_palette();
+	primary_wp = square_wp(current_primary_index).relative_to(parent->self.transform);
+	sync_primary_selector();
+	alternate_wp = square_wp(current_alternate_index).relative_to(parent->self.transform);
+	sync_alternate_selector();
 }
 
 WidgetPlacement ColorSubpalette::square_wp(int i) const
@@ -118,6 +231,11 @@ int ColorSubpalette::num_squares_visible() const
 {
 	int leftover = (int)subscheme->get_colors().size() - first_square();
 	return std::clamp(leftover, 0, ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT);
+}
+
+Position ColorSubpalette::cursor_world_pos() const
+{
+	return Machine.to_world_coordinates(Machine.main_window->cursor_pos(), glm::inverse(*dynamic_cast<ColorPalette*>(parent)->vp));
 }
 
 ColorSubpalette& ColorPalette::get_subpalette(size_t pos)
@@ -232,8 +350,22 @@ size_t ColorPalette::num_subpalettes() const
 void ColorPalette::connect_input_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
-	mb_handler.callback = [](const MouseButtonEvent& mb) {
-		// TODO
+	mb_handler.callback = [this](const MouseButtonEvent& mb) {
+		if (mb.action != IAction::RELEASE)
+			return;
+		if (children[BACKGROUND]->contains_screen_point(Machine.main_window->cursor_pos(), vp))
+		{
+			if (mb.button == MouseButton::LEFT)
+			{
+				if (current_subpalette().check_primary())
+					mb.consumed = true;
+			}
+			else if (mb.button == MouseButton::RIGHT)
+			{
+				if (current_subpalette().check_alternate())
+					mb.consumed = true;
+			}
+		}
 		};
 	parent_key_handler.children.push_back(&key_handler);
 	key_handler.callback = [](const KeyEvent& k) {
@@ -243,6 +375,7 @@ void ColorPalette::connect_input_handlers()
 	scroll_handler.callback = [this](const ScrollEvent& s) {
 		if (children[BACKGROUND]->contains_screen_point(Machine.main_window->cursor_pos(), vp))
 		{
+			s.consumed = true;
 			scroll_backlog -= s.yoff;
 			float amount;
 			scroll_backlog = modf(scroll_backlog, &amount);
