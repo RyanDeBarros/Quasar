@@ -13,7 +13,7 @@ void Panel::render()
 
 bool Panel::cursor_in_clipping() const
 {
-	return bounds.clip().contains_point(Machine.main_window->cursor_pos());
+	return bounds.clip().contains_point(Machine.cursor_screen_pos());
 }
 
 glm::vec2 Panel::get_app_size() const
@@ -33,7 +33,7 @@ float Panel::get_app_height() const
 
 glm::vec2 Panel::get_app_cursor_pos() const
 {
-	return Machine.main_window->cursor_pos() * Machine.inv_app_scale();
+	return Machine.cursor_screen_pos() * Machine.inv_app_scale();
 }
 
 glm::mat3 Panel::vp_matrix() const

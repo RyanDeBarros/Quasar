@@ -225,19 +225,34 @@ Position MachineImpl::to_screen_coordinates(Position world_coordinates, const gl
 	};
 }
 
-Position MachineImpl::cursor_world_coordinates(const glm::mat3& inverse_vp) const
+Position MachineImpl::cursor_screen_pos() const
+{
+	return main_window->cursor_pos();
+}
+
+Position MachineImpl::cursor_screen_x() const
+{
+	return main_window->cursor_x();
+}
+
+Position MachineImpl::cursor_screen_y() const
+{
+	return main_window->cursor_y();
+}
+
+Position MachineImpl::cursor_world_pos(const glm::mat3& inverse_vp) const
 {
 	return to_world_coordinates(main_window->cursor_pos(), inverse_vp);
 }
 
 glm::vec2 MachineImpl::easel_cursor_world_pos() const
 {
-	return easel()->to_world_coordinates(main_window->cursor_pos());
+	return easel()->to_world_coordinates(cursor_screen_pos());
 }
 
 glm::vec2 MachineImpl::palette_cursor_world_pos() const
 {
-	return palette()->to_world_coordinates(main_window->cursor_pos());
+	return palette()->to_world_coordinates(cursor_screen_pos());
 }
 
 bool MachineImpl::cursor_in_easel() const
@@ -457,7 +472,7 @@ void MachineImpl::canvas_zoom_by(float z)
 {
 	Position cursor_world;
 	if (!main_window->is_alt_pressed())
-		cursor_world = easel()->to_world_coordinates(main_window->cursor_pos());
+		cursor_world = easel()->to_world_coordinates(cursor_screen_pos());
 
 	float factor = main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
 	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, z), zoom_info.in_min, zoom_info.in_max);

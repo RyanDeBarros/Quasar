@@ -106,6 +106,12 @@ void ColorSubpalette::sync_primary_selector()
 	ufr.send_buffer();
 }
 
+void ColorSubpalette::resync_primary_selector()
+{
+	primary_wp = square_wp(current_primary_index).relative_to(parent->self.transform);
+	sync_primary_selector();
+}
+
 void ColorSubpalette::sync_alternate_selector()
 {
 	Scale sc = global_scale();
@@ -121,6 +127,12 @@ void ColorSubpalette::sync_alternate_selector()
 	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_second_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }));
 	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_second_offset * sc.y }));
 	ufr.send_buffer();
+}
+
+void ColorSubpalette::resync_alternate_selector()
+{
+	alternate_wp = square_wp(current_alternate_index).relative_to(parent->self.transform);
+	sync_alternate_selector();
 }
 
 void ColorSubpalette::sync_with_palette()
@@ -142,6 +154,9 @@ void ColorSubpalette::sync_with_palette()
 		squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(color));
 	}
 	squares.send_vertex_buffer();
+
+	resync_primary_selector();
+	resync_alternate_selector();
 }
 
 void ColorSubpalette::process()
@@ -217,10 +232,6 @@ void ColorSubpalette::scroll_by(int delta)
 {
 	scroll_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - ColorPalette::ROW_COUNT));
 	sync_with_palette();
-	primary_wp = square_wp(current_primary_index).relative_to(parent->self.transform);
-	sync_primary_selector();
-	alternate_wp = square_wp(current_alternate_index).relative_to(parent->self.transform);
-	sync_alternate_selector();
 }
 
 WidgetPlacement ColorSubpalette::square_wp(int i) const
@@ -243,7 +254,7 @@ int ColorSubpalette::num_squares_visible() const
 
 Position ColorSubpalette::cursor_world_pos() const
 {
-	return Machine.to_world_coordinates(Machine.main_window->cursor_pos(), glm::inverse(*dynamic_cast<ColorPalette*>(parent)->vp));
+	return Machine.to_world_coordinates(Machine.cursor_screen_pos(), glm::inverse(*dynamic_cast<ColorPalette*>(parent)->vp));
 }
 
 ColorSubpalette& ColorPalette::get_subpalette(size_t pos)
@@ -361,7 +372,7 @@ void ColorPalette::connect_input_handlers()
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (mb.action != IAction::RELEASE)
 			return;
-		if (children[BACKGROUND]->contains_screen_point(Machine.main_window->cursor_pos(), vp))
+		if (children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp))
 		{
 			if (mb.button == MouseButton::LEFT)
 			{
@@ -377,11 +388,11 @@ void ColorPalette::connect_input_handlers()
 		};
 	parent_key_handler.children.push_back(&key_handler);
 	key_handler.callback = [](const KeyEvent& k) {
-		// TODO
+		// TODO 'X' to switch primary/alternate selection. Eventually, SHIFT+X will switch primary/alternate brushes.
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {
-		if (children[BACKGROUND]->contains_screen_point(Machine.main_window->cursor_pos(), vp))
+		if (children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp))
 		{
 			s.consumed = true;
 			scroll_backlog -= s.yoff;

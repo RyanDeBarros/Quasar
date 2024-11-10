@@ -194,8 +194,6 @@ inline const ToggleTButton& tb_t_wget(const Widget& w, size_t i)
 	return *w.get<ToggleTButton>(i);
 }
 
-// TODO Toggle Button group. NOT a widget.
-
 class ToggleTButtonGroup
 {
 	std::unordered_map<size_t, ToggleTButton*> buttons;

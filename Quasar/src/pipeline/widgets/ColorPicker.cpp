@@ -799,7 +799,7 @@ void ColorPicker::connect_input_handlers()
 		{
 			if (current_widget_control < 0)
 			{
-				Position local_cursor_pos = local_of(Machine.cursor_world_coordinates(glm::inverse(*vp)));
+				Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 				if (wp_at(ALPHA_SLIDER).contains_point(local_cursor_pos))
 				{
 					take_over_cursor();

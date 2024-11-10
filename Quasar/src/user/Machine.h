@@ -89,10 +89,14 @@ struct MachineImpl
 	void set_clear_color(ColorFrame color);
 
 	ClippingRect main_window_clip() const { return ClippingRect(0, 0, main_window->width(), main_window->height()); }
-	
+
 	Position to_world_coordinates(Position screen_coordinates, const glm::mat3& inverse_vp) const;
 	Position to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const;
-	Position cursor_world_coordinates(const glm::mat3& inverse_vp) const;
+
+	Position cursor_screen_pos() const;
+	Position cursor_screen_x() const;
+	Position cursor_screen_y() const;
+	Position cursor_world_pos(const glm::mat3& inverse_vp) const;
 
 	// Panels
 	glm::vec2 easel_cursor_world_pos() const;

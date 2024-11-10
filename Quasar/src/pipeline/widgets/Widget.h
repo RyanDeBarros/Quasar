@@ -91,7 +91,7 @@ struct Widget
 
 	float scale1d() const { return mean2d1d(self.transform.scale.x, self.transform.scale.y); }
 	bool contains_global_point(Position pos) const;
-	bool contains_screen_point(Position pos, glm::mat3* vp) const;
+	bool contains_screen_point(Position pos, const glm::mat3& vp) const;
 };
 
 inline void detach_widget(Widget* parent, Widget* child)

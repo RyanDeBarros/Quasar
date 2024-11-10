@@ -133,7 +133,7 @@ bool TButton::is_pressed(MouseButton mb) const
 
 bool TButton::is_hovered(Position* local_pos) const
 {
-	Position pos = local_of(Machine.cursor_world_coordinates(glm::inverse(*vp)));
+	Position pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 	if (local_pos)
 		*local_pos = pos;
 	return on_interval(pos.x, -0.5f, 0.5f) && on_interval(pos.y, -0.5f, 0.5f);

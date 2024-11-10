@@ -24,7 +24,9 @@ struct ColorSubpalette : public Widget
 	void draw_selectors();
 	void sync_hover_selector();
 	void sync_primary_selector();
+	void resync_primary_selector();
 	void sync_alternate_selector();
+	void resync_alternate_selector();
 	void sync_with_palette();
 	void process();
 	bool check_primary();
