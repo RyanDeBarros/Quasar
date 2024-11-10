@@ -24,6 +24,7 @@ struct MachineImpl
 	MouseButtonHandler palette_mb_handler;
 	KeyHandler palette_key_handler;
 	ScrollHandler easel_scroll_handler;
+	ScrollHandler palette_scroll_handler;
 	KeyHandler global_key_handler;
 	PathDropHandler path_drop_handler;
 

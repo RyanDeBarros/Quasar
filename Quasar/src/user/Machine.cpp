@@ -61,6 +61,7 @@ bool MachineImpl::create_main_window()
 		main_window->root_mouse_button.children.push_back(&palette_mb_handler);
 		main_window->root_key.children.push_back(&palette_key_handler);
 		main_window->root_scroll.children.push_back(&easel_scroll_handler);
+		main_window->root_scroll.children.push_back(&palette_scroll_handler);
 		main_window->root_key.children.push_back(&global_key_handler);
 		main_window->root_path_drop.children.push_back(&path_drop_handler);
 		return true;

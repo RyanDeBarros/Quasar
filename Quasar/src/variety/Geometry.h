@@ -96,6 +96,11 @@ constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
 	return val >= min_inclusive && val <= max_inclusive;
 }
 
+inline bool in_diagonal_rect(Position pos, Position bl, Position tr)
+{
+	return on_interval(pos.x, bl.x, tr.x) && on_interval(pos.y, bl.y, tr.y);
+}
+
 struct ClippingRect
 {
 	GLint x = 0, y = 0;

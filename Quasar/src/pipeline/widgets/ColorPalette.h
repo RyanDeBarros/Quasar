@@ -45,14 +45,18 @@ class ColorPalette : public Widget
 	ColorScheme scheme;
 	size_t current_subscheme = 0;
 
-	Shader color_square_shader;
-	Shader grid_shader;
+	Shader color_square_shader, grid_shader, round_rect_shader;
 	glm::mat3* vp;
 
 	MouseButtonHandler& parent_mb_handler;
 	MouseButtonHandler mb_handler;
 	KeyHandler& parent_key_handler;
 	KeyHandler key_handler;
+	ScrollHandler& parent_scroll_handler;
+	ScrollHandler scroll_handler;
+
+	float cached_scale1d = 0.0f;
+	float scroll_backlog = 0.0f;
 
 	ColorSubpalette& get_subpalette(size_t pos);
 	const ColorSubpalette& get_subpalette(size_t pos) const;
@@ -63,10 +67,10 @@ public:
 	static const int ROW_COUNT = 8;
 	static inline const float SQUARE_SEP = 28.0f;
 	static inline const Scale SQUARE_SIZE = Scale(24);
-	static inline const float GRID_WIDTH = COL_COUNT * SQUARE_SEP;
-	static inline const WidgetPlacement GRID_WP = { { {}, Scale(GRID_WIDTH) } };
+	static inline const float GRID_OFFSET_Y = -60;
+	static inline const WidgetPlacement GRID_WP = { { { 0, GRID_OFFSET_Y }, Scale(COL_COUNT * SQUARE_SEP) } };
 
-	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
+	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler);
 	ColorPalette(const ColorPalette&) = delete;
 	ColorPalette(ColorPalette&&) noexcept = delete;
 	~ColorPalette();
@@ -78,14 +82,17 @@ public:
 	void new_subpalette();
 	void delete_subpalette(size_t pos);
 	size_t num_subpalettes() const;
+	void set_size(Scale pos, bool sync = false);
 
 private:
 	void connect_input_handlers();
+	void initialize_widget();
 	void import_color_scheme();
 	void sync_widget_with_vp();
 
 	enum : size_t
 	{
+		BACKGROUND,
 		BLACK_GRID,
 		SUBPALETTE_START
 	};
