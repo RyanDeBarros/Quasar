@@ -12,7 +12,7 @@ struct WidgetPlacement
 	bool operator==(const WidgetPlacement&) const = default;
 
 	WidgetPlacement relative_to(const FlatTransform& parent) const { return { transform.relative_to(parent), pivot }; }
-
+	
 	float clamp_x(float x) const { return std::clamp(x, left(), right()); }
 	float clamp_y(float y) const { return std::clamp(y, bottom(), top()); }
 	Position clamp_point(Position pos) const { return { clamp_x(pos.x), clamp_y(pos.y) }; }
@@ -87,6 +87,7 @@ struct Widget
 	glm::mat3 global_matrix_inverse() const { if (parent) return self.inverse_matrix() * parent->global_matrix_inverse(); else return self.inverse_matrix(); }
 	Position global_of(Position local) const { glm::vec3 g = global_matrix() * glm::vec3(local, 1.0f); return { g.x, g.y }; }
 	Position local_of(Position global) const { glm::vec3 l = global_matrix_inverse() * glm::vec3(global, 1.0f); return { l.x, l.y }; }
+	Scale global_scale() const { if (parent) return parent->global_scale() * self.transform.scale; else return self.transform.scale; }
 
 	float scale1d() const { return mean2d1d(self.transform.scale.x, self.transform.scale.y); }
 	bool contains_global_point(Position pos) const;

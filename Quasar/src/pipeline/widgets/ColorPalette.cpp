@@ -85,33 +85,41 @@ void ColorSubpalette::sync_hover_selector()
 	ur.send_buffer();
 }
 
+const float tri_first_offset = 3;
+const float tri_last_offset = 15;
+const float tri_second_offset = tri_last_offset - tri_first_offset * (1 + glm::sqrt(2.0f));
+
 void ColorSubpalette::sync_primary_selector()
 {
+	Scale sc = global_scale();
+
 	const UnitRenderable& ubr = ur_wget(*this, PRIMARY_SELECTOR_B);
 	ubr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() }));
-	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + 14, primary_wp.top() }));
-	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() - 14 }));
+	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_last_offset * sc.x, primary_wp.top()}));
+	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() - tri_last_offset * sc.y }));
 	ubr.send_buffer();
 
 	const UnitRenderable& ufr = ur_wget(*this, PRIMARY_SELECTOR_F);
-	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + 2.8f, primary_wp.top() - 2.8f }));
-	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + 8, primary_wp.top() - 2.8f }));
-	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + 2.8f, primary_wp.top() - 8 }));
+	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }));
+	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_second_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }));
+	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_second_offset * sc.y }));
 	ufr.send_buffer();
 }
 
 void ColorSubpalette::sync_alternate_selector()
 {
+	Scale sc = global_scale();
+
 	const UnitRenderable& ubr = ur_wget(*this, ALTERNATE_SELECTOR_B);
 	ubr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() }));
-	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - 14, alternate_wp.top() }));
-	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() - 14 }));
+	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_last_offset * sc.x, alternate_wp.top() }));
+	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() - tri_last_offset * sc.y }));
 	ubr.send_buffer();
 
 	const UnitRenderable& ufr = ur_wget(*this, ALTERNATE_SELECTOR_F);
-	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - 2.8f, alternate_wp.top() - 2.8f }));
-	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - 8, alternate_wp.top() - 2.8f }));
-	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - 2.8f, alternate_wp.top() - 8 }));
+	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }));
+	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_second_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }));
+	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_second_offset * sc.y }));
 	ufr.send_buffer();
 }
 
