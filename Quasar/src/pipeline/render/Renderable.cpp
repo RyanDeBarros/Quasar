@@ -358,6 +358,6 @@ void IndexedRenderable::draw(size_t num_indexes_to_draw, size_t offset) const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glDrawElements(GL_TRIANGLES, GLuint(num_indexes_to_draw == decltype(num_indexes_to_draw)(-1) ? iarr.size() : num_indexes_to_draw), GL_UNSIGNED_INT, (void*)offset));
+	QUASAR_GL(glDrawElements(GL_TRIANGLES, GLuint(num_indexes_to_draw == decltype(num_indexes_to_draw)(-1) ? iarr.size() : num_indexes_to_draw), GL_UNSIGNED_INT, (void*)(offset * sizeof(GLuint))));
 	unbind_vao_buffers();
 }

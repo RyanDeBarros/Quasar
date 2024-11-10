@@ -24,8 +24,6 @@ void ColorSubscheme::remove(size_t i)
 
 size_t ColorSubscheme::insert(RGBA color, Sort sort)
 {
-	if (colors.size() >= MAX_COLORS)
-		return -1;
 	this->sort(sort);
 	// TODO test that this works
 	auto iter = std::lower_bound(colors.begin(), colors.end(), color, [this](RGBA a, RGBA b) { return predicate(a, b); });

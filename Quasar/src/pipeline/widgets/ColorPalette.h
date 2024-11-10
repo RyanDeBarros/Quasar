@@ -7,17 +7,18 @@
 struct ColorSubpalette : public Widget
 {
 	std::shared_ptr<ColorSubscheme> subscheme = nullptr;
+	int scroll_offset = 0;
 
-	ColorSubpalette();
+	ColorSubpalette(Shader* color_square_shader);
 	ColorSubpalette(const ColorSubpalette&) = delete;
 	ColorSubpalette(ColorSubpalette&&) noexcept = delete;
 	
-	void init(Shader* color_square_shader);
 	void reload_subscheme();
 	virtual void draw() override;
 	void sync_with_palette();
 
-	static WidgetPlacement square_wp(size_t i);
+	void scroll_by(int delta);
+	WidgetPlacement square_wp(int i) const;
 
 	enum : size_t
 	{
@@ -58,11 +59,11 @@ class ColorPalette : public Widget
 	size_t subpalette_index_in_widget(size_t pos) const;
 
 public:
-	static const size_t COL_COUNT = 8;
-	static const size_t ROW_COUNT = 8;
-	static inline const float SQUARE_SEP = 30.0f;
+	static const int COL_COUNT = 8;
+	static const int ROW_COUNT = 8;
+	static inline const float SQUARE_SEP = 28.0f;
 	static inline const Scale SQUARE_SIZE = Scale(24);
-	static inline const float GRID_WIDTH = COL_COUNT * (SQUARE_SEP - SQUARE_SIZE.x) + COL_COUNT * SQUARE_SIZE.x;
+	static inline const float GRID_WIDTH = COL_COUNT * SQUARE_SEP;
 	static inline const WidgetPlacement GRID_WP = { { {}, Scale(GRID_WIDTH) } };
 
 	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);

@@ -5,38 +5,35 @@
 #include "../render/Uniforms.h"
 
 
-ColorSubpalette::ColorSubpalette()
+ColorSubpalette::ColorSubpalette(Shader* color_square_shader)
 	: Widget(_W_COUNT)
 {
-}
-
-void ColorSubpalette::init(Shader* color_square_shader)
-{
-	// TODO initialize widgets
 	assign_widget(this, SQUARES, new W_IndexedRenderable(color_square_shader));
-	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	squares.set_num_vertices(ColorSubscheme::MAX_COLORS * 4);
-	squares.push_back_quads(ColorSubscheme::MAX_COLORS);
-	squares.send_both_buffers_resized();
-
-	sync_with_palette();
 }
 
 void ColorSubpalette::reload_subscheme()
 {
-	// TODO
+	IndexedRenderable& squares = ir_wget(*this, SQUARES);
+	squares.varr.clear();
+	squares.iarr.clear();
+	squares.set_num_vertices(subscheme->get_colors().size() * 4);
+	squares.push_back_quads(subscheme->get_colors().size());
+	squares.send_both_buffers_resized();
+	sync_with_palette();
 }
 
 void ColorSubpalette::draw()
 {
-	ir_wget(*this, SQUARES).draw();
+	int leftover = subscheme->get_colors().size() - scroll_offset * ColorPalette::COL_COUNT;
+	int num_to_draw = std::clamp(leftover, 0, ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT);
+	ir_wget(*this, SQUARES).draw(num_to_draw * 6, scroll_offset * ColorPalette::COL_COUNT * 6);
 }
 
 void ColorSubpalette::sync_with_palette()
 {
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	WidgetPlacement global;
-	for (size_t i = 0; i < ColorSubscheme::MAX_COLORS; ++i)
+	for (size_t i = 0; i < squares.iarr.size() / 6; ++i)
 	{
 		global = square_wp(i).relative_to(parent->self.transform);
 		squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
@@ -52,10 +49,17 @@ void ColorSubpalette::sync_with_palette()
 	squares.send_vertex_buffer();
 }
 
-WidgetPlacement ColorSubpalette::square_wp(size_t i)
+void ColorSubpalette::scroll_by(int delta)
+{
+	scroll_offset = std::clamp(scroll_offset + delta, 0, std::max(0, int(subscheme->get_colors().size() / ColorPalette::COL_COUNT - ColorPalette::ROW_COUNT)));
+	sync_with_palette();
+}
+
+WidgetPlacement ColorSubpalette::square_wp(int i) const
 {
 	Position initial_pos{ -ColorPalette::SQUARE_SEP * (ColorPalette::COL_COUNT - 1) * 0.5f, ColorPalette::SQUARE_SEP * (ColorPalette::ROW_COUNT - 1) * 0.5f };
-	return { { { initial_pos + Position{ ColorPalette::SQUARE_SEP * (i % ColorPalette::COL_COUNT), -ColorPalette::SQUARE_SEP * (i / ColorPalette::ROW_COUNT) }}, ColorPalette::SQUARE_SIZE } };
+	Position delta_pos{ ColorPalette::SQUARE_SEP * (i % ColorPalette::COL_COUNT), -ColorPalette::SQUARE_SEP * (i / ColorPalette::ROW_COUNT - scroll_offset) };
+	return { { { initial_pos + delta_pos}, ColorPalette::SQUARE_SIZE } };
 }
 
 ColorSubpalette& ColorPalette::get_subpalette(size_t pos)
@@ -79,10 +83,14 @@ ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler,
 	color_square_shader(FileSystem::shader_path("palette/color_square.vert"), FileSystem::shader_path("palette/color_square.frag"))
 {
 	assign_widget(this, BLACK_GRID, new W_UnitRenderable(&grid_shader));
-	sync_widget_with_vp();
-
 	connect_input_handlers();
 	new_subpalette(); // always have at least one subpalette
+
+	// TODO remove:
+	for (size_t i = 0; i < 127; ++i)
+		get_subpalette(current_subscheme).subscheme->insert(HSVA(i / 127.0f, 1.0f, 1.0f, 1.0f).to_rgba());
+	get_subpalette(current_subscheme).reload_subscheme();
+	get_subpalette(current_subscheme).scroll_by(3);
 }
 
 ColorPalette::~ColorPalette()
@@ -119,18 +127,11 @@ void ColorPalette::import_color_scheme(ColorScheme&& color_scheme)
 
 void ColorPalette::new_subpalette()
 {
-	attach_widget(this, new ColorSubpalette());
-	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>(std::vector<RGBA>{
-		RGBA(1.0f, 0.0f, 0.0f, 1.0f),
-		RGBA(1.0f, 0.0f, 1.0f, 1.0f),
-		RGBA(0.0f, 1.0f, 1.0f, 1.0f),
-		RGBA(0.0f, 1.0f, 0.0f, 1.0f),
-		RGBA(0.0f, 0.0f, 1.0f, 1.0f),
-		RGBA(1.0f, 1.0f, 0.0f, 1.0f),
-	})); // TODO remove list initializer
+	attach_widget(this, new ColorSubpalette(&color_square_shader));
+	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>(std::vector<RGBA>{ RGBA::WHITE }));
 	current_subscheme = num_subpalettes() - 1;
 	get_subpalette(current_subscheme).subscheme = scheme.subschemes[current_subscheme];
-	get_subpalette(current_subscheme).init(&color_square_shader);
+	get_subpalette(current_subscheme).reload_subscheme();
 }
 
 void ColorPalette::delete_subpalette(size_t pos)

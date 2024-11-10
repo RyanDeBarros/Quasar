@@ -15,8 +15,6 @@ public:
 	
 	const std::vector<RGBA>& get_colors() const { return colors; }
 
-	static const size_t MAX_COLORS = 64;
-
 	std::string name;
 
 	enum class SortingPolicy : char
