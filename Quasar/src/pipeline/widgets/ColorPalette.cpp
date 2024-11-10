@@ -6,10 +6,20 @@
 #include "RoundRect.h"
 #include "user/Machine.h"
 
-ColorSubpalette::ColorSubpalette(Shader* color_square_shader)
+ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader)
 	: Widget(_W_COUNT)
 {
 	assign_widget(this, SQUARES, new W_IndexedRenderable(color_square_shader));
+	
+	assign_widget(this, HOVER_SELECTOR, new W_UnitRenderable(outline_rect_shader));
+	UnitRenderable& ur = ur_wget(*this, HOVER_SELECTOR);
+	ur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
+	ur.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }));
+	ur.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }));
+	ur.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }));
+	ur.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }));
+	ur.send_buffer();
+	// TODO setup HOVER_SELECTOR
 }
 
 void ColorSubpalette::reload_subscheme()
@@ -25,29 +35,65 @@ void ColorSubpalette::reload_subscheme()
 
 void ColorSubpalette::draw()
 {
-	int leftover = (int)subscheme->get_colors().size() - scroll_offset * ColorPalette::COL_COUNT;
-	int num_to_draw = std::clamp(leftover, 0, ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT);
-	ir_wget(*this, SQUARES).draw(num_to_draw * 6, scroll_offset * ColorPalette::COL_COUNT * 6);
+	ir_wget(*this, SQUARES).draw(num_squares_visible() * size_t(6), first_square() * size_t(6));
+}
+
+void ColorSubpalette::draw_selectors()
+{
+	if (current_hover_index >= 0)
+		ur_wget(*this, HOVER_SELECTOR).draw();
+}
+
+void ColorSubpalette::sync_hover_selector()
+{
+	const UnitRenderable& ur = ur_wget(*this, HOVER_SELECTOR);
+	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.bottom() }));
+	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.bottom() }));
+	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.top() }));
+	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.top() }));
+	ur.send_buffer();
 }
 
 void ColorSubpalette::sync_with_palette()
 {
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	WidgetPlacement global;
-	for (int i = 0; i < squares.iarr.size() / 6; ++i)
+	size_t num_colors = subscheme->get_colors().size();
+	for (size_t i = 0; i < num_colors; ++i)
 	{
-		global = square_wp(i).relative_to(parent->self.transform);
+		global = square_wp((int)i).relative_to(parent->self.transform);
 		squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
 		squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
 		squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
 		squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-		glm::vec4 color = (i < subscheme->get_colors().size() ? subscheme->get_colors()[i] : RGBA::WHITE).as_vec(); // TODO don't use MAX_COLORS. have unlimited variable number of colors and scroll pane. Only COL_COUNT is a constant.
+		glm::vec4 color = subscheme->get_colors()[i].as_vec();
 		squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(color));
 		squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(color));
 		squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(color));
 		squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(color));
 	}
 	squares.send_vertex_buffer();
+}
+
+void ColorSubpalette::process()
+{
+	current_hover_index = -1;
+	WidgetPlacement global;
+	Position cursor_pos = Machine.to_world_coordinates(Machine.main_window->cursor_pos(), glm::inverse(*dynamic_cast<ColorPalette*>(parent)->vp));
+	int end_square = first_square() + num_squares_visible();
+	for (int i = first_square(); i < end_square; ++i)
+	{
+		global = square_wp(i).relative_to(parent->self.transform);
+		if (global.contains_point(cursor_pos))
+		{
+			current_hover_index = i;
+			if (hover_wp != global)
+			{
+				hover_wp = global;
+				sync_hover_selector();
+			}
+		}
+	}
 }
 
 void ColorSubpalette::scroll_by(int delta)
@@ -63,6 +109,17 @@ WidgetPlacement ColorSubpalette::square_wp(int i) const
 	return WidgetPlacement{ { { initial_pos + delta_pos}, ColorPalette::SQUARE_SIZE } }.relative_to(self.transform);
 }
 
+int ColorSubpalette::first_square() const
+{
+	return scroll_offset * ColorPalette::COL_COUNT;
+}
+
+int ColorSubpalette::num_squares_visible() const
+{
+	int leftover = (int)subscheme->get_colors().size() - first_square();
+	return std::clamp(leftover, 0, ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT);
+}
+
 ColorSubpalette& ColorPalette::get_subpalette(size_t pos)
 {
 	return cspl_wget(*this, subpalette_index_in_widget(pos));
@@ -73,15 +130,27 @@ const ColorSubpalette& ColorPalette::get_subpalette(size_t pos) const
 	return cspl_wget(*this, subpalette_index_in_widget(pos));
 }
 
+ColorSubpalette& ColorPalette::current_subpalette()
+{
+	return get_subpalette(current_subscheme);
+}
+
+const ColorSubpalette& ColorPalette::current_subpalette() const
+{
+	return get_subpalette(current_subscheme);
+}
+
 size_t ColorPalette::subpalette_index_in_widget(size_t pos) const
 {
 	return SUBPALETTE_START + pos;
 }
 
+// LATER use black outlined square IR instead of single-unit blackgrid shader?
 ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler)
 	: Widget(SUBPALETTE_START), vp(vp), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), parent_scroll_handler(parent_scroll_handler),
 	grid_shader(FileSystem::shader_path("palette/black_grid.vert"), FileSystem::shader_path("palette/black_grid.frag")),
 	color_square_shader(FileSystem::shader_path("palette/color_square.vert"), FileSystem::shader_path("palette/color_square.frag")),
+	outline_rect_shader(FileSystem::shader_path("palette/outline_rect.vert"), FileSystem::shader_path("palette/outline_rect.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag"))
 {
 	initialize_widget();
@@ -91,8 +160,8 @@ ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler,
 	// TODO remove:
 	float num_colors = 100;
 	for (int i = 0; i < num_colors; ++i)
-		get_subpalette(current_subscheme).subscheme->insert(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
-	get_subpalette(current_subscheme).reload_subscheme();
+		current_subpalette().subscheme->insert(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
+	current_subpalette().reload_subscheme();
 }
 
 ColorPalette::~ColorPalette()
@@ -104,16 +173,19 @@ ColorPalette::~ColorPalette()
 
 void ColorPalette::draw()
 {
+	current_subpalette().process();
 	// TODO render imgui
 	rr_wget(*this, BACKGROUND).draw();
-	get_subpalette(current_subscheme).draw();
+	current_subpalette().draw();
 	ur_wget(*this, BLACK_GRID).draw();
+	current_subpalette().draw_selectors();
 }
 
 void ColorPalette::send_vp()
 {
 	Uniforms::send_matrix3(color_square_shader, "u_VP", *vp);
 	Uniforms::send_matrix3(grid_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(outline_rect_shader, "u_VP", *vp);
 	Uniforms::send_matrix3(round_rect_shader, "u_VP", *vp);
 	sync_widget_with_vp();
 }
@@ -132,12 +204,12 @@ void ColorPalette::import_color_scheme(ColorScheme&& color_scheme)
 
 void ColorPalette::new_subpalette()
 {
-	attach_widget(this, new ColorSubpalette(&color_square_shader));
+	attach_widget(this, new ColorSubpalette(&color_square_shader, &outline_rect_shader));
 	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>(std::vector<RGBA>{ RGBA::WHITE }));
 	current_subscheme = num_subpalettes() - 1;
-	get_subpalette(current_subscheme).subscheme = scheme.subschemes[current_subscheme];
-	get_subpalette(current_subscheme).self.transform.position.y = GRID_OFFSET_Y;
-	get_subpalette(current_subscheme).reload_subscheme();
+	current_subpalette().subscheme = scheme.subschemes[current_subscheme];
+	current_subpalette().self.transform.position.y = GRID_OFFSET_Y;
+	current_subpalette().reload_subscheme();
 }
 
 void ColorPalette::delete_subpalette(size_t pos)
@@ -169,14 +241,12 @@ void ColorPalette::connect_input_handlers()
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {
-		auto bl = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, -0.5f }), *vp);
-		auto tr = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ 0.5f, 0.5f }), *vp);
-		if (in_diagonal_rect(Machine.main_window->cursor_pos(), bl, tr))
+		if (children[BACKGROUND]->contains_screen_point(Machine.main_window->cursor_pos(), vp))
 		{
 			scroll_backlog -= s.yoff;
 			float amount;
 			scroll_backlog = modf(scroll_backlog, &amount);
-			get_subpalette(current_subscheme).scroll_by((int)amount);
+			current_subpalette().scroll_by((int)amount);
 		}
 		};
 }

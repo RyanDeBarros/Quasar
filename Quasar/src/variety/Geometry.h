@@ -64,6 +64,8 @@ struct FlatTransform
 	Position position;
 	Scale scale;
 
+	bool operator==(const FlatTransform&) const = default;
+
 	glm::mat3 camera() const { return inverse().matrix(); }
 	
 	FlatTransform inverse() const

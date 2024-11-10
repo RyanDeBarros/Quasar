@@ -8,17 +8,24 @@ struct ColorSubpalette : public Widget
 {
 	std::shared_ptr<ColorSubscheme> subscheme = nullptr;
 	int scroll_offset = 0;
+	int current_hover_index = -1;
+	WidgetPlacement hover_wp;
 
-	ColorSubpalette(Shader* color_square_shader);
+	ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader);
 	ColorSubpalette(const ColorSubpalette&) = delete;
 	ColorSubpalette(ColorSubpalette&&) noexcept = delete;
 	
 	void reload_subscheme();
 	virtual void draw() override;
+	void draw_selectors();
+	void sync_hover_selector();
 	void sync_with_palette();
+	void process();
 
 	void scroll_by(int delta);
 	WidgetPlacement square_wp(int i) const;
+	int first_square() const;
+	int num_squares_visible() const;
 
 	enum : size_t
 	{
@@ -42,10 +49,12 @@ inline const ColorSubpalette& cspl_wget(const Widget& w, size_t i)
 
 class ColorPalette : public Widget
 {
+	friend ColorSubpalette;
+
 	ColorScheme scheme;
 	size_t current_subscheme = 0;
 
-	Shader color_square_shader, grid_shader, round_rect_shader;
+	Shader color_square_shader, grid_shader, outline_rect_shader, round_rect_shader;
 	glm::mat3* vp;
 
 	MouseButtonHandler& parent_mb_handler;
@@ -60,6 +69,8 @@ class ColorPalette : public Widget
 
 	ColorSubpalette& get_subpalette(size_t pos);
 	const ColorSubpalette& get_subpalette(size_t pos) const;
+	ColorSubpalette& current_subpalette();
+	const ColorSubpalette& current_subpalette() const;
 	size_t subpalette_index_in_widget(size_t pos) const;
 
 public:

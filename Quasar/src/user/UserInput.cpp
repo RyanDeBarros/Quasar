@@ -3,7 +3,7 @@
 #include "Machine.h"
 #include "variety/Utils.h"
 
-// TODO put these as data members on Easel, and put these functions there. Honestly, get rid of UserInput.h/cpp altogether.
+// LATER put these as data members on Easel, and put these functions there. Honestly, get rid of UserInput.h/cpp altogether.
 void attach_canvas_controls()
 {
 	// Panning

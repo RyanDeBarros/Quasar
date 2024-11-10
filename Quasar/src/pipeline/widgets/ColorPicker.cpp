@@ -1274,21 +1274,21 @@ float ColorPicker::slider_normal_y(size_t control, size_t cursor) const
 
 void ColorPicker::setup_vertex_positions(size_t control) const
 {
-	const UnitRenderable& renderable = ur_wget(*this, control);
+	const UnitRenderable& ur = ur_wget(*this, control);
 	WidgetPlacement wp = wp_at(control).relative_to(self.transform);
-	renderable.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	renderable.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	renderable.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	renderable.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
+	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
+	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
+	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
+	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
 }
 
 void ColorPicker::setup_rect_uvs(size_t control) const
 {
-	const UnitRenderable& renderable = ur_wget(*this, control);
-	renderable.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0.0f, 0.0f }));
-	renderable.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1.0f, 0.0f }));
-	renderable.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0.0f, 1.0f }));
-	renderable.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1.0f, 1.0f }));
+	const UnitRenderable& ur = ur_wget(*this, control);
+	ur.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0.0f, 0.0f }));
+	ur.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1.0f, 0.0f }));
+	ur.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0.0f, 1.0f }));
+	ur.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1.0f, 1.0f }));
 }
 
 void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const
@@ -1366,18 +1366,14 @@ void ColorPicker::sync_widget_with_vp()
 
 void ColorPicker::sync_single_standard_ur_transform(size_t control, bool send_buffer) const
 {
-	if (children[control])
-	{
-		setup_vertex_positions(control);
-		if (send_buffer)
-			ur_wget(*this, control).send_buffer();
-	}
+	setup_vertex_positions(control);
+	if (send_buffer)
+		ur_wget(*this, control).send_buffer();
 }
 
 void ColorPicker::send_cpwc_buffer(size_t control) const
 {
-	if (children[control])
-		ur_wget(*this, control).send_buffer();
+	ur_wget(*this, control).send_buffer();
 }
 
 void ColorPicker::set_circle_cursor_thickness(size_t cursor, float thickness) const

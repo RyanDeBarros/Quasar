@@ -9,6 +9,8 @@ struct WidgetPlacement
 	FlatTransform transform{};
 	glm::vec2 pivot{ 0.5f, 0.5f };
 
+	bool operator==(const WidgetPlacement&) const = default;
+
 	WidgetPlacement relative_to(const FlatTransform& parent) const { return { transform.relative_to(parent), pivot }; }
 
 	float clamp_x(float x) const { return std::clamp(x, left(), right()); }
@@ -87,6 +89,8 @@ struct Widget
 	Position local_of(Position global) const { glm::vec3 l = global_matrix_inverse() * glm::vec3(global, 1.0f); return { l.x, l.y }; }
 
 	float scale1d() const { return mean2d1d(self.transform.scale.x, self.transform.scale.y); }
+	bool contains_global_point(Position pos) const;
+	bool contains_screen_point(Position pos, glm::mat3* vp) const;
 };
 
 inline void detach_widget(Widget* parent, Widget* child)
