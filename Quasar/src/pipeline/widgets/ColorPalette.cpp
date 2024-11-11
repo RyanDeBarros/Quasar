@@ -191,11 +191,6 @@ void ColorSubpalette::process()
 			hover_wp = new_wp;
 			sync_hover_selector();
 		}
-		if (Machine.main_window->is_ctrl_pressed() && Machine.main_window->is_mouse_button_pressed(MouseButton::LEFT))
-		{
-			hover_wp.transform.scale = Scale(-1);
-			Machine.canvas_zoom_by(0.0001f);
-		}
 	}
 }
 
@@ -538,9 +533,16 @@ void ColorPalette::draw()
 void ColorPalette::process()
 {
 	current_subpalette().process();
-	// TODO use cursor_in_bkg(), but define a unhover() function for button when cursor goes outside of bkg.
-	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).process();
-	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).process();
+	if (cursor_in_bkg())
+	{
+		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).process();
+		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).process();
+	}
+	else
+	{
+		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).unhover();
+		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).unhover();
+	}
 }
 
 void ColorPalette::send_vp()
@@ -595,35 +597,28 @@ void ColorPalette::connect_input_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
-		if (!cursor_in_bkg())
+		if (mb.action != IAction::RELEASE || !cursor_in_bkg())
 			return;
-		if (mb.action == IAction::RELEASE)
+		if (!(mb.mods & Mods::CONTROL))
 		{
-			if (!(mb.mods & Mods::CONTROL))
+			if (mb.button == MouseButton::LEFT)
 			{
-				if (mb.button == MouseButton::LEFT)
+				if (current_subpalette().check_primary())
 				{
-					if (current_subpalette().check_primary())
-					{
-						mb.consumed = true;
-						current_subpalette().update_primary_color_in_picker();
-					}
-				}
-				else if (mb.button == MouseButton::RIGHT)
-				{
-					if (current_subpalette().check_alternate())
-						mb.consumed = true;
+					mb.consumed = true;
+					current_subpalette().update_primary_color_in_picker();
 				}
 			}
-			else if (mb.button == MouseButton::LEFT)
+			else if (mb.button == MouseButton::RIGHT)
 			{
-				current_subpalette().remove_square_under_cursor(false); // false because of clean_extra_buffer_space() on next line
-				current_subpalette().clean_extra_buffer_space();
+				if (current_subpalette().check_alternate())
+					mb.consumed = true;
 			}
 		}
-		else if (mb.action == IAction::PRESS && mb.button == MouseButton::LEFT)
+		else if (mb.button == MouseButton::LEFT)
 		{
-			// TODO initiate multi-remove
+			current_subpalette().remove_square_under_cursor(false); // false because of clean_extra_buffer_space() on next line 
+			current_subpalette().clean_extra_buffer_space();
 		}
 		};
 	parent_key_handler.children.push_back(&key_handler);

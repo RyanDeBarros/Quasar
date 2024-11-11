@@ -139,6 +139,15 @@ bool TButton::is_hovered(Position* local_pos) const
 	return on_interval(pos.x, -0.5f, 0.5f) && on_interval(pos.y, -0.5f, 0.5f);
 }
 
+void TButton::unhover()
+{
+	if (hovering)
+	{
+		hovering = false;
+		on_hover_exit();
+	}
+}
+
 StandardTButton::StandardTButton(const StandardTButtonArgs& args)
 	: TButton(args.vp, { args.transform, args.pivot }, *args.frange, args.font_size, args.rr_shader, args.mb_parent, args.text),
 	g_normal(args.normal), g_hovered(args.hovered), g_pressed(args.pressed), g_disabled(args.disabled),

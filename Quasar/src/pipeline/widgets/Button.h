@@ -49,6 +49,7 @@ public:
 	void process();
 	bool is_pressed(MouseButton mb) const;
 	bool is_hovered(Position* local_pos = nullptr) const;
+	void unhover();
 
 	TextRender& text() { return tr_wget(*this, TEXT); }
 	const TextRender& text() const { return tr_wget(*this, TEXT); }

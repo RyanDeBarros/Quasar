@@ -139,17 +139,35 @@ void ColorPicker::draw()
 void ColorPicker::process()
 {
 	process_mb_down_events();
-	b_t_wget(*this, BUTTON_GRAPHIC).process();
-	b_t_wget(*this, BUTTON_RGB_SLIDER).process();
-	b_t_wget(*this, BUTTON_HSV_SLIDER).process();
-	b_t_wget(*this, BUTTON_HSL_SLIDER).process();
-	b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
-	if (state & State::SLIDER_RGB)
-		b_t_wget(*this, BUTTON_RGB_HEX_CODE).process();
-	else if (state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL))
+	if (cursor_in_bkg())
 	{
-		b_t_wget(*this, BUTTON_QUAD).process();
-		b_t_wget(*this, BUTTON_WHEEL).process();
+		b_t_wget(*this, BUTTON_GRAPHIC).process();
+		b_t_wget(*this, BUTTON_RGB_SLIDER).process();
+		b_t_wget(*this, BUTTON_HSV_SLIDER).process();
+		b_t_wget(*this, BUTTON_HSL_SLIDER).process();
+		b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
+		if (state & State::SLIDER_RGB)
+			b_t_wget(*this, BUTTON_RGB_HEX_CODE).process();
+		else if (state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL))
+		{
+			b_t_wget(*this, BUTTON_QUAD).process();
+			b_t_wget(*this, BUTTON_WHEEL).process();
+		}
+	}
+	else
+	{
+		b_t_wget(*this, BUTTON_GRAPHIC).unhover();
+		b_t_wget(*this, BUTTON_RGB_SLIDER).unhover();
+		b_t_wget(*this, BUTTON_HSV_SLIDER).unhover();
+		b_t_wget(*this, BUTTON_HSL_SLIDER).unhover();
+		b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).unhover();
+		if (state & State::SLIDER_RGB)
+			b_t_wget(*this, BUTTON_RGB_HEX_CODE).unhover();
+		else if (state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL))
+		{
+			b_t_wget(*this, BUTTON_QUAD).unhover();
+			b_t_wget(*this, BUTTON_WHEEL).unhover();
+		}
 	}
 }
 
