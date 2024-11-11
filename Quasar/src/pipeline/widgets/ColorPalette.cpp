@@ -5,6 +5,7 @@
 #include "../render/Uniforms.h"
 #include "RoundRect.h"
 #include "user/Machine.h"
+#include "Button.h"
 
 ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader)
 	: Widget(_W_COUNT)
@@ -53,6 +54,8 @@ const ColorPalette& ColorSubpalette::palette() const
 
 void ColorSubpalette::reload_subscheme()
 {
+	if (subscheme->get_colors().empty())
+		subscheme->insert(RGBA::WHITE);
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	squares.varr.clear();
 	squares.iarr.clear();
@@ -60,6 +63,7 @@ void ColorSubpalette::reload_subscheme()
 	squares.push_back_quads(subscheme->get_colors().size());
 	squares.send_both_buffers_resized();
 	sync_with_palette();
+	update_primary_color_in_picker();
 }
 
 void ColorSubpalette::draw()
@@ -244,7 +248,11 @@ void ColorSubpalette::switch_primary_and_alternate()
 	std::swap(current_primary_index, current_alternate_index);
 	resync_primary_selector();
 	resync_alternate_selector();
-	// TODO palette() method for this dynamic cast
+	update_primary_color_in_picker();
+}
+
+void ColorSubpalette::update_primary_color_in_picker() const
+{
 	(*palette().primary_color_update)(subscheme->get_colors()[current_primary_index]);
 }
 
@@ -282,6 +290,33 @@ Position ColorSubpalette::cursor_world_pos() const
 	return Machine.to_world_coordinates(Machine.cursor_screen_pos(), glm::inverse(*palette().vp));
 }
 
+void ColorSubpalette::override_current_color(RGBA color)
+{
+	set_color(current_primary_index, color);
+}
+
+void ColorSubpalette::new_color(RGBA color)
+{
+	// TODO
+}
+
+void ColorSubpalette::set_color(size_t i, RGBA color)
+{
+	if (color == subscheme->get_colors()[i])
+		return;
+	*subscheme->at(i) = color;
+	IndexedRenderable& squares = ir_wget(*this, SQUARES);
+	glm::vec4 rgba = color.as_vec();
+	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba));
+	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba));
+	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba));
+	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba));
+	squares.send_single_vertex(i * 4 + 0);
+	squares.send_single_vertex(i * 4 + 1);
+	squares.send_single_vertex(i * 4 + 2);
+	squares.send_single_vertex(i * 4 + 3);
+}
+
 ColorSubpalette& ColorPalette::get_subpalette(size_t pos)
 {
 	return cspl_wget(*this, subpalette_index_in_widget(pos));
@@ -308,23 +343,18 @@ size_t ColorPalette::subpalette_index_in_widget(size_t pos) const
 }
 
 // LATER use black outlined square IR instead of single-unit blackgrid shader?
-ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler, const std::function<void(RGBA)>* primary_color_update)
+ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
+	const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba)
 	: Widget(SUBPALETTE_START), vp(vp), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), parent_scroll_handler(parent_scroll_handler),
 	grid_shader(FileSystem::shader_path("palette/black_grid.vert"), FileSystem::shader_path("palette/black_grid.frag")),
 	color_square_shader(FileSystem::shader_path("palette/color_square.vert"), FileSystem::shader_path("palette/color_square.frag")),
 	outline_rect_shader(FileSystem::shader_path("palette/outline_rect.vert"), FileSystem::shader_path("palette/outline_rect.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
-	primary_color_update(primary_color_update)
+	primary_color_update(primary_color_update), get_picker_rgba(get_picker_rgba)
 {
 	initialize_widget();
 	connect_input_handlers();
 	new_subpalette(); // always have at least one subpalette
-
-	// TODO remove:
-	float num_colors = 100;
-	for (int i = 0; i < num_colors; ++i)
-		current_subpalette().subscheme->insert(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
-	current_subpalette().reload_subscheme();
 }
 
 ColorPalette::~ColorPalette()
@@ -336,13 +366,24 @@ ColorPalette::~ColorPalette()
 
 void ColorPalette::draw()
 {
-	if (children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp))
-		current_subpalette().process();
+	process();
 	// TODO render imgui
 	rr_wget(*this, BACKGROUND).draw();
 	current_subpalette().draw();
 	ur_wget(*this, BLACK_GRID).draw();
 	current_subpalette().draw_selectors();
+	// LATER use StandardIButton instead of StandardTButton
+	sb_t_wget(*this, BUTTON_OVERRIDE_COLOR).draw();
+	sb_t_wget(*this, BUTTON_INSERT_NEW_COLOR).draw();
+}
+
+// TODO call process() on ColorPalette+ColorPicker externally in Palette, instead of in draw()?
+void ColorPalette::process()
+{
+	current_subpalette().process();
+	// TODO use cursor_in_bkg(), but define a unhover() function for button when cursor goes outside of bkg.
+	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).process();
+	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).process();
 }
 
 void ColorPalette::send_vp()
@@ -369,7 +410,7 @@ void ColorPalette::import_color_scheme(ColorScheme&& color_scheme)
 void ColorPalette::new_subpalette()
 {
 	attach_widget(this, new ColorSubpalette(&color_square_shader, &outline_rect_shader));
-	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>(std::vector<RGBA>{ RGBA::WHITE }));
+	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>());
 	current_subscheme = num_subpalettes() - 1;
 	current_subpalette().subscheme = scheme.subschemes[current_subscheme];
 	current_subpalette().self.transform.position.y = GRID_OFFSET_Y;
@@ -399,14 +440,14 @@ void ColorPalette::connect_input_handlers()
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (mb.action != IAction::RELEASE)
 			return;
-		if (children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp))
+		if (cursor_in_bkg())
 		{
 			if (mb.button == MouseButton::LEFT)
 			{
 				if (current_subpalette().check_primary())
 				{
 					mb.consumed = true;
-					(*primary_color_update)(scheme.subschemes[current_subscheme]->get_colors()[current_subpalette().current_primary_index]);
+					current_subpalette().update_primary_color_in_picker();
 				}
 			}
 			else if (mb.button == MouseButton::RIGHT)
@@ -426,7 +467,7 @@ void ColorPalette::connect_input_handlers()
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {
-		if (children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp))
+		if (cursor_in_bkg())
 		{
 			s.consumed = true;
 			scroll_backlog -= s.yoff;
@@ -439,6 +480,8 @@ void ColorPalette::connect_input_handlers()
 
 void ColorPalette::initialize_widget()
 {
+	const float button1_x = -30;
+
 	assign_widget(this, BACKGROUND, new RoundRect(&round_rect_shader));
 	rr_wget(*this, BACKGROUND).thickness = 0.25f;
 	rr_wget(*this, BACKGROUND).corner_radius = 10;
@@ -447,6 +490,30 @@ void ColorPalette::initialize_widget()
 	rr_wget(*this, BACKGROUND).update_all();
 
 	assign_widget(this, BLACK_GRID, new W_UnitRenderable(&grid_shader));
+
+	StandardTButtonArgs sba(&mb_handler, &round_rect_shader, vp);
+	sba.frange = Fonts::label_black;
+	sba.font_size = 26;
+	sba.pivot = { 0, 1 };
+	sba.transform.scale = { 28, 28 };
+	
+	sba.transform.position = { button1_x, 130 };
+	sba.text = "↓";
+	sba.on_select = [this](StandardTButton&, const MouseButtonEvent& mb, Position) {
+		current_subpalette().override_current_color((*get_picker_rgba)());
+		};
+	assign_widget(this, BUTTON_OVERRIDE_COLOR, new StandardTButton(sba));
+	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).text().self.transform.position = { 0.05f, -0.05f };
+	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).text().self.transform.scale *= 1.0f;
+
+	sba.transform.position.x = button1_x + sba.transform.scale.x;
+	sba.text = "+";
+	sba.on_select = [this](StandardTButton&, const MouseButtonEvent& mb, Position) {
+		current_subpalette().new_color((*get_picker_rgba)());
+		};
+	assign_widget(this, BUTTON_INSERT_NEW_COLOR, new StandardTButton(sba));
+	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.position = { 0.1f, -0.15f };
+	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.scale *= 1.4f;
 }
 
 void ColorPalette::import_color_scheme()
@@ -485,8 +552,12 @@ void ColorPalette::sync_widget_with_vp()
 	{
 		cached_scale1d = sc;
 		rr_wget(*this, BACKGROUND).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).update_corner_radius(sc).update_thickness(sc);
 	}
 	rr_wget(*this, BACKGROUND).update_transform().send_buffer();
+	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).send_vp();
+	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).send_vp();
 
 	UnitRenderable& ur = ur_wget(*this, BLACK_GRID);
 	WidgetPlacement global = GRID_WP.relative_to(self.transform);
@@ -511,4 +582,9 @@ void ColorPalette::set_size(Scale size, bool sync)
 	rr_wget(*this, BACKGROUND).update_transform();
 	if (sync)
 		sync_widget_with_vp();
+}
+
+bool ColorPalette::cursor_in_bkg() const
+{
+	return children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp);
 }

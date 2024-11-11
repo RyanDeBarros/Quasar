@@ -171,8 +171,7 @@ void ColorPicker::cp_render_gui_back()
 	{
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
 		ImGui::SetWindowFontScale(scale1d() * font_window_scale);
-		imgui_takeover_mb = false;
-		imgui_takeover_key = false;
+		popup_hovered = false;
 		if (state & State::SLIDER_RGB)
 		{
 			if (showing_hex_popup)
@@ -181,10 +180,11 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextWindowSize({ psz.x, psz.y });
 				ImGui::SetNextWindowPos(ImVec2(gui_transform.position.x + 0.5f * gui_transform.scale.x - 0.5f * psz.x,
 					gui_transform.position.y + 0.475f * gui_transform.scale.y - 0.5f * psz.y));
-				ImGui::OpenPopup("hex-popup");
+				ImGui::OpenPopup("hex-popup", ImGuiPopupFlags_MouseButtonLeft);
 			}
 			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
 			{
+				popup_hovered = ImGui::IsWindowHovered();
 				if (Machine.main_window->is_key_pressed(Key::ESCAPE))
 					tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
 				if (showing_hex_popup)
@@ -195,8 +195,6 @@ void ColorPicker::cp_render_gui_back()
 					ImGui::SetNextItemWidth(90 * self.transform.scale.x);
 					ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size);
 					update_rgb_hex();
-					imgui_takeover_mb = true;
-					imgui_takeover_key = true;
 				}
 				else
 					ImGui::CloseCurrentPopup();
@@ -705,10 +703,7 @@ void ColorPicker::initialize_widget()
 	
 	// ---------- BUTTONS ----------
 
-	StandardTButtonArgs sba{};
-	sba.vp = vp;
-	sba.rr_shader = &round_rect_shader;
-	sba.mb_parent = &mb_handler;
+	StandardTButtonArgs sba(&mb_handler, &round_rect_shader, vp);
 	sba.pivot = { 0, 1 };
 
 	sba.text = "#";
@@ -726,13 +721,9 @@ void ColorPicker::initialize_widget()
 			b.text().set_text("#");
 		}
 		};
-	StandardTButton* b_switch_txtfld_mode = new StandardTButton(sba);
-	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, b_switch_txtfld_mode);
+	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, new StandardTButton(sba));
 
-	ToggleTButtonArgs tba{};
-	tba.vp = vp;
-	tba.rr_shader = &round_rect_shader;
-	tba.mb_parent = &mb_handler;
+	ToggleTButtonArgs tba(&mb_handler, &round_rect_shader, vp);
 	tba.pivot = { 0, 1 };
 
 	tba.text = "HEX";
@@ -795,6 +786,13 @@ void ColorPicker::connect_input_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
+		if (showing_hex_popup && cursor_in_bkg())
+		{
+			mb.consumed = true;
+			if (mb.action == IAction::PRESS && showing_hex_popup && !popup_hovered)
+				tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
+			return;
+		}
 		if (mb.button != MouseButton::LEFT)
 			return;
 		if (mb.action == IAction::PRESS)
@@ -929,15 +927,10 @@ void ColorPicker::connect_input_handlers()
 			}
 		}
 	};
-	mb_handler.children.push_back(&imgui_mb_handler);
-	imgui_mb_handler.callback = [this](const MouseButtonEvent& mb) {
-		if (imgui_takeover_mb)
-			mb.consumed = true;
-		};
 
 	parent_key_handler.children.push_back(&key_handler);
 	key_handler.callback = [this](const KeyEvent& key) {
-		if (imgui_takeover_key)
+		if (ImGui::GetIO().WantCaptureKeyboard)
 			key.consumed = true;
 		};
 }
@@ -1404,4 +1397,9 @@ void ColorPicker::setup_circle_cursor(size_t cursor)
 	set_circle_cursor_thickness(cursor, 0.4f);
 	set_circle_cursor_value(cursor, 1.0f);
 	wp_at(cursor).transform.scale = { 8, 8 };
+}
+
+bool ColorPicker::cursor_in_bkg() const
+{
+	return children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp);
 }

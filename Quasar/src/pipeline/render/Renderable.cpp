@@ -79,7 +79,7 @@ void UnitRenderable::send_buffer() const
 void UnitRenderable::send_single_vertex(unsigned short vertex) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride, shader->stride * sizeof(GLfloat), varr + vertex * shader->stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr + vertex * shader->stride));
 	unbind_vao_buffers();
 }
 
@@ -185,14 +185,14 @@ void UnitMultiRenderable::send_buffer() const
 void UnitMultiRenderable::send_single_unit(unsigned short unit) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, unit * unit_num_vertices * shader->stride, size_t(unit_num_vertices) * shader->stride * sizeof(GLfloat), varr + unit * unit_num_vertices * shader->stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, unit * unit_num_vertices * shader->stride * sizeof(GLfloat), size_t(unit_num_vertices) * shader->stride * sizeof(GLfloat), varr + unit * unit_num_vertices * shader->stride));
 	unbind_vao_buffers();
 }
 
 void UnitMultiRenderable::send_single_vertex(unsigned short unit, unsigned short vertex) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, (unit * unit_num_vertices + vertex) * shader->stride, shader->stride * sizeof(GLfloat), varr + (unit * unit_num_vertices + vertex) * shader->stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, (unit * unit_num_vertices + vertex) * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr + (unit * unit_num_vertices + vertex) * shader->stride));
 	unbind_vao_buffers();
 }
 
@@ -334,7 +334,7 @@ void IndexedRenderable::send_index_buffer_resized() const
 void IndexedRenderable::send_single_vertex(size_t vertex) const
 {
 	bind_vao_buffers(vao, vb, ib); // LATER only need to bind index buffer ?
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride, shader->stride * sizeof(GLfloat), varr.data() + vertex * shader->stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr.data() + vertex * shader->stride));
 	unbind_vao_buffers();
 }
 

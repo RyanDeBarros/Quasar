@@ -37,6 +37,7 @@ struct ColorSubpalette : public Widget
 	
 	bool get_visible_square_under_pos(Position pos, int& index) const;
 	void switch_primary_and_alternate();
+	void update_primary_color_in_picker() const;
 
 	void scroll_by(int delta);
 	WidgetPlacement square_wp(int i) const;
@@ -44,6 +45,10 @@ struct ColorSubpalette : public Widget
 	int first_square() const;
 	int num_squares_visible() const;
 	Position cursor_world_pos() const;
+
+	void override_current_color(RGBA color);
+	void new_color(RGBA color);
+	void set_color(size_t i, RGBA color);
 
 	enum : size_t
 	{
@@ -103,8 +108,10 @@ public:
 	static inline const WidgetPlacement GRID_WP = { { { 0, GRID_OFFSET_Y }, Scale(COL_COUNT * SQUARE_SEP) } };
 
 	const std::function<void(RGBA)>* primary_color_update;
+	const std::function<RGBA()>* get_picker_rgba;
 
-	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler, const std::function<void(RGBA)>* primary_color_update);
+	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
+		const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba);
 	ColorPalette(const ColorPalette&) = delete;
 	ColorPalette(ColorPalette&&) noexcept = delete;
 	~ColorPalette();
@@ -124,10 +131,15 @@ private:
 	void import_color_scheme();
 	void sync_widget_with_vp();
 
+	void process();
+	bool cursor_in_bkg() const;
+
 	enum : size_t
 	{
 		BACKGROUND,
 		BLACK_GRID,
+		BUTTON_OVERRIDE_COLOR,
+		BUTTON_INSERT_NEW_COLOR,
 		SUBPALETTE_START
 	};
 };

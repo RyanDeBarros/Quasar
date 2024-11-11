@@ -126,6 +126,7 @@ void MachineImpl::destroy()
 {
 	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(panels);
+	Fonts::invalidate_common_fonts();
 	main_window->release_cursor(&panning_info.wh);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }

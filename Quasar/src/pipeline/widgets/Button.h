@@ -84,10 +84,10 @@ struct StandardTButton;
 
 struct StandardTButtonArgs
 {
-	MouseButtonHandler* mb_parent = nullptr;
-	FontRange& frange = *Fonts::label_regular;
-	Shader* rr_shader = nullptr;
-	glm::mat3* vp = nullptr;
+	MouseButtonHandler* mb_parent;
+	FontRange* frange = Fonts::label_regular;
+	Shader* rr_shader;
+	glm::mat3* vp;
 	float font_size = 18.0f;
 	UTF::String text = "";
 	glm::vec2 pivot = { 0.5f, 0.5f };
@@ -103,6 +103,8 @@ struct StandardTButtonArgs
 	std::function<bool()> is_hoverable = []() { return true; };
 	std::function<bool(StandardTButton&, const MouseButtonEvent&, Position)> is_selectable = [](StandardTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
 	std::function<void(StandardTButton&, const MouseButtonEvent&, Position)> on_select = [](StandardTButton&, const MouseButtonEvent&, Position) {};
+
+	StandardTButtonArgs(MouseButtonHandler* mb_parent, Shader* rr_shader, glm::mat3* vp) : mb_parent(mb_parent), rr_shader(rr_shader), vp(vp) {}
 };
 
 struct StandardTButton : public TButton
@@ -136,10 +138,10 @@ struct ToggleTButton;
 
 struct ToggleTButtonArgs
 {
-	MouseButtonHandler* mb_parent = nullptr;
-	FontRange& frange = *Fonts::label_regular;
-	Shader* rr_shader = nullptr;
-	glm::mat3* vp = nullptr;
+	MouseButtonHandler* mb_parent;
+	FontRange* frange = Fonts::label_regular;
+	Shader* rr_shader;
+	glm::mat3* vp;
 	float font_size = 18.0f;
 	UTF::String text = "";
 	glm::vec2 pivot = { 0.5f, 0.5f };
@@ -157,6 +159,8 @@ struct ToggleTButtonArgs
 	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_select = [](ToggleTButton&, const MouseButtonEvent&, Position) {};
 	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_deselectable = [](ToggleTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
 	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_deselect = [](ToggleTButton&, const MouseButtonEvent&, Position) {};
+
+	ToggleTButtonArgs(MouseButtonHandler* mb_parent, Shader* rr_shader, glm::mat3* vp) : mb_parent(mb_parent), rr_shader(rr_shader), vp(vp) {}
 };
 
 struct ToggleTButton : public TButton

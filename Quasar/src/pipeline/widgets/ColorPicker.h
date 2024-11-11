@@ -45,12 +45,10 @@ private:
 
 	MouseButtonHandler& parent_mb_handler;
 	MouseButtonHandler mb_handler;
-	MouseButtonHandler imgui_mb_handler;
 	KeyHandler& parent_key_handler;
 	KeyHandler key_handler;
 	
-	bool imgui_takeover_mb = false;
-	bool imgui_takeover_key = false; // LATER are these imgui_takeover data members necessary?
+	bool popup_hovered = false;
 
 	ToggleTButtonGroup main_tab_bar;
 	ToggleTButtonGroup sub_tab_bar;
@@ -122,6 +120,8 @@ private:
 	void set_circle_cursor_value(size_t cursor, float value) const;
 	float get_circle_cursor_value(size_t cursor) const;
 	void setup_circle_cursor(size_t cursor);
+
+	bool cursor_in_bkg() const;
 
 	float cached_scale1d = 0.0f;
 

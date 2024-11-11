@@ -16,6 +16,7 @@ struct Palette : public Panel
 	Widget widget;
 
 	std::function<void(RGBA)> update_primary_color;
+	std::function<RGBA()> get_picker_rgba;
 
 	Palette();
 	Palette(const Palette&) = delete;

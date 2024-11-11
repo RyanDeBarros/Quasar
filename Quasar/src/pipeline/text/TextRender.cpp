@@ -185,6 +185,7 @@ void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t 
 {
 	// LATER baseline offset + to y. In file similar to .kern. Makes certain characters align to baseline better.
 	// This would have to be dependent on font scaling somehow though. Since offsets are only relevant for small font scales.
+	// Even do horizontal offset that doesn't require an adjacent character. Some special unicode characters are weirdly aligned.
 	FlatTransform local{ { float(x), float(y - glyph.ch_y0) }, { float(glyph.width), -float(glyph.height) } };
 	float left = local.position.x;
 	float right = local.position.x + local.scale.x;
