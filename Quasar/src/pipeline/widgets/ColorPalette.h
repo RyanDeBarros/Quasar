@@ -108,12 +108,20 @@ class ColorPalette : public Widget
 
 public:
 	static const int COL_COUNT = 8;
-	static const int ROW_COUNT = 8;
-	static inline const float SQUARE_SEP = 28.0f;
-	static inline const float SQUARE_SEP_INV = 1.0f / SQUARE_SEP;
+	static inline const float SQUARE_SEP = 28;
 	static inline const float SQUARE_SIZE = 24;
-	static inline const float GRID_OFFSET_Y = -60;
-	static inline const WidgetPlacement GRID_WP = { { { 0, GRID_OFFSET_Y }, Scale(COL_COUNT * SQUARE_SEP) } };
+
+private:
+	//int _row_count = 8;
+	int _row_count = 10;
+	//float _grid_offset_y = -60;
+	float _grid_offset_y = -30;
+	WidgetPlacement _grid_wp = { { { 0, _grid_offset_y }, { COL_COUNT * SQUARE_SEP, _row_count * SQUARE_SEP } } };
+
+public:
+	int row_count() const { return _row_count; }
+	float grid_offset_y() const { return _grid_offset_y; }
+	WidgetPlacement grid_wp() const { return _grid_wp; }
 
 	const std::function<void(RGBA)>* primary_color_update;
 	const std::function<RGBA()>* get_picker_rgba;

@@ -15,3 +15,9 @@ bool Widget::contains_screen_point(Position pos, const glm::mat3& vp) const
 	auto tr = global_of({  0.5f,  0.5f });
 	return in_diagonal_rect(Machine.cursor_world_pos(glm::inverse(vp)), bl, tr);
 }
+
+Logger& operator<<(Logger& log, const WidgetPlacement& wp)
+{
+	log << "[T: " << wp.transform.position << " | S: " << wp.transform.scale << " | P: " << wp.pivot;
+	return log;
+}

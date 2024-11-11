@@ -58,6 +58,8 @@ inline float wp_right(const glm::mat3& global) { return global[2][0] + 0.5f * gl
 inline float wp_bottom(const glm::mat3& global) { return global[2][1] - 0.5f * global[1][1]; }
 inline float wp_top(const glm::mat3& global) { return global[2][1] + 0.5f * global[1][1]; }
 
+extern Logger& operator<<(Logger&, const WidgetPlacement&);
+
 struct Widget
 {
 	Widget* parent = nullptr;

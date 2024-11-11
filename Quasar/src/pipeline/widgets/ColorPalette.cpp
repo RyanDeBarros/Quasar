@@ -228,7 +228,7 @@ bool ColorSubpalette::check_alternate()
 
 bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) const
 {
-	pos = local_of(pos) + 0.5f * ColorPalette::SQUARE_SEP * Position{ ColorPalette::COL_COUNT - 1, 1 - ColorPalette::ROW_COUNT };
+	pos = local_of(pos) + 0.5f * ColorPalette::SQUARE_SEP * Position{ ColorPalette::COL_COUNT - 1, 1.0f - palette().row_count() };
 	
 	float min_x = -0.5f * ColorPalette::SQUARE_SIZE;
 	float max_x = (ColorPalette::COL_COUNT - 1) * ColorPalette::SQUARE_SEP + 0.5f * ColorPalette::SQUARE_SIZE;
@@ -236,12 +236,12 @@ bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) con
 		return false;
 
 	float max_y = 0.5f * ColorPalette::SQUARE_SIZE;
-	float min_y = -ColorPalette::SQUARE_SEP * ((ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT - 1) / ColorPalette::ROW_COUNT) - 0.5f * ColorPalette::SQUARE_SIZE;
+	float min_y = -(palette().row_count() - 1) * ColorPalette::SQUARE_SEP - 0.5f * ColorPalette::SQUARE_SIZE;
 	if (pos.y < min_y || pos.y > max_y)
 		return false;
 
-	int ix = static_cast<int>((pos.x + 0.5f * ColorPalette::SQUARE_SIZE) * ColorPalette::SQUARE_SEP_INV);
-	int iy = static_cast<int>(ceilf(-(pos.y + 0.5f * ColorPalette::SQUARE_SIZE) * ColorPalette::SQUARE_SEP_INV));
+	int ix = (pos.x + 0.5f * ColorPalette::SQUARE_SIZE) / ColorPalette::SQUARE_SEP;
+	int iy = ceil_divide(pos.y + 0.5f * ColorPalette::SQUARE_SIZE, -ColorPalette::SQUARE_SEP); // TODO is ceil_divide(x, y) just equal to -(x / -y)?
 	Position c{ ColorPalette::SQUARE_SEP * ix, -ColorPalette::SQUARE_SEP * iy };
 	if (std::abs(pos.x - c.x) >= ColorPalette::SQUARE_SIZE || std::abs(pos.y - c.y) >= ColorPalette::SQUARE_SIZE)
 		return false;
@@ -269,7 +269,7 @@ void ColorSubpalette::update_primary_color_in_picker() const
 
 void ColorSubpalette::scroll_by(int delta)
 {
-	int new_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - ColorPalette::ROW_COUNT));
+	int new_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - palette().row_count()));
 	if (new_offset != scroll_offset)
 	{
 		scroll_offset = new_offset;
@@ -293,7 +293,7 @@ void ColorSubpalette::scroll_to_view(int i)
 
 void ColorSubpalette::scroll_down_full()
 {
-	int new_offset = std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - ColorPalette::ROW_COUNT);
+	int new_offset = std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - palette().row_count());
 	if (new_offset != scroll_offset)
 	{
 		scroll_offset = new_offset;
@@ -303,8 +303,8 @@ void ColorSubpalette::scroll_down_full()
 
 WidgetPlacement ColorSubpalette::square_wp(int i) const
 {
-	Position initial_pos{ -ColorPalette::SQUARE_SEP * (ColorPalette::COL_COUNT - 1) * 0.5f, ColorPalette::SQUARE_SEP * (ColorPalette::ROW_COUNT - 1) * 0.5f };
-	Position delta_pos{ ColorPalette::SQUARE_SEP * (i % ColorPalette::COL_COUNT), -ColorPalette::SQUARE_SEP * (i / ColorPalette::ROW_COUNT - scroll_offset) };
+	Position initial_pos{ -ColorPalette::SQUARE_SEP * (ColorPalette::COL_COUNT - 1) * 0.5f, ColorPalette::SQUARE_SEP * (palette().row_count() - 1) * 0.5f };
+	Position delta_pos{ ColorPalette::SQUARE_SEP * (i % ColorPalette::COL_COUNT), -ColorPalette::SQUARE_SEP * (i / ColorPalette::COL_COUNT - scroll_offset)};
 	return WidgetPlacement{ { { initial_pos + delta_pos}, Scale(ColorPalette::SQUARE_SIZE) } }.relative_to(self.transform);
 }
 
@@ -321,7 +321,7 @@ int ColorSubpalette::first_square() const
 int ColorSubpalette::num_squares_visible() const
 {
 	int leftover = (int)subscheme->get_colors().size() - first_square();
-	return std::clamp(leftover, 0, ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT);
+	return std::clamp(leftover, 0, ColorPalette::COL_COUNT * palette().row_count());
 }
 
 bool ColorSubpalette::is_square_visible(int i) const
@@ -447,7 +447,7 @@ void ColorSubpalette::remove_square_under_cursor(bool send_vb)
 
 	if (primary_index >= subscheme->get_colors().size())
 	{
-		primary_index = subscheme->get_colors().size() - 1;
+		primary_index = (int)subscheme->get_colors().size() - 1;
 		resync_primary_selector();
 		update_primary_color_in_picker();
 	}
@@ -455,7 +455,7 @@ void ColorSubpalette::remove_square_under_cursor(bool send_vb)
 		update_primary_color_in_picker();
 	if (alternate_index >= subscheme->get_colors().size())
 	{
-		alternate_index = subscheme->get_colors().size() - 1;
+		alternate_index = (int)subscheme->get_colors().size() - 1;
 		resync_alternate_selector();
 	}
 }
@@ -509,6 +509,9 @@ ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler,
 	initialize_widget();
 	connect_input_handlers();
 	new_subpalette(); // always have at least one subpalette
+
+	Uniforms::send_1(grid_shader, "u_ColProportion", 1.0f / COL_COUNT);
+	Uniforms::send_1(grid_shader, "u_RowProportion", 1.0f / row_count());
 }
 
 ColorPalette::~ColorPalette()
@@ -532,9 +535,9 @@ void ColorPalette::draw()
 
 void ColorPalette::process()
 {
-	current_subpalette().process();
 	if (cursor_in_bkg())
 	{
+		current_subpalette().process();
 		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).process();
 		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).process();
 	}
@@ -572,7 +575,7 @@ void ColorPalette::new_subpalette()
 	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>());
 	current_subscheme = num_subpalettes() - 1;
 	current_subpalette().subscheme = scheme.subschemes[current_subscheme];
-	current_subpalette().self.transform.position.y = GRID_OFFSET_Y;
+	current_subpalette().self.transform.position.y = grid_offset_y();
 	current_subpalette().reload_subscheme();
 }
 
@@ -645,6 +648,7 @@ void ColorPalette::connect_input_handlers()
 void ColorPalette::initialize_widget()
 {
 	const float button1_x = -30;
+	const float button_y = 170;
 
 	assign_widget(this, BACKGROUND, new RoundRect(&round_rect_shader));
 	rr_wget(*this, BACKGROUND).thickness = 0.25f;
@@ -661,7 +665,7 @@ void ColorPalette::initialize_widget()
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
 	
-	sba.transform.position = { button1_x, 130 };
+	sba.transform.position = { button1_x, button_y };
 	sba.text = "↓";
 	sba.on_select = [this](StandardTButton&, const MouseButtonEvent& mb, Position) {
 		current_subpalette().override_current_color((*get_picker_rgba)());
@@ -670,7 +674,7 @@ void ColorPalette::initialize_widget()
 	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).text().self.transform.position = { 0.05f, -0.05f };
 	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).text().self.transform.scale *= 1.0f;
 
-	sba.transform.position.x = button1_x + sba.transform.scale.x;
+	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "+";
 	sba.on_select = [this](StandardTButton&, const MouseButtonEvent& mb, Position) {
 		bool adjacent = !Machine.main_window->is_shift_pressed();
@@ -726,7 +730,7 @@ void ColorPalette::sync_widget_with_vp()
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).send_vp();
 
 	UnitRenderable& ur = ur_wget(*this, BLACK_GRID);
-	WidgetPlacement global = GRID_WP.relative_to(self.transform);
+	WidgetPlacement global = grid_wp().relative_to(self.transform);
 
 	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
 	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
