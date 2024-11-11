@@ -42,3 +42,8 @@
 * Maximize with ALT+ENTER.
 * Fullscreen with F11.
 * Exit maximize/fullscreen state with the same combo, or with ESCAPE.
+
+## Palette
+
+* Left click on the color palette to select the primary color, and right click on the color palette to select the secondary color.
+* Press the X key anywhere to swap the primary and alternate color selections.

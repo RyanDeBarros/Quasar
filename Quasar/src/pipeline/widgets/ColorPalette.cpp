@@ -41,6 +41,16 @@ ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_re
 	afur.send_buffer();
 }
 
+ColorPalette& ColorSubpalette::palette()
+{
+	return *dynamic_cast<ColorPalette*>(parent);
+}
+
+const ColorPalette& ColorSubpalette::palette() const
+{
+	return *dynamic_cast<const ColorPalette*>(parent);
+}
+
 void ColorSubpalette::reload_subscheme()
 {
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
@@ -215,18 +225,27 @@ bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) con
 		return false;
 
 	float max_y = 0.5f * ColorPalette::SQUARE_SIZE;
-	float min_y = -ColorPalette::SQUARE_SEP * ((ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT - 1) / ColorPalette::ROW_COUNT) - 0.5f * ColorPalette::SQUARE_SIZE;
+	float min_y = -ColorPalette::SQUARE_SEP * (ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT - 1) / ColorPalette::ROW_COUNT - 0.5f * ColorPalette::SQUARE_SIZE;
 	if (pos.y < min_y || pos.y > max_y)
 		return false;
 
-	int ix = static_cast<int>((pos.x + 0.5f * ColorPalette::SQUARE_SIZE) / ColorPalette::SQUARE_SEP); // TODO INV version of these constants
-	int iy = static_cast<int>(ceilf(-(pos.y + 0.5f * ColorPalette::SQUARE_SIZE) / ColorPalette::SQUARE_SEP));
+	int ix = static_cast<int>((pos.x + 0.5f * ColorPalette::SQUARE_SIZE) * ColorPalette::SQUARE_SEP_INV);
+	int iy = static_cast<int>(ceilf(-(pos.y + 0.5f * ColorPalette::SQUARE_SIZE) * ColorPalette::SQUARE_SEP_INV));
 	Position c{ ColorPalette::SQUARE_SEP * ix, -ColorPalette::SQUARE_SEP * iy };
 	if (std::abs(pos.x - c.x) >= ColorPalette::SQUARE_SIZE || std::abs(pos.y - c.y) >= ColorPalette::SQUARE_SIZE)
 		return false;
 
 	index = ix + iy * ColorPalette::COL_COUNT + first_square();
 	return true;
+}
+
+void ColorSubpalette::switch_primary_and_alternate()
+{
+	std::swap(current_primary_index, current_alternate_index);
+	resync_primary_selector();
+	resync_alternate_selector();
+	// TODO palette() method for this dynamic cast
+	(*palette().primary_color_update)(subscheme->get_colors()[current_primary_index]);
 }
 
 void ColorSubpalette::scroll_by(int delta)
@@ -260,7 +279,7 @@ int ColorSubpalette::num_squares_visible() const
 
 Position ColorSubpalette::cursor_world_pos() const
 {
-	return Machine.to_world_coordinates(Machine.cursor_screen_pos(), glm::inverse(*dynamic_cast<ColorPalette*>(parent)->vp));
+	return Machine.to_world_coordinates(Machine.cursor_screen_pos(), glm::inverse(*palette().vp));
 }
 
 ColorSubpalette& ColorPalette::get_subpalette(size_t pos)
@@ -398,8 +417,12 @@ void ColorPalette::connect_input_handlers()
 		}
 		};
 	parent_key_handler.children.push_back(&key_handler);
-	key_handler.callback = [](const KeyEvent& k) {
-		// TODO 'X' to switch primary/alternate selection. Eventually, SHIFT+X will switch primary/alternate brushes.
+	key_handler.callback = [this](const KeyEvent& k) {
+		if (k.action == IAction::RELEASE && k.key == Key::X)
+		{
+			k.consumed = true;
+			current_subpalette().switch_primary_and_alternate();
+		}
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {

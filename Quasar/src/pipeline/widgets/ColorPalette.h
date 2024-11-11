@@ -19,6 +19,9 @@ struct ColorSubpalette : public Widget
 	ColorSubpalette(const ColorSubpalette&) = delete;
 	ColorSubpalette(ColorSubpalette&&) noexcept = delete;
 	
+	class ColorPalette& palette();
+	const class ColorPalette& palette() const;
+
 	void reload_subscheme();
 	virtual void draw() override;
 	void draw_selectors();
@@ -33,6 +36,7 @@ struct ColorSubpalette : public Widget
 	bool check_alternate();
 	
 	bool get_visible_square_under_pos(Position pos, int& index) const;
+	void switch_primary_and_alternate();
 
 	void scroll_by(int delta);
 	WidgetPlacement square_wp(int i) const;
@@ -93,6 +97,7 @@ public:
 	static const int COL_COUNT = 8;
 	static const int ROW_COUNT = 8;
 	static inline const float SQUARE_SEP = 28.0f;
+	static inline const float SQUARE_SEP_INV = 1.0f / SQUARE_SEP;
 	static inline const float SQUARE_SIZE = 24;
 	static inline const float GRID_OFFSET_Y = -60;
 	static inline const WidgetPlacement GRID_WP = { { { 0, GRID_OFFSET_Y }, Scale(COL_COUNT * SQUARE_SEP) } };
