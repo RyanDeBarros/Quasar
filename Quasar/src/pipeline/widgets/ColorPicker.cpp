@@ -217,6 +217,8 @@ void ColorPicker::cp_render_gui_back()
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				bool mod = false;
+				// LATER should the get_pixel_ functions be doing static_cast<int> instead of roundi? for instance, 0.5f currently becomes 128, not 127.
+				// Make sure though that in static_cast<int> case, 1.0 becomes 255 and not 254.
 				int r = rgb.get_pixel_r(), g = rgb.get_pixel_g(), b = rgb.get_pixel_b();
 				ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_1));
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);

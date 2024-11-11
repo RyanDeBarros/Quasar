@@ -162,70 +162,71 @@ void ColorSubpalette::sync_with_palette()
 void ColorSubpalette::process()
 {
 	current_hover_index = -1;
-	WidgetPlacement global;
-	Position cursor_pos = cursor_world_pos();
-	int end_square = first_square() + num_squares_visible();
-	// TODO non-iterative formula for determining i. this is a waste of performance. remember that i must be a valid color index, and some cells may be empty.
-	for (int i = first_square(); i < end_square; ++i)
+	if (get_visible_square_under_pos(cursor_world_pos(), current_hover_index))
 	{
-		global = square_wp(i).relative_to(parent->self.transform);
-		if (global.contains_point(cursor_pos))
+		WidgetPlacement new_wp = global_square_wp(current_hover_index);
+		if (hover_wp != new_wp)
 		{
-			current_hover_index = i;
-			if (hover_wp != global)
-			{
-				hover_wp = global;
-				sync_hover_selector();
-			}
-			return;
+			hover_wp = new_wp;
+			sync_hover_selector();
 		}
 	}
 }
 
 bool ColorSubpalette::check_primary()
 {
-	WidgetPlacement global;
-	Position cursor_pos = cursor_world_pos();
-	int end_square = first_square() + num_squares_visible();
-	// TODO non-iterative formula for determining i. this is a waste of performance. remember that i must be a valid color index, and some cells may be empty.
-	for (int i = first_square(); i < end_square; ++i)
+	if (get_visible_square_under_pos(cursor_world_pos(), current_primary_index))
 	{
-		global = square_wp(i).relative_to(parent->self.transform);
-		if (global.contains_point(cursor_pos))
+		WidgetPlacement new_wp = global_square_wp(current_primary_index);
+		if (primary_wp != new_wp)
 		{
-			current_primary_index = i;
-			if (primary_wp != global)
-			{
-				primary_wp = global;
-				sync_primary_selector();
-			}
-			return true;
+			primary_wp = new_wp;
+			sync_primary_selector();
 		}
+		return true;
 	}
-	return false;
+	else
+		return false;
 }
 
 bool ColorSubpalette::check_alternate()
 {
-	WidgetPlacement global;
-	Position cursor_pos = cursor_world_pos();
-	int end_square = first_square() + num_squares_visible();
-	// TODO non-iterative formula for determining i. this is a waste of performance. remember that i must be a valid color index, and some cells may be empty.
-	for (int i = first_square(); i < end_square; ++i)
+	if (get_visible_square_under_pos(cursor_world_pos(), current_alternate_index))
 	{
-		global = square_wp(i).relative_to(parent->self.transform);
-		if (global.contains_point(cursor_pos))
+		WidgetPlacement new_wp = global_square_wp(current_alternate_index);
+		if (alternate_wp != new_wp)
 		{
-			current_alternate_index = i;
-			if (alternate_wp != global)
-			{
-				alternate_wp = global;
-				sync_alternate_selector();
-			}
-			return true;
+			alternate_wp = new_wp;
+			sync_alternate_selector();
 		}
+		return true;
 	}
-	return false;
+	else
+		return false;
+}
+
+bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) const
+{
+	pos = local_of(pos) + 0.5f * ColorPalette::SQUARE_SEP * Position{ ColorPalette::COL_COUNT - 1, 1 - ColorPalette::ROW_COUNT };
+	
+	float min_x = -0.5f * ColorPalette::SQUARE_SIZE;
+	float max_x = (ColorPalette::COL_COUNT - 1) * ColorPalette::SQUARE_SEP + 0.5f * ColorPalette::SQUARE_SIZE;
+	if (pos.x < min_x || pos.x > max_x)
+		return false;
+
+	float max_y = 0.5f * ColorPalette::SQUARE_SIZE;
+	float min_y = -ColorPalette::SQUARE_SEP * ((ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT - 1) / ColorPalette::ROW_COUNT) - 0.5f * ColorPalette::SQUARE_SIZE;
+	if (pos.y < min_y || pos.y > max_y)
+		return false;
+
+	int ix = static_cast<int>((pos.x + 0.5f * ColorPalette::SQUARE_SIZE) / ColorPalette::SQUARE_SEP); // TODO INV version of these constants
+	int iy = static_cast<int>(ceilf(-(pos.y + 0.5f * ColorPalette::SQUARE_SIZE) / ColorPalette::SQUARE_SEP));
+	Position c{ ColorPalette::SQUARE_SEP * ix, -ColorPalette::SQUARE_SEP * iy };
+	if (std::abs(pos.x - c.x) >= ColorPalette::SQUARE_SIZE || std::abs(pos.y - c.y) >= ColorPalette::SQUARE_SIZE)
+		return false;
+
+	index = ix + iy * ColorPalette::COL_COUNT + first_square();
+	return true;
 }
 
 void ColorSubpalette::scroll_by(int delta)
@@ -238,7 +239,12 @@ WidgetPlacement ColorSubpalette::square_wp(int i) const
 {
 	Position initial_pos{ -ColorPalette::SQUARE_SEP * (ColorPalette::COL_COUNT - 1) * 0.5f, ColorPalette::SQUARE_SEP * (ColorPalette::ROW_COUNT - 1) * 0.5f };
 	Position delta_pos{ ColorPalette::SQUARE_SEP * (i % ColorPalette::COL_COUNT), -ColorPalette::SQUARE_SEP * (i / ColorPalette::ROW_COUNT - scroll_offset) };
-	return WidgetPlacement{ { { initial_pos + delta_pos}, ColorPalette::SQUARE_SIZE } }.relative_to(self.transform);
+	return WidgetPlacement{ { { initial_pos + delta_pos}, Scale(ColorPalette::SQUARE_SIZE) } }.relative_to(self.transform);
+}
+
+WidgetPlacement ColorSubpalette::global_square_wp(int i) const
+{
+	return square_wp(i).relative_to(parent->self.transform);
 }
 
 int ColorSubpalette::first_square() const
@@ -283,12 +289,13 @@ size_t ColorPalette::subpalette_index_in_widget(size_t pos) const
 }
 
 // LATER use black outlined square IR instead of single-unit blackgrid shader?
-ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler)
+ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler, const std::function<void(RGBA)>* primary_color_update)
 	: Widget(SUBPALETTE_START), vp(vp), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), parent_scroll_handler(parent_scroll_handler),
 	grid_shader(FileSystem::shader_path("palette/black_grid.vert"), FileSystem::shader_path("palette/black_grid.frag")),
 	color_square_shader(FileSystem::shader_path("palette/color_square.vert"), FileSystem::shader_path("palette/color_square.frag")),
 	outline_rect_shader(FileSystem::shader_path("palette/outline_rect.vert"), FileSystem::shader_path("palette/outline_rect.frag")),
-	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag"))
+	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
+	primary_color_update(primary_color_update)
 {
 	initialize_widget();
 	connect_input_handlers();
@@ -310,7 +317,8 @@ ColorPalette::~ColorPalette()
 
 void ColorPalette::draw()
 {
-	current_subpalette().process();
+	if (children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp))
+		current_subpalette().process();
 	// TODO render imgui
 	rr_wget(*this, BACKGROUND).draw();
 	current_subpalette().draw();
@@ -377,7 +385,10 @@ void ColorPalette::connect_input_handlers()
 			if (mb.button == MouseButton::LEFT)
 			{
 				if (current_subpalette().check_primary())
+				{
 					mb.consumed = true;
+					(*primary_color_update)(scheme.subschemes[current_subscheme]->get_colors()[current_subpalette().current_primary_index]);
+				}
 			}
 			else if (mb.button == MouseButton::RIGHT)
 			{

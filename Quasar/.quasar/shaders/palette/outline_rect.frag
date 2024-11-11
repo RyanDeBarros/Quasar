@@ -3,7 +3,7 @@
 layout(location=0) out vec4 o_Color;
 
 uniform float u_Padding = 0.05;
-uniform float u_Border = 0.125;
+uniform float u_Border = 0.105;
 
 in vec2 t_UVs;
 in vec4 t_Color;

@@ -8,11 +8,31 @@
 
 #include "Macros.h"
 
+constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
+{
+	return val >= min_inclusive && val <= max_inclusive;
+}
+
 struct Position : glm::vec2
 {
 	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
 	Position(const glm::vec2& vec) : glm::vec2(vec) {}
+
+	Position operator+(Position r) const { return { x + r.x, y + r.y }; }
+	Position& operator+=(Position r) { x += r.x; y += r.y; ; return *this; }
+	Position operator-(Position r) const { return { x - r.x, y - r.y }; }
+	Position& operator-=(Position r) { x -= r.x; y -= r.y; ; return *this; }
+
+	Position operator+(glm::vec2 r) const { return { x + r.x, y + r.y }; }
+	Position& operator+=(glm::vec2 r) { x += r.x; y += r.y; ; return *this; }
+	Position operator-(glm::vec2 r) const { return { x - r.x, y - r.y }; }
+	Position& operator-=(glm::vec2 r) { x -= r.x; y -= r.y; ; return *this; }
 };
+
+inline bool in_diagonal_rect(Position pos, Position bl, Position tr)
+{
+	return on_interval(pos.x, bl.x, tr.x) && on_interval(pos.y, bl.y, tr.y);
+}
 
 struct Rotation
 {
@@ -32,6 +52,16 @@ struct Scale : glm::vec2
 	Scale(const glm::vec2& vec) : glm::vec2(vec) {}
 
 	Scale reciprocal() const { return { x ? 1.0f / x : 0.0f, y ? 1.0f / y : 0.0f }; }
+
+	Scale operator+(Scale r) const { return { x + r.x, y + r.y }; }
+	Scale& operator+=(Scale r) { x += r.x; y += r.y; ; return *this; }
+	Scale operator-(Scale r) const { return { x - r.x, y - r.y }; }
+	Scale& operator-=(Scale r) { x -= r.x; y -= r.y; ; return *this; }
+
+	Scale operator+(glm::vec2 r) const { return { x + r.x, y + r.y }; }
+	Scale& operator+=(glm::vec2 r) { x += r.x; y += r.y; ; return *this; }
+	Scale operator-(glm::vec2 r) const { return { x - r.x, y - r.y }; }
+	Scale& operator-=(glm::vec2 r) { x -= r.x; y -= r.y; ; return *this; }
 };
 
 struct Transform
@@ -91,17 +121,10 @@ struct FlatTransform
 	}
 
 	Position get_relative_pos(Position absolute) const { return (absolute - position) * scale.reciprocal(); }
+
+	bool contains_point(Position pos) const { return on_interval(pos.x, position.x - 0.5f * scale.x, position.x + 0.5f * scale.x)
+		&& on_interval(pos.y, position.y - 0.5f * scale.y, position.y + 0.5f * scale.y); }
 };
-
-constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
-{
-	return val >= min_inclusive && val <= max_inclusive;
-}
-
-inline bool in_diagonal_rect(Position pos, Position bl, Position tr)
-{
-	return on_interval(pos.x, bl.x, tr.x) && on_interval(pos.y, bl.y, tr.y);
-}
 
 struct ClippingRect
 {

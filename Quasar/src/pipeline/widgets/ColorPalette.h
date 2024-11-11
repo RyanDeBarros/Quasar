@@ -31,9 +31,12 @@ struct ColorSubpalette : public Widget
 	void process();
 	bool check_primary();
 	bool check_alternate();
+	
+	bool get_visible_square_under_pos(Position pos, int& index) const;
 
 	void scroll_by(int delta);
 	WidgetPlacement square_wp(int i) const;
+	WidgetPlacement global_square_wp(int i) const;
 	int first_square() const;
 	int num_squares_visible() const;
 	Position cursor_world_pos() const;
@@ -90,11 +93,13 @@ public:
 	static const int COL_COUNT = 8;
 	static const int ROW_COUNT = 8;
 	static inline const float SQUARE_SEP = 28.0f;
-	static inline const Scale SQUARE_SIZE = Scale(24);
+	static inline const float SQUARE_SIZE = 24;
 	static inline const float GRID_OFFSET_Y = -60;
 	static inline const WidgetPlacement GRID_WP = { { { 0, GRID_OFFSET_Y }, Scale(COL_COUNT * SQUARE_SEP) } };
 
-	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler);
+	const std::function<void(RGBA)>* primary_color_update;
+
+	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler, const std::function<void(RGBA)>* primary_color_update);
 	ColorPalette(const ColorPalette&) = delete;
 	ColorPalette(ColorPalette&&) noexcept = delete;
 	~ColorPalette();

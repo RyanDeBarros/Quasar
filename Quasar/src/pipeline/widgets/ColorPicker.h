@@ -70,7 +70,7 @@ public:
 	void process();
 	void send_vp();
 	ColorFrame get_color() const;
-	void set_color(ColorFrame);
+	void set_color(ColorFrame color);
 	void set_size(Scale size, bool sync = false);
 	
 private:

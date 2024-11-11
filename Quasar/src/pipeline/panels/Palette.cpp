@@ -6,11 +6,33 @@
 #include "../widgets/ColorPicker.h"
 #include "../widgets/ColorPalette.h"
 
+static ColorPicker& color_picker(Palette* palette)
+{
+	return cpk_wget(palette->widget, Palette::COLOR_PICKER);
+}
+
+static const ColorPicker& color_picker(const Palette* palette)
+{
+	return cpk_wget(palette->widget, Palette::COLOR_PICKER);
+}
+
+static ColorPalette& color_palette(Palette* palette)
+{
+	return cpl_wget(palette->widget, Palette::COLOR_PALETTE);
+}
+
+static const ColorPalette& color_palette(const Palette* palette)
+{
+	return cpl_wget(palette->widget, Palette::COLOR_PALETTE);
+}
+
 Palette::Palette()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
 	widget(_W_COUNT)
 {
 	initialize_widget();
+
+	update_primary_color = [this](RGBA color) { color_picker(this).set_color(color); };
 
 	static constexpr size_t num_quads = 1;
 	varr = new GLfloat[num_quads * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
@@ -49,8 +71,8 @@ void Palette::draw()
 
 void Palette::render_widget()
 {
-	cpk_wget(widget, COLOR_PICKER).draw();
-	cpl_wget(widget, COLOR_PALETTE).draw();
+	color_picker(this).draw();
+	color_palette(this).draw();
 }
 
 void Palette::initialize_widget()
@@ -58,7 +80,7 @@ void Palette::initialize_widget()
 	assign_widget(&widget, COLOR_PICKER, new ColorPicker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
 	widget.wp_at(COLOR_PICKER).transform.scale = Scale(0.9f);
 
-	assign_widget(&widget, COLOR_PALETTE, new ColorPalette(&vp, Machine.palette_mb_handler, Machine.palette_key_handler, Machine.palette_scroll_handler));
+	assign_widget(&widget, COLOR_PALETTE, new ColorPalette(&vp, Machine.palette_mb_handler, Machine.palette_key_handler, Machine.palette_scroll_handler, &update_primary_color));
 	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(0.9f);
 }
 
@@ -78,13 +100,13 @@ void Palette::_send_view()
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
 
 	Scale color_picker_size{ 240, 420 };
-	cpk_wget(widget, COLOR_PICKER).set_size(color_picker_size);
+	color_picker(this).set_size(color_picker_size);
 	widget.wp_at(COLOR_PICKER).transform.position = { 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * widget.wp_at(COLOR_PICKER).transform.scale.y * 0.5f - 20 };
-	cpk_wget(widget, COLOR_PICKER).send_vp();
+	color_picker(this).send_vp();
 
 	Scale color_palette_size{ 240, 360 };
-	cpl_wget(widget, COLOR_PALETTE).set_size(color_palette_size);
+	color_palette(this).set_size(color_palette_size);
 	widget.wp_at(COLOR_PALETTE).transform.position = { 0, -200 };
-	cpl_wget(widget, COLOR_PALETTE).send_vp();
+	color_palette(this).send_vp();
 	unbind_shader();
 }
