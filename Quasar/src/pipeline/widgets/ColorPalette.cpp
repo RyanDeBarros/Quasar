@@ -75,17 +75,17 @@ void ColorSubpalette::draw_selectors()
 {
 	int first = first_square();
 	int end = first + num_squares_visible();
-	if (current_alternate_index >= first && current_alternate_index < end)
+	if (alternate_index >= first && alternate_index < end)
 	{
 		ur_wget(*this, ALTERNATE_SELECTOR_B).draw();
 		ur_wget(*this, ALTERNATE_SELECTOR_F).draw();
 	}
-	if (current_primary_index >= first && current_primary_index < end)
+	if (primary_index >= first && primary_index < end)
 	{
 		ur_wget(*this, PRIMARY_SELECTOR_B).draw();
 		ur_wget(*this, PRIMARY_SELECTOR_F).draw();
 	}
-	if (current_hover_index >= 0)
+	if (hover_index >= 0)
 		ur_wget(*this, HOVER_SELECTOR).draw();
 }
 
@@ -122,7 +122,7 @@ void ColorSubpalette::sync_primary_selector()
 
 void ColorSubpalette::resync_primary_selector()
 {
-	primary_wp = square_wp(current_primary_index).relative_to(parent->self.transform);
+	primary_wp = square_wp(primary_index).relative_to(parent->self.transform);
 	sync_primary_selector();
 }
 
@@ -145,40 +145,47 @@ void ColorSubpalette::sync_alternate_selector()
 
 void ColorSubpalette::resync_alternate_selector()
 {
-	alternate_wp = square_wp(current_alternate_index).relative_to(parent->self.transform);
+	alternate_wp = square_wp(alternate_index).relative_to(parent->self.transform);
 	sync_alternate_selector();
 }
 
 void ColorSubpalette::sync_with_palette()
 {
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	WidgetPlacement global;
 	size_t num_colors = subscheme->get_colors().size();
 	for (size_t i = 0; i < num_colors; ++i)
-	{
-		global = square_wp((int)i).relative_to(parent->self.transform);
-		squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-		squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-		squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-		squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-		glm::vec4 color = subscheme->get_colors()[i].as_vec();
-		squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(color));
-		squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(color));
-		squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(color));
-		squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(color));
-	}
+		setup_color_buffer(i, squares);
 	squares.send_vertex_buffer();
 
 	resync_primary_selector();
 	resync_alternate_selector();
 }
 
+void ColorSubpalette::setup_color_buffer(size_t i, IndexedRenderable& squares) const
+{
+	WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
+	squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
+	squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
+	squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
+	squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
+	glm::vec4 color = subscheme->get_colors()[i].as_vec();
+	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(color));
+	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(color));
+	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(color));
+	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(color));
+}
+
+void ColorSubpalette::setup_color_buffer(size_t i)
+{
+	setup_color_buffer(i, ir_wget(*this, SQUARES));
+}
+
 void ColorSubpalette::process()
 {
-	current_hover_index = -1;
-	if (get_visible_square_under_pos(cursor_world_pos(), current_hover_index))
+	hover_index = -1;
+	if (get_visible_square_under_pos(cursor_world_pos(), hover_index))
 	{
-		WidgetPlacement new_wp = global_square_wp(current_hover_index);
+		WidgetPlacement new_wp = global_square_wp(hover_index);
 		if (hover_wp != new_wp)
 		{
 			hover_wp = new_wp;
@@ -189,9 +196,9 @@ void ColorSubpalette::process()
 
 bool ColorSubpalette::check_primary()
 {
-	if (get_visible_square_under_pos(cursor_world_pos(), current_primary_index))
+	if (get_visible_square_under_pos(cursor_world_pos(), primary_index))
 	{
-		WidgetPlacement new_wp = global_square_wp(current_primary_index);
+		WidgetPlacement new_wp = global_square_wp(primary_index);
 		if (primary_wp != new_wp)
 		{
 			primary_wp = new_wp;
@@ -205,9 +212,9 @@ bool ColorSubpalette::check_primary()
 
 bool ColorSubpalette::check_alternate()
 {
-	if (get_visible_square_under_pos(cursor_world_pos(), current_alternate_index))
+	if (get_visible_square_under_pos(cursor_world_pos(), alternate_index))
 	{
-		WidgetPlacement new_wp = global_square_wp(current_alternate_index);
+		WidgetPlacement new_wp = global_square_wp(alternate_index);
 		if (alternate_wp != new_wp)
 		{
 			alternate_wp = new_wp;
@@ -229,7 +236,7 @@ bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) con
 		return false;
 
 	float max_y = 0.5f * ColorPalette::SQUARE_SIZE;
-	float min_y = -ColorPalette::SQUARE_SEP * (ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT - 1) / ColorPalette::ROW_COUNT - 0.5f * ColorPalette::SQUARE_SIZE;
+	float min_y = -ColorPalette::SQUARE_SEP * ((ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT - 1) / ColorPalette::ROW_COUNT) - 0.5f * ColorPalette::SQUARE_SIZE;
 	if (pos.y < min_y || pos.y > max_y)
 		return false;
 
@@ -239,13 +246,17 @@ bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) con
 	if (std::abs(pos.x - c.x) >= ColorPalette::SQUARE_SIZE || std::abs(pos.y - c.y) >= ColorPalette::SQUARE_SIZE)
 		return false;
 
-	index = ix + iy * ColorPalette::COL_COUNT + first_square();
+	int i = ix + iy * ColorPalette::COL_COUNT + first_square();
+	if (i >= subscheme->get_colors().size())
+		return false;
+
+	index = i;
 	return true;
 }
 
 void ColorSubpalette::switch_primary_and_alternate()
 {
-	std::swap(current_primary_index, current_alternate_index);
+	std::swap(primary_index, alternate_index);
 	resync_primary_selector();
 	resync_alternate_selector();
 	update_primary_color_in_picker();
@@ -253,13 +264,41 @@ void ColorSubpalette::switch_primary_and_alternate()
 
 void ColorSubpalette::update_primary_color_in_picker() const
 {
-	(*palette().primary_color_update)(subscheme->get_colors()[current_primary_index]);
+	(*palette().primary_color_update)(subscheme->get_colors()[primary_index]);
 }
 
 void ColorSubpalette::scroll_by(int delta)
 {
-	scroll_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - ColorPalette::ROW_COUNT));
-	sync_with_palette();
+	int new_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - ColorPalette::ROW_COUNT));
+	if (new_offset != scroll_offset)
+	{
+		scroll_offset = new_offset;
+		sync_with_palette();
+	}
+}
+
+void ColorSubpalette::scroll_to_view(int i)
+{
+	if (i < first_square())
+	{
+		// scroll up
+		scroll_by(-ceil_divide(first_square() - i, ColorPalette::COL_COUNT));
+	}
+	else if (i >= first_square() + num_squares_visible())
+	{
+		// scroll down
+		scroll_by(1 - ceil_divide(first_square() + num_squares_visible() - i, ColorPalette::COL_COUNT));
+	}
+}
+
+void ColorSubpalette::scroll_down_full()
+{
+	int new_offset = std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - ColorPalette::ROW_COUNT);
+	if (new_offset != scroll_offset)
+	{
+		scroll_offset = new_offset;
+		sync_with_palette();
+	}
 }
 
 WidgetPlacement ColorSubpalette::square_wp(int i) const
@@ -285,6 +324,11 @@ int ColorSubpalette::num_squares_visible() const
 	return std::clamp(leftover, 0, ColorPalette::COL_COUNT * ColorPalette::ROW_COUNT);
 }
 
+bool ColorSubpalette::is_square_visible(int i) const
+{
+	return i >= first_square() && i < first_square() + num_squares_visible();
+}
+
 Position ColorSubpalette::cursor_world_pos() const
 {
 	return Machine.to_world_coordinates(Machine.cursor_screen_pos(), glm::inverse(*palette().vp));
@@ -292,21 +336,89 @@ Position ColorSubpalette::cursor_world_pos() const
 
 void ColorSubpalette::override_current_color(RGBA color)
 {
-	set_color(current_primary_index, color);
+	if (color != subscheme->get_colors()[primary_index])
+	{
+		*subscheme->at(primary_index) = color;
+		send_color(primary_index, color);
+	}
 }
 
-void ColorSubpalette::new_color(RGBA color)
+void ColorSubpalette::new_color(RGBA color, bool adjacent, bool update_primary)
 {
-	// TODO
+	if (adjacent)
+	{
+		subscheme->insert(color, primary_index + 1);
+		if (alternate_index > primary_index)
+		{
+			++alternate_index;
+			resync_alternate_selector();
+		}
+
+		IndexedRenderable& squares = ir_wget(*this, SQUARES);
+		squares.insert_vertices(4, 4 * (primary_index + 1));
+		squares.push_back_quads(1);
+		setup_color_buffer(primary_index + 1, squares);
+
+		size_t num_colors = subscheme->get_colors().size();
+		for (size_t i = primary_index + 2; i < num_colors; ++i)
+		{
+			WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
+			squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
+			squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
+			squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
+			squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
+		}
+
+		squares.send_both_buffers_resized();
+
+		if (update_primary)
+		{
+			++primary_index;
+			resync_primary_selector();
+		}
+		scroll_to_view(primary_index);
+	}
+	else
+	{
+		subscheme->insert(color);
+
+		IndexedRenderable& squares = ir_wget(*this, SQUARES);
+		squares.push_back_vertices(4);
+		squares.push_back_quads(1);
+		setup_color_buffer(subscheme->get_colors().size() - 1, squares);
+
+		squares.send_both_buffers_resized();
+
+		if (update_primary)
+		{
+			primary_index = subscheme->get_colors().size() - 1;
+			resync_primary_selector();
+			if (primary_index > first_square() + num_squares_visible())
+				scroll_down_full();
+		}
+		else
+			scroll_to_view(primary_index);
+	}
 }
 
-void ColorSubpalette::set_color(size_t i, RGBA color)
+void ColorSubpalette::send_color(size_t i, RGBA color)
 {
-	if (color == subscheme->get_colors()[i])
-		return;
-	*subscheme->at(i) = color;
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	glm::vec4 rgba = color.as_vec();
+	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba));
+	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba));
+	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba));
+	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba));
+	squares.send_single_vertex(i * 4 + 0);
+	squares.send_single_vertex(i * 4 + 1);
+	squares.send_single_vertex(i * 4 + 2);
+	squares.send_single_vertex(i * 4 + 3);
+}
+
+void ColorSubpalette::send_color(size_t i)
+{
+	IndexedRenderable& squares = ir_wget(*this, SQUARES);
+	glm::vec4 rgba = subscheme->get_colors()[i].as_vec();
 	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba));
 	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba));
 	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba));
@@ -366,7 +478,6 @@ ColorPalette::~ColorPalette()
 
 void ColorPalette::draw()
 {
-	process();
 	// TODO render imgui
 	rr_wget(*this, BACKGROUND).draw();
 	current_subpalette().draw();
@@ -377,7 +488,6 @@ void ColorPalette::draw()
 	sb_t_wget(*this, BUTTON_INSERT_NEW_COLOR).draw();
 }
 
-// TODO call process() on ColorPalette+ColorPicker externally in Palette, instead of in draw()?
 void ColorPalette::process()
 {
 	current_subpalette().process();
@@ -509,7 +619,9 @@ void ColorPalette::initialize_widget()
 	sba.transform.position.x = button1_x + sba.transform.scale.x;
 	sba.text = "+";
 	sba.on_select = [this](StandardTButton&, const MouseButtonEvent& mb, Position) {
-		current_subpalette().new_color((*get_picker_rgba)());
+		bool adjacent = !Machine.main_window->is_shift_pressed();
+		bool update_primary = Machine.main_window->is_ctrl_pressed();
+		current_subpalette().new_color((*get_picker_rgba)(), adjacent, update_primary);
 		};
 	assign_widget(this, BUTTON_INSERT_NEW_COLOR, new StandardTButton(sba));
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.position = { 0.1f, -0.15f };

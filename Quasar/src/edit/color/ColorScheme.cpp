@@ -22,14 +22,14 @@ void ColorSubscheme::remove(size_t i)
 		colors.erase(colors.begin() + i);
 }
 
-size_t ColorSubscheme::insert(RGBA color, Sort sort)
+void ColorSubscheme::insert(RGBA color)
 {
-	this->sort(sort);
-	// TODO test that this works
-	auto iter = std::lower_bound(colors.begin(), colors.end(), color, [this](RGBA a, RGBA b) { return predicate(a, b); });
-	auto index = iter - colors.begin();
-	colors.insert(iter, color);
-	return index;
+	colors.push_back(color);
+}
+
+void ColorSubscheme::insert(RGBA color, size_t pos)
+{
+	colors.insert(colors.begin() + pos, color);
 }
 
 static constexpr bool less(float a, float b) { return a < b; }

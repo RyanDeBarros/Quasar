@@ -78,6 +78,8 @@ void Palette::draw()
 
 void Palette::render_widget()
 {
+	color_picker(this).process();
+	color_palette(this).process();
 	color_picker(this).draw();
 	color_palette(this).draw();
 }

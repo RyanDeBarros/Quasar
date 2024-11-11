@@ -43,7 +43,13 @@
 * Fullscreen with F11.
 * Exit maximize/fullscreen state with the same combo, or with ESCAPE.
 
-## Palette
+## Palette panel
+
+### Color picker
+
+### Color palette
 
 * Left click on the color palette to select the primary color, and right click on the color palette to select the secondary color.
 * Press the X key anywhere to swap the primary and alternate color selections.
+* Press the down arrow button to override the primary selection with the current color in color picker.
+* Press the + button to add a new color to the palette with the current color in color picker. If SHIFT is held, the new color will be inserted at the end of the palette instead of next to the primary selection. If CTRL is held, the new color will be selected as the primary color.

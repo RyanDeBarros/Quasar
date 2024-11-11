@@ -89,7 +89,6 @@ ColorPicker::~ColorPicker()
 
 void ColorPicker::draw()
 {
-	process();
 	rr_wget(*this, BACKGROUND).draw();
 	cp_render_gui_back();
 	ur_wget(*this, ALPHA_SLIDER).draw(); // LATER bool member on ColorPicker to enable/disable alpha support
@@ -795,7 +794,7 @@ void ColorPicker::connect_input_handlers()
 		}
 		if (mb.button != MouseButton::LEFT)
 			return;
-		if (mb.action == IAction::PRESS)
+		if (mb.action == IAction::PRESS && cursor_in_bkg())
 		{
 			if (current_widget_control < 0)
 			{

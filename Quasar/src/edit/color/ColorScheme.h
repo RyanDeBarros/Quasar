@@ -45,7 +45,8 @@ public:
 	RGBA* at(size_t i);
 	const RGBA* at(size_t i) const;
 	void remove(size_t i);
-	size_t insert(RGBA color, Sort sort = { SortingPolicy::NONE, true });
+	void insert(RGBA color);
+	void insert(RGBA color, size_t pos);
 	void sort(Sort sort);
 	size_t first_index_of(RGBA color);
 	bool predicate(RGBA a, RGBA b);

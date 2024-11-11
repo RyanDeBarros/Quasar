@@ -8,11 +8,11 @@ struct ColorSubpalette : public Widget
 {
 	std::shared_ptr<ColorSubscheme> subscheme = nullptr;
 	int scroll_offset = 0;
-	int current_hover_index = -1;
+	int hover_index = -1;
 	WidgetPlacement hover_wp;
-	int current_primary_index = 0;
+	int primary_index = 0;
 	WidgetPlacement primary_wp;
-	int current_alternate_index = 0;
+	int alternate_index = 0;
 	WidgetPlacement alternate_wp;
 
 	ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader);
@@ -31,6 +31,8 @@ struct ColorSubpalette : public Widget
 	void sync_alternate_selector();
 	void resync_alternate_selector();
 	void sync_with_palette();
+	void setup_color_buffer(size_t i, IndexedRenderable& squares) const;
+	void setup_color_buffer(size_t i);
 	void process();
 	bool check_primary();
 	bool check_alternate();
@@ -40,15 +42,19 @@ struct ColorSubpalette : public Widget
 	void update_primary_color_in_picker() const;
 
 	void scroll_by(int delta);
+	void scroll_to_view(int i);
+	void scroll_down_full();
 	WidgetPlacement square_wp(int i) const;
 	WidgetPlacement global_square_wp(int i) const;
 	int first_square() const;
 	int num_squares_visible() const;
+	bool is_square_visible(int i) const;
 	Position cursor_world_pos() const;
 
 	void override_current_color(RGBA color);
-	void new_color(RGBA color);
-	void set_color(size_t i, RGBA color);
+	void new_color(RGBA color, bool adjacent, bool update_primary);
+	void send_color(size_t i, RGBA color);
+	void send_color(size_t i);
 
 	enum : size_t
 	{
@@ -117,6 +123,7 @@ public:
 	~ColorPalette();
 
 	virtual void draw() override;
+	void process();
 	void send_vp();
 	void import_color_scheme(const ColorScheme& color_scheme);
 	void import_color_scheme(ColorScheme&& color_scheme);
@@ -131,7 +138,6 @@ private:
 	void import_color_scheme();
 	void sync_widget_with_vp();
 
-	void process();
 	bool cursor_in_bkg() const;
 
 	enum : size_t
