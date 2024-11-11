@@ -55,6 +55,8 @@ struct ColorSubpalette : public Widget
 	void new_color(RGBA color, bool adjacent, bool update_primary);
 	void send_color(size_t i, RGBA color);
 	void send_color(size_t i);
+	void remove_square_under_cursor(bool send_vb);
+	void clean_extra_buffer_space();
 
 	enum : size_t
 	{

@@ -191,6 +191,11 @@ void ColorSubpalette::process()
 			hover_wp = new_wp;
 			sync_hover_selector();
 		}
+		if (Machine.main_window->is_ctrl_pressed() && Machine.main_window->is_mouse_button_pressed(MouseButton::LEFT))
+		{
+			hover_wp.transform.scale = Scale(-1);
+			Machine.canvas_zoom_by(0.0001f);
+		}
 	}
 }
 
@@ -331,7 +336,7 @@ bool ColorSubpalette::is_square_visible(int i) const
 
 Position ColorSubpalette::cursor_world_pos() const
 {
-	return Machine.to_world_coordinates(Machine.cursor_screen_pos(), glm::inverse(*palette().vp));
+	return Machine.cursor_world_pos(glm::inverse(*palette().vp));
 }
 
 void ColorSubpalette::override_current_color(RGBA color)
@@ -391,7 +396,7 @@ void ColorSubpalette::new_color(RGBA color, bool adjacent, bool update_primary)
 
 		if (update_primary)
 		{
-			primary_index = subscheme->get_colors().size() - 1;
+			primary_index = (int)subscheme->get_colors().size() - 1;
 			resync_primary_selector();
 			if (primary_index > first_square() + num_squares_visible())
 				scroll_down_full();
@@ -427,6 +432,48 @@ void ColorSubpalette::send_color(size_t i)
 	squares.send_single_vertex(i * 4 + 1);
 	squares.send_single_vertex(i * 4 + 2);
 	squares.send_single_vertex(i * 4 + 3);
+}
+
+void ColorSubpalette::remove_square_under_cursor(bool send_vb)
+{
+	int index;
+	if (!get_visible_square_under_pos(cursor_world_pos(), index))
+		return;
+
+	subscheme->remove(index);
+	
+	IndexedRenderable& squares = ir_wget(*this, SQUARES);
+	size_t num_colors = subscheme->get_colors().size();
+	for (size_t i = index; i < num_colors; ++i)
+		setup_color_buffer(i, squares);
+
+	if (send_vb)
+		squares.send_vertex_buffer();
+
+	if (primary_index >= subscheme->get_colors().size())
+	{
+		primary_index = subscheme->get_colors().size() - 1;
+		resync_primary_selector();
+		update_primary_color_in_picker();
+	}
+	else if (index <= primary_index)
+		update_primary_color_in_picker();
+	if (alternate_index >= subscheme->get_colors().size())
+	{
+		alternate_index = subscheme->get_colors().size() - 1;
+		resync_alternate_selector();
+	}
+}
+
+void ColorSubpalette::clean_extra_buffer_space()
+{
+	int end = (int)subscheme->get_colors().size();
+	IndexedRenderable& squares = ir_wget(*this, SQUARES);
+	if (squares.num_vertices() < end * 4)
+		return;
+	squares.remove_from_varr(end * 4);
+	squares.remove_from_iarr(end * 6);
+	squares.send_both_buffers_resized();
 }
 
 ColorSubpalette& ColorPalette::get_subpalette(size_t pos)
@@ -548,23 +595,35 @@ void ColorPalette::connect_input_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
-		if (mb.action != IAction::RELEASE)
+		if (!cursor_in_bkg())
 			return;
-		if (cursor_in_bkg())
+		if (mb.action == IAction::RELEASE)
 		{
-			if (mb.button == MouseButton::LEFT)
+			if (!(mb.mods & Mods::CONTROL))
 			{
-				if (current_subpalette().check_primary())
+				if (mb.button == MouseButton::LEFT)
 				{
-					mb.consumed = true;
-					current_subpalette().update_primary_color_in_picker();
+					if (current_subpalette().check_primary())
+					{
+						mb.consumed = true;
+						current_subpalette().update_primary_color_in_picker();
+					}
+				}
+				else if (mb.button == MouseButton::RIGHT)
+				{
+					if (current_subpalette().check_alternate())
+						mb.consumed = true;
 				}
 			}
-			else if (mb.button == MouseButton::RIGHT)
+			else if (mb.button == MouseButton::LEFT)
 			{
-				if (current_subpalette().check_alternate())
-					mb.consumed = true;
+				current_subpalette().remove_square_under_cursor(false); // false because of clean_extra_buffer_space() on next line
+				current_subpalette().clean_extra_buffer_space();
 			}
+		}
+		else if (mb.action == IAction::PRESS && mb.button == MouseButton::LEFT)
+		{
+			// TODO initiate multi-remove
 		}
 		};
 	parent_key_handler.children.push_back(&key_handler);

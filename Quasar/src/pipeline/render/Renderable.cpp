@@ -242,6 +242,11 @@ void IndexedRenderable::set_num_vertices(size_t num_vertices)
 	varr.resize(num_vertices * shader->stride);
 }
 
+size_t IndexedRenderable::num_vertices() const
+{
+	return varr.size() / shader->stride;
+}
+
 void IndexedRenderable::push_back_vertices(size_t num_vertices)
 {
 	varr.insert(varr.end(), num_vertices * shader->stride, 0.0f);
@@ -279,6 +284,16 @@ void IndexedRenderable::push_back_quads(size_t num_quads, GLuint starting_vertex
 			0 + 4 * i
 			});
 	}
+}
+
+void IndexedRenderable::remove_from_varr(size_t pos)
+{
+	varr.erase(varr.begin() + pos * shader->stride, varr.end());
+}
+
+void IndexedRenderable::remove_from_iarr(size_t pos)
+{
+	iarr.erase(iarr.begin() + pos, iarr.end());
 }
 
 void IndexedRenderable::push_back_quads(size_t num_quads)

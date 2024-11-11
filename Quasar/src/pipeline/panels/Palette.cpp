@@ -36,7 +36,7 @@ Palette::Palette()
 
 	// TODO remove:
 	std::vector<RGBA> colors;
-	float num_colors = 100;
+	float num_colors = 10;
 	for (int i = 0; i < num_colors; ++i)
 		colors.push_back(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
 	color_palette(this).import_color_scheme(ColorScheme{ { std::make_shared<ColorSubscheme>(std::move(colors)) } });
