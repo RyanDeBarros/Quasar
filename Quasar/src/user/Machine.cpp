@@ -123,7 +123,7 @@ void MachineImpl::init_renderer()
 	main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
 		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
 		//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
-		window_layout_info.menu_panel_height + window_layout_info.views_panel_height + palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
+		window_layout_info.menu_panel_height + window_layout_info.views_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
 	import_file(FileSystem::workspace_path("ex/flag.png"));
 	//show_major_gridlines();

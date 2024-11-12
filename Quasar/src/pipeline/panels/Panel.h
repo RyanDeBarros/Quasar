@@ -11,7 +11,7 @@ struct Panel
 {
 	PanelGroup* pgroup = nullptr;
 	bool visible = true;
-	Position view{}; // TODO change back to FlatTransform
+	FlatTransform view{};
 	IntBounds bounds{};
 
 	Panel() = default;

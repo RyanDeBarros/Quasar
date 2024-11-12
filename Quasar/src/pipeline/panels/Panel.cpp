@@ -38,17 +38,17 @@ glm::vec2 Panel::get_app_cursor_pos() const
 
 glm::mat3 Panel::vp_matrix() const
 {
-	return pgroup->projection * glm::mat3{ { 1, 0, 0 }, { 0, 1, 0 }, { -view.x, -view.y, 1 } };
+	return pgroup->projection * view.camera();
 }
 
 glm::mat3 Panel::vp_matrix_inverse() const
 {
-	return glm::mat3{ { 1, 0, 0 }, { 0, 1, 0 }, { view.x, view.y, 1 } } * glm::inverse(pgroup->projection);
+	return view.matrix() * glm::inverse(pgroup->projection);
 }
 
 void Panel::send_view()
 {
-	view = to_view_coordinates(bounds.clip().center_point());
+	view.position = to_view_coordinates(bounds.clip().center_point());
 	_send_view();
 }
 
