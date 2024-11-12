@@ -1113,6 +1113,11 @@ void ColorPicker::set_size(Scale size, bool sync)
 		sync_widget_with_vp();
 }
 
+Scale ColorPicker::minimum_display() const
+{
+	return Scale{ 240, 420 };
+}
+
 void ColorPicker::mouse_handler_graphic_quad(Position local_cursor_pos)
 {
 	wp_at(GRAPHIC_QUAD_CURSOR).transform.position = wp_at(GRAPHIC_QUAD).clamp_point(local_cursor_pos);

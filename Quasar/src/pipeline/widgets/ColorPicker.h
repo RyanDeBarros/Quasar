@@ -70,6 +70,7 @@ public:
 	ColorFrame get_color() const;
 	void set_color(ColorFrame color);
 	void set_size(Scale size, bool sync);
+	Scale minimum_display() const;
 	
 private:
 	void process_mb_down_events();

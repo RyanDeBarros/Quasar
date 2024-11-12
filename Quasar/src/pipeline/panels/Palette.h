@@ -27,6 +27,7 @@ struct Palette : public Panel
 	void _send_view() override;
 	void draw() override;
 	void render_widget();
+	Scale minimum_screen_display() const override;
 
 private:
 	void initialize_widget();

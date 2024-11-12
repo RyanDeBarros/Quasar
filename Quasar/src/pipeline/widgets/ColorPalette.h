@@ -100,13 +100,13 @@ class ColorPalette : public Widget
 	float cached_scale1d = 0.0f;
 	float scroll_backlog = 0.0f;
 
+public:
 	ColorSubpalette& get_subpalette(size_t pos);
 	const ColorSubpalette& get_subpalette(size_t pos) const;
 	ColorSubpalette& current_subpalette();
 	const ColorSubpalette& current_subpalette() const;
 	size_t subpalette_index_in_widget(size_t pos) const;
 
-public:
 	static inline const float SQUARE_SEP = 28;
 	static inline const float SQUARE_SIZE = 24;
 
@@ -137,6 +137,7 @@ public:
 	void delete_subpalette(size_t pos);
 	size_t num_subpalettes() const;
 	void set_size(Scale pos, bool sync);
+	Scale minimum_display() const;
 
 private:
 	void connect_input_handlers();

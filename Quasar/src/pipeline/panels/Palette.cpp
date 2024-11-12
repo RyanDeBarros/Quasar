@@ -28,6 +28,7 @@ static const ColorPalette& color_palette(const Palette* palette)
 
 const Scale color_palette_scale = Scale(0.9f);
 const Scale color_picker_scale = Scale(0.9f);
+const float padding = 20;
 
 Palette::Palette()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
@@ -87,6 +88,11 @@ void Palette::render_widget()
 	color_palette(this).draw();
 }
 
+Scale Palette::minimum_screen_display() const
+{
+	return to_screen_coordinates(color_picker_scale * color_picker(this).minimum_display() + color_palette_scale * color_palette(this).minimum_display() + Scale{ 2 * padding, 3 * padding }) - to_screen_coordinates({});
+}
+
 void Palette::initialize_widget()
 {
 	assign_widget(&widget, COLOR_PICKER, new ColorPicker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
@@ -112,7 +118,6 @@ void Palette::_send_view()
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
 
 	float view_height = (to_view_coordinates({}) - to_view_coordinates({ 0, bounds.clip().screen_h })).y;
-	const float padding = 20;
 	const float free_space_y = view_height - 3 * padding;
 	const float color_picker_height = 420; // LATER palette min height is at least 420 + 3 * padding + min color palette height, or else scale Palette view down.
 	const float color_palette_height = free_space_y - color_picker_height * color_picker_scale.y;

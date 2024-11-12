@@ -758,7 +758,10 @@ void ColorPalette::set_grid_metrics(int col, int row, bool sync)
 	Uniforms::send_1(grid_shader, "u_ColProportion", 1.0f / col_count());
 	Uniforms::send_1(grid_shader, "u_RowProportion", 1.0f / row_count());
 	for (int i = 0; i < num_subpalettes(); ++i)
+	{
 		get_subpalette(i).self.transform.position.y = subpalette_pos_y();
+		get_subpalette(i).scroll_by(0);
+	}
 	if (sync)
 	{
 		sync_widget_with_vp();
@@ -778,6 +781,11 @@ void ColorPalette::set_size(Scale size, bool sync)
 
 	set_grid_metrics(std::max(1, (int)((size.x - SQUARE_SIZE - (grid_padding_x1 + grid_padding_x2)) / SQUARE_SEP) + 1),
 		std::max(1, (int)((size.y - SQUARE_SIZE - (grid_padding_y1 + grid_padding_y2)) / SQUARE_SEP) + 1), sync);
+}
+
+Scale ColorPalette::minimum_display() const
+{
+	return Scale { grid_padding_x1 + grid_padding_x2 + 100, grid_padding_y1 + grid_padding_y2 + 50 };
 }
 
 bool ColorPalette::cursor_in_bkg() const

@@ -63,10 +63,6 @@ bool MachineImpl::create_main_window()
 		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
-		main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
-			//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
-			//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
-			400, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
 		main_window->root_window_size.children.push_back(&resize_handler);
 		main_window->root_display_scale.children.push_back(&rescale_handler);
@@ -123,6 +119,11 @@ void MachineImpl::init_renderer()
 	easel()->canvas.major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
 
 	set_app_scale(main_window->display_scale());
+
+	main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
+		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
+		//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
+		window_layout_info.menu_panel_height + window_layout_info.views_panel_height + palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
 	import_file(FileSystem::workspace_path("ex/flag.png"));
 	//show_major_gridlines();

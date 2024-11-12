@@ -35,6 +35,8 @@ struct Panel
 	Position to_view_coordinates(Position screen_coordinates) const;
 	Position to_world_coordinates(Position screen_coordinates) const;
 	Position to_screen_coordinates(Position world_coordinates) const;
+
+	virtual Scale minimum_screen_display() const { return {}; }
 };
 
 struct PanelGroup
