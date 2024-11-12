@@ -187,7 +187,7 @@ void ColorPicker::cp_render_gui_back()
 		ImGuiWindowFlags_NoSavedSettings |
 		ImGuiWindowFlags_NoDecoration |
 		ImGuiWindowFlags_NoBackground;
-	if (ImGui::Begin("-", nullptr, window_flags))
+	if (ImGui::Begin("##color-picker", nullptr, window_flags))
 	{
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
 		ImGui::SetWindowFontScale(scale1d() * font_window_scale);

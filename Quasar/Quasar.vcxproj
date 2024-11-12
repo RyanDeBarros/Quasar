@@ -176,6 +176,7 @@
     <ClCompile Include="src\pipeline\widgets\ColorPalette.cpp" />
     <ClCompile Include="src\edit\color\ColorScheme.cpp" />
     <ClCompile Include="src\pipeline\widgets\Widget.cpp" />
+    <ClCompile Include="src\variety\Geometry.cpp" />
     <ClCompile Include="src\variety\UTF.cpp" />
     <ClCompile Include="src\pipeline\widgets\ColorPicker.cpp" />
     <ClCompile Include="src\pipeline\panels\Palette.cpp" />

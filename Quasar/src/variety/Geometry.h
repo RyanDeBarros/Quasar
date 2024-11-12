@@ -174,6 +174,10 @@ struct FlatTransform
 	float top() const { return position.y + 0.5f * scale.y; }
 };
 
+extern Logger& operator<<(Logger&, const Position&);
+extern Logger& operator<<(Logger&, const Scale&);
+extern Logger& operator<<(Logger&, const FlatTransform&);
+
 struct ClippingRect
 {
 	GLint x = 0, y = 0;

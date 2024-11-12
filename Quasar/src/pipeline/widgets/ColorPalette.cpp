@@ -1,6 +1,7 @@
 #include "ColorPalette.h"
 
 #include <glm/gtc/type_ptr.inl>
+#include <imgui/imgui_internal.h>
 
 #include "../render/Uniforms.h"
 #include "RoundRect.h"
@@ -192,6 +193,12 @@ void ColorSubpalette::process()
 			sync_hover_selector();
 		}
 	}
+}
+
+void ColorSubpalette::unprocess()
+{
+	hover_index = -1;
+	hover_wp = { {}, Scale(-1) };
 }
 
 bool ColorSubpalette::check_primary()
@@ -502,7 +509,7 @@ const float grid_padding_y1 = 80;
 const float grid_padding_y2 = 10;
 
 const float button1_x = -30;
-const float button_y = 20;
+const float button_y = 40;
 
 ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
 	const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba)
@@ -527,7 +534,7 @@ ColorPalette::~ColorPalette()
 
 void ColorPalette::draw()
 {
-	// TODO render imgui
+	render_imgui();
 	rr_wget(*this, BACKGROUND).draw();
 	current_subpalette().draw();
 	ur_wget(*this, BLACK_GRID).draw();
@@ -535,11 +542,13 @@ void ColorPalette::draw()
 	// LATER use StandardIButton instead of StandardTButton
 	sb_t_wget(*this, BUTTON_OVERRIDE_COLOR).draw();
 	sb_t_wget(*this, BUTTON_INSERT_NEW_COLOR).draw();
+	if (imgui_editing)
+		rr_wget(*this, BACKGROUND).draw();
 }
 
 void ColorPalette::process()
 {
-	if (cursor_in_bkg())
+	if (!imgui_editing && cursor_in_bkg())
 	{
 		current_subpalette().process();
 		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).process();
@@ -547,6 +556,7 @@ void ColorPalette::process()
 	}
 	else
 	{
+		current_subpalette().unprocess();
 		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).unhover();
 		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).unhover();
 	}
@@ -600,11 +610,60 @@ size_t ColorPalette::num_subpalettes() const
 	return children.size() - SUBPALETTE_START;
 }
 
+void ColorPalette::render_imgui()
+{
+	ImGui::SetNextWindowBgAlpha(0);
+	ImGui::SetNextWindowPos({ gui_transform.position.x, gui_transform.position.y });
+	ImGui::SetNextWindowSize({ gui_transform.scale.x, gui_transform.scale.y });
+
+	// LATER put window setup in external function to be used across project
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar |
+		ImGuiWindowFlags_NoResize |
+		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoSavedSettings |
+		ImGuiWindowFlags_NoDecoration |
+		ImGuiWindowFlags_NoBackground;
+	if (ImGui::Begin("##color-palette", nullptr, window_flags))
+	{
+		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
+		ImGui::SetWindowFontScale(scale1d() * font_window_scale);
+
+		static int selected_item = 0;
+		static const int num_items = 5;
+		const char* items[num_items] = { "Option 1", "Option 2", "Option 3", "Option 4", "Option 5" };
+
+		imgui_editing = false;
+
+		ImGui::SetNextItemWidth(180 * self.transform.scale.x);
+		if (ImGui::BeginCombo("Subschemes", items[selected_item]))
+		{
+			imgui_editing = true;
+			for (int n = 0; n < num_items; ++n)
+			{
+				bool is_selected = (selected_item == n);
+				if (ImGui::Selectable(items[n], is_selected))
+					selected_item = n;
+
+				if (is_selected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+
+		//LOG << items[selected_item] << LOG.endl;
+		//LOG << ImGui::GetIO().WantCaptureMouse << LOG.endl;
+
+		ImGui::SetWindowFontScale(font_window_scale);
+		ImGui::End();
+	}
+}
+
 void ColorPalette::connect_input_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
-		if (mb.action != IAction::RELEASE || !cursor_in_bkg())
+		if (imgui_editing || mb.action != IAction::RELEASE || !cursor_in_bkg())
 			return;
 		if (!(mb.mods & Mods::CONTROL))
 		{
@@ -630,7 +689,7 @@ void ColorPalette::connect_input_handlers()
 		};
 	parent_key_handler.children.push_back(&key_handler);
 	key_handler.callback = [this](const KeyEvent& k) {
-		if (k.action == IAction::RELEASE && k.key == Key::X)
+		if (!imgui_editing && k.action == IAction::RELEASE && k.key == Key::X)
 		{
 			k.consumed = true;
 			current_subpalette().switch_primary_and_alternate();
@@ -638,7 +697,7 @@ void ColorPalette::connect_input_handlers()
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {
-		if (cursor_in_bkg())
+		if (!imgui_editing && cursor_in_bkg())
 		{
 			s.consumed = true;
 			scroll_backlog -= s.yoff;
@@ -665,6 +724,8 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 26;
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
+	sba.is_hoverable = [this]() { return !imgui_editing; };
+	sba.is_selectable = [this](StandardTButton&, const MouseButtonEvent&, Position) { return !imgui_editing; }; // TODO create helper utility to convert std::function<void()> to these various function signatures
 	
 	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";
@@ -747,6 +808,10 @@ void ColorPalette::sync_widget_with_vp()
 	// LATER is this necessary, or should only current subpalette be selected, and when selecting a new subpalette, sync it then.
 	for (size_t i = 0; i < num_subpalettes(); ++i)
 		get_subpalette(i).sync_with_palette();
+
+	gui_transform.scale = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
+	gui_transform.position = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, 0.5f }), *vp);
+	gui_transform.position.y = Machine.main_window->height() - gui_transform.position.y;
 }
 
 void ColorPalette::set_grid_metrics(int col, int row, bool sync)

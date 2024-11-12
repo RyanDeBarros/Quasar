@@ -34,6 +34,7 @@ struct ColorSubpalette : public Widget
 	void setup_color_buffer(size_t i, IndexedRenderable& squares) const;
 	void setup_color_buffer(size_t i);
 	void process();
+	void unprocess();
 	bool check_primary();
 	bool check_alternate();
 	
@@ -100,6 +101,9 @@ class ColorPalette : public Widget
 	float cached_scale1d = 0.0f;
 	float scroll_backlog = 0.0f;
 
+	FlatTransform gui_transform;
+	bool imgui_editing;
+
 public:
 	ColorSubpalette& get_subpalette(size_t pos);
 	const ColorSubpalette& get_subpalette(size_t pos) const;
@@ -140,6 +144,7 @@ public:
 	Scale minimum_display() const;
 
 private:
+	void render_imgui();
 	void connect_input_handlers();
 	void initialize_widget();
 	void import_color_scheme();
