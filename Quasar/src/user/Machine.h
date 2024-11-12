@@ -77,6 +77,7 @@ struct MachineImpl
 
 	bool create_main_window();
 	void init_renderer();
+	void init_panels_layout();
 	void destroy();
 	void exit() const { main_window->request_close(); }
 	bool should_exit() const;
@@ -103,7 +104,7 @@ struct MachineImpl
 	glm::vec2 palette_cursor_world_pos() const;
 	bool cursor_in_easel() const;
 	bool cursor_in_palette() const;
-	
+
 	// Canvas
 	FlatTransform& canvas_transform() const;
 	Position& canvas_position() const { return canvas_transform().position; }

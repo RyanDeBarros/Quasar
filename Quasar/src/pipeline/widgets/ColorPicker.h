@@ -69,7 +69,7 @@ public:
 	void send_vp();
 	ColorFrame get_color() const;
 	void set_color(ColorFrame color);
-	void set_size(Scale size, bool sync = false);
+	void set_size(Scale size, bool sync);
 	
 private:
 	void process_mb_down_events();

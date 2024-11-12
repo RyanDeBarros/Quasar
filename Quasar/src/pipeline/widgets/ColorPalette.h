@@ -107,22 +107,18 @@ class ColorPalette : public Widget
 	size_t subpalette_index_in_widget(size_t pos) const;
 
 public:
-	static const int COL_COUNT = 8;
 	static inline const float SQUARE_SEP = 28;
 	static inline const float SQUARE_SIZE = 24;
 
 private:
-	//int _row_count = 8;
-	int _row_count = 10;
-	//float _grid_offset_y = -60;
-	float _grid_offset_y = -30;
-	WidgetPlacement _grid_wp = { { { 0, _grid_offset_y }, { COL_COUNT * SQUARE_SEP, _row_count * SQUARE_SEP } } };
+	float grid_offset_y = 0;
+	int _col_count = 8;
+	int _row_count = 8;
 
 public:
 	int row_count() const { return _row_count; }
-	float grid_offset_y() const { return _grid_offset_y; }
-	WidgetPlacement grid_wp() const { return _grid_wp; }
-
+	int col_count() const { return _col_count; }
+	
 	const std::function<void(RGBA)>* primary_color_update;
 	const std::function<RGBA()>* get_picker_rgba;
 
@@ -140,15 +136,20 @@ public:
 	void new_subpalette();
 	void delete_subpalette(size_t pos);
 	size_t num_subpalettes() const;
-	void set_size(Scale pos, bool sync = false);
+	void set_size(Scale pos, bool sync);
 
 private:
 	void connect_input_handlers();
 	void initialize_widget();
 	void import_color_scheme();
 	void sync_widget_with_vp();
+	void set_grid_metrics(int col_count, int row_count, bool sync);
 
 	bool cursor_in_bkg() const;
+	glm::mat3 grid_vp() const;
+	float subpalette_pos_y() const;
+	float absolute_y_off_bkg_top(float y) const;
+	float absolute_y_off_bkg_bot(float y) const;
 
 	enum : size_t
 	{

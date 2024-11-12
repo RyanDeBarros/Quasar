@@ -28,6 +28,18 @@ static Palette* palette()
 	return dynamic_cast<Palette*>(panels->panels[1].get());
 }
 
+void MachineImpl::init_panels_layout()
+{
+	easel()->bounds.x1 = window_layout_info.initial_brush_panel_width;
+	easel()->bounds.x2 = window_layout_info.initial_width - window_layout_info.initial_palette_panel_width;
+	easel()->bounds.y1 = window_layout_info.initial_views_panel_height;
+	easel()->bounds.y2 = window_layout_info.initial_height - window_layout_info.initial_menu_panel_height;
+	palette()->bounds.x1 = easel()->bounds.x2;
+	palette()->bounds.x2 = window_layout_info.initial_width;
+	palette()->bounds.y1 = easel()->bounds.y1;
+	palette()->bounds.y2 = easel()->bounds.y2;
+}
+
 static void update_panels_to_window_size(int width, int height)
 {
 	//easel()->bounds.x1 = 
@@ -53,7 +65,8 @@ bool MachineImpl::create_main_window()
 		update_vsync();
 		main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
 			//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
-			window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
+			//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
+			400, GLFW_DONT_CARE, GLFW_DONT_CARE);
 
 		main_window->root_window_size.children.push_back(&resize_handler);
 		main_window->root_display_scale.children.push_back(&rescale_handler);
@@ -83,14 +96,7 @@ void MachineImpl::init_renderer()
 	panels->panels.push_back(std::make_unique<Easel>());
 	panels->panels.push_back(std::make_unique<Palette>());
 
-	easel()->bounds.x1 = window_layout_info.initial_brush_panel_width;
-	easel()->bounds.x2 = window_layout_info.initial_width - window_layout_info.initial_palette_panel_width;
-	easel()->bounds.y1 = window_layout_info.initial_views_panel_height;
-	easel()->bounds.y2 = window_layout_info.initial_height - window_layout_info.initial_menu_panel_height;
-	palette()->bounds.x1 = easel()->bounds.x2;
-	palette()->bounds.x2 = window_layout_info.initial_width;
-	palette()->bounds.y1 = easel()->bounds.y1;
-	palette()->bounds.y2 = easel()->bounds.y2;
+	init_panels_layout();
 
 	panels->sync_panels();
 

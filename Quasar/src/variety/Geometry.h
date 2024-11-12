@@ -16,6 +16,9 @@ constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
 struct Position : glm::vec2
 {
 	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
+	Position(int x, int y) : glm::vec2(x, y) {}
+	Position(int x, float y) : glm::vec2(x, y) {}
+	Position(float x, int y) : glm::vec2(x, y) {}
 	Position(const glm::vec2& vec) : glm::vec2(vec) {}
 
 	Position operator+(Position r) const { return { x + r.x, y + r.y }; }
@@ -27,6 +30,25 @@ struct Position : glm::vec2
 	Position& operator+=(glm::vec2 r) { x += r.x; y += r.y; ; return *this; }
 	Position operator-(glm::vec2 r) const { return { x - r.x, y - r.y }; }
 	Position& operator-=(glm::vec2 r) { x -= r.x; y -= r.y; ; return *this; }
+
+	Position operator*(Position r) const { return { x * r.x, y * r.y }; }
+	Position& operator*=(Position r) { x *= r.x; y *= r.y; ; return *this; }
+	Position operator/(Position r) const { return { x / r.x, y / r.y }; }
+	Position& operator/=(Position r) { x /= r.x; y /= r.y; ; return *this; }
+
+	Position operator*(glm::vec2 r) const { return { x * r.x, y * r.y }; }
+	Position& operator*=(glm::vec2 r) { x *= r.x; y *= r.y; ; return *this; }
+	Position operator/(glm::vec2 r) const { return { x / r.x, y / r.y }; }
+	Position& operator/=(glm::vec2 r) { x /= r.x; y /= r.y; ; return *this; }
+
+	Position operator+(float r) const { return { x + r, y + r }; }
+	Position& operator+=(float r) { x += r; y += r; return *this; }
+	Position operator-(float r) const { return { x - r, y - r }; }
+	Position& operator-=(float r) { x -= r; y -= r; return *this; }
+	Position operator*(float r) const { return { x * r, y * r }; }
+	Position& operator*=(float r) { x *= r; y *= r; return *this; }
+	Position operator/(float r) const { return { x / r, y / r }; }
+	Position& operator/=(float r) { x /= r; y /= r; return *this; }
 };
 
 inline bool in_diagonal_rect(Position pos, Position bl, Position tr)
@@ -49,6 +71,9 @@ struct Scale : glm::vec2
 {
 	Scale(float s = 1.0f) : glm::vec2(s) {}
 	Scale(float x, float y) : glm::vec2(x, y) {}
+	Scale(int x, int y) : glm::vec2(x, y) {}
+	Scale(int x, float y) : glm::vec2(x, y) {}
+	Scale(float x, int y) : glm::vec2(x, y) {}
 	Scale(const glm::vec2& vec) : glm::vec2(vec) {}
 
 	Scale reciprocal() const { return { x ? 1.0f / x : 0.0f, y ? 1.0f / y : 0.0f }; }
@@ -62,6 +87,25 @@ struct Scale : glm::vec2
 	Scale& operator+=(glm::vec2 r) { x += r.x; y += r.y; ; return *this; }
 	Scale operator-(glm::vec2 r) const { return { x - r.x, y - r.y }; }
 	Scale& operator-=(glm::vec2 r) { x -= r.x; y -= r.y; ; return *this; }
+
+	Scale operator*(Scale r) const { return { x * r.x, y * r.y }; }
+	Scale& operator*=(Scale r) { x *= r.x; y *= r.y; ; return *this; }
+	Scale operator/(Scale r) const { return { x / r.x, y / r.y }; }
+	Scale& operator/=(Scale r) { x /= r.x; y /= r.y; ; return *this; }
+
+	Scale operator*(glm::vec2 r) const { return { x * r.x, y * r.y }; }
+	Scale& operator*=(glm::vec2 r) { x *= r.x; y *= r.y; ; return *this; }
+	Scale operator/(glm::vec2 r) const { return { x / r.x, y / r.y }; }
+	Scale& operator/=(glm::vec2 r) { x /= r.x; y /= r.y; ; return *this; }
+
+	Scale operator+(float r) const { return { x + r, y + r }; }
+	Scale& operator+=(float r) { x += r; y += r; return *this; }
+	Scale operator-(float r) const { return { x - r, y - r }; }
+	Scale& operator-=(float r) { x -= r; y -= r; return *this; }
+	Scale operator*(float r) const { return { x * r, y * r }; }
+	Scale& operator*=(float r) { x *= r; y *= r; return *this; }
+	Scale operator/(float r) const { return { x / r, y / r }; }
+	Scale& operator/=(float r) { x /= r; y /= r; return *this; }
 };
 
 struct Transform
@@ -122,8 +166,12 @@ struct FlatTransform
 
 	Position get_relative_pos(Position absolute) const { return (absolute - position) * scale.reciprocal(); }
 
-	bool contains_point(Position pos) const { return on_interval(pos.x, position.x - 0.5f * scale.x, position.x + 0.5f * scale.x)
-		&& on_interval(pos.y, position.y - 0.5f * scale.y, position.y + 0.5f * scale.y); }
+	bool contains_point(Position pos) const { return on_interval(pos.x, left(), right()) && on_interval(pos.y, bottom(), top()); }
+
+	float left() const { return position.x - 0.5f * scale.x; }
+	float right() const { return position.x + 0.5f * scale.x; }
+	float bottom() const { return position.y - 0.5f * scale.y; }
+	float top() const { return position.y + 0.5f * scale.y; }
 };
 
 struct ClippingRect

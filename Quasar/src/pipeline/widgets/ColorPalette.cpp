@@ -228,10 +228,10 @@ bool ColorSubpalette::check_alternate()
 
 bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) const
 {
-	pos = local_of(pos) + 0.5f * ColorPalette::SQUARE_SEP * Position{ ColorPalette::COL_COUNT - 1, 1.0f - palette().row_count() };
+	pos = local_of(pos) + 0.5f * ColorPalette::SQUARE_SEP * Position(palette().col_count() - 1, 1 - palette().row_count());
 	
 	float min_x = -0.5f * ColorPalette::SQUARE_SIZE;
-	float max_x = (ColorPalette::COL_COUNT - 1) * ColorPalette::SQUARE_SEP + 0.5f * ColorPalette::SQUARE_SIZE;
+	float max_x = (palette().col_count() - 1) * ColorPalette::SQUARE_SEP + 0.5f * ColorPalette::SQUARE_SIZE;
 	if (pos.x < min_x || pos.x > max_x)
 		return false;
 
@@ -240,13 +240,13 @@ bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) con
 	if (pos.y < min_y || pos.y > max_y)
 		return false;
 
-	int ix = (pos.x + 0.5f * ColorPalette::SQUARE_SIZE) / ColorPalette::SQUARE_SEP;
-	int iy = ceil_divide(pos.y + 0.5f * ColorPalette::SQUARE_SIZE, -ColorPalette::SQUARE_SEP); // TODO is ceil_divide(x, y) just equal to -(x / -y)?
+	int ix = (int)((pos.x + 0.5f * ColorPalette::SQUARE_SIZE) / ColorPalette::SQUARE_SEP);
+	int iy = (int)ceilf((pos.y + 0.5f * ColorPalette::SQUARE_SIZE) / -ColorPalette::SQUARE_SEP);
 	Position c{ ColorPalette::SQUARE_SEP * ix, -ColorPalette::SQUARE_SEP * iy };
 	if (std::abs(pos.x - c.x) >= ColorPalette::SQUARE_SIZE || std::abs(pos.y - c.y) >= ColorPalette::SQUARE_SIZE)
 		return false;
 
-	int i = ix + iy * ColorPalette::COL_COUNT + first_square();
+	int i = ix + iy * palette().col_count() + first_square();
 	if (i >= subscheme->get_colors().size())
 		return false;
 
@@ -269,7 +269,7 @@ void ColorSubpalette::update_primary_color_in_picker() const
 
 void ColorSubpalette::scroll_by(int delta)
 {
-	int new_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - palette().row_count()));
+	int new_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), palette().col_count()) - palette().row_count()));
 	if (new_offset != scroll_offset)
 	{
 		scroll_offset = new_offset;
@@ -282,18 +282,18 @@ void ColorSubpalette::scroll_to_view(int i)
 	if (i < first_square())
 	{
 		// scroll up
-		scroll_by(-ceil_divide(first_square() - i, ColorPalette::COL_COUNT));
+		scroll_by(-ceil_divide(first_square() - i, palette().col_count()));
 	}
 	else if (i >= first_square() + num_squares_visible())
 	{
 		// scroll down
-		scroll_by(1 - ceil_divide(first_square() + num_squares_visible() - i, ColorPalette::COL_COUNT));
+		scroll_by(1 - ceil_divide(first_square() + num_squares_visible() - i, palette().col_count()));
 	}
 }
 
 void ColorSubpalette::scroll_down_full()
 {
-	int new_offset = std::max(0, ceil_divide((int)subscheme->get_colors().size(), ColorPalette::COL_COUNT) - palette().row_count());
+	int new_offset = std::max(0, ceil_divide((int)subscheme->get_colors().size(), palette().col_count()) - palette().row_count());
 	if (new_offset != scroll_offset)
 	{
 		scroll_offset = new_offset;
@@ -303,8 +303,8 @@ void ColorSubpalette::scroll_down_full()
 
 WidgetPlacement ColorSubpalette::square_wp(int i) const
 {
-	Position initial_pos{ -ColorPalette::SQUARE_SEP * (ColorPalette::COL_COUNT - 1) * 0.5f, ColorPalette::SQUARE_SEP * (palette().row_count() - 1) * 0.5f };
-	Position delta_pos{ ColorPalette::SQUARE_SEP * (i % ColorPalette::COL_COUNT), -ColorPalette::SQUARE_SEP * (i / ColorPalette::COL_COUNT - scroll_offset)};
+	Position initial_pos{ -ColorPalette::SQUARE_SEP * (palette().col_count() - 1) * 0.5f, ColorPalette::SQUARE_SEP * (palette().row_count() - 1) * 0.5f };
+	Position delta_pos{ ColorPalette::SQUARE_SEP * (i % palette().col_count()), -ColorPalette::SQUARE_SEP * (i / palette().col_count() - scroll_offset)};
 	return WidgetPlacement{ { { initial_pos + delta_pos}, Scale(ColorPalette::SQUARE_SIZE) } }.relative_to(self.transform);
 }
 
@@ -315,13 +315,13 @@ WidgetPlacement ColorSubpalette::global_square_wp(int i) const
 
 int ColorSubpalette::first_square() const
 {
-	return scroll_offset * ColorPalette::COL_COUNT;
+	return scroll_offset * palette().col_count();
 }
 
 int ColorSubpalette::num_squares_visible() const
 {
 	int leftover = (int)subscheme->get_colors().size() - first_square();
-	return std::clamp(leftover, 0, ColorPalette::COL_COUNT * palette().row_count());
+	return std::clamp(leftover, 0, palette().col_count() * palette().row_count());
 }
 
 bool ColorSubpalette::is_square_visible(int i) const
@@ -496,7 +496,14 @@ size_t ColorPalette::subpalette_index_in_widget(size_t pos) const
 	return SUBPALETTE_START + pos;
 }
 
-// LATER use black outlined square IR instead of single-unit blackgrid shader?
+const float grid_padding_x1 = 10;
+const float grid_padding_x2 = 10;
+const float grid_padding_y1 = 80;
+const float grid_padding_y2 = 10;
+
+const float button1_x = -30;
+const float button_y = 20;
+
 ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
 	const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba)
 	: Widget(SUBPALETTE_START), vp(vp), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), parent_scroll_handler(parent_scroll_handler),
@@ -509,9 +516,6 @@ ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler,
 	initialize_widget();
 	connect_input_handlers();
 	new_subpalette(); // always have at least one subpalette
-
-	Uniforms::send_1(grid_shader, "u_ColProportion", 1.0f / COL_COUNT);
-	Uniforms::send_1(grid_shader, "u_RowProportion", 1.0f / row_count());
 }
 
 ColorPalette::~ColorPalette()
@@ -551,7 +555,7 @@ void ColorPalette::process()
 void ColorPalette::send_vp()
 {
 	Uniforms::send_matrix3(color_square_shader, "u_VP", *vp);
-	Uniforms::send_matrix3(grid_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(grid_shader, "u_VP", grid_vp());
 	Uniforms::send_matrix3(outline_rect_shader, "u_VP", *vp);
 	Uniforms::send_matrix3(round_rect_shader, "u_VP", *vp);
 	sync_widget_with_vp();
@@ -575,7 +579,7 @@ void ColorPalette::new_subpalette()
 	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>());
 	current_subscheme = num_subpalettes() - 1;
 	current_subpalette().subscheme = scheme.subschemes[current_subscheme];
-	current_subpalette().self.transform.position.y = grid_offset_y();
+	current_subpalette().self.transform.position.y = subpalette_pos_y();
 	current_subpalette().reload_subscheme();
 }
 
@@ -647,9 +651,6 @@ void ColorPalette::connect_input_handlers()
 
 void ColorPalette::initialize_widget()
 {
-	const float button1_x = -30;
-	const float button_y = 170;
-
 	assign_widget(this, BACKGROUND, new RoundRect(&round_rect_shader));
 	rr_wget(*this, BACKGROUND).thickness = 0.25f;
 	rr_wget(*this, BACKGROUND).corner_radius = 10;
@@ -665,7 +666,7 @@ void ColorPalette::initialize_widget()
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
 	
-	sba.transform.position = { button1_x, button_y };
+	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";
 	sba.on_select = [this](StandardTButton&, const MouseButtonEvent& mb, Position) {
 		current_subpalette().override_current_color((*get_picker_rgba)());
@@ -730,7 +731,8 @@ void ColorPalette::sync_widget_with_vp()
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).send_vp();
 
 	UnitRenderable& ur = ur_wget(*this, BLACK_GRID);
-	WidgetPlacement global = grid_wp().relative_to(self.transform);
+	FlatTransform global = self.transform;
+	global.scale *= Scale(_col_count * SQUARE_SEP, _row_count * SQUARE_SEP);
 
 	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
 	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
@@ -742,19 +744,63 @@ void ColorPalette::sync_widget_with_vp()
 	ur.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1, 1 }));
 	ur.send_buffer();
 
+	// LATER is this necessary, or should only current subpalette be selected, and when selecting a new subpalette, sync it then.
 	for (size_t i = 0; i < num_subpalettes(); ++i)
 		get_subpalette(i).sync_with_palette();
+}
+
+void ColorPalette::set_grid_metrics(int col, int row, bool sync)
+{
+	_col_count = col;
+	_row_count = row;
+	grid_offset_y = -wp_at(BACKGROUND).transform.scale.y + grid_padding_y1 + grid_padding_y2 + (row - 1) * SQUARE_SEP + SQUARE_SIZE;
+
+	Uniforms::send_1(grid_shader, "u_ColProportion", 1.0f / col_count());
+	Uniforms::send_1(grid_shader, "u_RowProportion", 1.0f / row_count());
+	for (int i = 0; i < num_subpalettes(); ++i)
+		get_subpalette(i).self.transform.position.y = subpalette_pos_y();
+	if (sync)
+	{
+		sync_widget_with_vp();
+		Uniforms::send_matrix3(grid_shader, "u_VP", grid_vp());
+	}
 }
 
 void ColorPalette::set_size(Scale size, bool sync)
 {
 	wp_at(BACKGROUND).transform.scale = size;
 	rr_wget(*this, BACKGROUND).update_transform();
-	if (sync)
-		sync_widget_with_vp();
+	
+	wp_at(BUTTON_INSERT_NEW_COLOR).transform.position.y = absolute_y_off_bkg_top(button_y);
+	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).update_transform();
+	wp_at(BUTTON_OVERRIDE_COLOR).transform.position.y = absolute_y_off_bkg_top(button_y);
+	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).update_transform();
+
+	set_grid_metrics(std::max(1, (int)((size.x - SQUARE_SIZE - (grid_padding_x1 + grid_padding_x2)) / SQUARE_SEP) + 1),
+		std::max(1, (int)((size.y - SQUARE_SIZE - (grid_padding_y1 + grid_padding_y2)) / SQUARE_SEP) + 1), sync);
 }
 
 bool ColorPalette::cursor_in_bkg() const
 {
 	return children[BACKGROUND]->contains_screen_point(Machine.cursor_screen_pos(), *vp);
+}
+
+glm::mat3 ColorPalette::grid_vp() const
+{
+	return (*vp) * FlatTransform { global_scale() * 0.5f * Position{ grid_padding_x2 - grid_padding_x1, -grid_offset_y + grid_padding_y2 - grid_padding_y1 } }.matrix();
+}
+
+float ColorPalette::subpalette_pos_y() const
+{
+	return (-grid_offset_y + grid_padding_y2 - grid_padding_y1) * 0.5f;
+}
+
+float ColorPalette::absolute_y_off_bkg_top(float y) const
+{
+	return 0.5f * wp_at(BACKGROUND).transform.scale.y - y;
+}
+
+float ColorPalette::absolute_y_off_bkg_bot(float y) const
+{
+	return -0.5f * wp_at(BACKGROUND).transform.scale.y + y;
 }

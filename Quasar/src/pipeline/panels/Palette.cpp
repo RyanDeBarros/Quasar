@@ -26,6 +26,9 @@ static const ColorPalette& color_palette(const Palette* palette)
 	return cpl_wget(palette->widget, Palette::COLOR_PALETTE);
 }
 
+const Scale color_palette_scale = Scale(0.9f);
+const Scale color_picker_scale = Scale(0.9f);
+
 Palette::Palette()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
 	widget(_W_COUNT)
@@ -87,10 +90,10 @@ void Palette::render_widget()
 void Palette::initialize_widget()
 {
 	assign_widget(&widget, COLOR_PICKER, new ColorPicker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
-	widget.wp_at(COLOR_PICKER).transform.scale = Scale(0.9f);
+	widget.wp_at(COLOR_PICKER).transform.scale = Scale(color_picker_scale);
 
 	assign_widget(&widget, COLOR_PALETTE, new ColorPalette(&vp, Machine.palette_mb_handler, Machine.palette_key_handler, Machine.palette_scroll_handler, &update_primary_color, &get_picker_rgba));
-	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(0.9f);
+	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(color_palette_scale);
 }
 
 void Palette::subsend_background_vao() const
@@ -108,14 +111,20 @@ void Palette::_send_view()
 	vp = vp_matrix();
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
 
-	Scale color_picker_size{ 240, 420 };
-	color_picker(this).set_size(color_picker_size);
-	widget.wp_at(COLOR_PICKER).transform.position = { 0, bounds.clip().screen_h * 0.5f * Machine.inv_app_scale().y - color_picker_size.y * widget.wp_at(COLOR_PICKER).transform.scale.y * 0.5f - 20 };
+	float view_height = (to_view_coordinates({}) - to_view_coordinates({ 0, bounds.clip().screen_h })).y;
+	const float padding = 20;
+	const float free_space_y = view_height - 3 * padding;
+	const float color_picker_height = 420; // LATER palette min height is at least 420 + 3 * padding + min color palette height, or else scale Palette view down.
+	const float color_palette_height = free_space_y - color_picker_height * color_picker_scale.y;
+
+	Scale color_picker_size{ 240, color_picker_height };
+	color_picker(this).set_size(color_picker_size, false);
+	widget.wp_at(COLOR_PICKER).transform.position = { 0, 0.5f * view_height - color_picker_size.y * widget.wp_at(COLOR_PICKER).transform.scale.y * 0.5f - padding };
 	color_picker(this).send_vp();
 
-	Scale color_palette_size{ 240, 360 };
-	color_palette(this).set_size(color_palette_size);
-	widget.wp_at(COLOR_PALETTE).transform.position = { 0, -200 };
+	Scale color_palette_size{ 240, color_palette_height / color_palette_scale.y };
+	color_palette(this).set_size(color_palette_size, false);
+	widget.wp_at(COLOR_PALETTE).transform.position = { 0, -0.5f * view_height + color_palette_size.y * widget.wp_at(COLOR_PALETTE).transform.scale.y * 0.5f + padding };
 	color_palette(this).send_vp();
 	unbind_shader();
 }

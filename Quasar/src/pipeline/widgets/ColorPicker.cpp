@@ -53,8 +53,11 @@ const float button_h = 30;
 float button_left_x = -115;
 float button_top_y_1 = 205;
 float button_top_y_2 = 173;
-float button_sep_x = 7;
-
+float button_sep_x = 4.25f;
+const float button_quad_w = 55;
+const float button_wheel_w = 70;
+const float button_graphic_w = 80;
+const float button_rgb_w = 45;
 
 void ColorPicker::send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color)
 {
@@ -753,13 +756,14 @@ void ColorPicker::initialize_widget()
 
 	tba.is_hoverable = [this]() { return current_widget_control == -1; };
 	tba.text = "QUAD";
-	tba.transform.scale = { 60, button_h };
+	tba.transform.scale = { button_quad_w, button_h };
 	tba.is_hoverable = [this]() { return state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL) && current_widget_control == -1; };
 	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent&, Position) { set_state(State::GRAPHIC_QUAD); };
 	assign_widget(this, BUTTON_QUAD, new ToggleTButton(tba));
 	
 	tba.text = "WHEEL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
+	tba.transform.scale.x = button_wheel_w;
 	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent&, Position) { set_state(State::GRAPHIC_WHEEL); };
 	assign_widget(this, BUTTON_WHEEL, new ToggleTButton(tba));
 
@@ -770,14 +774,14 @@ void ColorPicker::initialize_widget()
 
 	tba.text = "GRAPHIC";
 	tba.transform.position = { button_left_x, button_top_y_1 };
-	tba.transform.scale.x = 72;
+	tba.transform.scale.x = button_graphic_w;
 	tba.is_hoverable = [this]() { return current_widget_control == -1; };
 	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent&, Position) { set_state(last_graphic_state); };
 	assign_widget(this, BUTTON_GRAPHIC, new ToggleTButton(tba));
 
 	tba.text = "RGB";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
-	tba.transform.scale.x = 45;
+	tba.transform.scale.x = button_rgb_w;
 	tba.on_select = [this](ToggleTButton&, const MouseButtonEvent&, Position) { set_state(State::SLIDER_RGB); };
 	assign_widget(this, BUTTON_RGB_SLIDER, new ToggleTButton(tba));
 
