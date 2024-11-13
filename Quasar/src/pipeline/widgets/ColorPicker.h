@@ -128,6 +128,7 @@ private:
 
 	float cached_scale1d = 0.0f;
 
+public:
 	// LATER use UMR when possible
 	enum : size_t
 	{
@@ -201,6 +202,7 @@ private:
 		_MAX_GRADIENT_COLORS
 	};
 
+private:
 	static void send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color);
 };
 

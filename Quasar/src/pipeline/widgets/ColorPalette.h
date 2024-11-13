@@ -162,6 +162,7 @@ private:
 	float absolute_y_off_bkg_top(float y) const;
 	float absolute_y_off_bkg_bot(float y) const;
 
+public:
 	enum : size_t
 	{
 		BACKGROUND,

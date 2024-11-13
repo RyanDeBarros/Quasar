@@ -13,6 +13,24 @@
 #include "../text/CommonFonts.h"
 #include "Button.h"
 
+static const size_t MAIN_TABBAR_BUTTONS[] {
+	ColorPicker::BUTTON_GRAPHIC,
+	ColorPicker::BUTTON_RGB_SLIDER,
+	ColorPicker::BUTTON_HSV_SLIDER,
+	ColorPicker::BUTTON_HSL_SLIDER
+};
+
+static const size_t ALL_BUTTONS[] {
+	ColorPicker::BUTTON_RGB_HEX_CODE,
+	ColorPicker::BUTTON_SWITCH_TXTFLD_MODE,
+	ColorPicker::BUTTON_QUAD,
+	ColorPicker::BUTTON_WHEEL,
+	ColorPicker::BUTTON_GRAPHIC,
+	ColorPicker::BUTTON_RGB_SLIDER,
+	ColorPicker::BUTTON_HSV_SLIDER,
+	ColorPicker::BUTTON_HSL_SLIDER
+};
+
 // ---------- LAYOUT ----------
 
 const float graphic_x = -15;
@@ -144,10 +162,8 @@ void ColorPicker::process()
 	process_mb_down_events();
 	if (cursor_in_bkg())
 	{
-		b_t_wget(*this, BUTTON_GRAPHIC).process();
-		b_t_wget(*this, BUTTON_RGB_SLIDER).process();
-		b_t_wget(*this, BUTTON_HSV_SLIDER).process();
-		b_t_wget(*this, BUTTON_HSL_SLIDER).process();
+		for (size_t button : MAIN_TABBAR_BUTTONS)
+			b_t_wget(*this, button).process();
 		b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).process();
 		if (state & State::SLIDER_RGB)
 			b_t_wget(*this, BUTTON_RGB_HEX_CODE).process();
@@ -159,10 +175,8 @@ void ColorPicker::process()
 	}
 	else
 	{
-		b_t_wget(*this, BUTTON_GRAPHIC).unhover();
-		b_t_wget(*this, BUTTON_RGB_SLIDER).unhover();
-		b_t_wget(*this, BUTTON_HSV_SLIDER).unhover();
-		b_t_wget(*this, BUTTON_HSL_SLIDER).unhover();
+		for (size_t button : MAIN_TABBAR_BUTTONS)
+			b_t_wget(*this, button).unhover();
 		b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).unhover();
 		if (state & State::SLIDER_RGB)
 			b_t_wget(*this, BUTTON_RGB_HEX_CODE).unhover();
@@ -1364,14 +1378,8 @@ void ColorPicker::sync_widget_with_vp()
 	{
 		cached_scale1d = sc;
 		rr_wget(*this, BACKGROUND).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_RGB_HEX_CODE).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_QUAD).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_WHEEL).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_GRAPHIC).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_RGB_SLIDER).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_HSV_SLIDER).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_HSL_SLIDER).update_corner_radius(sc).update_thickness(sc);
+		for (size_t button : ALL_BUTTONS)
+			b_t_wget(*this, button).update_corner_radius(sc).update_thickness(sc);
 	}
 	rr_wget(*this, BACKGROUND).update_transform().send_buffer();
 	tr_wget(*this, TEXT_ALPHA).send_vp(*vp);
@@ -1382,14 +1390,8 @@ void ColorPicker::sync_widget_with_vp()
 	tr_wget(*this, TEXT_SAT).send_vp(*vp);
 	tr_wget(*this, TEXT_VALUE).send_vp(*vp);
 	tr_wget(*this, TEXT_LIGHT).send_vp(*vp);
-	b_t_wget(*this, BUTTON_RGB_HEX_CODE).send_vp();
-	b_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE).send_vp();
-	b_t_wget(*this, BUTTON_QUAD).send_vp();
-	b_t_wget(*this, BUTTON_WHEEL).send_vp();
-	b_t_wget(*this, BUTTON_GRAPHIC).send_vp();
-	b_t_wget(*this, BUTTON_RGB_SLIDER).send_vp();
-	b_t_wget(*this, BUTTON_HSV_SLIDER).send_vp();
-	b_t_wget(*this, BUTTON_HSL_SLIDER).send_vp();
+	for (size_t button : ALL_BUTTONS)
+		b_t_wget(*this, button).send_vp();
 
 	gui_transform.scale = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
 	gui_transform.position = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, 0.5f }), *vp);

@@ -503,15 +503,22 @@ size_t ColorPalette::subpalette_index_in_widget(size_t pos) const
 	return SUBPALETTE_START + pos;
 }
 
+static const size_t BUTTONS[] = {
+	ColorPalette::BUTTON_OVERRIDE_COLOR,
+	ColorPalette::BUTTON_INSERT_NEW_COLOR,
+	ColorPalette::BUTTON_SUBPALETTE_NEW,
+	ColorPalette::BUTTON_SUBPALETTE_RENAME,
+	ColorPalette::BUTTON_SUBPALETTE_DELETE
+};
+
 const float grid_padding_x1 = 10;
 const float grid_padding_x2 = 10;
 const float grid_padding_y1 = 100;
 const float grid_padding_y2 = 10;
 
-const float button1_x = -30;
+const float button1_x = -110;
 const float button2_x = 25;
-const float button1_y = 10;
-const float button2_y = 55;
+const float button_y = 55;
 
 ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
 	const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba)
@@ -542,11 +549,8 @@ void ColorPalette::draw()
 	ur_wget(*this, BLACK_GRID).draw();
 	current_subpalette().draw_selectors();
 	// LATER use StandardIButton instead of StandardTButton
-	sb_t_wget(*this, BUTTON_OVERRIDE_COLOR).draw();
-	sb_t_wget(*this, BUTTON_INSERT_NEW_COLOR).draw();
-	sb_t_wget(*this, BUTTON_SUBPALETTE_NEW).draw();
-	sb_t_wget(*this, BUTTON_SUBPALETTE_RENAME).draw();
-	sb_t_wget(*this, BUTTON_SUBPALETTE_DELETE).draw();
+	for (size_t button : BUTTONS)
+		sb_t_wget(*this, button).draw();
 	if (imgui_editing || renaming_subpalette)
 		rr_wget(*this, BACKGROUND).draw();
 }
@@ -556,21 +560,14 @@ void ColorPalette::process()
 	if (!imgui_editing && !renaming_subpalette && cursor_in_bkg())
 	{
 		current_subpalette().process();
-		// TODO here and in color picker use static size_t[] arrays to loop over these types of repeat calls. For instance, name it BUTTONS[]
-		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).process();
-		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).process();
-		b_t_wget(*this, BUTTON_SUBPALETTE_NEW).process();
-		b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).process();
-		b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).process();
+		for (size_t button : BUTTONS)
+			b_t_wget(*this, button).process();
 	}
 	else
 	{
 		current_subpalette().unprocess();
-		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).unhover();
-		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).unhover();
-		b_t_wget(*this, BUTTON_SUBPALETTE_NEW).unhover();
-		b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).unhover();
-		b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).unhover();
+		for (size_t button : BUTTONS)
+			b_t_wget(*this, button).unhover();
 	}
 }
 
@@ -652,7 +649,7 @@ void ColorPalette::render_imgui()
 
 		ImGui::BeginDisabled(renaming_subpalette);
 
-		ImGui::SetNextItemWidth(200 * self.transform.scale.x);
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		if (ImGui::BeginCombo("##Subschemes", current_subpalette().subscheme->name.c_str()))
 		{
 			imgui_editing = true;
@@ -767,7 +764,7 @@ void ColorPalette::initialize_widget()
 	sba.is_hoverable = [this]() { return !imgui_editing && !renaming_subpalette; };
 	sba.is_selectable = [this](StandardTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT && !imgui_editing && !renaming_subpalette; };
 	
-	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button2_y) };
+	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";
 	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
 		current_subpalette().override_current_color((*get_picker_rgba)());
@@ -790,8 +787,7 @@ void ColorPalette::initialize_widget()
 	// LATER use image buttons
 	sba.frange = Fonts::label_regular;
 	sba.font_size = 22;
-	sba.transform.position = { button2_x, absolute_y_off_bkg_top(button1_y) };
-	// TODO put in same row as other buttons to give more room to dropdown width. Also make sure horizontal minimum display fits all buttons + dropdown. dropdown would then be able to occupy full width, without calling ImGui::SetNextItemWidth()
+	sba.transform.position.x = button2_x;
 	sba.text = "N";
 	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
 		new_subpalette();
@@ -852,18 +848,12 @@ void ColorPalette::sync_widget_with_vp()
 	{
 		cached_scale1d = sc;
 		rr_wget(*this, BACKGROUND).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_SUBPALETTE_NEW).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).update_corner_radius(sc).update_thickness(sc);
-		b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).update_corner_radius(sc).update_thickness(sc);
+		for (size_t button : BUTTONS)
+			b_t_wget(*this, button).update_corner_radius(sc).update_thickness(sc);
 	}
 	rr_wget(*this, BACKGROUND).update_transform().send_buffer();
-	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).send_vp();
-	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).send_vp();
-	b_t_wget(*this, BUTTON_SUBPALETTE_NEW).send_vp();
-	b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).send_vp();
-	b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).send_vp();
+	for (size_t button : BUTTONS)
+		b_t_wget(*this, button).send_vp();
 
 	UnitRenderable& ur = ur_wget(*this, BLACK_GRID);
 	FlatTransform global = self.transform;
@@ -913,16 +903,11 @@ void ColorPalette::set_size(Scale size, bool sync)
 	wp_at(BACKGROUND).transform.scale = size;
 	rr_wget(*this, BACKGROUND).update_transform();
 	
-	wp_at(BUTTON_INSERT_NEW_COLOR).transform.position.y = absolute_y_off_bkg_top(button2_y);
-	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).update_transform();
-	wp_at(BUTTON_OVERRIDE_COLOR).transform.position.y = absolute_y_off_bkg_top(button2_y);
-	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).update_transform();
-	wp_at(BUTTON_SUBPALETTE_NEW).transform.position.y = absolute_y_off_bkg_top(button1_y);
-	b_t_wget(*this, BUTTON_SUBPALETTE_NEW).update_transform();
-	wp_at(BUTTON_SUBPALETTE_RENAME).transform.position.y = absolute_y_off_bkg_top(button1_y);
-	b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).update_transform();
-	wp_at(BUTTON_SUBPALETTE_DELETE).transform.position.y = absolute_y_off_bkg_top(button1_y);
-	b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).update_transform();
+	for (size_t button : BUTTONS)
+	{
+		wp_at(button).transform.position.y = absolute_y_off_bkg_top(button_y);
+		b_t_wget(*this, button).update_transform();
+	}
 
 	set_grid_metrics(std::max(1, (int)((size.x - SQUARE_SIZE - (grid_padding_x1 + grid_padding_x2)) / SQUARE_SEP) + 1),
 		std::max(1, (int)((size.y - SQUARE_SIZE - (grid_padding_y1 + grid_padding_y2)) / SQUARE_SEP) + 1), sync);
