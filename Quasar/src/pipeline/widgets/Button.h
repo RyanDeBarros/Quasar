@@ -55,6 +55,11 @@ public:
 	const TextRender& text() const { return tr_wget(*this, TEXT); }
 };
 
+inline std::function<void(const MouseButtonEvent&, Position)> fconv_on_action(std::function<void()>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent&, Position) { f(); }; }
+inline std::function<void(const MouseButtonEvent&, Position)> fconv_on_action(std::function<void(const MouseButtonEvent&)>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { f(m); }; }
+
 inline TButton& b_t_wget(Widget& w, size_t i)
 {
 	return *w.get<TButton>(i);
@@ -81,8 +86,6 @@ struct TButtonGDesign
 	RGBA text_color = RGBA::WHITE;
 };
 
-struct StandardTButton;
-
 struct StandardTButtonArgs
 {
 	MouseButtonHandler* mb_parent;
@@ -102,11 +105,20 @@ struct StandardTButtonArgs
 	TButtonGDesign disabled = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f) };
 
 	std::function<bool()> is_hoverable = []() { return true; };
-	std::function<bool(StandardTButton&, const MouseButtonEvent&, Position)> is_selectable = [](StandardTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
-	std::function<void(StandardTButton&, const MouseButtonEvent&, Position)> on_select = [](StandardTButton&, const MouseButtonEvent&, Position) {};
+	std::function<bool(const MouseButtonEvent&, Position)> is_selectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	std::function<void(const MouseButtonEvent&, Position)> on_select = [](const MouseButtonEvent&, Position) {};
 
 	StandardTButtonArgs(MouseButtonHandler* mb_parent, Shader* rr_shader, glm::mat3* vp) : mb_parent(mb_parent), rr_shader(rr_shader), vp(vp) {}
 };
+
+inline std::function<bool(const MouseButtonEvent&, Position)> fconv_st_check(std::function<bool()>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent&, Position) { return f(); }; }
+inline std::function<bool(const MouseButtonEvent&, Position)> fconv_st_check(std::function<bool(const MouseButtonEvent&)>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { return f(m); }; }
+inline std::function<void(const MouseButtonEvent&, Position)> fconv_st_on_action(std::function<void()>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent&, Position) { f(); }; }
+inline std::function<void(const MouseButtonEvent&, Position)> fconv_st_on_action(std::function<void(const MouseButtonEvent&)>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { f(m); }; }
 
 struct StandardTButton : public TButton
 {
@@ -114,8 +126,8 @@ struct StandardTButton : public TButton
 	ButtonGState state = ButtonGState::_NONE;
 
 	std::function<bool()> is_hoverable;
-	std::function<bool(StandardTButton&, const MouseButtonEvent&, Position)> is_selectable;
-	std::function<void(StandardTButton&, const MouseButtonEvent&, Position)> on_select;
+	std::function<bool(const MouseButtonEvent&, Position)> is_selectable;
+	std::function<void(const MouseButtonEvent&, Position)> on_select;
 	
 	StandardTButton(const StandardTButtonArgs& args);
 
@@ -134,8 +146,6 @@ inline const StandardTButton& sb_t_wget(const Widget& w, size_t i)
 {
 	return *w.get<StandardTButton>(i);
 }
-
-struct ToggleTButton;
 
 struct ToggleTButtonArgs
 {
@@ -156,13 +166,22 @@ struct ToggleTButtonArgs
 	TButtonGDesign disabled = { RGBA(HSV(0.7f, 0.5f, 0.2f).to_rgb(), 1.0f), RGBA(HSV(0.7f, 0.3f, 0.3f).to_rgb(), 0.9f) };
 
 	std::function<bool()> is_hoverable = []() { return true; };
-	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_selectable = [](ToggleTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
-	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_select = [](ToggleTButton&, const MouseButtonEvent&, Position) {};
-	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_deselectable = [](ToggleTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
-	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_deselect = [](ToggleTButton&, const MouseButtonEvent&, Position) {};
+	std::function<bool(const MouseButtonEvent&, Position)> is_selectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	std::function<void(const MouseButtonEvent&, Position)> on_select = [](const MouseButtonEvent&, Position) {};
+	std::function<bool(const MouseButtonEvent&, Position)> is_deselectable = [](const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT; };
+	std::function<void(const MouseButtonEvent&, Position)> on_deselect = [](const MouseButtonEvent&, Position) {};
 
 	ToggleTButtonArgs(MouseButtonHandler* mb_parent, Shader* rr_shader, glm::mat3* vp) : mb_parent(mb_parent), rr_shader(rr_shader), vp(vp) {}
 };
+
+inline std::function<bool(const MouseButtonEvent&, Position)> fconv_tt_check(std::function<bool()>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent&, Position) { return f(); }; }
+inline std::function<bool(const MouseButtonEvent&, Position)> fconv_tt_check(std::function<bool(const MouseButtonEvent&)>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { return f(m); }; }
+inline std::function<void(const MouseButtonEvent&, Position)> fconv_tt_on_action(std::function<void()>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent&, Position) { f(); }; }
+inline std::function<void(const MouseButtonEvent&, Position)> fconv_tt_on_action(std::function<void(const MouseButtonEvent&)>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { f(m); }; }
 
 struct ToggleTButton : public TButton
 {
@@ -174,10 +193,10 @@ private:
 
 public:
 	std::function<bool()> is_hoverable;
-	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_selectable;
-	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_select;
-	std::function<bool(ToggleTButton&, const MouseButtonEvent&, Position)> is_deselectable;
-	std::function<void(ToggleTButton&, const MouseButtonEvent&, Position)> on_deselect;
+	std::function<bool(const MouseButtonEvent&, Position)> is_selectable;
+	std::function<void(const MouseButtonEvent&, Position)> on_select;
+	std::function<bool(const MouseButtonEvent&, Position)> is_deselectable;
+	std::function<void(const MouseButtonEvent&, Position)> on_deselect;
 
 	ToggleTButton(const ToggleTButtonArgs& args);
 

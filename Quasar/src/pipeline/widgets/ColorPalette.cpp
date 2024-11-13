@@ -760,26 +760,23 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 26;
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
-	// TODO create helper utility to convert std::function<void()> or std::function<void(MouseButtonEvent&)> to these various function signatures
 	sba.is_hoverable = [this]() { return !imgui_editing && !renaming_subpalette; };
-	sba.is_selectable = [this](StandardTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT && !imgui_editing && !renaming_subpalette; };
+	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_editing && !renaming_subpalette; });
 	
 	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";
-	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
-		current_subpalette().override_current_color((*get_picker_rgba)());
-		};
+	sba.on_select = fconv_st_on_action([this]() { current_subpalette().override_current_color((*get_picker_rgba)()); });
 	assign_widget(this, BUTTON_OVERRIDE_COLOR, new StandardTButton(sba));
 	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).text().self.transform.position = { 0.05f, -0.05f };
 	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).text().self.transform.scale *= 1.0f;
 
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "+";
-	sba.on_select = [this](StandardTButton&, const MouseButtonEvent& mb, Position) {
+	sba.on_select = fconv_st_on_action([this]() {
 		bool adjacent = !Machine.main_window->is_shift_pressed();
 		bool update_primary = Machine.main_window->is_ctrl_pressed();
 		current_subpalette().new_color((*get_picker_rgba)(), adjacent, update_primary);
-		};
+		});
 	assign_widget(this, BUTTON_INSERT_NEW_COLOR, new StandardTButton(sba));
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.position = { 0.1f, -0.15f };
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.scale *= 1.4f;
@@ -789,24 +786,17 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 22;
 	sba.transform.position.x = button2_x;
 	sba.text = "N";
-	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
-		new_subpalette();
-		};
+	sba.on_select = fconv_st_on_action([this]() { new_subpalette(); });
 	assign_widget(this, BUTTON_SUBPALETTE_NEW, new StandardTButton(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "R";
-	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
-		renaming_subpalette = true;
-		renaming_subpalette_start = true;
-		};
+	sba.on_select = fconv_st_on_action([this]() { renaming_subpalette = true; renaming_subpalette_start = true; });
 	assign_widget(this, BUTTON_SUBPALETTE_RENAME, new StandardTButton(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "D";
-	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
-		delete_subpalette(current_subscheme);
-		};
+	sba.on_select = fconv_st_on_action([this]() { delete_subpalette(current_subscheme); });
 	assign_widget(this, BUTTON_SUBPALETTE_DELETE, new StandardTButton(sba));
 }
 

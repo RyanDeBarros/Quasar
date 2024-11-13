@@ -173,14 +173,14 @@ StandardTButton::StandardTButton(const StandardTButtonArgs& args)
 		Machine.main_window->release_cursor(&wh);
 		};
 	on_press = [this](const MouseButtonEvent& mb, Position pos) {
-		if (is_selectable(*this, mb, pos))
+		if (is_selectable(mb, pos))
 		{
 			send_state(ButtonGState::PRESSED);
 			Machine.main_window->release_cursor(&wh);
 		}
 		};
 	on_release = [this](const MouseButtonEvent& mb, Position pos) {
-		if (is_selectable(*this, mb, pos))
+		if (is_selectable(mb, pos))
 			select(mb, pos);
 		};
 }
@@ -189,7 +189,7 @@ void StandardTButton::select(const MouseButtonEvent& mb, Position local_pos)
 {
 	send_state(ButtonGState::NORMAL);
 	hovering = false;
-	on_select(*this, mb, local_pos);
+	on_select(mb, local_pos);
 }
 
 void StandardTButton::send_state(ButtonGState _state)
@@ -259,7 +259,7 @@ ToggleTButton::ToggleTButton(const ToggleTButtonArgs& args)
 		Machine.main_window->release_cursor(&wh);
 		};
 	on_press = [this](const MouseButtonEvent& mb, Position pos) {
-		if ((selected && is_deselectable(*this, mb, pos)) || (!selected && is_selectable(*this, mb, pos)))
+		if ((selected && is_deselectable(mb, pos)) || (!selected && is_selectable(mb, pos)))
 		{
 			send_state(ButtonGState::PRESSED);
 			Machine.main_window->release_cursor(&wh);
@@ -268,14 +268,14 @@ ToggleTButton::ToggleTButton(const ToggleTButtonArgs& args)
 	on_release = [this](const MouseButtonEvent& mb, Position pos) {
 		if (selected)
 		{
-			if (is_deselectable(*this, mb, pos))
+			if (is_deselectable(mb, pos))
 				deselect(mb, pos);
 			else
 				unclick();
 		}
 		else
 		{
-			if (is_selectable(*this, mb, pos))
+			if (is_selectable(mb, pos))
 				select(mb, pos);
 			else
 				unclick();
@@ -290,7 +290,7 @@ void ToggleTButton::select(const MouseButtonEvent& mb, Position local_pos)
 	selected = true;
 	send_state(ButtonGState::PRESSED);
 	hovering = false;
-	on_select(*this, mb, local_pos);
+	on_select(mb, local_pos);
 }
 
 void ToggleTButton::deselect(const MouseButtonEvent& mb, Position local_pos)
@@ -300,7 +300,7 @@ void ToggleTButton::deselect(const MouseButtonEvent& mb, Position local_pos)
 	selected = false;
 	send_state(ButtonGState::NORMAL);
 	hovering = false;
-	on_deselect(*this, mb, local_pos);
+	on_deselect(mb, local_pos);
 }
 
 void ToggleTButton::unclick()
@@ -355,7 +355,7 @@ void ToggleTButtonGroup::init(std::unordered_map<size_t, ToggleTButton*>&& _butt
 {
 	buttons = std::move(_buttons);
 	for (auto iter = buttons.begin(); iter != buttons.end(); ++iter)
-		iter->second->is_deselectable = [](ToggleTButton&, const MouseButtonEvent&, Position) { return false; };
+		iter->second->is_deselectable = [](const MouseButtonEvent&, Position) { return false; };
 	current_btn = starting_btn;
 	buttons.find(current_btn)->second->select();
 }
