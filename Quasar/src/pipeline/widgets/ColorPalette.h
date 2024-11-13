@@ -59,6 +59,14 @@ struct ColorSubpalette : public Widget
 	void remove_square_under_cursor(bool send_vb);
 	void clean_extra_buffer_space();
 
+	bool move_in_1d;
+	int moving_color = -1;
+	bool moving_color_start = false;
+
+	void begin_moving_color_under_cursor(bool move_in_1d);
+	void stop_moving_color();
+	bool is_moving_a_color() const { return moving_color >= 0; }
+
 	enum : size_t
 	{
 		SQUARES,

@@ -4,18 +4,15 @@
 
 #include "Color.h"
 
-class ColorSubscheme
+struct ColorSubscheme
 {
 	std::vector<RGBA> colors;
 
-public:
 	ColorSubscheme(const std::string& name, const std::vector<RGBA>& colors = {}) : name(name), colors(colors) {}
 	ColorSubscheme(const std::string& name, std::vector<RGBA>&& colors) : name(name), colors(std::move(colors)) {}
 	ColorSubscheme(std::string&& name, const std::vector<RGBA>& colors = {}) : name(std::move(name)), colors(colors) {}
 	ColorSubscheme(std::string&& name, std::vector<RGBA>&& colors) : name(std::move(name)), colors(std::move(colors)) {}
 	
-	const std::vector<RGBA>& get_colors() const { return colors; }
-
 	static const size_t MAX_NAME_LENGTH = 24;
 
 	std::string name;
@@ -45,10 +42,7 @@ private:
 	Sort _sort = { SortingPolicy::NONE, true };
 	
 public:
-	RGBA* at(size_t i);
-	const RGBA* at(size_t i) const;
 	void remove(size_t i);
-	void insert(RGBA color);
 	void insert(RGBA color, size_t pos);
 	void sort(Sort sort);
 	size_t first_index_of(RGBA color);

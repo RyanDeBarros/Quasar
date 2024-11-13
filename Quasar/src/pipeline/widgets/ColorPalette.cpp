@@ -55,13 +55,13 @@ const ColorPalette& ColorSubpalette::palette() const
 
 void ColorSubpalette::reload_subscheme()
 {
-	if (subscheme->get_colors().empty())
-		subscheme->insert(RGBA::WHITE);
+	if (subscheme->colors.empty())
+		subscheme->colors.push_back(RGBA::WHITE);
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	squares.varr.clear();
 	squares.iarr.clear();
-	squares.set_num_vertices(subscheme->get_colors().size() * 4);
-	squares.push_back_quads(subscheme->get_colors().size());
+	squares.set_num_vertices(subscheme->colors.size() * 4);
+	squares.push_back_quads(subscheme->colors.size());
 	squares.send_both_buffers_resized();
 	sync_with_palette();
 	update_primary_color_in_picker();
@@ -153,7 +153,7 @@ void ColorSubpalette::resync_alternate_selector()
 void ColorSubpalette::sync_with_palette()
 {
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	size_t num_colors = subscheme->get_colors().size();
+	size_t num_colors = subscheme->colors.size();
 	for (size_t i = 0; i < num_colors; ++i)
 		setup_color_buffer(i, squares);
 	squares.send_vertex_buffer();
@@ -169,7 +169,7 @@ void ColorSubpalette::setup_color_buffer(size_t i, IndexedRenderable& squares) c
 	squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
 	squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
 	squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-	glm::vec4 color = subscheme->get_colors()[i].as_vec();
+	glm::vec4 color = subscheme->colors[i].as_vec();
 	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(color));
 	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(color));
 	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(color));
@@ -183,14 +183,51 @@ void ColorSubpalette::setup_color_buffer(size_t i)
 
 void ColorSubpalette::process()
 {
-	hover_index = -1;
-	if (get_visible_square_under_pos(cursor_world_pos(), hover_index))
+	if (!is_moving_a_color())
 	{
-		WidgetPlacement new_wp = global_square_wp(hover_index);
-		if (hover_wp != new_wp)
+		hover_index = -1;
+		if (get_visible_square_under_pos(cursor_world_pos(), hover_index))
 		{
-			hover_wp = new_wp;
-			sync_hover_selector();
+			WidgetPlacement new_wp = global_square_wp(hover_index);
+			if (hover_wp != new_wp)
+			{
+				hover_wp = new_wp;
+				sync_hover_selector();
+			}
+		}
+	}
+	else
+	{
+		if (moving_color_start)
+		{
+			moving_color_start = false;
+			unprocess();
+		}
+		int target = -1;
+		if (get_visible_square_under_pos(cursor_world_pos(), target) && target != moving_color)
+		{
+			if (move_in_1d)
+			{
+				if (target < moving_color)
+				{
+					std::rotate(subscheme->colors.begin() + target, subscheme->colors.begin() + moving_color, subscheme->colors.begin() + moving_color + 1);
+					for (int i = target; i <= moving_color; ++i)
+						send_color(i);
+				}
+				else
+				{
+					std::rotate(subscheme->colors.begin() + moving_color, subscheme->colors.begin() + moving_color + 1, subscheme->colors.begin() + target + 1);
+					for (int i = moving_color; i <= target; ++i)
+						send_color(i);
+				}
+			}
+			else
+			{
+				std::swap(subscheme->colors[target], subscheme->colors[moving_color]);
+				send_color(target);
+				send_color(moving_color);
+			}
+			moving_color = target;
 		}
 	}
 }
@@ -254,7 +291,7 @@ bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) con
 		return false;
 
 	int i = ix + iy * palette().col_count() + first_square();
-	if (i >= subscheme->get_colors().size())
+	if (i >= subscheme->colors.size())
 		return false;
 
 	index = i;
@@ -271,12 +308,12 @@ void ColorSubpalette::switch_primary_and_alternate()
 
 void ColorSubpalette::update_primary_color_in_picker() const
 {
-	(*palette().primary_color_update)(subscheme->get_colors()[primary_index]);
+	(*palette().primary_color_update)(subscheme->colors[primary_index]);
 }
 
 void ColorSubpalette::scroll_by(int delta)
 {
-	int new_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->get_colors().size(), palette().col_count()) - palette().row_count()));
+	int new_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->colors.size(), palette().col_count()) - palette().row_count()));
 	if (new_offset != scroll_offset)
 	{
 		scroll_offset = new_offset;
@@ -300,7 +337,7 @@ void ColorSubpalette::scroll_to_view(int i)
 
 void ColorSubpalette::scroll_down_full()
 {
-	int new_offset = std::max(0, ceil_divide((int)subscheme->get_colors().size(), palette().col_count()) - palette().row_count());
+	int new_offset = std::max(0, ceil_divide((int)subscheme->colors.size(), palette().col_count()) - palette().row_count());
 	if (new_offset != scroll_offset)
 	{
 		scroll_offset = new_offset;
@@ -327,7 +364,7 @@ int ColorSubpalette::first_square() const
 
 int ColorSubpalette::num_squares_visible() const
 {
-	int leftover = (int)subscheme->get_colors().size() - first_square();
+	int leftover = (int)subscheme->colors.size() - first_square();
 	return std::clamp(leftover, 0, palette().col_count() * palette().row_count());
 }
 
@@ -343,9 +380,9 @@ Position ColorSubpalette::cursor_world_pos() const
 
 void ColorSubpalette::override_current_color(RGBA color)
 {
-	if (color != subscheme->get_colors()[primary_index])
+	if (color != subscheme->colors[primary_index])
 	{
-		*subscheme->at(primary_index) = color;
+		subscheme->colors[primary_index] = color;
 		send_color(primary_index, color);
 	}
 }
@@ -366,7 +403,7 @@ void ColorSubpalette::new_color(RGBA color, bool adjacent, bool update_primary)
 		squares.push_back_quads(1);
 		setup_color_buffer(primary_index + 1, squares);
 
-		size_t num_colors = subscheme->get_colors().size();
+		size_t num_colors = subscheme->colors.size();
 		for (size_t i = primary_index + 2; i < num_colors; ++i)
 		{
 			WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
@@ -387,18 +424,18 @@ void ColorSubpalette::new_color(RGBA color, bool adjacent, bool update_primary)
 	}
 	else
 	{
-		subscheme->insert(color);
+		subscheme->colors.push_back(color);
 
 		IndexedRenderable& squares = ir_wget(*this, SQUARES);
 		squares.push_back_vertices(4);
 		squares.push_back_quads(1);
-		setup_color_buffer(subscheme->get_colors().size() - 1, squares);
+		setup_color_buffer(subscheme->colors.size() - 1, squares);
 
 		squares.send_both_buffers_resized();
 
 		if (update_primary)
 		{
-			primary_index = (int)subscheme->get_colors().size() - 1;
+			primary_index = (int)subscheme->colors.size() - 1;
 			resync_primary_selector();
 			if (primary_index > first_square() + num_squares_visible())
 				scroll_down_full();
@@ -425,7 +462,7 @@ void ColorSubpalette::send_color(size_t i, RGBA color)
 void ColorSubpalette::send_color(size_t i)
 {
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	glm::vec4 rgba = subscheme->get_colors()[i].as_vec();
+	glm::vec4 rgba = subscheme->colors[i].as_vec();
 	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba));
 	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba));
 	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba));
@@ -445,37 +482,53 @@ void ColorSubpalette::remove_square_under_cursor(bool send_vb)
 	subscheme->remove(index);
 	
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	size_t num_colors = subscheme->get_colors().size();
+	size_t num_colors = subscheme->colors.size();
 	for (size_t i = index; i < num_colors; ++i)
 		setup_color_buffer(i, squares);
 
 	if (send_vb)
 		squares.send_vertex_buffer();
 
-	if (primary_index >= subscheme->get_colors().size())
+	if (primary_index >= subscheme->colors.size())
 	{
-		primary_index = (int)subscheme->get_colors().size() - 1;
+		primary_index = (int)subscheme->colors.size() - 1;
 		resync_primary_selector();
 		update_primary_color_in_picker();
 	}
 	else if (index <= primary_index)
 		update_primary_color_in_picker();
-	if (alternate_index >= subscheme->get_colors().size())
+	if (alternate_index >= subscheme->colors.size())
 	{
-		alternate_index = (int)subscheme->get_colors().size() - 1;
+		alternate_index = (int)subscheme->colors.size() - 1;
 		resync_alternate_selector();
 	}
 }
 
 void ColorSubpalette::clean_extra_buffer_space()
 {
-	int end = (int)subscheme->get_colors().size();
+	int end = (int)subscheme->colors.size();
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	if (squares.num_vertices() < end * 4)
 		return;
 	squares.remove_from_varr(end * 4);
 	squares.remove_from_iarr(end * 6);
 	squares.send_both_buffers_resized();
+}
+
+void ColorSubpalette::begin_moving_color_under_cursor(bool _1d)
+{
+	if (get_visible_square_under_pos(cursor_world_pos(), moving_color))
+	{
+		move_in_1d = _1d;
+		moving_color_start = true;
+	}
+	else
+		moving_color = -1;
+}
+
+void ColorSubpalette::stop_moving_color()
+{
+	moving_color = -1;
 }
 
 ColorSubpalette& ColorPalette::get_subpalette(size_t pos)
@@ -647,7 +700,7 @@ void ColorPalette::render_imgui()
 
 		imgui_editing = false;
 
-		ImGui::BeginDisabled(renaming_subpalette);
+		ImGui::BeginDisabled(renaming_subpalette || current_subpalette().is_moving_a_color());
 
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
 		if (ImGui::BeginCombo("##Subschemes", current_subpalette().subscheme->name.c_str()))
@@ -693,10 +746,19 @@ void ColorPalette::connect_input_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
-		if (imgui_editing || renaming_subpalette || mb.action != IAction::RELEASE || !cursor_in_bkg())
+		if (mb.action == IAction::RELEASE && mb.button != MouseButton::RIGHT && current_subpalette().is_moving_a_color())
+			current_subpalette().stop_moving_color();
+		if (imgui_editing || renaming_subpalette || !cursor_in_bkg())
 			return;
-		else if (!(mb.mods & Mods::CONTROL))
+		else if (mb.action == IAction::RELEASE && mb.button == MouseButton::LEFT && (mb.mods & Mods::CONTROL))
 		{
+			// delete color
+			current_subpalette().remove_square_under_cursor(false); // false because of clean_extra_buffer_space() on next line 
+			current_subpalette().clean_extra_buffer_space();
+		}
+		else if (mb.action == IAction::RELEASE && !Machine.main_window->is_key_pressed(Key::SPACE))
+		{
+			// select primary/alternate color
 			if (mb.button == MouseButton::LEFT)
 			{
 				if (current_subpalette().check_primary())
@@ -711,10 +773,10 @@ void ColorPalette::connect_input_handlers()
 					mb.consumed = true;
 			}
 		}
-		else if (mb.button == MouseButton::LEFT)
+		else if (mb.action == IAction::PRESS && (mb.button == MouseButton::MIDDLE || (mb.button == MouseButton::LEFT && Machine.main_window->is_key_pressed(Key::SPACE))))
 		{
-			current_subpalette().remove_square_under_cursor(false); // false because of clean_extra_buffer_space() on next line 
-			current_subpalette().clean_extra_buffer_space();
+			// move color without selecting
+			current_subpalette().begin_moving_color_under_cursor(!(mb.mods & Mods::ALT));
 		}
 		};
 	parent_key_handler.children.push_back(&key_handler);
@@ -760,8 +822,8 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 26;
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
-	sba.is_hoverable = [this]() { return !imgui_editing && !renaming_subpalette; };
-	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_editing && !renaming_subpalette; });
+	sba.is_hoverable = [this]() { return !imgui_editing && !renaming_subpalette && !current_subpalette().is_moving_a_color(); };
+	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_editing && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
 	
 	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";

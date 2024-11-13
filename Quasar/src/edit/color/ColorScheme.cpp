@@ -1,30 +1,9 @@
 #include "ColorScheme.h"
 
-RGBA* ColorSubscheme::at(size_t i)
-{
-	if (i < colors.size())
-		return &colors[i];
-	else
-		return nullptr;
-}
-
-const RGBA* ColorSubscheme::at(size_t i) const
-{
-	if (i < colors.size())
-		return &colors[i];
-	else
-		return nullptr;
-}
-
 void ColorSubscheme::remove(size_t i)
 {
 	if (i < colors.size())
 		colors.erase(colors.begin() + i);
-}
-
-void ColorSubscheme::insert(RGBA color)
-{
-	colors.push_back(color);
 }
 
 void ColorSubscheme::insert(RGBA color, size_t pos)
