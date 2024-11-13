@@ -509,7 +509,9 @@ const float grid_padding_y1 = 100;
 const float grid_padding_y2 = 10;
 
 const float button1_x = -30;
-const float button_y = 55;
+const float button2_x = 25;
+const float button1_y = 10;
+const float button2_y = 55;
 
 ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
 	const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba)
@@ -522,7 +524,7 @@ ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler,
 {
 	initialize_widget();
 	connect_input_handlers();
-	new_subpalette("scheme#0"); // always have at least one subpalette
+	new_subpalette(); // always have at least one subpalette
 }
 
 ColorPalette::~ColorPalette()
@@ -542,23 +544,33 @@ void ColorPalette::draw()
 	// LATER use StandardIButton instead of StandardTButton
 	sb_t_wget(*this, BUTTON_OVERRIDE_COLOR).draw();
 	sb_t_wget(*this, BUTTON_INSERT_NEW_COLOR).draw();
-	if (imgui_editing)
+	sb_t_wget(*this, BUTTON_SUBPALETTE_NEW).draw();
+	sb_t_wget(*this, BUTTON_SUBPALETTE_RENAME).draw();
+	sb_t_wget(*this, BUTTON_SUBPALETTE_DELETE).draw();
+	if (imgui_editing || renaming_subpalette)
 		rr_wget(*this, BACKGROUND).draw();
 }
 
 void ColorPalette::process()
 {
-	if (!imgui_editing && cursor_in_bkg())
+	if (!imgui_editing && !renaming_subpalette && cursor_in_bkg())
 	{
 		current_subpalette().process();
+		// TODO here and in color picker use static size_t[] arrays to loop over these types of repeat calls. For instance, name it BUTTONS[]
 		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).process();
 		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).process();
+		b_t_wget(*this, BUTTON_SUBPALETTE_NEW).process();
+		b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).process();
+		b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).process();
 	}
 	else
 	{
 		current_subpalette().unprocess();
 		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).unhover();
 		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).unhover();
+		b_t_wget(*this, BUTTON_SUBPALETTE_NEW).unhover();
+		b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).unhover();
+		b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).unhover();
 	}
 }
 
@@ -583,11 +595,13 @@ void ColorPalette::import_color_scheme(ColorScheme&& color_scheme)
 	import_color_scheme();
 }
 
-void ColorPalette::new_subpalette(std::string&& name)
+void ColorPalette::new_subpalette()
 {
+	// LATER import default subscheme here
 	attach_widget(this, new ColorSubpalette(&color_square_shader, &outline_rect_shader));
-	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>(std::move(name)));
-	switch_to_subpalette(num_subpalettes() - 1);
+	size_t last = num_subpalettes() - 1;
+	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>("default#" + std::to_string(last - 1)));
+	switch_to_subpalette(last);
 	current_subpalette().subscheme = scheme.subschemes[current_subscheme];
 	current_subpalette().self.transform.position.y = subpalette_pos_y();
 	current_subpalette().reload_subscheme();
@@ -600,7 +614,7 @@ void ColorPalette::delete_subpalette(size_t pos)
 	detach_widget(this, SUBPALETTE_START + pos);
 	scheme.subschemes.erase(scheme.subschemes.begin() + pos);
 	if (num_subpalettes() == 0)
-		new_subpalette("default");
+		new_subpalette();
 	if (current_subscheme >= num_subpalettes())
 		current_subscheme = num_subpalettes() - 1;
 }
@@ -636,7 +650,9 @@ void ColorPalette::render_imgui()
 
 		imgui_editing = false;
 
-		ImGui::SetNextItemWidth(180 * self.transform.scale.x);
+		ImGui::BeginDisabled(renaming_subpalette);
+
+		ImGui::SetNextItemWidth(200 * self.transform.scale.x);
 		if (ImGui::BeginCombo("##Subschemes", current_subpalette().subscheme->name.c_str()))
 		{
 			imgui_editing = true;
@@ -651,6 +667,26 @@ void ColorPalette::render_imgui()
 			ImGui::EndCombo();
 		}
 
+		ImGui::EndDisabled();
+
+		if (renaming_subpalette)
+		{
+			if (renaming_subpalette_start)
+			{
+				renaming_subpalette_start = false;
+				ImGui::SetKeyboardFocusHere();
+				memset(rename_buf, '\0', ColorSubscheme::MAX_NAME_LENGTH);
+				memcpy(rename_buf, current_subpalette().subscheme->name.c_str(), std::min(current_subpalette().subscheme->name.size(), ColorSubscheme::MAX_NAME_LENGTH));
+			}
+			ImGui::InputText("##rename-input", rename_buf, ColorSubscheme::MAX_NAME_LENGTH);
+			if (ImGui::IsItemDeactivated())
+			{
+				renaming_subpalette = false;
+				if (!Machine.main_window->is_key_pressed(Key::ESCAPE))
+					current_subpalette().subscheme->name = rename_buf;
+			}
+		}
+
 		ImGui::SetWindowFontScale(font_window_scale);
 		ImGui::End();
 	}
@@ -660,9 +696,9 @@ void ColorPalette::connect_input_handlers()
 {
 	parent_mb_handler.children.push_back(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
-		if (imgui_editing || mb.action != IAction::RELEASE || !cursor_in_bkg())
+		if (imgui_editing || renaming_subpalette || mb.action != IAction::RELEASE || !cursor_in_bkg())
 			return;
-		if (!(mb.mods & Mods::CONTROL))
+		else if (!(mb.mods & Mods::CONTROL))
 		{
 			if (mb.button == MouseButton::LEFT)
 			{
@@ -686,15 +722,21 @@ void ColorPalette::connect_input_handlers()
 		};
 	parent_key_handler.children.push_back(&key_handler);
 	key_handler.callback = [this](const KeyEvent& k) {
-		if (!imgui_editing && k.action == IAction::RELEASE && k.key == Key::X)
+		if (!imgui_editing && !renaming_subpalette && k.action == IAction::RELEASE && k.key == Key::X)
 		{
 			k.consumed = true;
 			current_subpalette().switch_primary_and_alternate();
 		}
+		else if (renaming_subpalette && !imgui_editing && k.action == IAction::PRESS && k.key == Key::ESCAPE)
+		{
+			k.consumed = true;
+			renaming_subpalette = false;
+			renaming_subpalette_start = false;
+		}
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {
-		if (!imgui_editing && cursor_in_bkg())
+		if (!imgui_editing && !renaming_subpalette && cursor_in_bkg())
 		{
 			s.consumed = true;
 			scroll_backlog -= s.yoff;
@@ -721,12 +763,13 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 26;
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
-	sba.is_hoverable = [this]() { return !imgui_editing; };
-	sba.is_selectable = [this](StandardTButton&, const MouseButtonEvent&, Position) { return !imgui_editing; }; // TODO create helper utility to convert std::function<void()> to these various function signatures
+	// TODO create helper utility to convert std::function<void()> or std::function<void(MouseButtonEvent&)> to these various function signatures
+	sba.is_hoverable = [this]() { return !imgui_editing && !renaming_subpalette; };
+	sba.is_selectable = [this](StandardTButton&, const MouseButtonEvent& mb, Position) { return mb.button == MouseButton::LEFT && !imgui_editing && !renaming_subpalette; };
 	
-	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
+	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button2_y) };
 	sba.text = "↓";
-	sba.on_select = [this](StandardTButton&, const MouseButtonEvent& mb, Position) {
+	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
 		current_subpalette().override_current_color((*get_picker_rgba)());
 		};
 	assign_widget(this, BUTTON_OVERRIDE_COLOR, new StandardTButton(sba));
@@ -743,6 +786,32 @@ void ColorPalette::initialize_widget()
 	assign_widget(this, BUTTON_INSERT_NEW_COLOR, new StandardTButton(sba));
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.position = { 0.1f, -0.15f };
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.scale *= 1.4f;
+
+	// LATER use image buttons
+	sba.frange = Fonts::label_regular;
+	sba.font_size = 22;
+	sba.transform.position = { button2_x, absolute_y_off_bkg_top(button1_y) };
+	// TODO put in same row as other buttons to give more room to dropdown width. Also make sure horizontal minimum display fits all buttons + dropdown. dropdown would then be able to occupy full width, without calling ImGui::SetNextItemWidth()
+	sba.text = "N";
+	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
+		new_subpalette();
+		};
+	assign_widget(this, BUTTON_SUBPALETTE_NEW, new StandardTButton(sba));
+	
+	sba.transform.position.x += sba.transform.scale.x;
+	sba.text = "R";
+	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
+		renaming_subpalette = true;
+		renaming_subpalette_start = true;
+		};
+	assign_widget(this, BUTTON_SUBPALETTE_RENAME, new StandardTButton(sba));
+	
+	sba.transform.position.x += sba.transform.scale.x;
+	sba.text = "D";
+	sba.on_select = [this](StandardTButton&, const MouseButtonEvent&, Position) {
+		delete_subpalette(current_subscheme);
+		};
+	assign_widget(this, BUTTON_SUBPALETTE_DELETE, new StandardTButton(sba));
 }
 
 void ColorPalette::import_color_scheme()
@@ -785,10 +854,16 @@ void ColorPalette::sync_widget_with_vp()
 		rr_wget(*this, BACKGROUND).update_corner_radius(sc).update_thickness(sc);
 		b_t_wget(*this, BUTTON_OVERRIDE_COLOR).update_corner_radius(sc).update_thickness(sc);
 		b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_SUBPALETTE_NEW).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).update_corner_radius(sc).update_thickness(sc);
+		b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).update_corner_radius(sc).update_thickness(sc);
 	}
 	rr_wget(*this, BACKGROUND).update_transform().send_buffer();
 	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).send_vp();
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).send_vp();
+	b_t_wget(*this, BUTTON_SUBPALETTE_NEW).send_vp();
+	b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).send_vp();
+	b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).send_vp();
 
 	UnitRenderable& ur = ur_wget(*this, BLACK_GRID);
 	FlatTransform global = self.transform;
@@ -838,10 +913,16 @@ void ColorPalette::set_size(Scale size, bool sync)
 	wp_at(BACKGROUND).transform.scale = size;
 	rr_wget(*this, BACKGROUND).update_transform();
 	
-	wp_at(BUTTON_INSERT_NEW_COLOR).transform.position.y = absolute_y_off_bkg_top(button_y);
+	wp_at(BUTTON_INSERT_NEW_COLOR).transform.position.y = absolute_y_off_bkg_top(button2_y);
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).update_transform();
-	wp_at(BUTTON_OVERRIDE_COLOR).transform.position.y = absolute_y_off_bkg_top(button_y);
+	wp_at(BUTTON_OVERRIDE_COLOR).transform.position.y = absolute_y_off_bkg_top(button2_y);
 	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).update_transform();
+	wp_at(BUTTON_SUBPALETTE_NEW).transform.position.y = absolute_y_off_bkg_top(button1_y);
+	b_t_wget(*this, BUTTON_SUBPALETTE_NEW).update_transform();
+	wp_at(BUTTON_SUBPALETTE_RENAME).transform.position.y = absolute_y_off_bkg_top(button1_y);
+	b_t_wget(*this, BUTTON_SUBPALETTE_RENAME).update_transform();
+	wp_at(BUTTON_SUBPALETTE_DELETE).transform.position.y = absolute_y_off_bkg_top(button1_y);
+	b_t_wget(*this, BUTTON_SUBPALETTE_DELETE).update_transform();
 
 	set_grid_metrics(std::max(1, (int)((size.x - SQUARE_SIZE - (grid_padding_x1 + grid_padding_x2)) / SQUARE_SEP) + 1),
 		std::max(1, (int)((size.y - SQUARE_SIZE - (grid_padding_y1 + grid_padding_y2)) / SQUARE_SEP) + 1), sync);

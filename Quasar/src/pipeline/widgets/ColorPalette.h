@@ -103,6 +103,10 @@ class ColorPalette : public Widget
 
 	FlatTransform gui_transform;
 	bool imgui_editing;
+	
+	bool renaming_subpalette = false;
+	bool renaming_subpalette_start = false;
+	char rename_buf[ColorSubscheme::MAX_NAME_LENGTH] = "";
 
 public:
 	ColorSubpalette& get_subpalette(size_t pos);
@@ -137,7 +141,7 @@ public:
 	void send_vp();
 	void import_color_scheme(const ColorScheme& color_scheme);
 	void import_color_scheme(ColorScheme&& color_scheme);
-	void new_subpalette(std::string&& name);
+	void new_subpalette();
 	void delete_subpalette(size_t pos);
 	void switch_to_subpalette(size_t pos);
 	size_t num_subpalettes() const;
@@ -164,6 +168,9 @@ private:
 		BLACK_GRID,
 		BUTTON_OVERRIDE_COLOR,
 		BUTTON_INSERT_NEW_COLOR,
+		BUTTON_SUBPALETTE_NEW,
+		BUTTON_SUBPALETTE_RENAME,
+		BUTTON_SUBPALETTE_DELETE,
 		SUBPALETTE_START
 	};
 };

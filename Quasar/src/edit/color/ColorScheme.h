@@ -16,6 +16,8 @@ public:
 	
 	const std::vector<RGBA>& get_colors() const { return colors; }
 
+	static const size_t MAX_NAME_LENGTH = 24;
+
 	std::string name;
 
 	enum class SortingPolicy : char
@@ -41,8 +43,8 @@ public:
 
 private:
 	Sort _sort = { SortingPolicy::NONE, true };
+	
 public:
-
 	RGBA* at(size_t i);
 	const RGBA* at(size_t i) const;
 	void remove(size_t i);

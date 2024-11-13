@@ -53,6 +53,8 @@ private:
 	ToggleTButtonGroup main_tab_bar;
 	ToggleTButtonGroup sub_tab_bar;
 	bool showing_hex_popup = false;
+
+	bool escape_to_close_popup = false;
 	
 	WindowHandle wh_interactable;
 

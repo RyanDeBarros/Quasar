@@ -205,8 +205,11 @@ void ColorPicker::cp_render_gui_back()
 			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
 			{
 				popup_hovered = ImGui::IsWindowHovered();
-				if (Machine.main_window->is_key_pressed(Key::ESCAPE))
+				if (escape_to_close_popup)
+				{
+					escape_to_close_popup = false;
 					tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
+				}
 				if (showing_hex_popup)
 				{
 					ImGui::Text("RGB hex code");
@@ -950,9 +953,14 @@ void ColorPicker::connect_input_handlers()
 	};
 
 	parent_key_handler.children.push_back(&key_handler);
-	key_handler.callback = [this](const KeyEvent& key) {
+	key_handler.callback = [this](const KeyEvent& k) {
 		if (ImGui::GetIO().WantCaptureKeyboard)
-			key.consumed = true;
+			k.consumed = true;
+		else if (k.action == IAction::PRESS && k.key == Key::ESCAPE && showing_hex_popup && cursor_in_bkg())
+		{
+			k.consumed = true;
+			escape_to_close_popup = true;
+		}
 		};
 }
 

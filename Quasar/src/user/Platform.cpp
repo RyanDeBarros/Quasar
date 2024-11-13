@@ -146,6 +146,8 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 		maximized = wm.maximized;
 		};
 
+	// LATER why must shift not be held in these callbacks?
+
 	// first callback in root to force
 	window_maximizer.callback = [this](const KeyEvent& k) {
 		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
