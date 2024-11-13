@@ -40,11 +40,26 @@ Palette::Palette()
 
 	// ##########################################################
 	// LATER replace with default palette found in settings file:
-	std::vector<RGBA> colors;
 	float num_colors = 250;
+	std::vector<RGBA> colors0;
 	for (int i = 0; i < num_colors; ++i)
-		colors.push_back(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
-	color_palette(this).import_color_scheme(ColorScheme{ { std::make_shared<ColorSubscheme>(std::move(colors)) } });
+		colors0.push_back(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
+
+	num_colors = 100;
+	std::vector<RGBA> colors1;
+	for (int i = 0; i < num_colors; ++i)
+		colors1.push_back(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
+
+	num_colors = 10;
+	std::vector<RGBA> colors2;
+	for (int i = 0; i < num_colors; ++i)
+		colors2.push_back(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
+
+	color_palette(this).import_color_scheme(ColorScheme({
+		std::make_shared<ColorSubscheme>("test#0", std::move(colors0)),
+		std::make_shared<ColorSubscheme>("test#1", std::move(colors1)),
+		std::make_shared<ColorSubscheme>("test#2", std::move(colors2))
+		}));
 	// ##########################################################
 
 	static constexpr size_t num_quads = 1;

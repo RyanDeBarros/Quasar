@@ -9,9 +9,10 @@ class ColorSubscheme
 	std::vector<RGBA> colors;
 
 public:
-	ColorSubscheme() = default;
-	ColorSubscheme(const std::vector<RGBA>& colors) : colors(colors) {}
-	ColorSubscheme(std::vector<RGBA>&& colors) noexcept : colors(std::move(colors)) {}
+	ColorSubscheme(const std::string& name, const std::vector<RGBA>& colors = {}) : name(name), colors(colors) {}
+	ColorSubscheme(const std::string& name, std::vector<RGBA>&& colors) : name(name), colors(std::move(colors)) {}
+	ColorSubscheme(std::string&& name, const std::vector<RGBA>& colors = {}) : name(std::move(name)), colors(colors) {}
+	ColorSubscheme(std::string&& name, std::vector<RGBA>&& colors) : name(std::move(name)), colors(std::move(colors)) {}
 	
 	const std::vector<RGBA>& get_colors() const { return colors; }
 
@@ -59,4 +60,8 @@ private:
 struct ColorScheme
 {
 	std::vector<std::shared_ptr<ColorSubscheme>> subschemes;
+
+	ColorScheme() = default;
+	ColorScheme(const std::vector<std::shared_ptr<ColorSubscheme>>& subschemes) : subschemes(subschemes) {}
+	ColorScheme(std::vector<std::shared_ptr<ColorSubscheme>>&& subschemes) : subschemes(std::move(subschemes)) {}
 };

@@ -505,11 +505,11 @@ size_t ColorPalette::subpalette_index_in_widget(size_t pos) const
 
 const float grid_padding_x1 = 10;
 const float grid_padding_x2 = 10;
-const float grid_padding_y1 = 80;
+const float grid_padding_y1 = 100;
 const float grid_padding_y2 = 10;
 
 const float button1_x = -30;
-const float button_y = 40;
+const float button_y = 55;
 
 ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
 	const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba)
@@ -522,7 +522,7 @@ ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler,
 {
 	initialize_widget();
 	connect_input_handlers();
-	new_subpalette(); // always have at least one subpalette
+	new_subpalette("scheme#0"); // always have at least one subpalette
 }
 
 ColorPalette::~ColorPalette()
@@ -583,11 +583,11 @@ void ColorPalette::import_color_scheme(ColorScheme&& color_scheme)
 	import_color_scheme();
 }
 
-void ColorPalette::new_subpalette()
+void ColorPalette::new_subpalette(std::string&& name)
 {
 	attach_widget(this, new ColorSubpalette(&color_square_shader, &outline_rect_shader));
-	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>());
-	current_subscheme = num_subpalettes() - 1;
+	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>(std::move(name)));
+	switch_to_subpalette(num_subpalettes() - 1);
 	current_subpalette().subscheme = scheme.subschemes[current_subscheme];
 	current_subpalette().self.transform.position.y = subpalette_pos_y();
 	current_subpalette().reload_subscheme();
@@ -600,9 +600,14 @@ void ColorPalette::delete_subpalette(size_t pos)
 	detach_widget(this, SUBPALETTE_START + pos);
 	scheme.subschemes.erase(scheme.subschemes.begin() + pos);
 	if (num_subpalettes() == 0)
-		new_subpalette();
+		new_subpalette("default");
 	if (current_subscheme >= num_subpalettes())
 		current_subscheme = num_subpalettes() - 1;
+}
+
+void ColorPalette::switch_to_subpalette(size_t pos)
+{
+	current_subscheme = pos;
 }
 
 size_t ColorPalette::num_subpalettes() const
@@ -629,30 +634,22 @@ void ColorPalette::render_imgui()
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
 		ImGui::SetWindowFontScale(scale1d() * font_window_scale);
 
-		static int selected_item = 0;
-		static const int num_items = 5;
-		const char* items[num_items] = { "Option 1", "Option 2", "Option 3", "Option 4", "Option 5" };
-
 		imgui_editing = false;
 
 		ImGui::SetNextItemWidth(180 * self.transform.scale.x);
-		if (ImGui::BeginCombo("Subschemes", items[selected_item]))
+		if (ImGui::BeginCombo("##Subschemes", current_subpalette().subscheme->name.c_str()))
 		{
 			imgui_editing = true;
-			for (int n = 0; n < num_items; ++n)
+			size_t num_subs = num_subpalettes();
+			for (int i = 0; i < num_subs; ++i)
 			{
-				bool is_selected = (selected_item == n);
-				if (ImGui::Selectable(items[n], is_selected))
-					selected_item = n;
-
-				if (is_selected)
+				if (ImGui::Selectable(get_subpalette(i).subscheme->name.c_str(), i == current_subscheme))
+					switch_to_subpalette(i);
+				if (i == current_subscheme)
 					ImGui::SetItemDefaultFocus();
 			}
 			ImGui::EndCombo();
 		}
-
-		//LOG << items[selected_item] << LOG.endl;
-		//LOG << ImGui::GetIO().WantCaptureMouse << LOG.endl;
 
 		ImGui::SetWindowFontScale(font_window_scale);
 		ImGui::End();
@@ -750,28 +747,30 @@ void ColorPalette::initialize_widget()
 
 void ColorPalette::import_color_scheme()
 {
-	if (scheme.subschemes.size() < num_subpalettes())
+	size_t num_subs = num_subpalettes();
+	if (scheme.subschemes.size() < num_subs)
 	{
 		for (size_t i = 0; i < scheme.subschemes.size(); ++i)
 		{
 			get_subpalette(i).subscheme = scheme.subschemes[i];
 			get_subpalette(i).reload_subscheme();
 		}
-		for (size_t i = scheme.subschemes.size(); i < num_subpalettes(); ++i)
+		for (size_t i = scheme.subschemes.size(); i < num_subs; ++i)
 			delete children[subpalette_index_in_widget(i)];
 		children.erase(children.begin() + subpalette_index_in_widget(scheme.subschemes.size()), children.end());
 	}
 	else
 	{
-		for (size_t i = 0; i < num_subpalettes(); ++i)
+		for (size_t i = 0; i < num_subs; ++i)
 		{
 			get_subpalette(i).subscheme = scheme.subschemes[i];
 			get_subpalette(i).reload_subscheme();
 		}
-		for (size_t i = num_subpalettes(); i < scheme.subschemes.size(); ++i)
+		for (size_t i = num_subs; i < scheme.subschemes.size(); ++i)
 		{
-			new_subpalette();
+			attach_widget(this, new ColorSubpalette(&color_square_shader, &outline_rect_shader));
 			get_subpalette(i).subscheme = scheme.subschemes[i];
+			get_subpalette(i).self.transform.position.y = subpalette_pos_y();
 			get_subpalette(i).reload_subscheme();
 		}
 	}

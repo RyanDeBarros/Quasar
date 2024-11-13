@@ -137,8 +137,9 @@ public:
 	void send_vp();
 	void import_color_scheme(const ColorScheme& color_scheme);
 	void import_color_scheme(ColorScheme&& color_scheme);
-	void new_subpalette();
+	void new_subpalette(std::string&& name);
 	void delete_subpalette(size_t pos);
+	void switch_to_subpalette(size_t pos);
 	size_t num_subpalettes() const;
 	void set_size(Scale pos, bool sync);
 	Scale minimum_display() const;
