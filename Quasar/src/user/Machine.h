@@ -10,7 +10,7 @@
 
 struct MachineImpl
 {
-	MachineImpl() = default;
+	MachineImpl();
 	MachineImpl(const MachineImpl&) = delete;
 	MachineImpl(MachineImpl&&) noexcept = delete;
 	~MachineImpl() = default;

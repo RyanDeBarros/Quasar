@@ -13,6 +13,24 @@
 #include "../text/CommonFonts.h"
 #include "Button.h"
 
+struct RGBAChangeAction : public ActionBase
+{
+	ColorPicker& picker;
+	RGBA prev_c, new_c;
+
+	RGBAChangeAction(ColorPicker& picker, const RGBA& prev_c, const RGBA& new_c) : picker(picker), prev_c(prev_c), new_c(new_c) { weight = 0.5f; }
+
+	void forward() override
+	{
+		picker.set_color(new_c, false);
+	}
+
+	void backward() override
+	{
+		picker.set_color(prev_c, false);
+	}
+};
+
 static const size_t MAIN_TABBAR_BUTTONS[] {
 	ColorPicker::BUTTON_GRAPHIC,
 	ColorPicker::BUTTON_RGB_SLIDER,
@@ -98,7 +116,7 @@ ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, K
 	send_gradient_color_uniform(quad_shader, GradientIndex::TRANSPARENT, ColorFrame(0));
 	initialize_widget();
 	connect_input_handlers();
-	set_color(ColorFrame());
+	set_color(ColorFrame(), false);
 }
 
 ColorPicker::~ColorPicker()
@@ -265,7 +283,7 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-blue", &b, 5, 10);
 				if (mod)
-					set_color(ColorFrame(RGB(r, g, b), alpha));
+					set_color(ColorFrame(RGB(r, g, b), alpha), true);
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
@@ -281,7 +299,7 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-blue", &b, 5, 10, "%.2f");
 				if (mod)
-					set_color(RGBA(r * 0.01f, g * 0.01f, b * 0.01f, alpha));
+					set_color(RGBA(r * 0.01f, g * 0.01f, b * 0.01f, alpha), true);
 			}
 		}
 		else if (state & State::SLIDER_HSV)
@@ -301,7 +319,7 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-value", &v, 5, 10);
 				if (mod)
-					set_color(ColorFrame(HSV(h, s, v), alpha));
+					set_color(ColorFrame(HSV(h, s, v), alpha), true);
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
@@ -317,7 +335,7 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-value", &v, 5, 10, "%.2f");
 				if (mod)
-					set_color(HSVA(h * 0.01f, s * 0.01f, v * 0.01f, alpha));
+					set_color(HSVA(h * 0.01f, s * 0.01f, v * 0.01f, alpha), true);
 			}
 		}
 		else if (state & State::SLIDER_HSL)
@@ -337,7 +355,7 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-light", &l, 5, 10);
 				if (mod)
-					set_color(ColorFrame(HSL(h, s, l), alpha));
+					set_color(ColorFrame(HSL(h, s, l), alpha), true);
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
@@ -353,7 +371,7 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-light", &l, 5, 10, "%.2f");
 				if (mod)
-					set_color(HSLA(h * 0.01f, s * 0.01f, l * 0.01f, alpha));
+					set_color(HSLA(h * 0.01f, s * 0.01f, l * 0.01f, alpha), true);
 			}
 		}
 		if (txtfld_mode == TextFieldMode::NUMBER)
@@ -365,7 +383,7 @@ void ColorPicker::cp_render_gui_back()
 			if (ImGui::InputInt("##it-alpha", &a, 5, 10))
 			{
 				color.set_pixel_a(a);
-				set_color(color);
+				set_color(color, true);
 			}
 		}
 		else if (txtfld_mode == TextFieldMode::PERCENT)
@@ -375,7 +393,7 @@ void ColorPicker::cp_render_gui_back()
 			ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_4));
 			ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 			if (ImGui::InputFloat("##it-alpha", &a, 5, 10, "%.2f"))
-				set_color(ColorFrame(color.rgb(), a * 0.01f));
+				set_color(ColorFrame(color.rgb(), a * 0.01f), true);
 		}
 
 		ImGui::SetWindowFontScale(font_window_scale);
@@ -441,7 +459,7 @@ void ColorPicker::update_rgb_hex()
 		else
 			hex |= (rgb_hex[i] - '0') << (4 * (rgb_hex_size - 2 - i));
 	}
-	set_color(RGB(hex));
+	set_color(RGB(hex), true); // TODO only create action if enter is pressed
 }
 
 void ColorPicker::set_state(State _state)
@@ -458,7 +476,7 @@ void ColorPicker::set_state(State _state)
 		release_cursor();
 		ColorFrame pre_color = get_color();
 		state = _state;
-		set_color(pre_color);
+		set_color(pre_color, true);
 
 		b_t_wget(*this, BUTTON_RGB_HEX_CODE).enabled = state & State::SLIDER_RGB;
 		b_t_wget(*this, BUTTON_QUAD).enabled = b_t_wget(*this, BUTTON_WHEEL).enabled = state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL);
@@ -838,12 +856,14 @@ void ColorPicker::connect_input_handlers()
 		{
 			if (current_widget_control < 0)
 			{
+				// TODO simplify these IF statements
 				Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 				if (wp_at(ALPHA_SLIDER).contains_point(local_cursor_pos))
 				{
 					take_over_cursor();
 					current_widget_control = ALPHA_SLIDER_CURSOR;
 					mb.consumed = true;
+					current_action_color = get_color().rgba();
 					mouse_handler_horizontal_slider(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, local_cursor_pos);
 				}
 				else if (state & State::GRAPHIC_QUAD)
@@ -853,6 +873,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = GRAPHIC_QUAD_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_graphic_quad(local_cursor_pos);
 					}
 					else if (wp_at(GRAPHIC_HUE_SLIDER).contains_point(local_cursor_pos))
@@ -860,6 +881,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = GRAPHIC_HUE_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_vertical_slider(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
@@ -870,6 +892,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = GRAPHIC_HUE_WHEEL_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_graphic_hue_wheel(local_cursor_pos);
 					}
 					else if (wp_at(GRAPHIC_VALUE_SLIDER).contains_point(local_cursor_pos))
@@ -877,6 +900,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = GRAPHIC_VALUE_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_vertical_slider(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
@@ -887,6 +911,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = RGB_R_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(RGB_G_SLIDER).contains_point(local_cursor_pos))
@@ -894,6 +919,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = RGB_G_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(RGB_B_SLIDER).contains_point(local_cursor_pos))
@@ -901,6 +927,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = RGB_B_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
@@ -911,6 +938,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = HSV_H_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(HSV_S_SLIDER).contains_point(local_cursor_pos))
@@ -918,6 +946,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = HSV_S_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(HSV_V_SLIDER).contains_point(local_cursor_pos))
@@ -925,6 +954,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = HSV_V_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
@@ -935,6 +965,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = HSL_H_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(HSL_S_SLIDER).contains_point(local_cursor_pos))
@@ -942,6 +973,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = HSL_S_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, local_cursor_pos);
 					}
 					else if (wp_at(HSL_L_SLIDER).contains_point(local_cursor_pos))
@@ -949,6 +981,7 @@ void ColorPicker::connect_input_handlers()
 						take_over_cursor();
 						current_widget_control = HSL_L_SLIDER_CURSOR;
 						mb.consumed = true;
+						current_action_color = get_color().rgba();
 						mouse_handler_horizontal_slider(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, local_cursor_pos);
 					}
 				}
@@ -963,6 +996,9 @@ void ColorPicker::connect_input_handlers()
 			{
 				mb.consumed = true;
 				release_cursor();
+
+				auto action = std::make_shared<RGBAChangeAction>(*this, current_action_color, get_color().rgba());
+				Machine.history.push(std::move(action));
 			}
 		}
 	};
@@ -1069,8 +1105,9 @@ ColorFrame ColorPicker::get_color() const
 	return color;
 }
 
-void ColorPicker::set_color(ColorFrame color)
+void ColorPicker::set_color(ColorFrame color, bool create_action)
 {
+	ColorFrame prev_color = get_color();
 	move_slider_cursor_x_relative(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, color.alpha);
 	sync_single_standard_ur_transform(ALPHA_SLIDER_CURSOR);
 	if (state & State::GRAPHIC_QUAD)
@@ -1125,7 +1162,11 @@ void ColorPicker::set_color(ColorFrame color)
 	}
 	update_display_colors();
 
-	// TODO here is where an action would be submitted (capturing the color from last action, and the current new color) to the action history.
+	if (create_action && color != prev_color)
+	{
+		auto action = std::make_shared<RGBAChangeAction>(*this, prev_color.rgba(), color.rgba());
+		Machine.history.push(std::move(action));
+	}
 }
 
 void ColorPicker::set_size(Scale size, bool sync)

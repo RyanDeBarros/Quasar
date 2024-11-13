@@ -37,6 +37,8 @@ struct ColorSubpalette : public Widget
 	void unprocess();
 	bool check_primary();
 	bool check_alternate();
+	void set_primary_selector(int index);
+	void set_alternate_selector(int index);
 	
 	bool get_visible_square_under_pos(Position pos, int& index) const;
 	void switch_primary_and_alternate();
@@ -59,7 +61,7 @@ struct ColorSubpalette : public Widget
 	void remove_square_under_cursor(bool send_vb);
 	void clean_extra_buffer_space();
 
-	bool move_in_1d;
+	bool move_in_1d = true;
 	int moving_color = -1;
 	bool moving_color_start = false;
 

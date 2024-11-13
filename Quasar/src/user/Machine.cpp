@@ -55,6 +55,11 @@ static void update_panels_to_window_size(int width, int height)
 	palette()->bounds.y2 = easel()->bounds.y2;
 }
 
+MachineImpl::MachineImpl()
+	: history(100) // SETTINGS and test that it works
+{
+}
+
 bool MachineImpl::create_main_window()
 {
 	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height);

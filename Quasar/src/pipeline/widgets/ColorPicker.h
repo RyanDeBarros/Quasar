@@ -60,6 +60,8 @@ private:
 
 	int current_widget_control = -1;
 
+	RGBA current_action_color;
+
 public:
 	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
 	ColorPicker(const ColorPicker&) = delete;
@@ -70,7 +72,7 @@ public:
 	void process();
 	void send_vp();
 	ColorFrame get_color() const;
-	void set_color(ColorFrame color);
+	void set_color(ColorFrame color, bool create_action);
 	void set_size(Scale size, bool sync);
 	Scale minimum_display() const;
 	

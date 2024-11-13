@@ -34,7 +34,7 @@ Palette::Palette()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
 	widget(_W_COUNT)
 {
-	update_primary_color = [this](RGBA color) { color_picker(this).set_color(color); };
+	update_primary_color = [this](RGBA color) { color_picker(this).set_color(color, false); };
 	get_picker_rgba = [this]() { return color_picker(this).get_color().rgba(); };
 	initialize_widget();
 

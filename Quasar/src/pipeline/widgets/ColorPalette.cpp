@@ -8,6 +8,61 @@
 #include "user/Machine.h"
 #include "Button.h"
 
+struct PrimarySelectorAction : public ActionBase
+{
+	ColorSubpalette& subpalette;
+	int prev_i, new_i;
+
+	PrimarySelectorAction(ColorSubpalette& subpalette, int prev_i, int new_i) : subpalette(subpalette), prev_i(prev_i), new_i(new_i) { weight = 0.5f; }
+
+	void forward() override
+	{
+		subpalette.set_primary_selector(new_i);
+		subpalette.update_primary_color_in_picker();
+	}
+
+	void backward() override
+	{
+		subpalette.set_primary_selector(prev_i);
+		subpalette.update_primary_color_in_picker();
+	}
+};
+
+struct AlternateSelectorAction : public ActionBase
+{
+	ColorSubpalette& subpalette;
+	int prev_i, new_i;
+
+	AlternateSelectorAction(ColorSubpalette& subpalette, int prev_i, int new_i) : subpalette(subpalette), prev_i(prev_i), new_i(new_i) { weight = 0.5f; }
+
+	void forward() override
+	{
+		subpalette.set_alternate_selector(new_i);
+	}
+
+	void backward() override
+	{
+		subpalette.set_alternate_selector(prev_i);
+	}
+};
+
+struct SelectorSwitchAction : public ActionBase
+{
+	ColorSubpalette& subpalette;
+
+	SelectorSwitchAction(ColorSubpalette& subpalette) : subpalette(subpalette) { weight = 0.1f; }
+
+	void forward() override
+	{
+		subpalette.switch_primary_and_alternate();
+	}
+
+	void backward() override
+	{
+		subpalette.switch_primary_and_alternate();
+	}
+};
+
 ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader)
 	: Widget(_W_COUNT)
 {
@@ -268,6 +323,28 @@ bool ColorSubpalette::check_alternate()
 	}
 	else
 		return false;
+}
+
+void ColorSubpalette::set_primary_selector(int index)
+{
+	primary_index = index;
+	WidgetPlacement new_wp = global_square_wp(primary_index);
+	if (primary_wp != new_wp)
+	{
+		primary_wp = new_wp;
+		sync_primary_selector();
+	}
+}
+
+void ColorSubpalette::set_alternate_selector(int index)
+{
+	alternate_index = index;
+	WidgetPlacement new_wp = global_square_wp(alternate_index);
+	if (alternate_wp != new_wp)
+	{
+		alternate_wp = new_wp;
+		sync_alternate_selector();
+	}
 }
 
 bool ColorSubpalette::get_visible_square_under_pos(Position pos, int& index) const
@@ -755,28 +832,40 @@ void ColorPalette::connect_input_handlers()
 			// delete color
 			current_subpalette().remove_square_under_cursor(false); // false because of clean_extra_buffer_space() on next line 
 			current_subpalette().clean_extra_buffer_space();
+			Machine.history.clear_history(); // TODO color remove action. Record color and index here. Then push action.
 		}
 		else if (mb.action == IAction::RELEASE && !Machine.main_window->is_key_pressed(Key::SPACE))
 		{
 			// select primary/alternate color
 			if (mb.button == MouseButton::LEFT)
 			{
+				int prev_i = current_subpalette().primary_index;
 				if (current_subpalette().check_primary())
 				{
 					mb.consumed = true;
 					current_subpalette().update_primary_color_in_picker();
+					int new_i = current_subpalette().primary_index;
+					auto action = std::make_shared<PrimarySelectorAction>(current_subpalette(), prev_i, new_i);
+					Machine.history.push(std::move(action));
 				}
 			}
 			else if (mb.button == MouseButton::RIGHT)
 			{
+				int prev_i = current_subpalette().alternate_index;
 				if (current_subpalette().check_alternate())
+				{
 					mb.consumed = true;
+					int new_i = current_subpalette().alternate_index;
+					auto action = std::make_shared<AlternateSelectorAction>(current_subpalette(), prev_i, new_i);
+					Machine.history.push(std::move(action));
+				}
 			}
 		}
 		else if (mb.action == IAction::PRESS && (mb.button == MouseButton::MIDDLE || (mb.button == MouseButton::LEFT && Machine.main_window->is_key_pressed(Key::SPACE))))
 		{
 			// move color without selecting
 			current_subpalette().begin_moving_color_under_cursor(!(mb.mods & Mods::ALT));
+			Machine.history.clear_history(); // TODO color move action. Record state here, and after stop_moving_color. Then push action.
 		}
 		};
 	parent_key_handler.children.push_back(&key_handler);
@@ -785,12 +874,15 @@ void ColorPalette::connect_input_handlers()
 		{
 			k.consumed = true;
 			current_subpalette().switch_primary_and_alternate();
+			auto action = std::make_shared<SelectorSwitchAction>(current_subpalette());
+			Machine.history.push(std::move(action));
 		}
 		else if (renaming_subpalette && !imgui_editing && k.action == IAction::PRESS && k.key == Key::ESCAPE)
 		{
 			k.consumed = true;
 			renaming_subpalette = false;
 			renaming_subpalette_start = false;
+			// TODO cancel rename subpalette action creation here.
 		}
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
@@ -827,7 +919,10 @@ void ColorPalette::initialize_widget()
 	
 	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";
-	sba.on_select = fconv_st_on_action([this]() { current_subpalette().override_current_color((*get_picker_rgba)()); });
+	sba.on_select = fconv_st_on_action([this]() {
+		current_subpalette().override_current_color((*get_picker_rgba)());
+		Machine.history.clear_history(); // TODO color override action. Record prev and new color. Then push action.
+		});
 	assign_widget(this, BUTTON_OVERRIDE_COLOR, new StandardTButton(sba));
 	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).text().self.transform.position = { 0.05f, -0.05f };
 	b_t_wget(*this, BUTTON_OVERRIDE_COLOR).text().self.transform.scale *= 1.0f;
@@ -838,6 +933,7 @@ void ColorPalette::initialize_widget()
 		bool adjacent = !Machine.main_window->is_shift_pressed();
 		bool update_primary = Machine.main_window->is_ctrl_pressed();
 		current_subpalette().new_color((*get_picker_rgba)(), adjacent, update_primary);
+		Machine.history.clear_history(); // TODO color insert action. Record prev and new color, as well as indexes. Then push action.
 		});
 	assign_widget(this, BUTTON_INSERT_NEW_COLOR, new StandardTButton(sba));
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.position = { 0.1f, -0.15f };
@@ -848,22 +944,32 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 22;
 	sba.transform.position.x = button2_x;
 	sba.text = "N";
-	sba.on_select = fconv_st_on_action([this]() { new_subpalette(); });
+	sba.on_select = fconv_st_on_action([this]() {
+		new_subpalette();
+		Machine.history.clear_history(); // TODO new subpalette action.
+		});
 	assign_widget(this, BUTTON_SUBPALETTE_NEW, new StandardTButton(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "R";
-	sba.on_select = fconv_st_on_action([this]() { renaming_subpalette = true; renaming_subpalette_start = true; });
+	sba.on_select = fconv_st_on_action([this]() {
+		renaming_subpalette = true; renaming_subpalette_start = true;
+		Machine.history.clear_history(); // TODO subpalette rename action. Record previous and next name. Then push action.
+		});
 	assign_widget(this, BUTTON_SUBPALETTE_RENAME, new StandardTButton(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "D";
-	sba.on_select = fconv_st_on_action([this]() { delete_subpalette(current_subscheme); });
+	sba.on_select = fconv_st_on_action([this]() {
+		delete_subpalette(current_subscheme);
+		Machine.history.clear_history(); // TODO subpalette delete action.
+		});
 	assign_widget(this, BUTTON_SUBPALETTE_DELETE, new StandardTButton(sba));
 }
 
 void ColorPalette::import_color_scheme()
 {
+	// TODO import color scheme action. Pass bool to import_color_scheme() on whether to create action, so that internal calls don't create actions.
 	size_t num_subs = num_subpalettes();
 	if (scheme.subschemes.size() < num_subs)
 	{

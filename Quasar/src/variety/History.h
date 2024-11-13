@@ -6,6 +6,8 @@
 
 struct ActionBase
 {
+	float weight = 1;
+
 	virtual ~ActionBase() = default;
 
 	virtual void forward() = 0;
@@ -32,29 +34,48 @@ struct StandardAction : public ActionBase
 
 class ActionHistory
 {
-	const size_t tracking_length;
+	const float tracking_size;
+	float current_size = 0;
 	std::deque<std::shared_ptr<ActionBase>> undo_deque;
 	std::deque<std::shared_ptr<ActionBase>> redo_deque;
 
 public:
-	ActionHistory(size_t tracking_length = 100) : tracking_length(tracking_length) {}
+	ActionHistory(float tracking_size = 100) : tracking_size(tracking_size) {}
 	ActionHistory(const ActionHistory&) = delete;
 	ActionHistory(ActionHistory&&) noexcept = delete;
 
 	void execute(std::shared_ptr<ActionBase>&& action)
 	{
 		action->forward();
-		if (undo_deque.size() == tracking_length)
-			undo_deque.pop_front();
-		undo_deque.push_back(std::move(action));
-		redo_deque.clear();
+		push(std::move(action));
 	}
 
 	void execute(const std::shared_ptr<ActionBase>& action)
 	{
 		action->forward();
-		if (undo_deque.size() == tracking_length)
+		push(action);
+	}
+
+	void push(std::shared_ptr<ActionBase>&& action)
+	{
+		current_size += action->weight;
+		while (current_size > tracking_size)
+		{
+			current_size -= undo_deque.front()->weight;
 			undo_deque.pop_front();
+		}
+		undo_deque.push_back(std::move(action));
+		redo_deque.clear();
+	}
+
+	void push(const std::shared_ptr<ActionBase>& action)
+	{
+		current_size += action->weight;
+		while (current_size > tracking_size)
+		{
+			current_size -= undo_deque.front()->weight;
+			undo_deque.pop_front();
+		}
 		undo_deque.push_back(action);
 		redo_deque.clear();
 	}
@@ -69,6 +90,7 @@ public:
 	{
 		undo_deque.clear();
 		redo_deque.clear();
+		current_size = 0;
 	}
 
 	void undo()
@@ -76,6 +98,7 @@ public:
 		if (!undo_deque.empty())
 		{
 			std::shared_ptr<ActionBase> action = std::move(undo_deque.back());
+			current_size -= action->weight;
 			undo_deque.pop_back();
 			action->backward();
 			redo_deque.push_back(std::move(action));
@@ -94,6 +117,7 @@ public:
 			std::shared_ptr<ActionBase> action = std::move(redo_deque.back());
 			redo_deque.pop_back();
 			action->forward();
+			current_size += action->weight;
 			undo_deque.push_back(std::move(action));
 		}
 	}
@@ -101,5 +125,10 @@ public:
 	size_t redo_size() const
 	{
 		return redo_deque.size();
+	}
+
+	float tracking_weight() const
+	{
+		return current_size;
 	}
 };
