@@ -98,7 +98,7 @@ class ColorPalette : public Widget
 {
 	friend ColorSubpalette;
 
-	ColorScheme scheme;
+	std::shared_ptr<ColorScheme> scheme;
 	size_t current_subscheme = 0;
 
 	Shader color_square_shader, grid_shader, outline_rect_shader, round_rect_shader;
@@ -133,6 +133,8 @@ public:
 	static inline const float SQUARE_SEP = 28;
 	static inline const float SQUARE_SIZE = 24;
 
+	bool clear_history_on_import = false; // SETTINGS
+
 private:
 	float grid_offset_y = 0;
 	int _col_count = 8;
@@ -154,8 +156,8 @@ public:
 	virtual void draw() override;
 	void process();
 	void send_vp();
-	void import_color_scheme(const ColorScheme& color_scheme);
-	void import_color_scheme(ColorScheme&& color_scheme);
+	void import_color_scheme(const std::shared_ptr<ColorScheme>& color_scheme, bool create_action);
+	void import_color_scheme(std::shared_ptr<ColorScheme>&& color_scheme, bool create_action);
 	void new_subpalette();
 	void delete_subpalette(size_t pos);
 	void switch_to_subpalette(size_t pos, bool update_primary_color);

@@ -55,11 +55,11 @@ Palette::Palette()
 	for (int i = 0; i < num_colors; ++i)
 		colors2.push_back(HSVA(i / num_colors, 1.0f, 1.0f, 1.0f).to_rgba());
 
-	color_palette(this).import_color_scheme(ColorScheme({
+	color_palette(this).import_color_scheme(std::make_shared<ColorScheme>(std::vector<std::shared_ptr<ColorSubscheme>>{
 		std::make_shared<ColorSubscheme>("test#0", std::move(colors0)),
 		std::make_shared<ColorSubscheme>("test#1", std::move(colors1)),
 		std::make_shared<ColorSubscheme>("test#2", std::move(colors2))
-		}));
+		}), true); // LATER this would be false for default color subscheme upon opening application/new file
 	// ##########################################################
 
 	static constexpr size_t num_quads = 1;

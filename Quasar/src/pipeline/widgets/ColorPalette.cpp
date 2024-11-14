@@ -151,11 +151,24 @@ struct InsertColorAction : public ActionBase
 	std::shared_ptr<ColorSubpalette> subpalette;
 	RGBA color;
 	int index, primary_index_1, primary_index_2, alternate_index_1, alternate_index_2;
-	InsertColorAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA color, int index, int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
+	InsertColorAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA color, int index,
+		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
 		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
 		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = 0.75f; }
 	void forward() override { subpalette->focus(true); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
 	void backward() override { subpalette->focus(true); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
+};
+
+// LATER test importing schemes and undo/redo. remember about ColorPalette::clear_history_on_import setting
+struct ImportColorSchemeAction : public ActionBase
+{
+	ColorPalette* palette;
+	std::shared_ptr<ColorScheme> prev_cs;
+	std::shared_ptr<ColorScheme> new_cs;
+	ImportColorSchemeAction(ColorPalette* palette, std::shared_ptr<ColorScheme>&& prev_cs, const std::shared_ptr<ColorScheme>& new_cs)
+		: palette(palette), prev_cs(std::move(prev_cs)), new_cs(new_cs) { weight = 10; } // LATER variable weight dependent on combined size of subschemes in prev_cs and new_cs
+	void forward() override { if (palette) palette->import_color_scheme(new_cs, false); }
+	void backward() override { if (palette) palette->import_color_scheme(prev_cs, false); }
 };
 
 ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader)
@@ -867,26 +880,39 @@ void ColorPalette::send_vp()
 	sync_widget_with_vp();
 }
 
-void ColorPalette::import_color_scheme(const ColorScheme& color_scheme)
+void ColorPalette::import_color_scheme(const std::shared_ptr<ColorScheme>& color_scheme, bool create_action)
 {
+	if (create_action)
+	{
+		if (clear_history_on_import)
+			Machine.history.clear_history();
+		else
+			Machine.history.push(std::make_shared<ImportColorSchemeAction>(this, std::move(scheme), color_scheme));
+	}
 	scheme = color_scheme;
 	import_color_scheme();
 }
 
-void ColorPalette::import_color_scheme(ColorScheme&& color_scheme)
+void ColorPalette::import_color_scheme(std::shared_ptr<ColorScheme>&& color_scheme, bool create_action)
 {
+	if (create_action)
+	{
+		if (clear_history_on_import)
+			Machine.history.clear_history();
+		else
+			Machine.history.push(std::make_shared<ImportColorSchemeAction>(this, std::move(scheme), color_scheme));
+	}
 	scheme = std::move(color_scheme);
 	import_color_scheme();
 }
 
 void ColorPalette::new_subpalette()
 {
-	// LATER import default subscheme here
 	attach_widget(this, std::make_shared<ColorSubpalette>(&color_square_shader, &outline_rect_shader));
 	size_t last = num_subpalettes() - 1;
-	scheme.subschemes.push_back(std::make_shared<ColorSubscheme>("default#" + std::to_string(last - 1)));
+	scheme->subschemes.push_back(std::make_shared<ColorSubscheme>("default#" + std::to_string(last - 1)));
 	switch_to_subpalette(last, true);
-	current_subpalette().subscheme = scheme.subschemes[current_subscheme];
+	current_subpalette().subscheme = scheme->subschemes[current_subscheme];
 	current_subpalette().self.transform.position.y = subpalette_pos_y();
 	current_subpalette().reload_subscheme();
 }
@@ -896,7 +922,7 @@ void ColorPalette::delete_subpalette(size_t pos)
 	if (pos >= num_subpalettes())
 		return;
 	detach_widget(this, SUBPALETTE_START + pos);
-	scheme.subschemes.erase(scheme.subschemes.begin() + pos);
+	scheme->subschemes.erase(scheme->subschemes.begin() + pos);
 	if (num_subpalettes() == 0)
 		new_subpalette();
 	if (current_subscheme >= num_subpalettes())
@@ -1144,30 +1170,29 @@ void ColorPalette::initialize_widget()
 
 void ColorPalette::import_color_scheme()
 {
-	// TODO import color scheme action. Pass bool to import_color_scheme() on whether to create action, so that internal calls don't create actions.
 	size_t num_subs = num_subpalettes();
-	if (scheme.subschemes.size() < num_subs)
+	if (scheme->subschemes.size() < num_subs)
 	{
-		for (size_t i = 0; i < scheme.subschemes.size(); ++i)
+		for (size_t i = 0; i < scheme->subschemes.size(); ++i)
 		{
-			get_subpalette(i).subscheme = scheme.subschemes[i];
+			get_subpalette(i).subscheme = scheme->subschemes[i];
 			get_subpalette(i).reload_subscheme();
 		}
-		for (size_t i = scheme.subschemes.size(); i < num_subs; ++i)
+		for (size_t i = scheme->subschemes.size(); i < num_subs; ++i)
 			detach_widget(this, subpalette_index_in_widget(i));
-		children.erase(children.begin() + subpalette_index_in_widget(scheme.subschemes.size()), children.end());
+		children.erase(children.begin() + subpalette_index_in_widget(scheme->subschemes.size()), children.end());
 	}
 	else
 	{
 		for (size_t i = 0; i < num_subs; ++i)
 		{
-			get_subpalette(i).subscheme = scheme.subschemes[i];
+			get_subpalette(i).subscheme = scheme->subschemes[i];
 			get_subpalette(i).reload_subscheme();
 		}
-		for (size_t i = num_subs; i < scheme.subschemes.size(); ++i)
+		for (size_t i = num_subs; i < scheme->subschemes.size(); ++i)
 		{
 			attach_widget(this, std::make_shared<ColorSubpalette>(&color_square_shader, &outline_rect_shader));
-			get_subpalette(i).subscheme = scheme.subschemes[i];
+			get_subpalette(i).subscheme = scheme->subschemes[i];
 			get_subpalette(i).self.transform.position.y = subpalette_pos_y();
 			get_subpalette(i).reload_subscheme();
 		}
