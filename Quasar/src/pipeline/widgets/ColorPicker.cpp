@@ -856,138 +856,64 @@ void ColorPicker::connect_input_handlers()
 		{
 			if (current_widget_control < 0)
 			{
-				// TODO simplify these IF statements
 				Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 				if (wp_at(ALPHA_SLIDER).contains_point(local_cursor_pos))
-				{
-					take_over_cursor();
-					current_widget_control = ALPHA_SLIDER_CURSOR;
-					mb.consumed = true;
-					current_action_color = get_color().rgba();
-					mouse_handler_horizontal_slider(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, local_cursor_pos);
-				}
+					mouse_handler_horizontal_slider(ALPHA_SLIDER, current_widget_control = ALPHA_SLIDER_CURSOR, local_cursor_pos);
 				else if (state & State::GRAPHIC_QUAD)
 				{
 					if (wp_at(GRAPHIC_QUAD).contains_point(local_cursor_pos))
 					{
-						take_over_cursor();
 						current_widget_control = GRAPHIC_QUAD_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
 						mouse_handler_graphic_quad(local_cursor_pos);
 					}
 					else if (wp_at(GRAPHIC_HUE_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = GRAPHIC_HUE_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_vertical_slider(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_vertical_slider(GRAPHIC_HUE_SLIDER, current_widget_control = GRAPHIC_HUE_SLIDER_CURSOR, local_cursor_pos);
 				}
 				else if (state & State::GRAPHIC_WHEEL)
 				{
 					if (wp_at(GRAPHIC_HUE_WHEEL).contains_point(local_cursor_pos))
 					{
-						take_over_cursor();
 						current_widget_control = GRAPHIC_HUE_WHEEL_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
 						mouse_handler_graphic_hue_wheel(local_cursor_pos);
 					}
 					else if (wp_at(GRAPHIC_VALUE_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = GRAPHIC_VALUE_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_vertical_slider(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_vertical_slider(GRAPHIC_VALUE_SLIDER, current_widget_control = GRAPHIC_VALUE_SLIDER_CURSOR, local_cursor_pos);
 				}
 				else if (state & State::SLIDER_RGB)
 				{
 					if (wp_at(RGB_R_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = RGB_R_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(RGB_R_SLIDER, current_widget_control = RGB_R_SLIDER_CURSOR, local_cursor_pos);
 					else if (wp_at(RGB_G_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = RGB_G_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(RGB_G_SLIDER, current_widget_control = RGB_G_SLIDER_CURSOR, local_cursor_pos);
 					else if (wp_at(RGB_B_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = RGB_B_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(RGB_B_SLIDER, current_widget_control = RGB_B_SLIDER_CURSOR, local_cursor_pos);
 				}
 				else if (state & State::SLIDER_HSV)
 				{
 					if (wp_at(HSV_H_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = HSV_H_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(HSV_H_SLIDER, current_widget_control = HSV_H_SLIDER_CURSOR, local_cursor_pos);
 					else if (wp_at(HSV_S_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = HSV_S_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(HSV_S_SLIDER, current_widget_control = HSV_S_SLIDER_CURSOR, local_cursor_pos);
 					else if (wp_at(HSV_V_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = HSV_V_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(HSV_V_SLIDER, current_widget_control = HSV_V_SLIDER_CURSOR, local_cursor_pos);
 				}
 				else if (state & State::SLIDER_HSL)
 				{
 					if (wp_at(HSL_H_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = HSL_H_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(HSL_H_SLIDER, current_widget_control = HSL_H_SLIDER_CURSOR, local_cursor_pos);
 					else if (wp_at(HSL_S_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = HSL_S_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(HSL_S_SLIDER, current_widget_control = HSL_S_SLIDER_CURSOR, local_cursor_pos);
 					else if (wp_at(HSL_L_SLIDER).contains_point(local_cursor_pos))
-					{
-						take_over_cursor();
-						current_widget_control = HSL_L_SLIDER_CURSOR;
-						mb.consumed = true;
-						current_action_color = get_color().rgba();
-						mouse_handler_horizontal_slider(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, local_cursor_pos);
-					}
+						mouse_handler_horizontal_slider(HSL_L_SLIDER, current_widget_control = HSL_L_SLIDER_CURSOR, local_cursor_pos);
 				}
 
 				if (current_widget_control >= 0)
+				{
+					take_over_cursor();
+					mb.consumed = true;
+					current_action_color = get_color().rgba();
 					update_display_colors();
+				}
 			}
 		}
 		else if (mb.action == IAction::RELEASE)
