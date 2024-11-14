@@ -59,7 +59,7 @@ Palette::Palette()
 		std::make_shared<ColorSubscheme>("test#0", std::move(colors0)),
 		std::make_shared<ColorSubscheme>("test#1", std::move(colors1)),
 		std::make_shared<ColorSubscheme>("test#2", std::move(colors2))
-		}), true); // LATER this would be false for default color subscheme upon opening application/new file
+		}), false); // LATER this would be true when importing a new scheme, but false for default color scheme upon opening application/new file
 	// ##########################################################
 
 	static constexpr size_t num_quads = 1;

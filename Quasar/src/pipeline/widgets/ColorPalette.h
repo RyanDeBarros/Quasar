@@ -158,6 +158,7 @@ public:
 	void send_vp();
 	void import_color_scheme(const std::shared_ptr<ColorScheme>& color_scheme, bool create_action);
 	void import_color_scheme(std::shared_ptr<ColorScheme>&& color_scheme, bool create_action);
+	// TODO import_color_subscheme (into new slot or into existing slot)
 	void new_subpalette();
 	void delete_subpalette(size_t pos);
 	void switch_to_subpalette(size_t pos, bool update_primary_color);

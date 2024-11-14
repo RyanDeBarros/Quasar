@@ -827,7 +827,7 @@ ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler,
 	color_square_shader(FileSystem::shader_path("palette/color_square.vert"), FileSystem::shader_path("palette/color_square.frag")),
 	outline_rect_shader(FileSystem::shader_path("palette/outline_rect.vert"), FileSystem::shader_path("palette/outline_rect.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
-	primary_color_update(primary_color_update), get_picker_rgba(get_picker_rgba)
+	primary_color_update(primary_color_update), get_picker_rgba(get_picker_rgba), scheme(std::make_shared<ColorScheme>())
 {
 	initialize_widget();
 	connect_input_handlers();
@@ -910,8 +910,8 @@ void ColorPalette::new_subpalette()
 {
 	attach_widget(this, std::make_shared<ColorSubpalette>(&color_square_shader, &outline_rect_shader));
 	size_t last = num_subpalettes() - 1;
-	scheme->subschemes.push_back(std::make_shared<ColorSubscheme>("default#" + std::to_string(last - 1)));
-	switch_to_subpalette(last, true);
+	scheme->subschemes.push_back(std::make_shared<ColorSubscheme>("default#" + std::to_string(last)));
+	current_subscheme = last;
 	current_subpalette().subscheme = scheme->subschemes[current_subscheme];
 	current_subpalette().self.transform.position.y = subpalette_pos_y();
 	current_subpalette().reload_subscheme();
