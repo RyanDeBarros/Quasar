@@ -515,10 +515,10 @@ void ColorPicker::initialize_widget()
 {
 	// ---------- GRAPHIC QUAD ----------
 
-	assign_widget(this, GRAPHIC_QUAD, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, GRAPHIC_QUAD_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
-	assign_widget(this, GRAPHIC_HUE_SLIDER, new W_UnitRenderable(&linear_hue_shader));
-	assign_widget(this, GRAPHIC_HUE_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
+	assign_widget(this, GRAPHIC_QUAD, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, GRAPHIC_QUAD_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
+	assign_widget(this, GRAPHIC_HUE_SLIDER, std::make_shared<W_UnitRenderable>(&linear_hue_shader));
+	assign_widget(this, GRAPHIC_HUE_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
 
 	setup_rect_uvs(GRAPHIC_QUAD);
 	setup_gradient(GRAPHIC_QUAD, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK,
@@ -539,10 +539,10 @@ void ColorPicker::initialize_widget()
 
 	// ---------- GRAPHIC WHEEL ----------
 
-	assign_widget(this, GRAPHIC_HUE_WHEEL, new W_UnitRenderable(&hue_wheel_w_shader));
-	assign_widget(this, GRAPHIC_HUE_WHEEL_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
-	assign_widget(this, GRAPHIC_VALUE_SLIDER, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, GRAPHIC_VALUE_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
+	assign_widget(this, GRAPHIC_HUE_WHEEL, std::make_shared<W_UnitRenderable>(&hue_wheel_w_shader));
+	assign_widget(this, GRAPHIC_HUE_WHEEL_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
+	assign_widget(this, GRAPHIC_VALUE_SLIDER, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, GRAPHIC_VALUE_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
 
 	setup_rect_uvs(GRAPHIC_HUE_WHEEL);
 	send_graphic_wheel_value_to_uniform(1.0f);
@@ -564,12 +564,12 @@ void ColorPicker::initialize_widget()
 
 	// ---------- RGB SLIDERS ----------
 
-	assign_widget(this, RGB_R_SLIDER, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, RGB_R_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
-	assign_widget(this, RGB_G_SLIDER, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, RGB_G_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
-	assign_widget(this, RGB_B_SLIDER, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, RGB_B_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
+	assign_widget(this, RGB_R_SLIDER, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, RGB_R_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
+	assign_widget(this, RGB_G_SLIDER, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, RGB_G_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
+	assign_widget(this, RGB_B_SLIDER, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, RGB_B_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
 
 	setup_rect_uvs(RGB_R_SLIDER);
 	setup_circle_cursor(RGB_R_SLIDER_CURSOR);
@@ -602,12 +602,12 @@ void ColorPicker::initialize_widget()
 
 	// ---------- HSV SLIDERS ----------
 
-	assign_widget(this, HSV_H_SLIDER, new W_UnitRenderable(&linear_hue_shader));
-	assign_widget(this, HSV_H_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
-	assign_widget(this, HSV_S_SLIDER, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, HSV_S_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
-	assign_widget(this, HSV_V_SLIDER, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, HSV_V_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
+	assign_widget(this, HSV_H_SLIDER, std::make_shared<W_UnitRenderable>(&linear_hue_shader));
+	assign_widget(this, HSV_H_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
+	assign_widget(this, HSV_S_SLIDER, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, HSV_S_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
+	assign_widget(this, HSV_V_SLIDER, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, HSV_V_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
 
 	orient_progress_slider(HSV_H_SLIDER, Cardinal::RIGHT);
 	setup_circle_cursor(HSV_H_SLIDER_CURSOR);
@@ -638,12 +638,12 @@ void ColorPicker::initialize_widget()
 
 	// ---------- HSL SLIDERS ----------
 
-	assign_widget(this, HSL_H_SLIDER, new W_UnitRenderable(&linear_hue_shader));
-	assign_widget(this, HSL_H_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
-	assign_widget(this, HSL_S_SLIDER, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, HSL_S_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
-	assign_widget(this, HSL_L_SLIDER, new W_UnitRenderable(&linear_lightness_shader));
-	assign_widget(this, HSL_L_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
+	assign_widget(this, HSL_H_SLIDER, std::make_shared<W_UnitRenderable>(&linear_hue_shader));
+	assign_widget(this, HSL_H_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
+	assign_widget(this, HSL_S_SLIDER, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, HSL_S_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
+	assign_widget(this, HSL_L_SLIDER, std::make_shared<W_UnitRenderable>(&linear_lightness_shader));
+	assign_widget(this, HSL_L_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
 
 	orient_progress_slider(HSL_H_SLIDER, Cardinal::RIGHT);
 	setup_circle_cursor(HSL_H_SLIDER_CURSOR);
@@ -671,8 +671,8 @@ void ColorPicker::initialize_widget()
 
 	// ---------- ALPHA SLIDER ----------
 	
-	assign_widget(this, ALPHA_SLIDER, new W_UnitRenderable(&quad_shader));
-	assign_widget(this, ALPHA_SLIDER_CURSOR, new W_UnitRenderable(&circle_cursor_shader));
+	assign_widget(this, ALPHA_SLIDER, std::make_shared<W_UnitRenderable>(&quad_shader));
+	assign_widget(this, ALPHA_SLIDER_CURSOR, std::make_shared<W_UnitRenderable>(&circle_cursor_shader));
 
 	setup_rect_uvs(ALPHA_SLIDER);
 	setup_circle_cursor(ALPHA_SLIDER_CURSOR);
@@ -687,7 +687,7 @@ void ColorPicker::initialize_widget()
 
 	// ---------- PREVIEW ----------
 	
-	assign_widget(this, PREVIEW, new W_UnitRenderable(&quad_shader));
+	assign_widget(this, PREVIEW, std::make_shared<W_UnitRenderable>(&quad_shader));
 	setup_rect_uvs(PREVIEW);
 	setup_gradient(PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW,
 		(GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW);
@@ -699,7 +699,7 @@ void ColorPicker::initialize_widget()
 
 	// ---------- BACKGROUND ----------
 
-	assign_widget(this, BACKGROUND, new RoundRect(&round_rect_shader));
+	assign_widget(this, BACKGROUND, std::make_shared<RoundRect>(&round_rect_shader));
 	rr_wget(*this, BACKGROUND).thickness = 0.25f;
 	rr_wget(*this, BACKGROUND).corner_radius = 10;
 	rr_wget(*this, BACKGROUND).border_color = RGBA(HSV(0.7f, 0.5f, 0.5f).to_rgb(), 0.5f);
@@ -708,49 +708,49 @@ void ColorPicker::initialize_widget()
 
 	// ---------- TEXT ----------
 
-	assign_widget(this, TEXT_ALPHA, new TextRender(*Fonts::label_regular, 18, "Alpha"));
+	assign_widget(this, TEXT_ALPHA, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Alpha"));
 	wp_at(TEXT_ALPHA).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_ALPHA).setup_renderable();
 	wp_at(TEXT_ALPHA).transform.position.x = left_text_x;
 	wp_at(TEXT_ALPHA).transform.position.y = text4_y;
 
-	assign_widget(this, TEXT_RED, new TextRender(*Fonts::label_regular, 18, "Red"));
+	assign_widget(this, TEXT_RED, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Red"));
 	wp_at(TEXT_RED).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_RED).setup_renderable();
 	wp_at(TEXT_RED).transform.position.x = left_text_x;
 	wp_at(TEXT_RED).transform.position.y = text1_y;
 
-	assign_widget(this, TEXT_GREEN, new TextRender(*Fonts::label_regular, 18, "Green"));
+	assign_widget(this, TEXT_GREEN, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Green"));
 	wp_at(TEXT_GREEN).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_GREEN).setup_renderable();
 	wp_at(TEXT_GREEN).transform.position.x = left_text_x;
 	wp_at(TEXT_GREEN).transform.position.y = text2_y;
 
-	assign_widget(this, TEXT_BLUE, new TextRender(*Fonts::label_regular, 18, "Blue"));
+	assign_widget(this, TEXT_BLUE, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Blue"));
 	wp_at(TEXT_BLUE).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_BLUE).setup_renderable();
 	wp_at(TEXT_BLUE).transform.position.x = left_text_x;
 	wp_at(TEXT_BLUE).transform.position.y = text3_y;
 
-	assign_widget(this, TEXT_HUE, new TextRender(*Fonts::label_regular, 18, "Hue"));
+	assign_widget(this, TEXT_HUE, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Hue"));
 	wp_at(TEXT_HUE).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_HUE).setup_renderable();
 	wp_at(TEXT_HUE).transform.position.x = left_text_x;
 	wp_at(TEXT_HUE).transform.position.y = text1_y;
 
-	assign_widget(this, TEXT_SAT, new TextRender(*Fonts::label_regular, 18, "Sat"));
+	assign_widget(this, TEXT_SAT, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Sat"));
 	wp_at(TEXT_SAT).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_SAT).setup_renderable();
 	wp_at(TEXT_SAT).transform.position.x = left_text_x;
 	wp_at(TEXT_SAT).transform.position.y = text2_y;
 
-	assign_widget(this, TEXT_VALUE, new TextRender(*Fonts::label_regular, 18, "Value"));
+	assign_widget(this, TEXT_VALUE, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Value"));
 	wp_at(TEXT_VALUE).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_VALUE).setup_renderable();
 	wp_at(TEXT_VALUE).transform.position.x = left_text_x;
 	wp_at(TEXT_VALUE).transform.position.y = text3_y;
 
-	assign_widget(this, TEXT_LIGHT, new TextRender(*Fonts::label_regular, 18, "Light"));
+	assign_widget(this, TEXT_LIGHT, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Light"));
 	wp_at(TEXT_LIGHT).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_LIGHT).setup_renderable();
 	wp_at(TEXT_LIGHT).transform.position.x = left_text_x;
@@ -764,7 +764,7 @@ void ColorPicker::initialize_widget()
 	sba.text = "#";
 	sba.transform = { { button_switch_txtfld_mode_x, button_top_y_2 }, { button_switch_txtfld_mode_w, button_h } };
 	sba.is_hoverable = [this]() { return current_widget_control == -1; };
-	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, new StandardTButton(sba));
+	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, std::make_shared<StandardTButton>(sba));
 	StandardTButton& b_txtfld = sb_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE);
 	b_txtfld.on_select = fconv_st_on_action([this, &b_txtfld]() {
 		if (txtfld_mode == TextFieldMode::NUMBER)
@@ -784,7 +784,7 @@ void ColorPicker::initialize_widget()
 
 	tba.text = "HEX";
 	tba.transform = { { button_left_x, button_top_y_2 }, { button_rgb_hex_code_w, button_h } };
-	ToggleTButton* tb = new ToggleTButton(tba);
+	auto tb = std::make_shared<ToggleTButton>(tba);
 	tb->is_hoverable = [this]() { return state & State::SLIDER_RGB && current_widget_control == -1; };
 	tb->on_select = fconv_tt_on_action([this]() { showing_hex_popup = true; });
 	tb->on_deselect = fconv_tt_on_action([this]() { showing_hex_popup = false; });
@@ -795,13 +795,13 @@ void ColorPicker::initialize_widget()
 	tba.transform.scale = { button_quad_w, button_h };
 	tba.is_hoverable = [this]() { return state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL) && current_widget_control == -1; };
 	tba.on_select = fconv_tt_on_action([this]() { set_state(State::GRAPHIC_QUAD); });
-	assign_widget(this, BUTTON_QUAD, new ToggleTButton(tba));
+	assign_widget(this, BUTTON_QUAD, std::make_shared<ToggleTButton>(tba));
 	
 	tba.text = "WHEEL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.transform.scale.x = button_wheel_w;
 	tba.on_select = fconv_tt_on_action([this]() { set_state(State::GRAPHIC_WHEEL); });
-	assign_widget(this, BUTTON_WHEEL, new ToggleTButton(tba));
+	assign_widget(this, BUTTON_WHEEL, std::make_shared<ToggleTButton>(tba));
 
 	sub_tab_bar.init({
 		{ BUTTON_QUAD, &tb_t_wget(*this, BUTTON_QUAD) },
@@ -813,23 +813,23 @@ void ColorPicker::initialize_widget()
 	tba.transform.scale.x = button_graphic_w;
 	tba.is_hoverable = [this]() { return current_widget_control == -1; };
 	tba.on_select = fconv_tt_on_action([this]() { set_state(last_graphic_state); });
-	assign_widget(this, BUTTON_GRAPHIC, new ToggleTButton(tba));
+	assign_widget(this, BUTTON_GRAPHIC, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "RGB";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.transform.scale.x = button_rgb_w;
 	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_RGB); });
-	assign_widget(this, BUTTON_RGB_SLIDER, new ToggleTButton(tba));
+	assign_widget(this, BUTTON_RGB_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "HSV";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_HSV); });
-	assign_widget(this, BUTTON_HSV_SLIDER, new ToggleTButton(tba));
+	assign_widget(this, BUTTON_HSV_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "HSL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_HSL); });
-	assign_widget(this, BUTTON_HSL_SLIDER, new ToggleTButton(tba));
+	assign_widget(this, BUTTON_HSL_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	main_tab_bar.init({
 		{ BUTTON_GRAPHIC, &tb_t_wget(*this, BUTTON_GRAPHIC) },

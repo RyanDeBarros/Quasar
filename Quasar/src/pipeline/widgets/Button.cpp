@@ -2,10 +2,10 @@
 
 #include "user/Machine.h"
 
-void TButton::init(const WidgetPlacement& wp, TextRender* txt)
+void TButton::init(const WidgetPlacement& wp, std::shared_ptr<TextRender>&& txt)
 {
 	children.resize(_W_COUNT);
-	assign_widget(this, TEXT, txt);
+	assign_widget(this, TEXT, std::move(txt));
 	if (parent_mbh)
 		parent_mbh->children.push_back(&handler);
 	handler.callback = [this](const MouseButtonEvent& m) {
@@ -55,28 +55,28 @@ void TButton::init(const WidgetPlacement& wp, TextRender* txt)
 TButton::TButton(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler* parent_mbh, const UTF::String& txt)
 	: RoundRect(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
-	init(wp, new TextRender(font, "", { 0.5f, 0.5f }));
+	init(wp, std::make_shared<TextRender>(font, "", glm::vec2{ 0.5f, 0.5f }));
 	text().set_text(txt);
 }
 
 TButton::TButton(glm::mat3* vp, const WidgetPlacement& wp, Font* font, Shader* bkg_shader, MouseButtonHandler* parent_mbh, UTF::String&& txt)
 	: RoundRect(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
-	init(wp, new TextRender(font, "", { 0.5f, 0.5f }));
+	init(wp, std::make_shared<TextRender>(font, "", glm::vec2{ 0.5f, 0.5f }));
 	text().set_text(std::move(txt));
 }
 
 TButton::TButton(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler* parent_mbh, const UTF::String& txt)
 	: RoundRect(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
-	init(wp, new TextRender(frange, font_size, "", { 0.5f, 0.5f }));
+	init(wp, std::make_shared<TextRender>(frange, font_size, "", glm::vec2{ 0.5f, 0.5f }));
 	text().set_text(txt);
 }
 
 TButton::TButton(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler* parent_mbh, UTF::String&& txt)
 	: RoundRect(bkg_shader), parent_mbh(parent_mbh), vp(vp)
 {
-	init(wp, new TextRender(frange, font_size, "", { 0.5f, 0.5f }));
+	init(wp, std::make_shared<TextRender>(frange, font_size, "", glm::vec2{ 0.5f, 0.5f }));
 	text().set_text(std::move(txt));
 }
 

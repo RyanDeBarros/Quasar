@@ -51,6 +51,7 @@ void attach_global_user_controls()
 				Machine.canvas_reset_camera();
 				break;
 			case Key::Z:
+				// TODO add process function so that held-down ctrl+Z/ctrl+shft+Z can result in multiple undos/redos at some speed. this would initiate calling of that process() method every frame until IAction::RELEASE.
 				if (Machine.main_window->is_ctrl_pressed())
 				{
 					k.consumed = true;

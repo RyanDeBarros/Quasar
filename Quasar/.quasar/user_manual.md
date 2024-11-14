@@ -52,7 +52,7 @@
 * Left click on the color palette to select the primary color, and right click on the color palette to select the secondary color.
 * Press the X key anywhere to swap the primary and alternate color selections.
 * Scroll the mouse wheel or track pad to scroll through colors in a subscheme.
-* Press the down arrow button to override the primary selection with the current color in color picker.
+* Press the down arrow button to overwrite the primary selection with the current color in color picker.
 * Press the + button to add a new color to the palette with the current color in color picker. If SHIFT is held, the new color will be inserted at the end of the palette instead of next to the primary selection. If CTRL is held, the new color will be selected as the primary color.
 * Hold CTRL and left click on colors to remove them from the palette.
 * Hold MMB or SPACE+LMB to move a color in the palette. Hold ALT to swap the color with every color your mouse passes over. If ALT is not held, then only the selected color will move, and the order of all other colors will be preserved.

@@ -112,10 +112,10 @@ Scale Palette::minimum_screen_display() const
 
 void Palette::initialize_widget()
 {
-	assign_widget(&widget, COLOR_PICKER, new ColorPicker(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
+	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
 	widget.wp_at(COLOR_PICKER).transform.scale = Scale(color_picker_scale);
 
-	assign_widget(&widget, COLOR_PALETTE, new ColorPalette(&vp, Machine.palette_mb_handler, Machine.palette_key_handler, Machine.palette_scroll_handler, &update_primary_color, &get_picker_rgba));
+	assign_widget(&widget, COLOR_PALETTE, std::make_shared<ColorPalette>(&vp, Machine.palette_mb_handler, Machine.palette_key_handler, Machine.palette_scroll_handler, &update_primary_color, &get_picker_rgba));
 	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(color_palette_scale);
 }
 

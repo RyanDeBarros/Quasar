@@ -64,24 +64,24 @@ struct Widget
 {
 	Widget* parent = nullptr;
 	WidgetPlacement self;
-	std::vector<Widget*> children; // LATER use shared_ptr?
+	std::vector<std::shared_ptr<Widget>> children;
 
 	Widget(size_t null_length = 0)
 	{
 		for (size_t i = 0; i < null_length; ++i)
 			children.push_back(nullptr);
 	}
-	Widget(std::vector<Widget*>&& heap_children) : children(std::move(heap_children)) {}
+	Widget(std::vector<std::shared_ptr<Widget>>&& heap_children) : children(std::move(heap_children)) {}
 	Widget(const Widget&) = delete;
 	Widget(Widget&&) noexcept = delete;
-	virtual ~Widget() { for (auto ptr : children) delete ptr; }
+	virtual ~Widget() = default;
 
 	virtual void draw() {}
 
 	template<std::derived_from<Widget> T>
-	T* get(size_t i) { return dynamic_cast<T*>(children[i]); }
+	T* get(size_t i) { return dynamic_cast<T*>(children[i].get()); }
 	template<std::derived_from<Widget> T>
-	const T* get(size_t i) const { return dynamic_cast<T*>(children[i]); }
+	const T* get(size_t i) const { return dynamic_cast<T*>(children[i].get()); }
 	WidgetPlacement& wp_at(size_t i) { return children[i]->self; }
 	const WidgetPlacement& wp_at(size_t i) const { return children[i]->self; }
 
@@ -96,7 +96,7 @@ struct Widget
 	bool contains_screen_point(Position pos, const glm::mat3& vp) const;
 };
 
-inline void detach_widget(Widget* parent, Widget* child)
+inline void detach_widget(Widget* parent, const std::shared_ptr<Widget>& child)
 {
 	if (parent && child)
 	{
@@ -116,20 +116,33 @@ inline void detach_widget(Widget* parent, size_t child_pos)
 	}
 }
 
-inline void attach_widget(Widget* parent, Widget* child)
+inline void attach_widget(Widget* parent, const std::shared_ptr<Widget>& child)
 {
 	if (child)
 	{
 		detach_widget(child->parent, child);
 		if (parent)
 		{
-			parent->children.push_back(child);
 			child->parent = parent;
+			parent->children.push_back(child);
 		}
 	}
 }
 
-inline void assign_widget(Widget* parent, size_t pos, Widget* child)
+inline void attach_widget(Widget* parent, std::shared_ptr<Widget>&& child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			child->parent = parent;
+			parent->children.push_back(std::move(child));
+		}
+	}
+}
+
+inline void assign_widget(Widget* parent, size_t pos, const std::shared_ptr<Widget>& child)
 {
 	if (child)
 	{
@@ -138,6 +151,21 @@ inline void assign_widget(Widget* parent, size_t pos, Widget* child)
 		{
 			parent->children[pos] = child;
 			child->parent = parent;
+		}
+	}
+	else if (parent)
+		parent->children[pos] = nullptr;
+}
+
+inline void assign_widget(Widget* parent, size_t pos, std::shared_ptr<Widget>&& child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			child->parent = parent;
+			parent->children[pos] = std::move(child);
 		}
 	}
 	else if (parent)

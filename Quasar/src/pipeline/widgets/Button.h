@@ -27,7 +27,7 @@ public:
 protected:
 	WindowHandle wh;
 
-	void init(const WidgetPlacement& wp, TextRender* text);
+	void init(const WidgetPlacement& wp, std::shared_ptr<TextRender>&& txt);
 
 public:
 	glm::mat3* vp;

@@ -46,7 +46,6 @@ struct ColorSubpalette : public Widget
 
 	void scroll_by(int delta);
 	void scroll_to_view(int i);
-	void scroll_down_full();
 	WidgetPlacement square_wp(int i) const;
 	WidgetPlacement global_square_wp(int i) const;
 	int first_square() const;
@@ -54,12 +53,14 @@ struct ColorSubpalette : public Widget
 	bool is_square_visible(int i) const;
 	Position cursor_world_pos() const;
 
-	void override_current_color(RGBA color);
-	void new_color(RGBA color, bool adjacent, bool update_primary);
+	void overwrite_current_color(RGBA color, bool update_in_picker);
+	void new_color(RGBA color, bool adjacent, bool update_primary, bool create_action);
 	void send_color(size_t i, RGBA color);
 	void send_color(size_t i);
 	void remove_square_under_cursor(bool send_vb);
 	void clean_extra_buffer_space();
+	void insert_color_at(int index, int to_primary_index, int to_alternate_index, RGBA color);
+	void remove_color_at(int index, int to_primary_index, int to_alternate_index, bool send_vb);
 
 	bool move_in_1d = true;
 	int moving_color = -1;
@@ -68,6 +69,7 @@ struct ColorSubpalette : public Widget
 	void begin_moving_color_under_cursor(bool move_in_1d);
 	void stop_moving_color();
 	bool is_moving_a_color() const { return moving_color >= 0; }
+	void move_color();
 
 	enum : size_t
 	{
@@ -123,6 +125,8 @@ public:
 	const ColorSubpalette& get_subpalette(size_t pos) const;
 	ColorSubpalette& current_subpalette();
 	const ColorSubpalette& current_subpalette() const;
+	std::shared_ptr<ColorSubpalette> subpalette_ref(ColorSubpalette* subpalette) const;
+	std::shared_ptr<ColorSubpalette> current_subpalette_ref() const;
 	size_t subpalette_index_in_widget(size_t pos) const;
 
 	static inline const float SQUARE_SEP = 28;
@@ -177,7 +181,7 @@ public:
 	{
 		BACKGROUND,
 		BLACK_GRID,
-		BUTTON_OVERRIDE_COLOR,
+		BUTTON_OVERWRITE_COLOR,
 		BUTTON_INSERT_NEW_COLOR,
 		BUTTON_SUBPALETTE_NEW,
 		BUTTON_SUBPALETTE_RENAME,
