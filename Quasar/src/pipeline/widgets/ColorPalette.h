@@ -127,6 +127,7 @@ public:
 	ColorSubpalette& current_subpalette();
 	const ColorSubpalette& current_subpalette() const;
 	std::shared_ptr<ColorSubpalette> subpalette_ref(ColorSubpalette* subpalette) const;
+	std::shared_ptr<ColorSubpalette> subpalette_ref(size_t pos) const;
 	std::shared_ptr<ColorSubpalette> current_subpalette_ref() const;
 	size_t subpalette_index_in_widget(size_t pos) const;
 
@@ -158,7 +159,10 @@ public:
 	void send_vp();
 	void import_color_scheme(const std::shared_ptr<ColorScheme>& color_scheme, bool create_action);
 	void import_color_scheme(std::shared_ptr<ColorScheme>&& color_scheme, bool create_action);
-	// TODO import_color_subscheme (into new slot or into existing slot)
+	void assign_color_subscheme(size_t pos, const std::shared_ptr<ColorSubscheme>& subscheme, bool create_action);
+	void assign_color_subscheme(size_t pos, std::shared_ptr<ColorSubscheme>&& subscheme, bool create_action);
+	void insert_subpalette(size_t pos, const std::shared_ptr<ColorSubpalette>& subpalette);
+	void insert_subpalette(size_t pos, std::shared_ptr<ColorSubpalette>&& subpalette);
 	void new_subpalette();
 	void delete_subpalette(size_t pos);
 	void switch_to_subpalette(size_t pos, bool update_primary_color);

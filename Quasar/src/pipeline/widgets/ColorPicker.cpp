@@ -708,49 +708,49 @@ void ColorPicker::initialize_widget()
 
 	// ---------- TEXT ----------
 
-	assign_widget(this, TEXT_ALPHA, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Alpha"));
+	assign_widget(this, TEXT_ALPHA, std::make_shared<TextRender>(*Fonts::label_regular, 18.0f, "Alpha"));
 	wp_at(TEXT_ALPHA).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_ALPHA).setup_renderable();
 	wp_at(TEXT_ALPHA).transform.position.x = left_text_x;
 	wp_at(TEXT_ALPHA).transform.position.y = text4_y;
 
-	assign_widget(this, TEXT_RED, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Red"));
+	assign_widget(this, TEXT_RED, std::make_shared<TextRender>(*Fonts::label_regular, 18.0f, "Red"));
 	wp_at(TEXT_RED).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_RED).setup_renderable();
 	wp_at(TEXT_RED).transform.position.x = left_text_x;
 	wp_at(TEXT_RED).transform.position.y = text1_y;
 
-	assign_widget(this, TEXT_GREEN, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Green"));
+	assign_widget(this, TEXT_GREEN, std::make_shared<TextRender>(*Fonts::label_regular, 18.0f, "Green"));
 	wp_at(TEXT_GREEN).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_GREEN).setup_renderable();
 	wp_at(TEXT_GREEN).transform.position.x = left_text_x;
 	wp_at(TEXT_GREEN).transform.position.y = text2_y;
 
-	assign_widget(this, TEXT_BLUE, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Blue"));
+	assign_widget(this, TEXT_BLUE, std::make_shared<TextRender>(*Fonts::label_regular, 18.0f, "Blue"));
 	wp_at(TEXT_BLUE).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_BLUE).setup_renderable();
 	wp_at(TEXT_BLUE).transform.position.x = left_text_x;
 	wp_at(TEXT_BLUE).transform.position.y = text3_y;
 
-	assign_widget(this, TEXT_HUE, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Hue"));
+	assign_widget(this, TEXT_HUE, std::make_shared<TextRender>(*Fonts::label_regular, 18.0f, "Hue"));
 	wp_at(TEXT_HUE).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_HUE).setup_renderable();
 	wp_at(TEXT_HUE).transform.position.x = left_text_x;
 	wp_at(TEXT_HUE).transform.position.y = text1_y;
 
-	assign_widget(this, TEXT_SAT, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Sat"));
+	assign_widget(this, TEXT_SAT, std::make_shared<TextRender>(*Fonts::label_regular, 18.0f, "Sat"));
 	wp_at(TEXT_SAT).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_SAT).setup_renderable();
 	wp_at(TEXT_SAT).transform.position.x = left_text_x;
 	wp_at(TEXT_SAT).transform.position.y = text2_y;
 
-	assign_widget(this, TEXT_VALUE, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Value"));
+	assign_widget(this, TEXT_VALUE, std::make_shared<TextRender>(*Fonts::label_regular, 18.0f, "Value"));
 	wp_at(TEXT_VALUE).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_VALUE).setup_renderable();
 	wp_at(TEXT_VALUE).transform.position.x = left_text_x;
 	wp_at(TEXT_VALUE).transform.position.y = text3_y;
 
-	assign_widget(this, TEXT_LIGHT, std::make_shared<TextRender>(*Fonts::label_regular, 18, "Light"));
+	assign_widget(this, TEXT_LIGHT, std::make_shared<TextRender>(*Fonts::label_regular, 18.0f, "Light"));
 	wp_at(TEXT_LIGHT).pivot.y = 0.5f;
 	tr_wget(*this, TEXT_LIGHT).setup_renderable();
 	wp_at(TEXT_LIGHT).transform.position.x = left_text_x;

@@ -8,7 +8,7 @@
 #include "user/Machine.h"
 #include "Button.h"
 
-// TODO weight should be by default sizeof(ActionStruct). So the default tracking length would be in bytes. Also make tracking length variable and add getter/setter.
+// TODO weight should be by default sizeof(ActionStruct) +- performance. So the default tracking length would be in bytes. Also make tracking length variable and add getter/setter.
 
 struct PrimarySelectorAction : public ActionBase
 {
@@ -195,6 +195,47 @@ struct SubpaletteRenameAction : public ActionBase
 		subpalette->focus(true);
 		subpalette->subscheme->name = std::move(name_combo.substr(start, len));
 	}
+};
+
+struct SubpaletteNewAction : public ActionBase
+{
+	ColorPalette* palette;
+	std::shared_ptr<ColorSubpalette> subpalette;
+	size_t index;
+
+	SubpaletteNewAction(ColorPalette* palette, std::shared_ptr<ColorSubpalette>&& subpalette, size_t index)
+		: palette(palette), subpalette(std::move(subpalette)), index(index) { weight = 0.5f; }
+
+	void forward() override { if (palette) palette->insert_subpalette(index, subpalette); }
+	void backward() override { if (palette) palette->delete_subpalette(index); }
+};
+
+struct SubpaletteDeleteAction : public ActionBase
+{
+	ColorPalette* palette;
+	std::shared_ptr<ColorSubpalette> subpalette;
+	size_t index;
+
+	SubpaletteDeleteAction(ColorPalette* palette, std::shared_ptr<ColorSubpalette>&& subpalette, size_t index)
+		: palette(palette), subpalette(std::move(subpalette)), index(index) {
+		weight = 0.5f;
+	}
+
+	void forward() override { if (palette) palette->delete_subpalette(index); }
+	void backward() override { if (palette) palette->insert_subpalette(index, subpalette); }
+};
+
+// LATER import subpalette files and test this action
+struct AssignColorSubschemeAction : public ActionBase
+{
+	ColorPalette* palette;
+	std::shared_ptr<ColorSubscheme> prev_subscheme, new_subscheme;
+	size_t index;
+	AssignColorSubschemeAction(ColorPalette* palette, std::shared_ptr<ColorSubscheme>&& prev_subscheme, const std::shared_ptr<ColorSubscheme>& new_subscheme, size_t index)
+		: palette(palette), prev_subscheme(std::move(prev_subscheme)), new_subscheme(new_subscheme), index(index) { weight = 1.0f; }
+
+	void forward() override { if (palette) palette->assign_color_subscheme(index, new_subscheme, false); }
+	void backward() override { if (palette) palette->assign_color_subscheme(index, prev_subscheme, false); }
 };
 
 // LATER test importing schemes and undo/redo. remember about ColorPalette::clear_history_on_import setting
@@ -842,6 +883,11 @@ std::shared_ptr<ColorSubpalette> ColorPalette::subpalette_ref(ColorSubpalette* s
 	return nullptr;
 }
 
+std::shared_ptr<ColorSubpalette> ColorPalette::subpalette_ref(size_t pos) const
+{
+	return std::dynamic_pointer_cast<ColorSubpalette>(children[subpalette_index_in_widget(pos)]);
+}
+
 std::shared_ptr<ColorSubpalette> ColorPalette::current_subpalette_ref() const
 {
 	return std::dynamic_pointer_cast<ColorSubpalette>(children[subpalette_index_in_widget(current_subscheme)]);
@@ -955,12 +1001,59 @@ void ColorPalette::import_color_scheme(std::shared_ptr<ColorScheme>&& color_sche
 	import_color_scheme();
 }
 
+void ColorPalette::assign_color_subscheme(size_t pos, const std::shared_ptr<ColorSubscheme>& subscheme, bool create_action)
+{
+	if (pos >= num_subpalettes())
+		return;
+	switch_to_subpalette(pos, false);
+	std::shared_ptr<ColorSubscheme> prev_subscheme = current_subpalette().subscheme;
+	scheme->subschemes[pos] = subscheme;
+	current_subpalette().subscheme = subscheme;
+	current_subpalette().reload_subscheme();
+	if (create_action)
+		Machine.history.push(std::make_shared<AssignColorSubschemeAction>(this, std::move(prev_subscheme), subscheme, pos));
+}
+
+void ColorPalette::assign_color_subscheme(size_t pos, std::shared_ptr<ColorSubscheme>&& subscheme, bool create_action)
+{
+	if (pos >= num_subpalettes())
+		return;
+	switch_to_subpalette(pos, false);
+	std::shared_ptr<ColorSubscheme> prev_subscheme = current_subpalette().subscheme;
+	scheme->subschemes[pos] = std::move(subscheme);
+	current_subpalette().subscheme = scheme->subschemes[pos];
+	current_subpalette().reload_subscheme();
+	if (create_action)
+		Machine.history.push(std::make_shared<AssignColorSubschemeAction>(this, std::move(prev_subscheme), scheme->subschemes[pos], pos));
+}
+
+void ColorPalette::insert_subpalette(size_t pos, const std::shared_ptr<ColorSubpalette>& subpalette)
+{
+	insert_widget(this, subpalette_index_in_widget(pos), subpalette);
+	scheme->subschemes.insert(scheme->subschemes.begin() + pos, subpalette->subscheme);
+	switch_to_subpalette(pos, false);
+	current_subpalette().self.transform.position.y = subpalette_pos_y();
+	current_subpalette().sync_with_palette();
+	current_subpalette().update_primary_color_in_picker();
+}
+
+void ColorPalette::insert_subpalette(size_t pos, std::shared_ptr<ColorSubpalette>&& subpalette)
+{
+	std::shared_ptr<ColorSubscheme> subscheme = subpalette->subscheme;
+	insert_widget(this, subpalette_index_in_widget(pos), std::move(subpalette));
+	scheme->subschemes.insert(scheme->subschemes.begin() + pos, subscheme);
+	switch_to_subpalette(pos, false);
+	current_subpalette().self.transform.position.y = subpalette_pos_y();
+	current_subpalette().sync_with_palette();
+	current_subpalette().update_primary_color_in_picker();
+}
+
 void ColorPalette::new_subpalette()
 {
 	attach_widget(this, std::make_shared<ColorSubpalette>(&color_square_shader, &outline_rect_shader));
 	size_t last = num_subpalettes() - 1;
 	scheme->subschemes.push_back(std::make_shared<ColorSubscheme>("default#" + std::to_string(last)));
-	current_subscheme = last;
+	switch_to_subpalette(last, false);
 	current_subpalette().subscheme = scheme->subschemes[current_subscheme];
 	current_subpalette().self.transform.position.y = subpalette_pos_y();
 	current_subpalette().reload_subscheme();
@@ -975,7 +1068,7 @@ void ColorPalette::delete_subpalette(size_t pos)
 	if (num_subpalettes() == 0)
 		new_subpalette();
 	if (current_subscheme >= num_subpalettes())
-		current_subscheme = num_subpalettes() - 1;
+		switch_to_subpalette(num_subpalettes() - 1, true);
 }
 
 void ColorPalette::switch_to_subpalette(size_t pos, bool update_primary_color)
@@ -983,7 +1076,8 @@ void ColorPalette::switch_to_subpalette(size_t pos, bool update_primary_color)
 	if (current_subscheme != pos)
 	{
 		current_subscheme = pos;
-		current_subpalette().update_primary_color_in_picker();
+		if (update_primary_color)
+			current_subpalette().update_primary_color_in_picker();
 	}
 }
 
@@ -1202,7 +1296,7 @@ void ColorPalette::initialize_widget()
 	sba.text = "N";
 	sba.on_select = fconv_st_on_action([this]() {
 		new_subpalette();
-		Machine.history.clear_history(); // TODO new subpalette action.
+		Machine.history.push(std::make_shared<SubpaletteNewAction>(this, current_subpalette_ref(), current_subscheme));
 		});
 	assign_widget(this, BUTTON_SUBPALETTE_NEW, std::make_shared<StandardTButton>(sba));
 	
@@ -1214,8 +1308,10 @@ void ColorPalette::initialize_widget()
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "D";
 	sba.on_select = fconv_st_on_action([this]() {
+		std::shared_ptr<ColorSubpalette> subpalette = current_subpalette_ref();
+		size_t index = current_subscheme;
 		delete_subpalette(current_subscheme);
-		Machine.history.clear_history(); // TODO subpalette delete action.
+		Machine.history.push(std::make_shared<SubpaletteDeleteAction>(this, std::move(subpalette), index));
 		});
 	assign_widget(this, BUTTON_SUBPALETTE_DELETE, std::make_shared<StandardTButton>(sba));
 }

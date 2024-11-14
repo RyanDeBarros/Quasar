@@ -142,6 +142,36 @@ inline void attach_widget(Widget* parent, std::shared_ptr<Widget>&& child)
 	}
 }
 
+inline void insert_widget(Widget* parent, size_t pos, const std::shared_ptr<Widget>& child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			child->parent = parent;
+			parent->children.insert(parent->children.begin() + pos, child);
+		}
+	}
+	else if (parent)
+		parent->children.insert(parent->children.begin() + pos, nullptr);
+}
+
+inline void insert_widget(Widget* parent, size_t pos, std::shared_ptr<Widget>&& child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			child->parent = parent;
+			parent->children.insert(parent->children.begin() + pos, std::move(child));
+		}
+	}
+	else if (parent)
+		parent->children.insert(parent->children.begin() + pos, nullptr);
+}
+
 inline void assign_widget(Widget* parent, size_t pos, const std::shared_ptr<Widget>& child)
 {
 	if (child)
@@ -149,8 +179,8 @@ inline void assign_widget(Widget* parent, size_t pos, const std::shared_ptr<Widg
 		detach_widget(child->parent, child);
 		if (parent)
 		{
-			parent->children[pos] = child;
 			child->parent = parent;
+			parent->children[pos] = child;
 		}
 	}
 	else if (parent)
