@@ -58,7 +58,7 @@ struct ColorSubpalette : public Widget
 	void new_color(RGBA color, bool adjacent, bool update_primary, bool create_action);
 	void send_color(size_t i, RGBA color);
 	void send_color(size_t i);
-	void remove_square_under_cursor(bool send_vb);
+	void remove_square_under_cursor(bool send_vb, bool create_action);
 	void clean_extra_buffer_space();
 	void insert_color_at(int index, int to_primary_index, int to_alternate_index, RGBA color);
 	void remove_color_at(int index, int to_primary_index, int to_alternate_index, bool send_vb);

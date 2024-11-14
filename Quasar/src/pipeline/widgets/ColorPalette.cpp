@@ -8,12 +8,14 @@
 #include "user/Machine.h"
 #include "Button.h"
 
+// TODO weight should be by default sizeof(ActionStruct). So the default tracking length would be in bytes. Also make tracking length variable and add getter/setter.
+
 struct PrimarySelectorAction : public ActionBase
 {
 	std::shared_ptr<ColorSubpalette> subpalette;
 	int prev_i, new_i;
 	PrimarySelectorAction(std::shared_ptr<ColorSubpalette>&& subpalette, int prev_i, int new_i)
-		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = 0.5f; }
+		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = 0.35f; }
 	void forward() override { execute(new_i); }
 	void backward() override { execute(prev_i); }
 	void execute(int i) const
@@ -29,7 +31,7 @@ struct AlternateSelectorAction : public ActionBase
 	std::shared_ptr<ColorSubpalette> subpalette;
 	int prev_i, new_i;
 	AlternateSelectorAction(std::shared_ptr<ColorSubpalette>&& subpalette, int prev_i, int new_i)
-		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = 0.5f; }
+		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = 0.35f; }
 	void forward() override { execute(new_i); }
 	void backward() override { execute(prev_i); }
 	void execute(int i) const
@@ -155,8 +157,44 @@ struct InsertColorAction : public ActionBase
 		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
 		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
 		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = 0.75f; }
-	void forward() override { subpalette->focus(true); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
-	void backward() override { subpalette->focus(true); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
+	void forward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
+	void backward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
+};
+
+struct RemoveColorAction : public ActionBase
+{
+	std::shared_ptr<ColorSubpalette> subpalette;
+	RGBA color;
+	int index, primary_index_1, primary_index_2, alternate_index_1, alternate_index_2;
+	RemoveColorAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA color, int index,
+		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
+		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
+		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) {
+		weight = 0.75f;
+	}
+	void forward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_2, alternate_index_2, true); }
+	void backward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_1, alternate_index_1, color); }
+};
+
+struct SubpaletteRenameAction : public ActionBase
+{
+	std::shared_ptr<ColorSubpalette> subpalette;
+	std::string name_combo;
+	size_t divider;
+	SubpaletteRenameAction(std::shared_ptr<ColorSubpalette>&& subpalette, std::string&& old_name, char* new_name)
+		: subpalette(std::move(subpalette)), name_combo(std::move(old_name))
+	{
+		weight = 0.8f;
+		divider = name_combo.size();
+		name_combo += new_name;
+	}
+	void forward() override { execute(divider, -1); }
+	void backward() override { execute(0, divider); }
+	void execute(size_t start, size_t len) const
+	{
+		subpalette->focus(true);
+		subpalette->subscheme->name = std::move(name_combo.substr(start, len));
+	}
 };
 
 // LATER test importing schemes and undo/redo. remember about ColorPalette::clear_history_on_import setting
@@ -166,7 +204,7 @@ struct ImportColorSchemeAction : public ActionBase
 	std::shared_ptr<ColorScheme> prev_cs;
 	std::shared_ptr<ColorScheme> new_cs;
 	ImportColorSchemeAction(ColorPalette* palette, std::shared_ptr<ColorScheme>&& prev_cs, const std::shared_ptr<ColorScheme>& new_cs)
-		: palette(palette), prev_cs(std::move(prev_cs)), new_cs(new_cs) { weight = 10; } // LATER variable weight dependent on combined size of subschemes in prev_cs and new_cs
+		: palette(palette), prev_cs(std::move(prev_cs)), new_cs(new_cs) { weight = 5; } // LATER variable weight dependent on combined size of subschemes in prev_cs and new_cs
 	void forward() override { if (palette) palette->import_color_scheme(new_cs, false); }
 	void backward() override { if (palette) palette->import_color_scheme(prev_cs, false); }
 };
@@ -617,11 +655,15 @@ void ColorSubpalette::send_color(size_t i)
 	squares.send_single_vertex(i * 4 + 3);
 }
 
-void ColorSubpalette::remove_square_under_cursor(bool send_vb)
+void ColorSubpalette::remove_square_under_cursor(bool send_vb, bool create_action)
 {
 	int index;
 	if (!get_visible_square_under_pos(cursor_world_pos(), index))
 		return;
+
+	int initial_primary = primary_index;
+	int initial_alternate = alternate_index;
+	RGBA color = subscheme->colors[index];
 
 	subscheme->remove(index);
 	
@@ -656,6 +698,9 @@ void ColorSubpalette::remove_square_under_cursor(bool send_vb)
 		--alternate_index;
 		resync_alternate_selector();
 	}
+
+	if (create_action)
+		Machine.history.push(std::make_shared<RemoveColorAction>(palette().subpalette_ref(this), color, index, initial_primary, primary_index, initial_alternate, alternate_index));
 }
 
 void ColorSubpalette::clean_extra_buffer_space()
@@ -679,7 +724,7 @@ void ColorSubpalette::insert_color_at(int index, int to_primary_index, int to_al
 	setup_color_buffer(index, squares);
 
 	size_t num_colors = subscheme->colors.size();
-	for (size_t i = primary_index + 2; i < num_colors; ++i)
+	for (int i = index + 1; i < num_colors; ++i)
 	{
 		WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
 		squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
@@ -696,6 +741,8 @@ void ColorSubpalette::insert_color_at(int index, int to_primary_index, int to_al
 		resync_primary_selector();
 		update_primary_color_in_picker();
 	}
+	else if (index == primary_index)
+		update_primary_color_in_picker();
 	if (to_alternate_index != alternate_index)
 	{
 		alternate_index = to_alternate_index;
@@ -723,6 +770,8 @@ void ColorSubpalette::remove_color_at(int index, int to_primary_index, int to_al
 		resync_primary_selector();
 		update_primary_color_in_picker();
 	}
+	else if (index == primary_index)
+		update_primary_color_in_picker();
 	if (alternate_index != to_alternate_index)
 	{
 		alternate_index = to_alternate_index;
@@ -1004,15 +1053,23 @@ void ColorPalette::render_imgui()
 			{
 				renaming_subpalette_start = false;
 				ImGui::SetKeyboardFocusHere();
+				
 				memset(rename_buf, '\0', ColorSubscheme::MAX_NAME_LENGTH);
 				memcpy(rename_buf, current_subpalette().subscheme->name.c_str(), std::min(current_subpalette().subscheme->name.size(), ColorSubscheme::MAX_NAME_LENGTH));
 			}
-			ImGui::InputText("##rename-input", rename_buf, ColorSubscheme::MAX_NAME_LENGTH);
+			ImGui::InputText("##rename-input", rename_buf, ColorSubscheme::MAX_NAME_LENGTH); // LATER ImGuiInputTextFlags_AutoSelectAll ? to auto select text on focus
 			if (ImGui::IsItemDeactivated())
 			{
 				renaming_subpalette = false;
 				if (!Machine.main_window->is_key_pressed(Key::ESCAPE))
-					current_subpalette().subscheme->name = rename_buf;
+				{
+					if (current_subpalette().subscheme->name != rename_buf)
+					{
+						std::string old_name = current_subpalette().subscheme->name;
+						current_subpalette().subscheme->name = rename_buf;
+						Machine.history.push(std::make_shared<SubpaletteRenameAction>(current_subpalette_ref(), std::move(old_name), rename_buf));
+					}
+				}
 			}
 		}
 
@@ -1032,9 +1089,8 @@ void ColorPalette::connect_input_handlers()
 		else if (mb.action == IAction::RELEASE && mb.button == MouseButton::LEFT && (mb.mods & Mods::CONTROL))
 		{
 			// delete color
-			current_subpalette().remove_square_under_cursor(false); // false because of clean_extra_buffer_space() on next line 
+			current_subpalette().remove_square_under_cursor(false, true); // false for first parameter because of clean_extra_buffer_space() on next line 
 			current_subpalette().clean_extra_buffer_space();
-			Machine.history.clear_history(); // TODO color remove action. Record color and index here. Then push action.
 		}
 		else if (mb.action == IAction::RELEASE && !Machine.main_window->is_key_pressed(Key::SPACE))
 		{
@@ -1082,7 +1138,6 @@ void ColorPalette::connect_input_handlers()
 			k.consumed = true;
 			renaming_subpalette = false;
 			renaming_subpalette_start = false;
-			// TODO cancel rename subpalette action creation here.
 		}
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
@@ -1153,10 +1208,7 @@ void ColorPalette::initialize_widget()
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "R";
-	sba.on_select = fconv_st_on_action([this]() {
-		renaming_subpalette = true; renaming_subpalette_start = true;
-		Machine.history.clear_history(); // TODO subpalette rename action. Record previous and next name. Then push action.
-		});
+	sba.on_select = fconv_st_on_action([this]() { renaming_subpalette = true; renaming_subpalette_start = true; });
 	assign_widget(this, BUTTON_SUBPALETTE_RENAME, std::make_shared<StandardTButton>(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;

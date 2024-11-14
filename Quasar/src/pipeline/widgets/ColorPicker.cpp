@@ -247,9 +247,9 @@ void ColorPicker::cp_render_gui_back()
 					ImGui::Text("RGB hex code");
 					ImGui::Text("#");
 					ImGui::SameLine();
-					ImGui::SetNextItemWidth(90 * self.transform.scale.x);
-					ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size);
-					update_rgb_hex();
+					ImGui::SetNextItemWidth(100 * self.transform.scale.x);
+					if (ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size))
+						update_rgb_hex();
 				}
 				else
 					ImGui::CloseCurrentPopup();
@@ -459,7 +459,7 @@ void ColorPicker::update_rgb_hex()
 		else
 			hex |= (rgb_hex[i] - '0') << (4 * (rgb_hex_size - 2 - i));
 	}
-	set_color(RGB(hex), true); // TODO only create action if enter is pressed
+	set_color(RGBA(RGB(hex), slider_normal_x(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR)), true);
 }
 
 void ColorPicker::set_state(State _state)
@@ -476,7 +476,7 @@ void ColorPicker::set_state(State _state)
 		release_cursor();
 		ColorFrame pre_color = get_color();
 		state = _state;
-		set_color(pre_color, true);
+		set_color(pre_color, false);
 
 		b_t_wget(*this, BUTTON_RGB_HEX_CODE).enabled = state & State::SLIDER_RGB;
 		b_t_wget(*this, BUTTON_QUAD).enabled = b_t_wget(*this, BUTTON_WHEEL).enabled = state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL);
