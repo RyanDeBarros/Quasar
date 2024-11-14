@@ -43,6 +43,7 @@ struct ColorSubpalette : public Widget
 	bool get_visible_square_under_pos(Position pos, int& index) const;
 	void switch_primary_and_alternate();
 	void update_primary_color_in_picker() const;
+	void focus(bool update_primary_color);
 
 	void scroll_by(int delta);
 	void scroll_to_view(int i);
@@ -157,7 +158,8 @@ public:
 	void import_color_scheme(ColorScheme&& color_scheme);
 	void new_subpalette();
 	void delete_subpalette(size_t pos);
-	void switch_to_subpalette(size_t pos);
+	void switch_to_subpalette(size_t pos, bool update_primary_color);
+	void switch_to_subpalette(ColorSubpalette* subpalette, bool update_primary_color);
 	size_t num_subpalettes() const;
 	void set_size(Scale pos, bool sync);
 	Scale minimum_display() const;
