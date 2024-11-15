@@ -30,9 +30,6 @@
     <ClCompile Include="vendor\glm\glm.cppm">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\edit\Image.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\user\Platform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -75,12 +72,6 @@
     <ClCompile Include="src\variety\FileSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\edit\PixelBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\edit\PixelBufferPaths.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\pipeline\panels\Palette.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -88,9 +79,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\pipeline\panels\Panel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\edit\Color.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Logger.cpp">
@@ -127,6 +115,30 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\pipeline\widgets\Button.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\edit\color\Color.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\edit\image\Image.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\edit\image\PixelBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\edit\image\PixelBufferPaths.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\widgets\ColorPalette.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\edit\color\ColorScheme.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\widgets\Widget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\variety\Geometry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1007,9 +1019,6 @@
     <ClInclude Include="vendor\stb\stb_image_write.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\edit\Image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\variety\Geometry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1020,9 +1029,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\user\Platform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\edit\Color.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\variety\Utils.h">
@@ -1079,12 +1085,6 @@
     <ClInclude Include="src\user\Preferences.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\edit\PixelBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\edit\PixelBufferPaths.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\pipeline\panels\Palette.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1124,9 +1124,6 @@
     <ClInclude Include="src\pipeline\widgets\RoundRect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\widgets\Widgets.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\pipeline\render\Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1137,6 +1134,27 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\pipeline\widgets\Button.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\edit\color\Color.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\edit\image\PixelBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\edit\image\PixelBufferPaths.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\widgets\ColorPalette.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\edit\color\ColorScheme.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\widgets\Widget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\edit\image\Image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

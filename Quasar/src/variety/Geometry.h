@@ -8,11 +8,53 @@
 
 #include "Macros.h"
 
+constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
+{
+	return val >= min_inclusive && val <= max_inclusive;
+}
+
 struct Position : glm::vec2
 {
 	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
+	Position(int x, int y) : glm::vec2(x, y) {}
+	Position(int x, float y) : glm::vec2(x, y) {}
+	Position(float x, int y) : glm::vec2(x, y) {}
 	Position(const glm::vec2& vec) : glm::vec2(vec) {}
+
+	Position operator+(Position r) const { return { x + r.x, y + r.y }; }
+	Position& operator+=(Position r) { x += r.x; y += r.y; ; return *this; }
+	Position operator-(Position r) const { return { x - r.x, y - r.y }; }
+	Position& operator-=(Position r) { x -= r.x; y -= r.y; ; return *this; }
+
+	Position operator+(glm::vec2 r) const { return { x + r.x, y + r.y }; }
+	Position& operator+=(glm::vec2 r) { x += r.x; y += r.y; ; return *this; }
+	Position operator-(glm::vec2 r) const { return { x - r.x, y - r.y }; }
+	Position& operator-=(glm::vec2 r) { x -= r.x; y -= r.y; ; return *this; }
+
+	Position operator*(Position r) const { return { x * r.x, y * r.y }; }
+	Position& operator*=(Position r) { x *= r.x; y *= r.y; ; return *this; }
+	Position operator/(Position r) const { return { x / r.x, y / r.y }; }
+	Position& operator/=(Position r) { x /= r.x; y /= r.y; ; return *this; }
+
+	Position operator*(glm::vec2 r) const { return { x * r.x, y * r.y }; }
+	Position& operator*=(glm::vec2 r) { x *= r.x; y *= r.y; ; return *this; }
+	Position operator/(glm::vec2 r) const { return { x / r.x, y / r.y }; }
+	Position& operator/=(glm::vec2 r) { x /= r.x; y /= r.y; ; return *this; }
+
+	Position operator+(float r) const { return { x + r, y + r }; }
+	Position& operator+=(float r) { x += r; y += r; return *this; }
+	Position operator-(float r) const { return { x - r, y - r }; }
+	Position& operator-=(float r) { x -= r; y -= r; return *this; }
+	Position operator*(float r) const { return { x * r, y * r }; }
+	Position& operator*=(float r) { x *= r; y *= r; return *this; }
+	Position operator/(float r) const { return { x / r, y / r }; }
+	Position& operator/=(float r) { x /= r; y /= r; return *this; }
 };
+
+inline bool in_diagonal_rect(Position pos, Position bl, Position tr)
+{
+	return on_interval(pos.x, bl.x, tr.x) && on_interval(pos.y, bl.y, tr.y);
+}
 
 struct Rotation
 {
@@ -29,9 +71,41 @@ struct Scale : glm::vec2
 {
 	Scale(float s = 1.0f) : glm::vec2(s) {}
 	Scale(float x, float y) : glm::vec2(x, y) {}
+	Scale(int x, int y) : glm::vec2(x, y) {}
+	Scale(int x, float y) : glm::vec2(x, y) {}
+	Scale(float x, int y) : glm::vec2(x, y) {}
 	Scale(const glm::vec2& vec) : glm::vec2(vec) {}
 
 	Scale reciprocal() const { return { x ? 1.0f / x : 0.0f, y ? 1.0f / y : 0.0f }; }
+
+	Scale operator+(Scale r) const { return { x + r.x, y + r.y }; }
+	Scale& operator+=(Scale r) { x += r.x; y += r.y; ; return *this; }
+	Scale operator-(Scale r) const { return { x - r.x, y - r.y }; }
+	Scale& operator-=(Scale r) { x -= r.x; y -= r.y; ; return *this; }
+
+	Scale operator+(glm::vec2 r) const { return { x + r.x, y + r.y }; }
+	Scale& operator+=(glm::vec2 r) { x += r.x; y += r.y; ; return *this; }
+	Scale operator-(glm::vec2 r) const { return { x - r.x, y - r.y }; }
+	Scale& operator-=(glm::vec2 r) { x -= r.x; y -= r.y; ; return *this; }
+
+	Scale operator*(Scale r) const { return { x * r.x, y * r.y }; }
+	Scale& operator*=(Scale r) { x *= r.x; y *= r.y; ; return *this; }
+	Scale operator/(Scale r) const { return { x / r.x, y / r.y }; }
+	Scale& operator/=(Scale r) { x /= r.x; y /= r.y; ; return *this; }
+
+	Scale operator*(glm::vec2 r) const { return { x * r.x, y * r.y }; }
+	Scale& operator*=(glm::vec2 r) { x *= r.x; y *= r.y; ; return *this; }
+	Scale operator/(glm::vec2 r) const { return { x / r.x, y / r.y }; }
+	Scale& operator/=(glm::vec2 r) { x /= r.x; y /= r.y; ; return *this; }
+
+	Scale operator+(float r) const { return { x + r, y + r }; }
+	Scale& operator+=(float r) { x += r; y += r; return *this; }
+	Scale operator-(float r) const { return { x - r, y - r }; }
+	Scale& operator-=(float r) { x -= r; y -= r; return *this; }
+	Scale operator*(float r) const { return { x * r, y * r }; }
+	Scale& operator*=(float r) { x *= r; y *= r; return *this; }
+	Scale operator/(float r) const { return { x / r, y / r }; }
+	Scale& operator/=(float r) { x /= r; y /= r; return *this; }
 };
 
 struct Transform
@@ -64,6 +138,8 @@ struct FlatTransform
 	Position position;
 	Scale scale;
 
+	bool operator==(const FlatTransform&) const = default;
+
 	glm::mat3 camera() const { return inverse().matrix(); }
 	
 	FlatTransform inverse() const
@@ -89,12 +165,18 @@ struct FlatTransform
 	}
 
 	Position get_relative_pos(Position absolute) const { return (absolute - position) * scale.reciprocal(); }
+
+	bool contains_point(Position pos) const { return on_interval(pos.x, left(), right()) && on_interval(pos.y, bottom(), top()); }
+
+	float left() const { return position.x - 0.5f * scale.x; }
+	float right() const { return position.x + 0.5f * scale.x; }
+	float bottom() const { return position.y - 0.5f * scale.y; }
+	float top() const { return position.y + 0.5f * scale.y; }
 };
 
-constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
-{
-	return val >= min_inclusive && val <= max_inclusive;
-}
+extern Logger& operator<<(Logger&, const Position&);
+extern Logger& operator<<(Logger&, const Scale&);
+extern Logger& operator<<(Logger&, const FlatTransform&);
 
 struct ClippingRect
 {
@@ -159,3 +241,8 @@ enum class Cardinal
 	LEFT,
 	DOWN
 };
+
+constexpr float mean2d1d(float a, float b)
+{
+	return (a + b + std::max(a, b)) / 3.0f;
+}

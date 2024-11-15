@@ -109,14 +109,14 @@ inline void initialize_dynamic_vao(GLuint& vao, GLuint& vb, size_t vertex_count,
 
 inline void delete_vao_buffers(GLuint vao, GLuint vb, GLuint ib)
 {
-	QUASAR_GL(glDeleteBuffers(1, &vao));
+	QUASAR_GL(glDeleteVertexArrays(1, &vao));
 	QUASAR_GL(glDeleteBuffers(1, &vb));
 	QUASAR_GL(glDeleteBuffers(1, &ib));
 }
 
 inline void delete_vao_buffers(GLuint vao, GLuint vb)
 {
-	QUASAR_GL(glDeleteBuffers(1, &vao));
+	QUASAR_GL(glDeleteVertexArrays(1, &vao));
 	QUASAR_GL(glDeleteBuffers(1, &vb));
 }
 

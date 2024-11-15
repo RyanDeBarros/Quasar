@@ -34,10 +34,7 @@ constexpr unsigned char hex_to_byte(unsigned int hex)
 		static_assert(false);
 }
 
-template<typename Held>
-struct PolyHolder
+inline int ceil_divide(int x, int y)
 {
-	Held held;
-
-	virtual ~PolyHolder() = default;
-};
+	return (int)ceilf(float(x) / y);
+}

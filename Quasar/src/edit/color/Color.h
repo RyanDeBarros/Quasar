@@ -231,6 +231,10 @@ constexpr HSV HSL::to_hsv() const
 	return hsv;
 }
 
+struct RGBA;
+struct HSVA;
+struct HSLA;
+
 struct RGBA
 {
 	RGB rgb;
@@ -254,7 +258,15 @@ struct RGBA
 	constexpr void set_pixel_b(int b) { rgb.set_pixel_b(b); }
 	constexpr void set_pixel_a(int a) { alpha = std::clamp(a, 0, 255) * inv255; }
 
+	constexpr HSVA to_hsva() const;
+	constexpr HSLA to_hsla() const;
+
+	static const RGBA WHITE;
+	static const RGBA BLACK;
 };
+
+inline const RGBA RGBA::WHITE = RGBA(1.0f, 1.0f, 1.0f, 1.0f);
+inline const RGBA RGBA::BLACK = RGBA(0.0f, 0.0f, 0.0f, 1.0f);
 
 struct HSVA
 {
@@ -278,6 +290,9 @@ struct HSVA
 	constexpr void set_pixel_s(int s) { hsv.set_pixel_s(s); }
 	constexpr void set_pixel_v(int v) { hsv.set_pixel_v(v); }
 	constexpr void set_pixel_a(int a) { alpha = std::clamp(a, 0, 255) * inv255; }
+
+	constexpr RGBA to_rgba() const;
+	constexpr HSLA to_hsla() const;
 };
 
 struct HSLA
@@ -302,7 +317,40 @@ struct HSLA
 	constexpr void set_pixel_s(int s) { hsl.set_pixel_s(s); }
 	constexpr void set_pixel_l(int l) { hsl.set_pixel_l(l); }
 	constexpr void set_pixel_a(int a) { alpha = std::clamp(a, 0, 255) * inv255; }
+
+	constexpr RGBA to_rgba() const;
+	constexpr HSVA to_hsva() const;
 };
+
+constexpr HSVA RGBA::to_hsva() const
+{
+	return HSVA(rgb.to_hsv(), alpha);
+}
+
+constexpr HSLA RGBA::to_hsla() const
+{
+	return HSLA(rgb.to_hsl(), alpha);
+}
+
+constexpr RGBA HSVA::to_rgba() const
+{
+	return RGBA(hsv.to_rgb(), alpha);
+}
+
+constexpr HSLA HSVA::to_hsla() const
+{
+	return HSLA(hsv.to_hsl(), alpha);
+}
+
+constexpr RGBA HSLA::to_rgba() const
+{
+	return RGBA(hsl.to_rgb(), alpha);
+}
+
+constexpr HSVA HSLA::to_hsva() const
+{
+	return HSVA(hsl.to_hsv(), alpha);
+}
 
 struct ColorFrame
 {

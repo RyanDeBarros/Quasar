@@ -164,15 +164,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\edit\Color.cpp" />
-    <ClCompile Include="src\edit\Image.cpp" />
-    <ClCompile Include="src\edit\PixelBuffer.cpp" />
-    <ClCompile Include="src\edit\PixelBufferPaths.cpp" />
+    <ClCompile Include="src\edit\color\Color.cpp" />
+    <ClCompile Include="src\edit\image\Image.cpp" />
+    <ClCompile Include="src\edit\image\PixelBuffer.cpp" />
+    <ClCompile Include="src\edit\image\PixelBufferPaths.cpp" />
     <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="src\pipeline\text\CommonFonts.cpp" />
     <ClCompile Include="src\pipeline\text\Font.cpp" />
     <ClCompile Include="src\pipeline\text\TextRender.cpp" />
     <ClCompile Include="src\pipeline\widgets\Button.cpp" />
+    <ClCompile Include="src\pipeline\widgets\ColorPalette.cpp" />
+    <ClCompile Include="src\edit\color\ColorScheme.cpp" />
+    <ClCompile Include="src\pipeline\widgets\Widget.cpp" />
+    <ClCompile Include="src\variety\Geometry.cpp" />
     <ClCompile Include="src\variety\UTF.cpp" />
     <ClCompile Include="src\pipeline\widgets\ColorPicker.cpp" />
     <ClCompile Include="src\pipeline\panels\Palette.cpp" />
@@ -204,14 +208,16 @@
     <ClCompile Include="vendor\tinyfd\tinyfiledialogs.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\edit\Color.h" />
-    <ClInclude Include="src\edit\PixelBuffer.h" />
-    <ClInclude Include="src\edit\PixelBufferPaths.h" />
+    <ClInclude Include="src\edit\color\Color.h" />
+    <ClInclude Include="src\edit\image\PixelBuffer.h" />
+    <ClInclude Include="src\edit\image\PixelBufferPaths.h" />
     <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\pipeline\text\CommonFonts.h" />
     <ClInclude Include="src\pipeline\text\Font.h" />
     <ClInclude Include="src\pipeline\text\TextRender.h" />
     <ClInclude Include="src\pipeline\widgets\Button.h" />
+    <ClInclude Include="src\pipeline\widgets\ColorPalette.h" />
+    <ClInclude Include="src\edit\color\ColorScheme.h" />
     <ClInclude Include="src\variety\UTF.h" />
     <ClInclude Include="src\pipeline\widgets\ColorPicker.h" />
     <ClInclude Include="src\pipeline\panels\Palette.h" />
@@ -221,7 +227,7 @@
     <ClInclude Include="src\pipeline\render\Uniforms.h" />
     <ClInclude Include="src\pipeline\render\Renderable.h" />
     <ClInclude Include="src\pipeline\widgets\RoundRect.h" />
-    <ClInclude Include="src\pipeline\widgets\Widgets.h" />
+    <ClInclude Include="src\pipeline\widgets\Widget.h" />
     <ClInclude Include="src\user\Preferences.h" />
     <ClInclude Include="src\user\UserInput.h" />
     <ClInclude Include="src\variety\FileSystem.h" />
@@ -231,7 +237,7 @@
     <ClInclude Include="src\variety\Geometry.h" />
     <ClInclude Include="src\variety\GLutility.h" />
     <ClInclude Include="src\variety\History.h" />
-    <ClInclude Include="src\edit\Image.h" />
+    <ClInclude Include="src\edit\image\Image.h" />
     <ClInclude Include="src\variety\IO.h" />
     <ClInclude Include="src\Macros.h" />
     <ClInclude Include="src\pipeline\render\Shader.h" />

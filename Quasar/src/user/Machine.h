@@ -10,7 +10,7 @@
 
 struct MachineImpl
 {
-	MachineImpl() = default;
+	MachineImpl();
 	MachineImpl(const MachineImpl&) = delete;
 	MachineImpl(MachineImpl&&) noexcept = delete;
 	~MachineImpl() = default;
@@ -24,6 +24,7 @@ struct MachineImpl
 	MouseButtonHandler palette_mb_handler;
 	KeyHandler palette_key_handler;
 	ScrollHandler easel_scroll_handler;
+	ScrollHandler palette_scroll_handler;
 	KeyHandler global_key_handler;
 	PathDropHandler path_drop_handler;
 
@@ -32,8 +33,8 @@ struct MachineImpl
 		constexpr static int initial_width = 2160;
 		constexpr static int initial_height = 1440;
 		constexpr static int initial_menu_panel_height = 32;
-		constexpr static int initial_brush_panel_width = 432;
-		constexpr static int initial_palette_panel_width = 432;
+		constexpr static int initial_brush_panel_width = 380;
+		constexpr static int initial_palette_panel_width = 380;
 		constexpr static int initial_views_panel_height = 288;
 		int menu_panel_height = initial_menu_panel_height;
 		int brush_panel_width = initial_brush_panel_width;
@@ -76,10 +77,12 @@ struct MachineImpl
 
 	bool create_main_window();
 	void init_renderer();
+	void init_panels_layout();
 	void destroy();
 	void exit() const { main_window->request_close(); }
 	bool should_exit() const;
 	void on_render();
+	void process();
 	void mark();
 	void unmark();
 	Scale inv_app_scale() const;
@@ -88,17 +91,21 @@ struct MachineImpl
 	void set_clear_color(ColorFrame color);
 
 	ClippingRect main_window_clip() const { return ClippingRect(0, 0, main_window->width(), main_window->height()); }
-	
+
 	Position to_world_coordinates(Position screen_coordinates, const glm::mat3& inverse_vp) const;
 	Position to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const;
-	Position cursor_world_coordinates(const glm::mat3& inverse_vp) const;
+
+	Position cursor_screen_pos() const;
+	Position cursor_screen_x() const;
+	Position cursor_screen_y() const;
+	Position cursor_world_pos(const glm::mat3& inverse_vp) const;
 
 	// Panels
 	glm::vec2 easel_cursor_world_pos() const;
 	glm::vec2 palette_cursor_world_pos() const;
 	bool cursor_in_easel() const;
 	bool cursor_in_palette() const;
-	
+
 	// Canvas
 	FlatTransform& canvas_transform() const;
 	Position& canvas_position() const { return canvas_transform().position; }
@@ -123,6 +130,8 @@ struct MachineImpl
 	bool undo_enabled() const { return history.undo_size() != 0; }
 	void redo() { history.redo(); mark(); }
 	bool redo_enabled() const { return history.redo_size() != 0; }
+	void start_held_undo();
+	void start_held_redo();
 
 	// User controls
 	void canvas_begin_panning();

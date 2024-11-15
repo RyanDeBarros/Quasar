@@ -5,7 +5,7 @@
 
 #include <stb/stb_truetype.h>
 
-#include "edit/Image.h"
+#include "edit/image/Image.h"
 #include "variety/UTF.h"
 #include "variety/Geometry.h"
 

@@ -10,7 +10,7 @@ struct UnitRenderable
 {
 	GLfloat* varr = nullptr;
 	GLuint vao = 0, vb = 0;
-	Shader* shader = nullptr;
+	Shader* shader = nullptr; // LATER std::shared_ptr for shaders?
 private:
 	unsigned short num_vertices;
 public:
@@ -74,9 +74,14 @@ struct IndexedRenderable
 
 	void set_shader(Shader* shader);
 	void set_num_vertices(size_t num_vertices);
+	size_t num_vertices() const;
 	void push_back_vertices(size_t num_vertices);
+	void insert_vertices(size_t num_vertices, size_t pos);
 	void fill_iarr_with_quads(size_t num_quads);
-	void push_back_quads(size_t num_quads, GLuint starting_vertex = -1);
+	void push_back_quads(size_t num_quads);
+	void push_back_quads(size_t num_quads, GLuint starting_vertex);
+	void remove_from_varr(size_t pos);
+	void remove_from_iarr(size_t pos);
 	void set_attribute(size_t attrib, const float* v);
 	void set_attribute_single_vertex(size_t vertex, size_t attrib, const float* v);
 	void get_attribute(size_t vertex, size_t attrib, float* v) const;

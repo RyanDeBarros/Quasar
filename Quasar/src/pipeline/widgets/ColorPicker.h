@@ -5,19 +5,20 @@
 #include <imgui/imgui.h>
 
 #include "user/Platform.h"
-#include "Widgets.h"
-#include "edit/Color.h"
+#include "Widget.h"
+#include "edit/color/Color.h"
 #include "variety/Geometry.h"
+#include "Button.h"
 
 struct ColorPicker : public Widget
 {
 	enum class State
 	{
-		GRAPHIC_QUAD,
-		GRAPHIC_WHEEL,
-		SLIDER_RGB,
-		SLIDER_HSV,
-		SLIDER_HSL,
+		GRAPHIC_QUAD = 0b1,
+		GRAPHIC_WHEEL = 0b10,
+		SLIDER_RGB = 0b100,
+		SLIDER_HSV = 0b1000,
+		SLIDER_HSL = 0b10000
 	};
 
 private:
@@ -31,7 +32,7 @@ public:
 	glm::mat3* vp;
 
 private:
-	Position gui_center;
+	FlatTransform gui_transform;
 	State last_graphic_state = State::GRAPHIC_QUAD;
 	enum class TextFieldMode
 	{
@@ -44,18 +45,22 @@ private:
 
 	MouseButtonHandler& parent_mb_handler;
 	MouseButtonHandler mb_handler;
-	MouseButtonHandler imgui_mb_handler;
 	KeyHandler& parent_key_handler;
 	KeyHandler key_handler;
 	
-	bool imgui_takeover_mb = false;
-	bool imgui_takeover_key = false;
+	bool popup_hovered = false;
+
+	ToggleTButtonGroup main_tab_bar;
+	ToggleTButtonGroup sub_tab_bar;
+	bool showing_hex_popup = false;
+
+	bool escape_to_close_popup = false;
 	
 	WindowHandle wh_interactable;
-	WindowHandle wh_rgb_hex_button;
-	WindowHandle wh_txtfld_mode_button;
 
 	int current_widget_control = -1;
+
+	RGBA current_action_color;
 
 public:
 	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
@@ -63,24 +68,23 @@ public:
 	ColorPicker(ColorPicker&&) noexcept = delete;
 	~ColorPicker();
 
-	void render();
+	virtual void draw() override;
 	void process();
 	void send_vp();
 	ColorFrame get_color() const;
-	void set_color(ColorFrame);
-	void set_size(Scale size, bool sync = false);
-	void set_position(Position world_pos);
+	void set_color(ColorFrame color, bool create_action);
+	void set_size(Scale size, bool sync);
+	Scale minimum_display() const;
 	
 private:
 	void process_mb_down_events();
 
 	void cp_render_gui_back();
 	void cp_render_gui_front();
-	void cp_render_tab_button(State& to_state, State state, bool disable, const char* display) const;
 	void update_rgb_hex();
 
 	void initialize_widget();
-	void connect_mouse_handlers();
+	void connect_input_handlers();
 	void take_over_cursor();
 	void release_cursor();
 
@@ -114,16 +118,21 @@ private:
 	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
-	void sync_cp_widget_with_vp();
-	void sync_single_cp_widget_transform_ur(size_t control, bool send_buffer = true) const;
+	void sync_widget_with_vp();
+	void sync_single_standard_ur_transform(size_t control, bool send_buffer = true) const;
 	void send_cpwc_buffer(size_t control) const;
 	void set_circle_cursor_thickness(size_t cursor, float thickness) const;
 	void set_circle_cursor_value(size_t cursor, float value) const;
 	float get_circle_cursor_value(size_t cursor) const;
 	void setup_circle_cursor(size_t cursor);
 
+	bool cursor_in_bkg() const;
+
+	float cached_scale1d = 0.0f;
+
+public:
 	// LATER use UMR when possible
-	enum
+	enum : size_t
 	{
 		// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
 		PREVIEW,						// quad
@@ -166,6 +175,12 @@ private:
 		TEXT_LIGHT,						// separate widget
 		BUTTON_RGB_HEX_CODE,			// separate widget
 		BUTTON_SWITCH_TXTFLD_MODE,		// separate widget
+		BUTTON_QUAD,					// separate widget
+		BUTTON_WHEEL,					// separate widget
+		BUTTON_GRAPHIC,					// separate widget
+		BUTTON_RGB_SLIDER,				// separate widget
+		BUTTON_HSV_SLIDER,				// separate widget
+		BUTTON_HSL_SLIDER,				// separate widget
 		_W_COUNT
 	};
 
@@ -189,5 +204,24 @@ private:
 		_MAX_GRADIENT_COLORS
 	};
 
+private:
 	static void send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color);
 };
+
+inline ColorPicker& cpk_wget(Widget& w, size_t i)
+{
+	return *w.get<ColorPicker>(i);
+}
+
+inline const ColorPicker& cpk_wget(const Widget& w, size_t i)
+{
+	return *w.get<ColorPicker>(i);
+}
+
+inline int operator|(ColorPicker::State a, ColorPicker::State b) { return int(a) | int(b); }
+inline int operator|(int a, ColorPicker::State b) { return a | int(b); }
+inline int operator|(ColorPicker::State a, int b) { return int(a) | b; }
+inline int operator&(ColorPicker::State a, ColorPicker::State b) { return int(a) & int(b); }
+inline int operator&(int a, ColorPicker::State b) { return a & int(b); }
+inline int operator&(ColorPicker::State a, int b) { return int(a) & b; }
+inline int operator~(ColorPicker::State a) { return ~int(a); }

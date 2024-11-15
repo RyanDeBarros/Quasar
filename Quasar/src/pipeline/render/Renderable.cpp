@@ -79,7 +79,7 @@ void UnitRenderable::send_buffer() const
 void UnitRenderable::send_single_vertex(unsigned short vertex) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride, shader->stride * sizeof(GLfloat), varr + vertex * shader->stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr + vertex * shader->stride));
 	unbind_vao_buffers();
 }
 
@@ -185,14 +185,14 @@ void UnitMultiRenderable::send_buffer() const
 void UnitMultiRenderable::send_single_unit(unsigned short unit) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, unit * unit_num_vertices * shader->stride, size_t(unit_num_vertices) * shader->stride * sizeof(GLfloat), varr + unit * unit_num_vertices * shader->stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, unit * unit_num_vertices * shader->stride * sizeof(GLfloat), size_t(unit_num_vertices) * shader->stride * sizeof(GLfloat), varr + unit * unit_num_vertices * shader->stride));
 	unbind_vao_buffers();
 }
 
 void UnitMultiRenderable::send_single_vertex(unsigned short unit, unsigned short vertex) const
 {
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, (unit * unit_num_vertices + vertex) * shader->stride, shader->stride * sizeof(GLfloat), varr + (unit * unit_num_vertices + vertex) * shader->stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, (unit * unit_num_vertices + vertex) * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr + (unit * unit_num_vertices + vertex) * shader->stride));
 	unbind_vao_buffers();
 }
 
@@ -242,9 +242,19 @@ void IndexedRenderable::set_num_vertices(size_t num_vertices)
 	varr.resize(num_vertices * shader->stride);
 }
 
+size_t IndexedRenderable::num_vertices() const
+{
+	return varr.size() / shader->stride;
+}
+
 void IndexedRenderable::push_back_vertices(size_t num_vertices)
 {
 	varr.insert(varr.end(), num_vertices * shader->stride, 0.0f);
+}
+
+void IndexedRenderable::insert_vertices(size_t num_vertices, size_t pos)
+{
+	varr.insert(varr.begin() + pos * shader->stride, num_vertices * shader->stride, 0.0f);
 }
 
 void IndexedRenderable::fill_iarr_with_quads(size_t num_quads)
@@ -263,8 +273,32 @@ void IndexedRenderable::fill_iarr_with_quads(size_t num_quads)
 
 void IndexedRenderable::push_back_quads(size_t num_quads, GLuint starting_vertex)
 {
-	if (starting_vertex == -1)
-		starting_vertex = GLuint(iarr.size() / 6);
+	for (GLuint i = starting_vertex; i < starting_vertex + num_quads; ++i)
+	{
+		iarr.insert(iarr.end(), {
+			0 + 4 * i,
+			1 + 4 * i,
+			2 + 4 * i,
+			2 + 4 * i,
+			3 + 4 * i,
+			0 + 4 * i
+			});
+	}
+}
+
+void IndexedRenderable::remove_from_varr(size_t pos)
+{
+	varr.erase(varr.begin() + pos * shader->stride, varr.end());
+}
+
+void IndexedRenderable::remove_from_iarr(size_t pos)
+{
+	iarr.erase(iarr.begin() + pos, iarr.end());
+}
+
+void IndexedRenderable::push_back_quads(size_t num_quads)
+{
+	GLuint starting_vertex = GLuint(iarr.size() / 6);
 	for (GLuint i = starting_vertex; i < starting_vertex + num_quads; ++i)
 	{
 		iarr.insert(iarr.end(), {
@@ -334,7 +368,7 @@ void IndexedRenderable::send_index_buffer_resized() const
 void IndexedRenderable::send_single_vertex(size_t vertex) const
 {
 	bind_vao_buffers(vao, vb, ib); // LATER only need to bind index buffer ?
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride, shader->stride * sizeof(GLfloat), varr.data() + vertex * shader->stride));
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr.data() + vertex * shader->stride));
 	unbind_vao_buffers();
 }
 
@@ -358,6 +392,6 @@ void IndexedRenderable::draw(size_t num_indexes_to_draw, size_t offset) const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glDrawElements(GL_TRIANGLES, GLuint(num_indexes_to_draw == decltype(num_indexes_to_draw)(-1) ? iarr.size() : num_indexes_to_draw), GL_UNSIGNED_INT, (void*)offset));
+	QUASAR_GL(glDrawElements(GL_TRIANGLES, GLuint(num_indexes_to_draw == decltype(num_indexes_to_draw)(-1) ? iarr.size() : num_indexes_to_draw), GL_UNSIGNED_INT, (void*)(offset * sizeof(GLuint))));
 	unbind_vao_buffers();
 }

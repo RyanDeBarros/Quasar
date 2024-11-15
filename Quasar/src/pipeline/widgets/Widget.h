@@ -9,8 +9,10 @@ struct WidgetPlacement
 	FlatTransform transform{};
 	glm::vec2 pivot{ 0.5f, 0.5f };
 
-	WidgetPlacement relative_to(const FlatTransform& parent) const { return { transform.relative_to(parent), pivot }; }
+	bool operator==(const WidgetPlacement&) const = default;
 
+	WidgetPlacement relative_to(const FlatTransform& parent) const { return { transform.relative_to(parent), pivot }; }
+	
 	float clamp_x(float x) const { return std::clamp(x, left(), right()); }
 	float clamp_y(float y) const { return std::clamp(y, bottom(), top()); }
 	Position clamp_point(Position pos) const { return { clamp_x(pos.x), clamp_y(pos.y) }; }
@@ -56,26 +58,30 @@ inline float wp_right(const glm::mat3& global) { return global[2][0] + 0.5f * gl
 inline float wp_bottom(const glm::mat3& global) { return global[2][1] - 0.5f * global[1][1]; }
 inline float wp_top(const glm::mat3& global) { return global[2][1] + 0.5f * global[1][1]; }
 
+extern Logger& operator<<(Logger&, const WidgetPlacement&);
+
 struct Widget
 {
 	Widget* parent = nullptr;
 	WidgetPlacement self;
-	std::vector<Widget*> children; // LATER use shared_ptr?
+	std::vector<std::shared_ptr<Widget>> children;
 
 	Widget(size_t null_length = 0)
 	{
 		for (size_t i = 0; i < null_length; ++i)
 			children.push_back(nullptr);
 	}
-	Widget(std::vector<Widget*>&& heap_children) : children(std::move(heap_children)) {}
+	Widget(std::vector<std::shared_ptr<Widget>>&& heap_children) : children(std::move(heap_children)) {}
 	Widget(const Widget&) = delete;
 	Widget(Widget&&) noexcept = delete;
-	virtual ~Widget() { for (auto ptr : children) delete ptr; }
+	virtual ~Widget() = default;
+
+	virtual void draw() {}
 
 	template<std::derived_from<Widget> T>
-	T* get(size_t i) { return dynamic_cast<T*>(children[i]); }
+	T* get(size_t i) { return dynamic_cast<T*>(children[i].get()); }
 	template<std::derived_from<Widget> T>
-	const T* get(size_t i) const { return dynamic_cast<T*>(children[i]); }
+	const T* get(size_t i) const { return dynamic_cast<T*>(children[i].get()); }
 	WidgetPlacement& wp_at(size_t i) { return children[i]->self; }
 	const WidgetPlacement& wp_at(size_t i) const { return children[i]->self; }
 
@@ -83,9 +89,14 @@ struct Widget
 	glm::mat3 global_matrix_inverse() const { if (parent) return self.inverse_matrix() * parent->global_matrix_inverse(); else return self.inverse_matrix(); }
 	Position global_of(Position local) const { glm::vec3 g = global_matrix() * glm::vec3(local, 1.0f); return { g.x, g.y }; }
 	Position local_of(Position global) const { glm::vec3 l = global_matrix_inverse() * glm::vec3(global, 1.0f); return { l.x, l.y }; }
+	Scale global_scale() const { if (parent) return parent->global_scale() * self.transform.scale; else return self.transform.scale; }
+
+	float scale1d() const { return mean2d1d(self.transform.scale.x, self.transform.scale.y); }
+	bool contains_global_point(Position pos) const;
+	bool contains_screen_point(Position pos, const glm::mat3& vp) const;
 };
 
-inline void detach_widget(Widget* parent, Widget* child)
+inline void detach_widget(Widget* parent, const std::shared_ptr<Widget>& child)
 {
 	if (parent && child)
 	{
@@ -96,82 +107,148 @@ inline void detach_widget(Widget* parent, Widget* child)
 	}
 }
 
-inline void attach_widget(Widget* parent, Widget* child)
+inline void detach_widget(Widget* parent, size_t child_pos)
+{
+	if (parent && child_pos < parent->children.size())
+	{
+		parent->children[child_pos]->parent = nullptr;
+		parent->children.erase(parent->children.begin() + child_pos);
+	}
+}
+
+inline void attach_widget(Widget* parent, const std::shared_ptr<Widget>& child)
 {
 	if (child)
 	{
 		detach_widget(child->parent, child);
 		if (parent)
 		{
-			parent->children.push_back(child);
 			child->parent = parent;
+			parent->children.push_back(child);
 		}
 	}
 }
 
-inline void assign_widget(Widget* parent, size_t pos, Widget* child)
+inline void attach_widget(Widget* parent, std::shared_ptr<Widget>&& child)
 {
 	if (child)
 	{
 		detach_widget(child->parent, child);
 		if (parent)
 		{
-			parent->children[pos] = child;
 			child->parent = parent;
+			parent->children.push_back(std::move(child));
+		}
+	}
+}
+
+inline void insert_widget(Widget* parent, size_t pos, const std::shared_ptr<Widget>& child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			child->parent = parent;
+			parent->children.insert(parent->children.begin() + pos, child);
+		}
+	}
+	else if (parent)
+		parent->children.insert(parent->children.begin() + pos, nullptr);
+}
+
+inline void insert_widget(Widget* parent, size_t pos, std::shared_ptr<Widget>&& child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			child->parent = parent;
+			parent->children.insert(parent->children.begin() + pos, std::move(child));
+		}
+	}
+	else if (parent)
+		parent->children.insert(parent->children.begin() + pos, nullptr);
+}
+
+inline void assign_widget(Widget* parent, size_t pos, const std::shared_ptr<Widget>& child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			child->parent = parent;
+			parent->children[pos] = child;
 		}
 	}
 	else if (parent)
 		parent->children[pos] = nullptr;
-
 }
 
-struct WP_UnitRenderable : public Widget
+inline void assign_widget(Widget* parent, size_t pos, std::shared_ptr<Widget>&& child)
+{
+	if (child)
+	{
+		detach_widget(child->parent, child);
+		if (parent)
+		{
+			child->parent = parent;
+			parent->children[pos] = std::move(child);
+		}
+	}
+	else if (parent)
+		parent->children[pos] = nullptr;
+}
+
+struct W_UnitRenderable : public Widget
 {
 	std::unique_ptr<UnitRenderable> ur;
 
-	WP_UnitRenderable(Shader* shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
+	W_UnitRenderable(Shader* shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
 };
 
 inline UnitRenderable& ur_wget(Widget& w, size_t i)
 {
-	return *w.get<WP_UnitRenderable>(i)->ur;
+	return *w.get<W_UnitRenderable>(i)->ur;
 }
 
 inline const UnitRenderable& ur_wget(const Widget& w, size_t i)
 {
-	return *w.get<WP_UnitRenderable>(i)->ur;
+	return *w.get<W_UnitRenderable>(i)->ur;
 }
 
-struct WP_UnitMultiRenderable : public Widget
+struct W_UnitMultiRenderable : public Widget
 {
 	std::unique_ptr<UnitMultiRenderable> umr;
 
-	WP_UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
+	W_UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
 };
 
 inline UnitMultiRenderable& umr_wget(Widget& w, size_t i)
 {
-	return *w.get<WP_UnitMultiRenderable>(i)->umr;
+	return *w.get<W_UnitMultiRenderable>(i)->umr;
 }
 
 inline const UnitMultiRenderable& umr_wget(const Widget& w, size_t i)
 {
-	return *w.get<WP_UnitMultiRenderable>(i)->umr;
+	return *w.get<W_UnitMultiRenderable>(i)->umr;
 }
 
-struct WP_IndexedRenderable : public Widget
+struct W_IndexedRenderable : public Widget
 {
 	std::unique_ptr<IndexedRenderable> ir;
 
-	WP_IndexedRenderable(Shader* shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
+	W_IndexedRenderable(Shader* shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
 };
 
 inline IndexedRenderable& ir_wget(Widget& w, size_t i)
 {
-	return *w.get<WP_IndexedRenderable>(i)->ir;
+	return *w.get<W_IndexedRenderable>(i)->ir;
 }
 
 inline const IndexedRenderable& ir_wget(const Widget& w, size_t i)
 {
-	return *w.get<WP_IndexedRenderable>(i)->ir;
+	return *w.get<W_IndexedRenderable>(i)->ir;
 }

@@ -15,7 +15,28 @@
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
 
-Scale app_inverse_scale{};
+namespace Data
+{
+	static double current_time = 0.0;
+	static double last_processed_time = 0.0;
+	static double delta_time = 0.0;
+	static void update_time()
+	{
+		current_time = glfwGetTime();
+		delta_time = current_time - last_processed_time;
+		last_processed_time = current_time;
+	}
+
+	static Scale app_inverse_scale{};
+	
+	namespace History
+	{
+		static bool held_undo = false, held_redo = false, on_starting_interval = true;
+		static double held_time = 0.0;
+		static const double held_interval = 0.1, held_start_interval = 0.5; // SETTINGS not const, but editable
+	}
+}
+
 static PanelGroup* panels = nullptr;
 
 static Easel* easel()
@@ -26,6 +47,18 @@ static Easel* easel()
 static Palette* palette()
 {
 	return dynamic_cast<Palette*>(panels->panels[1].get());
+}
+
+void MachineImpl::init_panels_layout()
+{
+	easel()->bounds.x1 = window_layout_info.initial_brush_panel_width;
+	easel()->bounds.x2 = window_layout_info.initial_width - window_layout_info.initial_palette_panel_width;
+	easel()->bounds.y1 = window_layout_info.initial_views_panel_height;
+	easel()->bounds.y2 = window_layout_info.initial_height - window_layout_info.initial_menu_panel_height;
+	palette()->bounds.x1 = easel()->bounds.x2;
+	palette()->bounds.x2 = window_layout_info.initial_width;
+	palette()->bounds.y1 = easel()->bounds.y1;
+	palette()->bounds.y2 = easel()->bounds.y2;
 }
 
 static void update_panels_to_window_size(int width, int height)
@@ -43,6 +76,13 @@ static void update_panels_to_window_size(int width, int height)
 	palette()->bounds.y2 = easel()->bounds.y2;
 }
 
+MachineImpl::MachineImpl()
+	: history(4'000'000) // SETTINGS and test that it works. currently it is 4MB, which is small to medium sized.
+	// Possible levels could be: Lightweight (1-2MB) | Moderate (4-8MB) | Intense (16+MB). Due to underestimations of action sizes, always be on low end of history pool sizes.
+	// Inevitably, the history's actual memory usage will be estimated, whether below or above the actual amount.
+{
+}
+
 bool MachineImpl::create_main_window()
 {
 	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height);
@@ -51,9 +91,6 @@ bool MachineImpl::create_main_window()
 		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
-		main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
-			//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
-			window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
 
 		main_window->root_window_size.children.push_back(&resize_handler);
 		main_window->root_display_scale.children.push_back(&rescale_handler);
@@ -61,6 +98,7 @@ bool MachineImpl::create_main_window()
 		main_window->root_mouse_button.children.push_back(&palette_mb_handler);
 		main_window->root_key.children.push_back(&palette_key_handler);
 		main_window->root_scroll.children.push_back(&easel_scroll_handler);
+		main_window->root_scroll.children.push_back(&palette_scroll_handler);
 		main_window->root_key.children.push_back(&global_key_handler);
 		main_window->root_path_drop.children.push_back(&path_drop_handler);
 		return true;
@@ -82,14 +120,7 @@ void MachineImpl::init_renderer()
 	panels->panels.push_back(std::make_unique<Easel>());
 	panels->panels.push_back(std::make_unique<Palette>());
 
-	easel()->bounds.x1 = window_layout_info.initial_brush_panel_width;
-	easel()->bounds.x2 = window_layout_info.initial_width - window_layout_info.initial_palette_panel_width;
-	easel()->bounds.y1 = window_layout_info.initial_views_panel_height;
-	easel()->bounds.y2 = window_layout_info.initial_height - window_layout_info.initial_menu_panel_height;
-	palette()->bounds.x1 = easel()->bounds.x2;
-	palette()->bounds.x2 = window_layout_info.initial_width;
-	palette()->bounds.y1 = easel()->bounds.y1;
-	palette()->bounds.y2 = easel()->bounds.y2;
+	init_panels_layout();
 
 	panels->sync_panels();
 
@@ -117,6 +148,13 @@ void MachineImpl::init_renderer()
 
 	set_app_scale(main_window->display_scale());
 
+	main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
+		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
+		//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
+		window_layout_info.menu_panel_height + window_layout_info.views_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	
+	Data::update_time();
+
 	import_file(FileSystem::workspace_path("ex/flag.png"));
 	//show_major_gridlines();
 }
@@ -125,6 +163,8 @@ void MachineImpl::destroy()
 {
 	// NOTE no Image shared_ptrs should remain before destroying window.
 	QUASAR_INVALIDATE_PTR(panels);
+	Fonts::invalidate_common_fonts();
+	history.clear_history();
 	main_window->release_cursor(&panning_info.wh);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
@@ -136,13 +176,85 @@ bool MachineImpl::should_exit() const
 
 void MachineImpl::on_render()
 {
-	canvas_update_panning();
+	process();
 	main_window->new_frame();
 	panels->render();
 	main_window_clip().scissor();
 	render_main_menu_bar();
 	update_currently_bound_shader();
 	main_window->end_frame();
+}
+
+static void process_undo()
+{
+	if (Machine.main_window->is_key_pressed(Key::Z) && Machine.main_window->is_ctrl_pressed())
+	{
+		if (!Machine.main_window->is_shift_pressed())
+		{
+			Data::History::held_time += Data::delta_time;
+			if (Data::History::on_starting_interval)
+			{
+				if (Data::History::held_time > Data::History::held_start_interval)
+				{
+					Data::History::held_time -= Data::History::held_start_interval;
+					while (Data::History::held_time > Data::History::held_interval)
+						Data::History::held_time -= Data::History::held_interval;
+					Machine.undo();
+					Data::History::on_starting_interval = false;
+				}
+			}
+			else if (Data::History::held_time > Data::History::held_interval)
+			{
+				do { Data::History::held_time -= Data::History::held_interval; } while (Data::History::held_time > Data::History::held_interval);
+				Machine.undo();
+			}
+		}
+		else
+			Machine.start_held_redo();
+	}
+	else
+		Data::History::held_undo = false;
+}
+
+static void process_redo()
+{
+	if (Machine.main_window->is_key_pressed(Key::Z) && Machine.main_window->is_ctrl_pressed())
+	{
+		if (Machine.main_window->is_shift_pressed())
+		{
+			Data::History::held_time += Data::delta_time;
+			if (Data::History::on_starting_interval)
+			{
+				if (Data::History::held_time > Data::History::held_start_interval)
+				{
+					Data::History::held_time -= Data::History::held_start_interval;
+					while (Data::History::held_time > Data::History::held_interval)
+						Data::History::held_time -= Data::History::held_interval;
+					Machine.redo();
+					Data::History::on_starting_interval = false;
+				}
+			}
+			else if (Data::History::held_time > Data::History::held_interval)
+			{
+				do { Data::History::held_time -= Data::History::held_interval; } while (Data::History::held_time > Data::History::held_interval);
+				Machine.redo();
+			}
+		}
+		else
+			Machine.start_held_undo();
+	}
+	else
+		Data::History::held_redo = false;
+}
+
+void MachineImpl::process()
+{
+	Data::update_time();
+	canvas_update_panning();
+	if (Data::History::held_undo)
+		process_undo();
+	else if (Data::History::held_redo)
+		process_redo();
 }
 
 void MachineImpl::mark()
@@ -174,19 +286,19 @@ bool MachineImpl::canvas_image_ready() const
 
 Scale MachineImpl::inv_app_scale() const
 {
-	return app_inverse_scale;
+	return Data::app_inverse_scale;
 }
 
 Scale MachineImpl::get_app_scale() const
 {
-	return 1.0f / app_inverse_scale;
+	return 1.0f / Data::app_inverse_scale;
 }
 
 void MachineImpl::set_app_scale(Scale scale) const
 {
-	app_inverse_scale = 1.0f / scale;
+	Data::app_inverse_scale = 1.0f / scale;
 	panels->set_projection();
-	float scale1d = (scale.x + scale.y + std::max(scale.x, scale.y)) / 3.0f;
+	float scale1d = mean2d1d(scale.x, scale.y);
 	static const float gui_scale_factor = 1.25f; // SETTINGS
 	float gui_scale = scale1d * gui_scale_factor;
 	ImGui::GetStyle().ScaleAllSizes(gui_scale);
@@ -216,7 +328,7 @@ Position MachineImpl::to_world_coordinates(Position screen_coordinates, const gl
 
 Position MachineImpl::to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const
 {
-	glm::vec3 world_pos{ world_coordinates.x, -world_coordinates.y, 1.0f };
+	glm::vec3 world_pos{ world_coordinates.x, world_coordinates.y, 1.0f };
 	glm::vec3 clip_space_pos = vp * world_pos;
 	return {
 		(1.0f + clip_space_pos.x) * 0.5f * main_window->width(),
@@ -224,19 +336,34 @@ Position MachineImpl::to_screen_coordinates(Position world_coordinates, const gl
 	};
 }
 
-Position MachineImpl::cursor_world_coordinates(const glm::mat3& inverse_vp) const
+Position MachineImpl::cursor_screen_pos() const
+{
+	return main_window->cursor_pos();
+}
+
+Position MachineImpl::cursor_screen_x() const
+{
+	return main_window->cursor_x();
+}
+
+Position MachineImpl::cursor_screen_y() const
+{
+	return main_window->cursor_y();
+}
+
+Position MachineImpl::cursor_world_pos(const glm::mat3& inverse_vp) const
 {
 	return to_world_coordinates(main_window->cursor_pos(), inverse_vp);
 }
 
 glm::vec2 MachineImpl::easel_cursor_world_pos() const
 {
-	return easel()->to_world_coordinates(main_window->cursor_pos());
+	return easel()->to_world_coordinates(cursor_screen_pos());
 }
 
 glm::vec2 MachineImpl::palette_cursor_world_pos() const
 {
-	return palette()->to_world_coordinates(main_window->cursor_pos());
+	return palette()->to_world_coordinates(cursor_screen_pos());
 }
 
 bool MachineImpl::cursor_in_easel() const
@@ -396,6 +523,22 @@ void MachineImpl::save_file(const FilePath& filepath)
 	// LATER actually save changes to filepath
 }
 
+void MachineImpl::start_held_undo()
+{
+	Data::History::held_undo = true;
+	Data::History::held_redo = false;
+	Data::History::held_time = 0.0;
+	Data::History::on_starting_interval = true;
+}
+
+void MachineImpl::start_held_redo()
+{
+	Data::History::held_redo = true;
+	Data::History::held_undo = false;
+	Data::History::held_time = 0.0;
+	Data::History::on_starting_interval = true;
+}
+
 void MachineImpl::canvas_begin_panning()
 {
 	if (!panning_info.panning)
@@ -456,7 +599,7 @@ void MachineImpl::canvas_zoom_by(float z)
 {
 	Position cursor_world;
 	if (!main_window->is_alt_pressed())
-		cursor_world = easel()->to_world_coordinates(main_window->cursor_pos());
+		cursor_world = easel()->to_world_coordinates(cursor_screen_pos());
 
 	float factor = main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
 	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, z), zoom_info.in_min, zoom_info.in_max);
@@ -469,48 +612,68 @@ void MachineImpl::canvas_zoom_by(float z)
 	zoom_info.zoom = new_zoom;
 }
 
+struct FlipHorizontallyAction : public ActionBase
+{
+	FlipHorizontallyAction() { weight = sizeof(FlipHorizontallyAction); }
+	void forward() override { easel()->canvas_image()->flip_horizontally(); }
+	void backward() override { easel()->canvas_image()->flip_horizontally(); }
+};
+
 void MachineImpl::flip_horizontally()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->flip_horizontally(); },
-		[this]() { easel()->canvas_image()->flip_horizontally(); }
-	));
+	static std::shared_ptr<ActionBase> a = std::make_shared<FlipHorizontallyAction>();
 	history.execute(a);
 }
+
+struct FlipVerticallyAction : public ActionBase
+{
+	FlipVerticallyAction() { weight = sizeof(FlipVerticallyAction); }
+	void forward() override { easel()->canvas_image()->flip_vertically(); }
+	void backward() override { easel()->canvas_image()->flip_vertically(); }
+};
 
 void MachineImpl::flip_vertically()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->flip_vertically(); },
-		[this]() { easel()->canvas_image()->flip_vertically(); }
-	));
+	static std::shared_ptr<ActionBase> a = std::make_shared<FlipVerticallyAction>();
 	history.execute(a);
 }
+
+struct Rotate90Action : public ActionBase
+{
+	Rotate90Action() { weight = sizeof(Rotate90Action); }
+	void forward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
+	void backward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
+};
 
 void MachineImpl::rotate_90()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); },
-		[this]() { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); })
-	);
+	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate90Action>();
 	history.execute(a);
 }
+
+struct Rotate180Action : public ActionBase
+{
+	Rotate180Action() { weight = sizeof(Rotate180Action); }
+	void forward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
+	void backward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
+};
 
 void MachineImpl::rotate_180()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->rotate_180(); },
-		[this]() { easel()->canvas_image()->rotate_180(); }
-	));
+	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate180Action>();
 	history.execute(a);
 }
 
+struct Rotate270Action : public ActionBase
+{
+	Rotate270Action() { weight = sizeof(Rotate270Action); }
+	void forward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
+	void backward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
+};
+
 void MachineImpl::rotate_270()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); },
-		[this]() { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
-	));
+	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate270Action>();
 	history.execute(a);
 }
 

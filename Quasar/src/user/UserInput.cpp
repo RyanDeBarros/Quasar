@@ -3,6 +3,7 @@
 #include "Machine.h"
 #include "variety/Utils.h"
 
+// LATER put these as data members on Easel, and put these functions there. Honestly, get rid of UserInput.h/cpp altogether.
 void attach_canvas_controls()
 {
 	// Panning
@@ -54,9 +55,21 @@ void attach_global_user_controls()
 				{
 					k.consumed = true;
 					if (Machine.main_window->is_shift_pressed())
-						Machine.redo();
+					{
+						if (Machine.redo_enabled())
+						{
+							Machine.start_held_redo();
+							Machine.redo();
+						}
+					}
 					else
-						Machine.undo();
+					{
+						if (Machine.undo_enabled())
+						{
+							Machine.start_held_undo();
+							Machine.undo();
+						}
+					}
 				}
 				break;
 			case Key::N:
