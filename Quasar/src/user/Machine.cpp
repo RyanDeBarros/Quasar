@@ -15,7 +15,28 @@
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
 
-Scale app_inverse_scale{};
+namespace Data
+{
+	static double current_time = 0.0;
+	static double last_processed_time = 0.0;
+	static double delta_time = 0.0;
+	static void update_time()
+	{
+		current_time = glfwGetTime();
+		delta_time = current_time - last_processed_time;
+		last_processed_time = current_time;
+	}
+
+	static Scale app_inverse_scale{};
+	
+	namespace History
+	{
+		static bool held_undo = false, held_redo = false, on_starting_interval = true;
+		static double held_time = 0.0;
+		static const double held_interval = 0.1, held_start_interval = 0.5; // SETTINGS not const, but editable
+	}
+}
+
 static PanelGroup* panels = nullptr;
 
 static Easel* easel()
@@ -131,6 +152,8 @@ void MachineImpl::init_renderer()
 		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
 		//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
 		window_layout_info.menu_panel_height + window_layout_info.views_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	
+	Data::update_time();
 
 	import_file(FileSystem::workspace_path("ex/flag.png"));
 	//show_major_gridlines();
@@ -153,13 +176,85 @@ bool MachineImpl::should_exit() const
 
 void MachineImpl::on_render()
 {
-	canvas_update_panning();
+	process();
 	main_window->new_frame();
 	panels->render();
 	main_window_clip().scissor();
 	render_main_menu_bar();
 	update_currently_bound_shader();
 	main_window->end_frame();
+}
+
+static void process_undo()
+{
+	if (Machine.main_window->is_key_pressed(Key::Z) && Machine.main_window->is_ctrl_pressed())
+	{
+		if (!Machine.main_window->is_shift_pressed())
+		{
+			Data::History::held_time += Data::delta_time;
+			if (Data::History::on_starting_interval)
+			{
+				if (Data::History::held_time > Data::History::held_start_interval)
+				{
+					Data::History::held_time -= Data::History::held_start_interval;
+					while (Data::History::held_time > Data::History::held_interval)
+						Data::History::held_time -= Data::History::held_interval;
+					Machine.undo();
+					Data::History::on_starting_interval = false;
+				}
+			}
+			else if (Data::History::held_time > Data::History::held_interval)
+			{
+				do { Data::History::held_time -= Data::History::held_interval; } while (Data::History::held_time > Data::History::held_interval);
+				Machine.undo();
+			}
+		}
+		else
+			Machine.start_held_redo();
+	}
+	else
+		Data::History::held_undo = false;
+}
+
+static void process_redo()
+{
+	if (Machine.main_window->is_key_pressed(Key::Z) && Machine.main_window->is_ctrl_pressed())
+	{
+		if (Machine.main_window->is_shift_pressed())
+		{
+			Data::History::held_time += Data::delta_time;
+			if (Data::History::on_starting_interval)
+			{
+				if (Data::History::held_time > Data::History::held_start_interval)
+				{
+					Data::History::held_time -= Data::History::held_start_interval;
+					while (Data::History::held_time > Data::History::held_interval)
+						Data::History::held_time -= Data::History::held_interval;
+					Machine.redo();
+					Data::History::on_starting_interval = false;
+				}
+			}
+			else if (Data::History::held_time > Data::History::held_interval)
+			{
+				do { Data::History::held_time -= Data::History::held_interval; } while (Data::History::held_time > Data::History::held_interval);
+				Machine.redo();
+			}
+		}
+		else
+			Machine.start_held_undo();
+	}
+	else
+		Data::History::held_redo = false;
+}
+
+void MachineImpl::process()
+{
+	Data::update_time();
+	canvas_update_panning();
+	if (Data::History::held_undo)
+		process_undo();
+	else if (Data::History::held_redo)
+		process_redo();
 }
 
 void MachineImpl::mark()
@@ -191,17 +286,17 @@ bool MachineImpl::canvas_image_ready() const
 
 Scale MachineImpl::inv_app_scale() const
 {
-	return app_inverse_scale;
+	return Data::app_inverse_scale;
 }
 
 Scale MachineImpl::get_app_scale() const
 {
-	return 1.0f / app_inverse_scale;
+	return 1.0f / Data::app_inverse_scale;
 }
 
 void MachineImpl::set_app_scale(Scale scale) const
 {
-	app_inverse_scale = 1.0f / scale;
+	Data::app_inverse_scale = 1.0f / scale;
 	panels->set_projection();
 	float scale1d = mean2d1d(scale.x, scale.y);
 	static const float gui_scale_factor = 1.25f; // SETTINGS
@@ -426,6 +521,22 @@ void MachineImpl::import_file(const FilePath& filepath)
 void MachineImpl::save_file(const FilePath& filepath)
 {
 	// LATER actually save changes to filepath
+}
+
+void MachineImpl::start_held_undo()
+{
+	Data::History::held_undo = true;
+	Data::History::held_redo = false;
+	Data::History::held_time = 0.0;
+	Data::History::on_starting_interval = true;
+}
+
+void MachineImpl::start_held_redo()
+{
+	Data::History::held_redo = true;
+	Data::History::held_undo = false;
+	Data::History::held_time = 0.0;
+	Data::History::on_starting_interval = true;
 }
 
 void MachineImpl::canvas_begin_panning()

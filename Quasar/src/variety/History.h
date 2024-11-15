@@ -116,6 +116,11 @@ public:
 		return current_size;
 	}
 
+	float get_fraction_of_memory_usage() const
+	{
+		return float(current_size) / float(tracking_size);
+	}
+
 	size_t get_pool_size() const
 	{
 		return tracking_size;

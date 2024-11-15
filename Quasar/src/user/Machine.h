@@ -82,6 +82,7 @@ struct MachineImpl
 	void exit() const { main_window->request_close(); }
 	bool should_exit() const;
 	void on_render();
+	void process();
 	void mark();
 	void unmark();
 	Scale inv_app_scale() const;
@@ -129,6 +130,8 @@ struct MachineImpl
 	bool undo_enabled() const { return history.undo_size() != 0; }
 	void redo() { history.redo(); mark(); }
 	bool redo_enabled() const { return history.redo_size() != 0; }
+	void start_held_undo();
+	void start_held_redo();
 
 	// User controls
 	void canvas_begin_panning();
