@@ -56,7 +56,9 @@ static void update_panels_to_window_size(int width, int height)
 }
 
 MachineImpl::MachineImpl()
-	: history(100) // SETTINGS and test that it works
+	: history(4'000'000) // SETTINGS and test that it works. currently it is 4MB, which is small to medium sized.
+	// Possible levels could be: Lightweight (1-2MB) | Moderate (4-8MB) | Intense (16+MB). Due to underestimations of action sizes, always be on low end of history pool sizes.
+	// Inevitably, the history's actual memory usage will be estimated, whether below or above the actual amount.
 {
 }
 
@@ -499,48 +501,68 @@ void MachineImpl::canvas_zoom_by(float z)
 	zoom_info.zoom = new_zoom;
 }
 
+struct FlipHorizontallyAction : public ActionBase
+{
+	FlipHorizontallyAction() { weight = sizeof(FlipHorizontallyAction); }
+	void forward() override { easel()->canvas_image()->flip_horizontally(); }
+	void backward() override { easel()->canvas_image()->flip_horizontally(); }
+};
+
 void MachineImpl::flip_horizontally()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->flip_horizontally(); },
-		[this]() { easel()->canvas_image()->flip_horizontally(); }
-	));
+	static std::shared_ptr<ActionBase> a = std::make_shared<FlipHorizontallyAction>();
 	history.execute(a);
 }
+
+struct FlipVerticallyAction : public ActionBase
+{
+	FlipVerticallyAction() { weight = sizeof(FlipVerticallyAction); }
+	void forward() override { easel()->canvas_image()->flip_vertically(); }
+	void backward() override { easel()->canvas_image()->flip_vertically(); }
+};
 
 void MachineImpl::flip_vertically()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->flip_vertically(); },
-		[this]() { easel()->canvas_image()->flip_vertically(); }
-	));
+	static std::shared_ptr<ActionBase> a = std::make_shared<FlipVerticallyAction>();
 	history.execute(a);
 }
+
+struct Rotate90Action : public ActionBase
+{
+	Rotate90Action() { weight = sizeof(Rotate90Action); }
+	void forward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
+	void backward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
+};
 
 void MachineImpl::rotate_90()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); },
-		[this]() { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); })
-	);
+	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate90Action>();
 	history.execute(a);
 }
+
+struct Rotate180Action : public ActionBase
+{
+	Rotate180Action() { weight = sizeof(Rotate180Action); }
+	void forward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
+	void backward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
+};
 
 void MachineImpl::rotate_180()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->rotate_180(); },
-		[this]() { easel()->canvas_image()->rotate_180(); }
-	));
+	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate180Action>();
 	history.execute(a);
 }
 
+struct Rotate270Action : public ActionBase
+{
+	Rotate270Action() { weight = sizeof(Rotate270Action); }
+	void forward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
+	void backward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
+};
+
 void MachineImpl::rotate_270()
 {
-	static std::shared_ptr<StandardAction> a(std::make_shared<StandardAction>(
-		[this]() { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); },
-		[this]() { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
-	));
+	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate270Action>();
 	history.execute(a);
 }
 

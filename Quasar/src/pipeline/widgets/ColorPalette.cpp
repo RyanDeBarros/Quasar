@@ -8,14 +8,12 @@
 #include "user/Machine.h"
 #include "Button.h"
 
-// TODO weight should be by default sizeof(ActionStruct) +- performance. So the default tracking length would be in bytes. Also make tracking length variable and add getter/setter.
-
 struct PrimarySelectorAction : public ActionBase
 {
 	std::shared_ptr<ColorSubpalette> subpalette;
 	int prev_i, new_i;
 	PrimarySelectorAction(std::shared_ptr<ColorSubpalette>&& subpalette, int prev_i, int new_i)
-		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = 0.35f; }
+		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = sizeof(PrimarySelectorAction); }
 	void forward() override { execute(new_i); }
 	void backward() override { execute(prev_i); }
 	void execute(int i) const
@@ -31,7 +29,7 @@ struct AlternateSelectorAction : public ActionBase
 	std::shared_ptr<ColorSubpalette> subpalette;
 	int prev_i, new_i;
 	AlternateSelectorAction(std::shared_ptr<ColorSubpalette>&& subpalette, int prev_i, int new_i)
-		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = 0.35f; }
+		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = sizeof(AlternateSelectorAction); }
 	void forward() override { execute(new_i); }
 	void backward() override { execute(prev_i); }
 	void execute(int i) const
@@ -44,7 +42,7 @@ struct AlternateSelectorAction : public ActionBase
 struct SelectorSwitchAction : public ActionBase
 {
 	std::shared_ptr<ColorSubpalette> subpalette;
-	SelectorSwitchAction(std::shared_ptr<ColorSubpalette>&& subpalette) : subpalette(std::move(subpalette)) { weight = 0.1f; }
+	SelectorSwitchAction(std::shared_ptr<ColorSubpalette>&& subpalette) : subpalette(std::move(subpalette)) { weight = sizeof(SelectorSwitchAction); }
 	void forward() override { execute(); }
 	void backward() override { execute(); }
 	void execute() const
@@ -59,7 +57,7 @@ struct ColorOverwriteAction : public ActionBase
 	std::shared_ptr<ColorSubpalette> subpalette;
 	RGBA prev_c, new_c;
 	ColorOverwriteAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA prev_c, RGBA new_c)
-		: subpalette(std::move(subpalette)), prev_c(prev_c), new_c(new_c) { weight = 0.1f; }
+		: subpalette(std::move(subpalette)), prev_c(prev_c), new_c(new_c) { weight = sizeof(ColorOverwriteAction); }
 	void forward() override { execute(new_c, true); }
 	void backward() override { execute(prev_c, false); }
 	void execute(RGBA c, bool update_picker) const
@@ -95,7 +93,7 @@ struct ColorMove1DAction : public ActionBase
 	std::shared_ptr<ColorSubpalette> subpalette;
 	int initial_index, target_index;
 	ColorMove1DAction(std::shared_ptr<ColorSubpalette>&& subpalette, int initial_index, int target_index)
-		: subpalette(std::move(subpalette)), initial_index(initial_index), target_index(target_index) { weight = 0.5f; }
+		: subpalette(std::move(subpalette)), initial_index(initial_index), target_index(target_index) { weight = sizeof(ColorMove1DAction); }
 	void forward() override { execute(initial_index, target_index); }
 	void backward() override { execute(target_index, initial_index); }
 	void execute(int initial, int target) const
@@ -127,7 +125,7 @@ struct ColorMove2DAction : public ActionBase
 	std::shared_ptr<ColorSubpalette> subpalette;
 	int initial_index, target_index;
 	ColorMove2DAction(std::shared_ptr<ColorSubpalette>&& subpalette, int initial_index, int target_index)
-		: subpalette(std::move(subpalette)), initial_index(initial_index), target_index(target_index) { weight = 0.5f; }
+		: subpalette(std::move(subpalette)), initial_index(initial_index), target_index(target_index) { weight = sizeof(ColorMove2DAction); }
 	void forward() override { execute(); }
 	void backward() override { execute(); }
 	void execute() const
@@ -156,7 +154,7 @@ struct InsertColorAction : public ActionBase
 	InsertColorAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA color, int index,
 		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
 		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
-		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = 0.75f; }
+		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = sizeof(InsertColorAction); }
 	void forward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
 	void backward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
 };
@@ -169,9 +167,7 @@ struct RemoveColorAction : public ActionBase
 	RemoveColorAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA color, int index,
 		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
 		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
-		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) {
-		weight = 0.75f;
-	}
+		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = sizeof(RemoveColorAction); }
 	void forward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_2, alternate_index_2, true); }
 	void backward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_1, alternate_index_1, color); }
 };
@@ -184,9 +180,9 @@ struct SubpaletteRenameAction : public ActionBase
 	SubpaletteRenameAction(std::shared_ptr<ColorSubpalette>&& subpalette, std::string&& old_name, char* new_name)
 		: subpalette(std::move(subpalette)), name_combo(std::move(old_name))
 	{
-		weight = 0.8f;
 		divider = name_combo.size();
 		name_combo += new_name;
+		weight = sizeof(SubpaletteRenameAction) + name_combo.size() * sizeof(char);
 	}
 	void forward() override { execute(divider, -1); }
 	void backward() override { execute(0, divider); }
@@ -204,7 +200,7 @@ struct SubpaletteNewAction : public ActionBase
 	size_t index;
 
 	SubpaletteNewAction(ColorPalette* palette, std::shared_ptr<ColorSubpalette>&& subpalette, size_t index)
-		: palette(palette), subpalette(std::move(subpalette)), index(index) { weight = 0.5f; }
+		: palette(palette), subpalette(std::move(subpalette)), index(index) { weight = sizeof(SubpaletteNewAction) + sizeof(ColorSubpalette) + this->subpalette->subscheme->colors.size() * sizeof(RGBA); }
 
 	void forward() override { if (palette) palette->insert_subpalette(index, subpalette); }
 	void backward() override { if (palette) palette->delete_subpalette(index); }
@@ -217,9 +213,7 @@ struct SubpaletteDeleteAction : public ActionBase
 	size_t index;
 
 	SubpaletteDeleteAction(ColorPalette* palette, std::shared_ptr<ColorSubpalette>&& subpalette, size_t index)
-		: palette(palette), subpalette(std::move(subpalette)), index(index) {
-		weight = 0.5f;
-	}
+		: palette(palette), subpalette(std::move(subpalette)), index(index) { weight = sizeof(SubpaletteDeleteAction) + sizeof(ColorSubpalette) + this->subpalette->subscheme->colors.size() * sizeof(RGBA); }
 
 	void forward() override { if (palette) palette->delete_subpalette(index); }
 	void backward() override { if (palette) palette->insert_subpalette(index, subpalette); }
@@ -232,7 +226,8 @@ struct AssignColorSubschemeAction : public ActionBase
 	std::shared_ptr<ColorSubscheme> prev_subscheme, new_subscheme;
 	size_t index;
 	AssignColorSubschemeAction(ColorPalette* palette, std::shared_ptr<ColorSubscheme>&& prev_subscheme, const std::shared_ptr<ColorSubscheme>& new_subscheme, size_t index)
-		: palette(palette), prev_subscheme(std::move(prev_subscheme)), new_subscheme(new_subscheme), index(index) { weight = 1.0f; }
+		: palette(palette), prev_subscheme(std::move(prev_subscheme)), new_subscheme(new_subscheme), index(index)
+	{ weight = sizeof(AssignColorSubschemeAction) + 2 * sizeof(ColorSubscheme) + this->prev_subscheme->colors.size() * sizeof(RGBA) + this->new_subscheme->colors.size() * sizeof(RGBA); }
 
 	void forward() override { if (palette) palette->assign_color_subscheme(index, new_subscheme, false); }
 	void backward() override { if (palette) palette->assign_color_subscheme(index, prev_subscheme, false); }
@@ -245,7 +240,14 @@ struct ImportColorSchemeAction : public ActionBase
 	std::shared_ptr<ColorScheme> prev_cs;
 	std::shared_ptr<ColorScheme> new_cs;
 	ImportColorSchemeAction(ColorPalette* palette, std::shared_ptr<ColorScheme>&& prev_cs, const std::shared_ptr<ColorScheme>& new_cs)
-		: palette(palette), prev_cs(std::move(prev_cs)), new_cs(new_cs) { weight = 5; } // LATER variable weight dependent on combined size of subschemes in prev_cs and new_cs
+		: palette(palette), prev_cs(std::move(prev_cs)), new_cs(new_cs)
+	{
+		weight = sizeof(ImportColorSchemeAction) + 2 * sizeof(ColorScheme) + this->prev_cs->subschemes.size() * sizeof(ColorSubscheme) + this->new_cs->subschemes.size() * sizeof(ColorSubscheme);
+		for (const auto& subscheme : this->prev_cs->subschemes)
+			weight += subscheme->colors.size() * sizeof(RGBA);
+		for (const auto& subscheme : this->new_cs->subschemes)
+			weight += subscheme->colors.size() * sizeof(RGBA);
+	}
 	void forward() override { if (palette) palette->import_color_scheme(new_cs, false); }
 	void backward() override { if (palette) palette->import_color_scheme(prev_cs, false); }
 };
@@ -624,7 +626,6 @@ void ColorSubpalette::overwrite_current_color(RGBA color, bool update_in_picker)
 	}
 }
 
-// TODO throughout project, any function that submits an action to history should have a bool create_action parameter to prevent accidental infinite action pushing. NO default value.
 void ColorSubpalette::new_color(RGBA color, bool adjacent, bool update_primary, bool create_action)
 {
 	int index = int(adjacent ? primary_index + 1 : subscheme->colors.size());
@@ -1196,9 +1197,7 @@ void ColorPalette::connect_input_handlers()
 				{
 					mb.consumed = true;
 					current_subpalette().update_primary_color_in_picker();
-					int new_i = current_subpalette().primary_index;
-					auto action = std::make_shared<PrimarySelectorAction>(current_subpalette_ref(), prev_i, new_i);
-					Machine.history.push(std::move(action));
+					Machine.history.push(std::make_shared<PrimarySelectorAction>(current_subpalette_ref(), prev_i, current_subpalette().primary_index));
 				}
 			}
 			else if (mb.button == MouseButton::RIGHT)
@@ -1207,9 +1206,7 @@ void ColorPalette::connect_input_handlers()
 				if (current_subpalette().check_alternate())
 				{
 					mb.consumed = true;
-					int new_i = current_subpalette().alternate_index;
-					auto action = std::make_shared<AlternateSelectorAction>(current_subpalette_ref(), prev_i, new_i);
-					Machine.history.push(std::move(action));
+					Machine.history.push(std::make_shared<AlternateSelectorAction>(current_subpalette_ref(), prev_i, current_subpalette().alternate_index));
 				}
 			}
 		}

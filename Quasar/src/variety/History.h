@@ -6,7 +6,7 @@
 
 struct ActionBase
 {
-	float weight = 1;
+	size_t weight = sizeof(ActionBase);
 
 	virtual ~ActionBase() = default;
 
@@ -14,33 +14,15 @@ struct ActionBase
 	virtual void backward() = 0;
 };
 
-struct StandardAction : public ActionBase
-{
-	std::function<void(void)> _forward;
-	std::function<void(void)> _backward;
-
-	StandardAction(const std::function<void(void)>& _forward, const std::function<void(void)>& _backward)
-		: _forward(_forward), _backward(_backward) {}
-	StandardAction(const std::function<void(void)>& _forward, std::function<void(void)>&& _backward)
-		: _forward(_forward), _backward(std::move(_backward)) {}
-	StandardAction(std::function<void(void)>&& _forward, const std::function<void(void)>& _backward)
-		: _forward(std::move(_forward)), _backward(_backward) {}
-	StandardAction(std::function<void(void)>&& _forward, std::function<void(void)>&& _backward)
-		: _forward(std::move(_forward)), _backward(std::move(_backward)) {}
-
-	void forward() override { _forward(); }
-	void backward() override { _backward(); }
-};
-
 class ActionHistory
 {
-	const float tracking_size;
-	float current_size = 0;
+	size_t tracking_size;
+	size_t current_size = 0;
 	std::deque<std::shared_ptr<ActionBase>> undo_deque;
 	std::deque<std::shared_ptr<ActionBase>> redo_deque;
 
 public:
-	ActionHistory(float tracking_size = 100) : tracking_size(tracking_size) {}
+	ActionHistory(size_t tracking_size = 4'000'000) : tracking_size(tracking_size) {}
 	ActionHistory(const ActionHistory&) = delete;
 	ActionHistory(ActionHistory&&) noexcept = delete;
 
@@ -56,27 +38,29 @@ public:
 		push(action);
 	}
 
-	void push(std::shared_ptr<ActionBase>&& action)
+private:
+	void add_weight(size_t weight)
 	{
-		current_size += action->weight;
+		current_size += weight;
 		while (current_size > tracking_size)
 		{
 			current_size -= undo_deque.front()->weight;
 			undo_deque.pop_front();
 		}
-		undo_deque.push_back(std::move(action));
+	}
+
+public:
+	void push(const std::shared_ptr<ActionBase>& action)
+	{
+		add_weight(action->weight);
+		undo_deque.push_back(action);
 		redo_deque.clear();
 	}
 
-	void push(const std::shared_ptr<ActionBase>& action)
+	void push(std::shared_ptr<ActionBase>&& action)
 	{
-		current_size += action->weight;
-		while (current_size > tracking_size)
-		{
-			current_size -= undo_deque.front()->weight;
-			undo_deque.pop_front();
-		}
-		undo_deque.push_back(action);
+		add_weight(action->weight);
+		undo_deque.push_back(std::move(action));
 		redo_deque.clear();
 	}
 
@@ -127,8 +111,23 @@ public:
 		return redo_deque.size();
 	}
 
-	float tracking_weight() const
+	size_t get_current_memory_usage() const
 	{
 		return current_size;
+	}
+
+	size_t get_pool_size() const
+	{
+		return tracking_size;
+	}
+
+	void set_pool_size(size_t pool_size)
+	{
+		while (current_size > pool_size)
+		{
+			current_size -= undo_deque.front()->weight;
+			undo_deque.pop_front();
+		}
+		tracking_size = pool_size;
 	}
 };

@@ -18,7 +18,7 @@ struct RGBAChangeAction : public ActionBase
 	ColorPicker& picker;
 	RGBA prev_c, new_c;
 
-	RGBAChangeAction(ColorPicker& picker, const RGBA& prev_c, const RGBA& new_c) : picker(picker), prev_c(prev_c), new_c(new_c) { weight = 0.5f; }
+	RGBAChangeAction(ColorPicker& picker, const RGBA& prev_c, const RGBA& new_c) : picker(picker), prev_c(prev_c), new_c(new_c) { weight = sizeof(RGBAChangeAction); }
 
 	void forward() override
 	{
@@ -922,9 +922,7 @@ void ColorPicker::connect_input_handlers()
 			{
 				mb.consumed = true;
 				release_cursor();
-
-				auto action = std::make_shared<RGBAChangeAction>(*this, current_action_color, get_color().rgba());
-				Machine.history.push(std::move(action));
+				Machine.history.push(std::make_shared<RGBAChangeAction>(*this, current_action_color, get_color().rgba()));
 			}
 		}
 	};

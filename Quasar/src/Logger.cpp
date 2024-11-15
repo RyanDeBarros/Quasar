@@ -5,6 +5,8 @@
 
 // LATER translate OpenGL error codes
 // LATER submit_count to batch X amount of statements before flushing.
+// LATER detect size of file when appending and warn when file is getting too large. additional behaviour to create a new file using (i) notation (i.e. quasar.log -> quasar (1).log -> quasar (2).log).
+// LATER default behaviour of removing excess initial logs when file is getting too large.
 
 Logger& Logger::specify_logfile(const char* filepath, bool append)
 {
