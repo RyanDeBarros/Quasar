@@ -617,6 +617,7 @@ struct FlipHorizontallyAction : public ActionBase
 	FlipHorizontallyAction() { weight = sizeof(FlipHorizontallyAction); }
 	void forward() override { easel()->canvas_image()->flip_horizontally(); }
 	void backward() override { easel()->canvas_image()->flip_horizontally(); }
+	bool equals(const ActionBase& other) const override { return dynamic_cast<const FlipHorizontallyAction*>(&other); }
 };
 
 void MachineImpl::flip_horizontally()
@@ -630,6 +631,7 @@ struct FlipVerticallyAction : public ActionBase
 	FlipVerticallyAction() { weight = sizeof(FlipVerticallyAction); }
 	void forward() override { easel()->canvas_image()->flip_vertically(); }
 	void backward() override { easel()->canvas_image()->flip_vertically(); }
+	bool equals(const ActionBase& other) const override { return dynamic_cast<const FlipVerticallyAction*>(&other); }
 };
 
 void MachineImpl::flip_vertically()
@@ -643,6 +645,7 @@ struct Rotate90Action : public ActionBase
 	Rotate90Action() { weight = sizeof(Rotate90Action); }
 	void forward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
 	void backward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
+	bool equals(const ActionBase& other) const override { return dynamic_cast<const Rotate90Action*>(&other); }
 };
 
 void MachineImpl::rotate_90()
@@ -656,6 +659,7 @@ struct Rotate180Action : public ActionBase
 	Rotate180Action() { weight = sizeof(Rotate180Action); }
 	void forward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
 	void backward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
+	bool equals(const ActionBase& other) const override { return dynamic_cast<const Rotate180Action*>(&other); }
 };
 
 void MachineImpl::rotate_180()
@@ -669,6 +673,7 @@ struct Rotate270Action : public ActionBase
 	Rotate270Action() { weight = sizeof(Rotate270Action); }
 	void forward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
 	void backward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
+	bool equals(const ActionBase& other) const override { return dynamic_cast<const Rotate270Action*>(&other); }
 };
 
 void MachineImpl::rotate_270()

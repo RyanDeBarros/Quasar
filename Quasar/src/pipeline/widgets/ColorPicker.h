@@ -72,7 +72,7 @@ public:
 	void process();
 	void send_vp();
 	ColorFrame get_color() const;
-	void set_color(ColorFrame color, bool create_action);
+	void set_color(ColorFrame color);
 	void set_size(Scale size, bool sync);
 	Scale minimum_display() const;
 	

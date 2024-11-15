@@ -12,6 +12,8 @@ struct ActionBase
 
 	virtual void forward() = 0;
 	virtual void backward() = 0;
+	virtual bool equals(const ActionBase&) const { return false; }
+	inline bool operator==(const ActionBase&) const = default;
 };
 
 class ActionHistory
@@ -53,15 +55,27 @@ public:
 	void push(const std::shared_ptr<ActionBase>& action)
 	{
 		add_weight(action->weight);
+		if (!redo_deque.empty())
+		{
+			if (redo_deque.back()->equals(*action))
+				redo_deque.pop_back();
+			else
+				redo_deque.clear();
+		}
 		undo_deque.push_back(action);
-		redo_deque.clear();
 	}
 
 	void push(std::shared_ptr<ActionBase>&& action)
 	{
 		add_weight(action->weight);
+		if (!redo_deque.empty())
+		{
+			if (redo_deque.back()->equals(*action))
+				redo_deque.pop_back();
+			else
+				redo_deque.clear();
+		}
 		undo_deque.push_back(std::move(action));
-		redo_deque.clear();
 	}
 
 	void execute_no_undo(const std::shared_ptr<ActionBase>& action)
