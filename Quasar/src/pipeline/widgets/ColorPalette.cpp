@@ -544,6 +544,14 @@ void ColorSubpalette::focus(bool update_gfx)
 		palette().switch_to_subpalette(this, update_gfx);
 }
 
+void ColorSubpalette::cycle_primary_through(int delta)
+{
+	primary_index = std::clamp(primary_index + delta, 0, (int)subscheme->colors.size() - 1);
+	resync_primary_selector();
+	scroll_to_view(primary_index);
+	update_primary_color_in_picker();
+}
+
 void ColorSubpalette::scroll_by(int delta)
 {
 	int new_offset = std::clamp(scroll_offset + delta, 0, std::max(0, ceil_divide((int)subscheme->colors.size(), palette().col_count()) - palette().row_count()));
@@ -971,13 +979,13 @@ void ColorPalette::draw()
 	// LATER use StandardIButton instead of StandardTButton
 	for (size_t button : BUTTONS)
 		sb_t_wget(*this, button).draw();
-	if (imgui_editing || renaming_subpalette)
+	if (imgui_combo_open || renaming_subpalette)
 		rr_wget(*this, BACKGROUND).draw();
 }
 
 void ColorPalette::process()
 {
-	if (!imgui_editing && !renaming_subpalette && cursor_in_bkg())
+	if (!imgui_combo_open && !renaming_subpalette && cursor_in_bkg())
 	{
 		current_subpalette().process();
 		for (size_t button : BUTTONS)
@@ -1125,7 +1133,7 @@ void ColorPalette::delete_current_subpalette(bool create_action)
 
 void ColorPalette::switch_to_subpalette(size_t pos, bool update_gfx)
 {
-	if (current_subscheme != pos)
+	if (current_subscheme != pos && pos < num_subpalettes())
 	{
 		current_subscheme = pos;
 		if (update_gfx)
@@ -1178,16 +1186,22 @@ void ColorPalette::render_imgui()
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
 		ImGui::SetWindowFontScale(scale1d() * font_window_scale);
 
-		imgui_editing = false;
+		imgui_combo_open = false;
 
 		ImGui::BeginDisabled(renaming_subpalette || current_subpalette().is_moving_a_color());
 
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-		if (ImGui::BeginCombo("##Subschemes", current_subpalette().subscheme->name.c_str()))
+		if (ImGui::BeginCombo("##Subschemes", current_subpalette().subscheme->name.c_str(), ImGuiComboFlags_HeightLarge))
 		{
-			imgui_editing = true;
+			if (escape_to_close_popup)
+			{
+				escape_to_close_popup = false;
+				ImGui::CloseCurrentPopup();
+			}
+			else
+				imgui_combo_open = true;
 			size_t num_subs = num_subpalettes();
-			for (int i = 0; i < num_subs; ++i)
+			for (int i = num_subs - 1; i >= 0; --i)
 			{
 				if (ImGui::Selectable(get_subpalette(i).subscheme->name.c_str(), i == current_subscheme))
 					switch_to_subpalette(i, true);
@@ -1236,7 +1250,7 @@ void ColorPalette::connect_input_handlers()
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (mb.action == IAction::RELEASE && mb.button != MouseButton::RIGHT && current_subpalette().is_moving_a_color())
 			current_subpalette().stop_moving_color();
-		if (imgui_editing || renaming_subpalette || !cursor_in_bkg())
+		if (imgui_combo_open || renaming_subpalette || !cursor_in_bkg())
 			return;
 		else if (mb.action == IAction::RELEASE && mb.button == MouseButton::LEFT && (mb.mods & Mods::CONTROL))
 		{
@@ -1274,27 +1288,77 @@ void ColorPalette::connect_input_handlers()
 		};
 	parent_key_handler.children.push_back(&key_handler);
 	key_handler.callback = [this](const KeyEvent& k) {
-		if (!imgui_editing && !renaming_subpalette && k.action == IAction::PRESS && k.key == Key::X)
+		if (renaming_subpalette)
 		{
-			k.consumed = true;
-			current_subpalette().switch_primary_and_alternate();
+			if (!imgui_combo_open && k.action == IAction::PRESS && k.key == Key::ESCAPE)
+			{
+				k.consumed = true;
+				renaming_subpalette = false;
+				renaming_subpalette_start = false;
+				return;
+			}
 		}
-		else if (renaming_subpalette && !imgui_editing && k.action == IAction::PRESS && k.key == Key::ESCAPE)
+		else if (k.action == IAction::PRESS)
 		{
-			k.consumed = true;
-			renaming_subpalette = false;
-			renaming_subpalette_start = false;
+			if (imgui_combo_open)
+			{
+				if (k.key == Key::ESCAPE)
+				{
+					k.consumed = true;
+					escape_to_close_popup = true;
+					return;
+				}
+			}
+			else
+			{
+				if (k.key == Key::X)
+				{
+					k.consumed = true;
+					current_subpalette().switch_primary_and_alternate();
+					return;
+				}
+			}
+			if (k.mods & Mods::CONTROL)
+			{
+				if (k.key == Key::UP)
+				{
+					k.consumed = true;
+					switch_to_subpalette(current_subscheme + 1, true);
+					return;
+				}
+				else if (k.key == Key::DOWN)
+				{
+					k.consumed = true;
+					switch_to_subpalette(current_subscheme - 1, true);
+					return;
+				}
+			}
+
 		}
 		};
 	parent_scroll_handler.children.push_back(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {
-		if (!imgui_editing && !renaming_subpalette && cursor_in_bkg())
+		if (!imgui_combo_open && !renaming_subpalette)
 		{
-			s.consumed = true;
-			scroll_backlog -= s.yoff;
-			float amount;
-			scroll_backlog = modf(scroll_backlog, &amount);
-			current_subpalette().scroll_by((int)amount);
+			if (Machine.main_window->is_alt_pressed())
+			{
+				s.consumed = true;
+				cycle_backlog -= s.yoff;
+				float amount;
+				cycle_backlog = modf(cycle_backlog, &amount);
+				current_subpalette().cycle_primary_through((int)amount);
+			}
+			else
+			{
+				if (cursor_in_bkg())
+				{
+					s.consumed = true;
+					scroll_backlog -= s.yoff;
+					float amount;
+					scroll_backlog = modf(scroll_backlog, &amount);
+					current_subpalette().scroll_by((int)amount);
+				}
+			}
 		}
 		};
 }
@@ -1315,8 +1379,8 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 26;
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
-	sba.is_hoverable = [this]() { return !imgui_editing && !renaming_subpalette && !current_subpalette().is_moving_a_color(); };
-	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_editing && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
+	sba.is_hoverable = [this]() { return !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); };
+	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
 	
 	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";

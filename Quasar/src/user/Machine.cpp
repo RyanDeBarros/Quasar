@@ -94,11 +94,11 @@ bool MachineImpl::create_main_window()
 
 		main_window->root_window_size.children.push_back(&resize_handler);
 		main_window->root_display_scale.children.push_back(&rescale_handler);
-		main_window->root_mouse_button.children.push_back(&easel_mb_handler);
 		main_window->root_mouse_button.children.push_back(&palette_mb_handler);
+		main_window->root_mouse_button.children.push_back(&easel_mb_handler);
 		main_window->root_key.children.push_back(&palette_key_handler);
-		main_window->root_scroll.children.push_back(&easel_scroll_handler);
 		main_window->root_scroll.children.push_back(&palette_scroll_handler);
+		main_window->root_scroll.children.push_back(&easel_scroll_handler);
 		main_window->root_key.children.push_back(&global_key_handler);
 		main_window->root_path_drop.children.push_back(&path_drop_handler);
 		return true;
@@ -255,6 +255,7 @@ void MachineImpl::process()
 		process_undo();
 	else if (Data::History::held_redo)
 		process_redo();
+	LOG << LOG.flush; // flush all pending logs so that elsewhere, LOG.nl can be used without LOG.endl unless necessary.
 }
 
 void MachineImpl::mark()

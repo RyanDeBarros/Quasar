@@ -217,9 +217,8 @@ void ColorPicker::cp_render_gui_back()
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoScrollbar |
 		ImGuiWindowFlags_NoSavedSettings |
-		ImGuiWindowFlags_NoDecoration |
-		ImGuiWindowFlags_NoBackground;
-	if (ImGui::Begin("##color-picker", nullptr, window_flags))
+		ImGuiWindowFlags_NoDecoration;
+	if (ImGui::Begin("##color-picker", nullptr, window_flags | ImGuiWindowFlags_NoBackground))
 	{
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
 		ImGui::SetWindowFontScale(scale1d() * font_window_scale);
@@ -228,36 +227,40 @@ void ColorPicker::cp_render_gui_back()
 		{
 			if (showing_hex_popup)
 			{
-				Scale psz = { 0.5f * gui_transform.scale.x, 0.3f * gui_transform.scale.y };
+				Scale psz = { 0.6f * gui_transform.scale.x, 0.18f * gui_transform.scale.y };
 				ImGui::SetNextWindowSize({ psz.x, psz.y });
 				ImGui::SetNextWindowPos(ImVec2(gui_transform.position.x + 0.5f * gui_transform.scale.x - 0.5f * psz.x,
 					gui_transform.position.y + 0.475f * gui_transform.scale.y - 0.5f * psz.y));
-				ImGui::OpenPopup("hex-popup", ImGuiPopupFlags_MouseButtonLeft);
-			}
-			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
-			{
-				popup_hovered = ImGui::IsWindowHovered();
-				if (escape_to_close_popup)
+
+				if (ImGui::Begin("##rgb-hex-code-popup", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | window_flags))
 				{
-					escape_to_close_popup = false;
-					tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
-				}
-				if (showing_hex_popup)
-				{
-					ImGui::Text("RGB hex code");
-					ImGui::Text("#");
-					ImGui::SameLine();
-					ImGui::SetNextItemWidth(100 * self.transform.scale.x);
-					if (ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size))
+					popup_hovered |= ImGui::IsWindowHovered();
+					if (escape_to_close_popup)
 					{
-						RGB prev_rgb = picker_color.rgb();
-						update_rgb_hex();
-						update_gfx |= prev_rgb != picker_color.rgb();
+						escape_to_close_popup = false;
+						tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
 					}
+					else
+					{
+						ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("RGB hex code").x) * 0.5f);
+						ImGui::Text("RGB hex code");
+						if (ImGui::BeginChild("##rgb-hex-code-input"))
+						{
+							popup_hovered |= ImGui::IsWindowHovered();
+							ImGui::Text("#");
+							ImGui::SameLine();
+							ImGui::SetNextItemWidth(100 * self.transform.scale.x);
+							if (ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size))
+							{
+								RGB prev_rgb = picker_color.rgb();
+								update_rgb_hex();
+								update_gfx |= prev_rgb != picker_color.rgb();
+							}
+							ImGui::EndChild();
+						}
+					}
+					ImGui::End();
 				}
-				else
-					ImGui::CloseCurrentPopup();
-				ImGui::EndPopup();
 			}
 		}
 
@@ -884,9 +887,9 @@ void ColorPicker::connect_input_handlers()
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (showing_hex_popup && cursor_in_bkg())
 		{
-			mb.consumed = true;
-			if (mb.action == IAction::PRESS && showing_hex_popup && !popup_hovered)
+			if (mb.action == IAction::PRESS && mb.button != MouseButton::MIDDLE && showing_hex_popup && !popup_hovered)
 			{
+				mb.consumed = true;
 				Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 				if (wp_at(PREVIEW_PRI).contains_point(local_cursor_pos) || wp_at(PREVIEW_ALT).contains_point(local_cursor_pos))
 				{
@@ -897,8 +900,8 @@ void ColorPicker::connect_input_handlers()
 				}
 				else
 					tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
+				return;
 			}
-			return;
 		}
 		if (mb.button != MouseButton::LEFT && mb.button != MouseButton::RIGHT)
 			return;

@@ -46,6 +46,8 @@ struct ColorSubpalette : public Widget
 	void update_alternate_color_in_picker() const;
 	void focus(bool update_gfx);
 
+	void cycle_primary_through(int delta);
+
 	void scroll_by(int delta);
 	void scroll_to_view(int i);
 	WidgetPlacement square_wp(int i) const;
@@ -121,10 +123,11 @@ class ColorPalette : public Widget
 
 	float cached_scale1d = 0.0f;
 	float scroll_backlog = 0.0f;
+	float cycle_backlog = 0.0f;
 
 	FlatTransform gui_transform;
-	bool imgui_editing;
-	
+	bool imgui_combo_open = false;
+	bool escape_to_close_popup = false;
 	bool renaming_subpalette = false;
 	bool renaming_subpalette_start = false;
 	char rename_buf[ColorSubscheme::MAX_NAME_LENGTH] = "";

@@ -104,7 +104,6 @@ static void global_key_handler_palette(const KeyEvent& k)
 			if (Machine.main_window->is_ctrl_pressed())
 				Machine.palette_delete_subpalette();
 			break;
-			// TODO CTRL+UP/DOWN to cycle through subpalettes
 		}
 	}
 }
