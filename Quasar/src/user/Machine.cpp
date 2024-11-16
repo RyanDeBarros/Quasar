@@ -165,7 +165,6 @@ void MachineImpl::destroy()
 	QUASAR_INVALIDATE_PTR(panels);
 	Fonts::invalidate_common_fonts();
 	history.clear_history();
-	main_window->release_cursor(&panning_info.wh);
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 
@@ -250,7 +249,7 @@ static void process_redo()
 void MachineImpl::process()
 {
 	Data::update_time();
-	canvas_update_panning();
+	easel()->update_panning();
 	if (Data::History::held_undo)
 		process_undo();
 	else if (Data::History::held_redo)
@@ -283,6 +282,31 @@ void MachineImpl::sync_canvas_transform() const
 bool MachineImpl::canvas_image_ready() const
 {
 	return easel()->canvas_image();
+}
+
+bool MachineImpl::canvas_is_panning() const
+{
+	return easel()->panning_info.panning;
+}
+
+void MachineImpl::canvas_begin_panning() const
+{
+	easel()->begin_panning();
+}
+
+void MachineImpl::canvas_end_panning() const
+{
+	easel()->end_panning();
+}
+
+void MachineImpl::canvas_cancel_panning() const
+{
+	easel()->cancel_panning();
+}
+
+void MachineImpl::canvas_zoom_by(float z) const
+{
+	easel()->zoom_by(z);
 }
 
 void MachineImpl::palette_insert_color()
@@ -570,79 +594,6 @@ void MachineImpl::start_held_redo()
 	Data::History::on_starting_interval = true;
 }
 
-void MachineImpl::canvas_begin_panning()
-{
-	if (!panning_info.panning)
-	{
-		panning_info.initial_canvas_pos = canvas_position();
-		panning_info.initial_cursor_pos = easel()->get_app_cursor_pos();
-		panning_info.panning = true;
-		main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
-	}
-}
-
-void MachineImpl::canvas_end_panning()
-{
-	if (panning_info.panning)
-	{
-		panning_info.panning = false;
-		main_window->release_cursor(&panning_info.wh);
-		main_window->release_mouse_mode(&panning_info.wh);
-	}
-}
-
-void MachineImpl::canvas_cancel_panning()
-{
-	if (panning_info.panning)
-	{
-		panning_info.panning = false;
-		canvas_position() = panning_info.initial_canvas_pos;
-		sync_canvas_transform();
-		main_window->release_cursor(&panning_info.wh);
-		main_window->release_mouse_mode(&panning_info.wh);
-	}
-}
-
-void MachineImpl::canvas_update_panning()
-{
-	if (panning_info.panning)
-	{
-		Position pan_delta = easel()->get_app_cursor_pos() - panning_info.initial_cursor_pos;
-		Position pos = pan_delta + panning_info.initial_canvas_pos;
-		if (main_window->is_shift_pressed())
-		{
-			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
-				pos.x = panning_info.initial_canvas_pos.x;
-			else
-				pos.y = panning_info.initial_canvas_pos.y;
-		}
-		canvas_position() = pos;
-		sync_canvas_transform();
-
-		if (!main_window->owns_mouse_mode(&panning_info.wh) && !easel()->cursor_in_clipping())
-			main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
-		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
-		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
-	}
-}
-
-void MachineImpl::canvas_zoom_by(float z)
-{
-	Position cursor_world;
-	if (!main_window->is_alt_pressed())
-		cursor_world = easel()->to_world_coordinates(cursor_screen_pos());
-
-	float factor = main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
-	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, z), zoom_info.in_min, zoom_info.in_max);
-	float zoom_change = new_zoom / zoom_info.zoom;
-	canvas_scale() *= zoom_change;
-	Position delta_position = (canvas_position() - cursor_world) * zoom_change;
-	canvas_position() = cursor_world + delta_position;
-
-	sync_canvas_transform();
-	zoom_info.zoom = new_zoom;
-}
-
 struct FlipHorizontallyAction : public ActionBase
 {
 	FlipHorizontallyAction() { weight = sizeof(FlipHorizontallyAction); }
@@ -764,9 +715,9 @@ void MachineImpl::close_views_panel() const
 	panels->set_projection();
 }
 
-void MachineImpl::canvas_reset_camera()
+void MachineImpl::canvas_reset_camera() const
 {
-	zoom_info.zoom = zoom_info.initial;
+	easel()->zoom_info.zoom = easel()->zoom_info.initial;
 	canvas_transform() = {};
 	if (easel()->canvas_image())
 	{
@@ -774,7 +725,7 @@ void MachineImpl::canvas_reset_camera()
 		if (fit_scale < 1.0f)
 		{
 			canvas_scale() *= fit_scale;
-			zoom_info.zoom *= fit_scale;
+			easel()->zoom_info.zoom *= fit_scale;
 		}
 		else
 		{
@@ -782,44 +733,44 @@ void MachineImpl::canvas_reset_camera()
 			if (fit_scale > 1.0f)
 			{
 				canvas_scale() *= fit_scale;
-				zoom_info.zoom *= fit_scale;
+				easel()->zoom_info.zoom *= fit_scale;
 			}
 		}
 	}
 	sync_canvas_transform();
 }
 
-bool MachineImpl::minor_gridlines_visible()
+bool MachineImpl::minor_gridlines_visible() const
 {
 	return easel()->minor_gridlines_are_visible();
 }
 
-void MachineImpl::show_minor_gridlines()
+void MachineImpl::show_minor_gridlines() const
 {
 	easel()->set_minor_gridlines_visibility(true);
 }
 
-void MachineImpl::hide_minor_gridlines()
+void MachineImpl::hide_minor_gridlines() const
 {
 	easel()->set_minor_gridlines_visibility(false);
 }
 
-bool MachineImpl::major_gridlines_visible()
+bool MachineImpl::major_gridlines_visible() const
 {
 	return easel()->major_gridlines_are_visible();
 }
 
-void MachineImpl::show_major_gridlines()
+void MachineImpl::show_major_gridlines() const
 {
 	easel()->set_major_gridlines_visibility(true);
 }
 
-void MachineImpl::hide_major_gridlines()
+void MachineImpl::hide_major_gridlines() const
 {
 	easel()->set_major_gridlines_visibility(false);
 }
 
-void MachineImpl::download_user_manual()
+void MachineImpl::download_user_manual() const
 {
 	static const int num_filters = 1;
 	static const char* filters[num_filters] = { "md" };

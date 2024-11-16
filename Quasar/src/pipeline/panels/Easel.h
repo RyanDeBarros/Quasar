@@ -3,7 +3,9 @@
 #include "Panel.h"
 #include "../render/FlatSprite.h"
 #include "../render/Shader.h"
+#include "user/Platform.h"
 
+// TODO convert Gridlines to widget
 struct Gridlines
 {
 	unsigned short width = 0, height = 0;
@@ -38,6 +40,7 @@ public:
 	void set_color(ColorFrame color) const;
 };
 
+// TODO convert Canvas to widget
 struct Canvas
 {
 	SharedFlatSprite sprite;
@@ -90,8 +93,8 @@ private:
 	bool major_gridlines_visible = false;
 	bool _buffer_major_gridlines_send_flat_transform = false;
 	bool _buffer_major_gridlines_sync_with_image = false;
-public:
 
+public:
 	Easel();
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
@@ -123,4 +126,30 @@ public:
 	void set_minor_gridlines_visibility(bool visible);
 	bool major_gridlines_are_visible() const { return major_gridlines_visible; }
 	void set_major_gridlines_visibility(bool visible);
+
+	struct
+	{
+		Position initial_cursor_pos{};
+		Position initial_canvas_pos{};
+		bool panning = false;
+	private:
+		friend Easel;
+		WindowHandle wh;
+	} panning_info;
+	struct
+	{
+		// SETTINGS (only some of them?)
+		constexpr static float initial = 0.5f;
+		constexpr static float in_min = 0.01f;
+		constexpr static float in_max = 100.0f;
+		constexpr static float factor = 1.5f;
+		constexpr static float factor_shift = 1.05f;
+		float zoom = initial;
+	} zoom_info;
+
+	void begin_panning();
+	void end_panning();
+	void cancel_panning();
+	void update_panning();
+	void zoom_by(float zoom);
 };

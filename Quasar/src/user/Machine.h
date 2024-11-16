@@ -59,28 +59,6 @@ struct MachineImpl
 		FILE,
 		PALETTE
 	} control_scheme = ControlScheme::FILE;
-	
-	// TODO move to Easel -> Canvas
-	// Canvas camera
-	struct
-	{
-		Position initial_cursor_pos{};
-		Position initial_canvas_pos{};
-		bool panning = false;
-	private:
-		friend MachineImpl;
-		WindowHandle wh;
-	} panning_info;
-	struct
-	{
-		// SETTINGS (only some of them?)
-		constexpr static float initial = 0.5f;
-		constexpr static float in_min = 0.01f;
-		constexpr static float in_max = 100.0f;
-		constexpr static float factor = 1.5f;
-		constexpr static float factor_shift = 1.05f;
-		float zoom = initial;
-	} zoom_info;
 
 	bool create_main_window();
 	void init_renderer();
@@ -118,7 +96,13 @@ struct MachineImpl
 	Position& canvas_position() const { return canvas_transform().position; }
 	Scale& canvas_scale() const { return canvas_transform().scale; }
 	void sync_canvas_transform() const;
+
 	bool canvas_image_ready() const;
+	bool canvas_is_panning() const;
+	void canvas_begin_panning() const;
+	void canvas_end_panning() const;
+	void canvas_cancel_panning() const;
+	void canvas_zoom_by(float zoom) const;
 
 	// Palette
 	void palette_insert_color();
@@ -148,13 +132,6 @@ struct MachineImpl
 	void start_held_undo();
 	void start_held_redo();
 
-	// User controls
-	void canvas_begin_panning();
-	void canvas_end_panning();
-	void canvas_cancel_panning();
-	void canvas_update_panning();
-	void canvas_zoom_by(float zoom);
-
 	// Edit menu
 	void flip_horizontally();
 	void flip_vertically();
@@ -172,16 +149,16 @@ struct MachineImpl
 	bool views_panel_visible() const;
 	void open_views_panel() const;
 	void close_views_panel() const;
-	void canvas_reset_camera();
-	bool minor_gridlines_visible();
-	void show_minor_gridlines();
-	void hide_minor_gridlines();
-	bool major_gridlines_visible();
-	void show_major_gridlines();
-	void hide_major_gridlines();
+	void canvas_reset_camera() const;
+	bool minor_gridlines_visible() const;
+	void show_minor_gridlines() const;
+	void hide_minor_gridlines() const;
+	bool major_gridlines_visible() const;
+	void show_major_gridlines() const;
+	void hide_major_gridlines() const;
 
 	// Help menu
-	void download_user_manual();
+	void download_user_manual() const;
 };
 
 inline MachineImpl Machine;

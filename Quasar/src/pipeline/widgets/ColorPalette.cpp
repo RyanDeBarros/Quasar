@@ -1200,7 +1200,7 @@ void ColorPalette::render_imgui()
 			}
 			else
 				imgui_combo_open = true;
-			size_t num_subs = num_subpalettes();
+			int num_subs = (int)num_subpalettes();
 			for (int i = num_subs - 1; i >= 0; --i)
 			{
 				if (ImGui::Selectable(get_subpalette(i).subscheme->name.c_str(), i == current_subscheme))

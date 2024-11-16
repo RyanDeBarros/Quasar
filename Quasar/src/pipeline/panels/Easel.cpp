@@ -469,3 +469,76 @@ void Easel::set_major_gridlines_visibility(bool visible)
 	}
 	major_gridlines_visible = visible;
 }
+
+void Easel::begin_panning()
+{
+	if (!panning_info.panning)
+	{
+		panning_info.initial_canvas_pos = canvas.position();
+		panning_info.initial_cursor_pos = get_app_cursor_pos();
+		panning_info.panning = true;
+		Machine.main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
+	}
+}
+
+void Easel::end_panning()
+{
+	if (panning_info.panning)
+	{
+		panning_info.panning = false;
+		Machine.main_window->release_cursor(&panning_info.wh);
+		Machine.main_window->release_mouse_mode(&panning_info.wh);
+	}
+}
+
+void Easel::cancel_panning()
+{
+	if (panning_info.panning)
+	{
+		panning_info.panning = false;
+		canvas.position() = panning_info.initial_canvas_pos;
+		sync_canvas_transform();
+		Machine.main_window->release_cursor(&panning_info.wh);
+		Machine.main_window->release_mouse_mode(&panning_info.wh);
+	}
+}
+
+void Easel::update_panning()
+{
+	if (panning_info.panning)
+	{
+		Position pan_delta = get_app_cursor_pos() - panning_info.initial_cursor_pos;
+		Position pos = pan_delta + panning_info.initial_canvas_pos;
+		if (Machine.main_window->is_shift_pressed())
+		{
+			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
+				pos.x = panning_info.initial_canvas_pos.x;
+			else
+				pos.y = panning_info.initial_canvas_pos.y;
+		}
+		canvas.position() = pos;
+		sync_canvas_transform();
+
+		if (!Machine.main_window->owns_mouse_mode(&panning_info.wh) && !cursor_in_clipping())
+			Machine.main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
+		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
+		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
+	}
+}
+
+void Easel::zoom_by(float zoom)
+{
+	Position cursor_world;
+	if (!Machine.main_window->is_ctrl_pressed())
+		cursor_world = to_world_coordinates(Machine.cursor_screen_pos());
+
+	float factor = Machine.main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
+	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, zoom), zoom_info.in_min, zoom_info.in_max);
+	float zoom_change = new_zoom / zoom_info.zoom;
+	canvas.scale() *= zoom_change;
+	Position delta_position = (canvas.position() - cursor_world) * zoom_change;
+	canvas.position() = cursor_world + delta_position;
+
+	sync_canvas_transform();
+	zoom_info.zoom = new_zoom;
+}

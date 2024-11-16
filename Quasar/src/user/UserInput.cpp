@@ -31,7 +31,7 @@ void attach_canvas_controls()
 		};
 	// Zooming
 	Machine.easel_scroll_handler.callback = [](const ScrollEvent& s) {
-		if (Machine.cursor_in_easel() && !Machine.panning_info.panning)
+		if (Machine.cursor_in_easel() && !Machine.canvas_is_panning())
 		{
 			Machine.canvas_zoom_by(s.yoff);
 			s.consumed = true;
@@ -195,7 +195,7 @@ static void global_key_handler_neutral(const KeyEvent& k)
 			}
 			break;
 		case Key::ESCAPE:
-			if (Machine.panning_info.panning)
+			if (Machine.canvas_is_panning())
 			{
 				k.consumed = true;
 				Machine.canvas_cancel_panning();

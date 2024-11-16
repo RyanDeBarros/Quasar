@@ -45,7 +45,7 @@ In global control scheme:
 
 * Scroll with mouse wheel or trackpad.
 * Scroll slower by holding SHIFT.
-* Scroll relative to center of canvas (not mouse cursor) by holding ALT.
+* Scroll relative to center of canvas (not mouse cursor) by holding CTRL.
 
 Pressing ROW0 will reset the camera to the default pan and zoom.
 
