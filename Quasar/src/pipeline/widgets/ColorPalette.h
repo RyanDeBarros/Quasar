@@ -22,7 +22,7 @@ struct ColorSubpalette : public Widget
 	class ColorPalette& palette();
 	const class ColorPalette& palette() const;
 
-	void reload_subscheme();
+	void reload_subscheme(bool update_picker_colors);
 	virtual void draw() override;
 	void draw_selectors();
 	void sync_hover_selector();
@@ -66,6 +66,7 @@ public:
 	void send_color(size_t i, RGBA color);
 	void send_color(size_t i);
 	void remove_square_under_cursor(bool send_vb, bool create_action);
+	void remove_square_under_index(int index, bool send_vb, bool create_action);
 	void clean_extra_buffer_space();
 	void insert_color_at(int index, int to_primary_index, int to_alternate_index, RGBA color);
 	void remove_color_at(int index, int to_primary_index, int to_alternate_index, bool send_vb);
@@ -160,12 +161,13 @@ public:
 		const std::function<RGBA()>* get_picker_alt_rgba;
 		const std::function<bool()>* use_primary;
 		const std::function<bool()>* use_alternate;
+		const std::function<void()>* swap_picker_colors;
 
 		Reflection(const std::function<void(RGBA)>* pri_color_update, const std::function<void(RGBA)>* alt_color_update,
 			const std::function<RGBA()>* get_picker_pri_rgba, const std::function<RGBA()>* get_picker_alt_rgba,
-			const std::function<bool()>* use_primary, const std::function<bool()>* use_alternate)
+			const std::function<bool()>* use_primary, const std::function<bool()>* use_alternate, const std::function<void(void)>* swap_picker_colors)
 			: pri_color_update(pri_color_update), alt_color_update(alt_color_update), get_picker_pri_rgba(get_picker_pri_rgba),
-			get_picker_alt_rgba(get_picker_alt_rgba), use_primary(use_primary), use_alternate(use_alternate) {}
+			get_picker_alt_rgba(get_picker_alt_rgba), use_primary(use_primary), use_alternate(use_alternate), swap_picker_colors(swap_picker_colors) {}
 		Reflection(const Reflection&) = default;
 	} reflection;
 
@@ -181,15 +183,21 @@ public:
 	void import_color_scheme(std::shared_ptr<ColorScheme>&& color_scheme, bool create_action);
 	void assign_color_subscheme(size_t pos, const std::shared_ptr<ColorSubscheme>& subscheme, bool create_action);
 	void assign_color_subscheme(size_t pos, std::shared_ptr<ColorSubscheme>&& subscheme, bool create_action);
+	
 	void insert_subpalette(size_t pos, const std::shared_ptr<ColorSubpalette>& subpalette);
 	void insert_subpalette(size_t pos, std::shared_ptr<ColorSubpalette>&& subpalette);
-	void new_subpalette();
+	void new_subpalette(bool create_action);
+	void rename_subpalette();
 	void delete_subpalette(size_t pos);
+	void delete_current_subpalette(bool create_action);
 	void switch_to_subpalette(size_t pos, bool update_gfx);
 	void switch_to_subpalette(ColorSubpalette* subpalette, bool update_gfx);
 	size_t num_subpalettes() const;
 	void set_size(Scale pos, bool sync);
 	Scale minimum_display() const;
+
+	void subpalette_overwrite_primary(bool create_action);
+	void subpalette_overwrite_alternate(bool create_action);
 
 private:
 	void render_imgui();

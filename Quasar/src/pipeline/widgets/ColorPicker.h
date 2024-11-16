@@ -88,6 +88,7 @@ public:
 	EditingColor get_editing_color() const { return editing_color; }
 	void set_pri_color(ColorFrame color, bool toggle_on);
 	void set_alt_color(ColorFrame color, bool toggle_on);
+	void swap_picker_colors();
 	void set_size(Scale size, bool sync);
 	Scale minimum_display() const;
 	

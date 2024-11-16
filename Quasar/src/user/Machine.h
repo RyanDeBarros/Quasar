@@ -54,6 +54,13 @@ struct MachineImpl
 	bool raw_mouse_motion = true;
 	void update_raw_mouse_motion() const { main_window->set_raw_mouse_motion(raw_mouse_motion); }
 
+	enum class ControlScheme
+	{
+		FILE,
+		PALETTE
+	} control_scheme = ControlScheme::FILE;
+	
+	// TODO move to Easel -> Canvas
 	// Canvas camera
 	struct
 	{
@@ -112,6 +119,14 @@ struct MachineImpl
 	Scale& canvas_scale() const { return canvas_transform().scale; }
 	void sync_canvas_transform() const;
 	bool canvas_image_ready() const;
+
+	// Palette
+	void palette_insert_color();
+	void palette_overwrite_color();
+	void palette_delete_color();
+	void palette_new_subpalette();
+	void palette_rename_subpalette();
+	void palette_delete_subpalette();
 
 	// File menu
 	bool new_file();

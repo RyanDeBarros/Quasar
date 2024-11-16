@@ -40,6 +40,7 @@ Palette::Palette()
 	get_picker_alt_rgba = [this]() { return color_picker(this).get_alt_color().rgba(); };
 	use_primary = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::PRIMARY; };
 	use_alternate = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::ALTERNATE; };
+	swap_picker_colors = [this]() { color_picker(this).swap_picker_colors(); };
 	initialize_widget();
 
 	// ##########################################################
@@ -114,13 +115,55 @@ Scale Palette::minimum_screen_display() const
 	return to_screen_coordinates(color_picker_scale * color_picker(this).minimum_display() + color_palette_scale * color_palette(this).minimum_display() + Scale{ 2 * padding, 3 * padding }) - to_screen_coordinates({});
 }
 
+void Palette::new_color()
+{
+	bool adjacent = !Machine.main_window->is_shift_pressed();
+	bool update_selector = Machine.main_window->is_ctrl_pressed();
+	if (Machine.main_window->is_alt_pressed())
+		color_palette(this).current_subpalette().new_color_from_alternate(color_picker(this).get_alt_color().rgba(), adjacent, update_selector, true);
+	else
+		color_palette(this).current_subpalette().new_color_from_primary(color_picker(this).get_pri_color().rgba(), adjacent, update_selector, true);
+}
+
+void Palette::overwrite_color()
+{
+	if (Machine.main_window->is_alt_pressed())
+		color_palette(this).subpalette_overwrite_alternate(true);
+	else
+		color_palette(this).subpalette_overwrite_primary(true);
+}
+
+void Palette::delete_color()
+{
+	ColorSubpalette& subpalette = color_palette(this).current_subpalette();
+	if (Machine.main_window->is_alt_pressed())
+		subpalette.remove_square_under_index(subpalette.alternate_index, true, true);
+	else
+		subpalette.remove_square_under_index(subpalette.primary_index, true, true);
+}
+
+void Palette::new_subpalette()
+{
+	color_palette(this).new_subpalette(true);
+}
+
+void Palette::rename_subpalette()
+{
+	color_palette(this).rename_subpalette();
+}
+
+void Palette::delete_subpalette()
+{
+	color_palette(this).delete_current_subpalette(true);
+}
+
 void Palette::initialize_widget()
 {
 	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
 	widget.wp_at(COLOR_PICKER).transform.scale = Scale(color_picker_scale);
 
 	assign_widget(&widget, COLOR_PALETTE, std::make_shared<ColorPalette>(&vp, Machine.palette_mb_handler, Machine.palette_key_handler,
-		Machine.palette_scroll_handler, ColorPalette::Reflection(&update_pri_color, &update_alt_color, &get_picker_pri_rgba, &get_picker_alt_rgba, &use_primary, &use_alternate)));
+		Machine.palette_scroll_handler, ColorPalette::Reflection(&update_pri_color, &update_alt_color, &get_picker_pri_rgba, &get_picker_alt_rgba, &use_primary, &use_alternate, &swap_picker_colors)));
 	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(color_palette_scale);
 }
 

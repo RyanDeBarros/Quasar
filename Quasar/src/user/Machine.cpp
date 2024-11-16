@@ -284,6 +284,36 @@ bool MachineImpl::canvas_image_ready() const
 	return easel()->canvas_image();
 }
 
+void MachineImpl::palette_insert_color()
+{
+	palette()->new_color();
+}
+
+void MachineImpl::palette_overwrite_color()
+{
+	palette()->overwrite_color();
+}
+
+void MachineImpl::palette_delete_color()
+{
+	palette()->delete_color();
+}
+
+void MachineImpl::palette_new_subpalette()
+{
+	palette()->new_subpalette();
+}
+
+void MachineImpl::palette_rename_subpalette()
+{
+	palette()->rename_subpalette();
+}
+
+void MachineImpl::palette_delete_subpalette()
+{
+	palette()->delete_subpalette();
+}
+
 Scale MachineImpl::inv_app_scale() const
 {
 	return Data::app_inverse_scale;
@@ -299,7 +329,7 @@ void MachineImpl::set_app_scale(Scale scale) const
 	Data::app_inverse_scale = 1.0f / scale;
 	panels->set_projection();
 	float scale1d = mean2d1d(scale.x, scale.y);
-	static const float gui_scale_factor = 1.25f; // SETTINGS
+	static const float gui_scale_factor = 1.15f; // SETTINGS
 	float gui_scale = scale1d * gui_scale_factor;
 	ImGui::GetStyle().ScaleAllSizes(gui_scale);
 	ImGui::GetIO().FontGlobalScale = gui_scale;

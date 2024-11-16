@@ -107,8 +107,6 @@ ColorPicker::~ColorPicker()
 {
 	parent_mb_handler.remove_child(&mb_handler);
 	parent_key_handler.remove_child(&key_handler);
-	Machine.main_window->release_cursor(&wh_interactable);
-	Machine.main_window->release_cursor(&wh_preview);
 }
 
 void ColorPicker::draw()
@@ -994,6 +992,11 @@ void ColorPicker::connect_input_handlers()
 			k.consumed = true;
 			escape_to_close_popup = true;
 		}
+		else if (k.action == IAction::PRESS && k.key == Key::X && Machine.main_window->is_key_pressed(Key::SPACE))
+		{
+			k.consumed = true;
+			swap_picker_colors();
+		}
 		};
 }
 
@@ -1199,6 +1202,22 @@ void ColorPicker::set_alt_color(ColorFrame color, bool toggle_on)
 	}
 	else
 		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, alt_color);
+}
+
+void ColorPicker::swap_picker_colors()
+{
+	std::swap(pri_color, alt_color);
+	if (editing_color == EditingColor::PRIMARY)
+	{
+		picker_color = pri_color;
+		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, alt_color);
+	}
+	else if (editing_color == EditingColor::ALTERNATE)
+	{
+		picker_color = alt_color;
+		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
+	}
+	set_gfx_from_picker_color();
 }
 
 void ColorPicker::set_size(Scale size, bool sync)

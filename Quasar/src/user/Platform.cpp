@@ -409,7 +409,6 @@ void Window::set_size_limits(int minwidth, int minheight, int maxwidth, int maxh
 	glfwSetWindowSizeLimits(window, minwidth, minheight, maxwidth, maxheight);
 }
 
-// TODO no need for release calls in external destructors
 WindowHandle::~WindowHandle()
 {
 	if (Machine.main_window)

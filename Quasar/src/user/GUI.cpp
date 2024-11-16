@@ -105,6 +105,28 @@ void render_main_menu_bar()
 			if (ImGui::MenuItem("Download user manual")) { Machine.download_user_manual(); }
 			ImGui::EndMenu();
 		}
+
+		ImGui::SameLine(ImGui::GetCursorPosX() + 100);
+		ImGui::Text("Control Scheme:");
+		ImGui::SetNextItemWidth(ImGui::CalcTextSize("PALETTE").x + ImGui::GetStyle().FramePadding.x * 2 + ImGui::GetFontSize() + ImGui::GetStyle().ItemInnerSpacing.x * 2);
+		static const char* control_scheme_display_names[] = { "FILE", "PALETTE" };
+		static const char* control_scheme_names[] = {
+			"FILE    (CTRL+1)",
+			"PALETTE (CTRL+2)"
+		};
+		static MachineImpl::ControlScheme schemes[] = { MachineImpl::ControlScheme::FILE, MachineImpl::ControlScheme::PALETTE };
+		if (ImGui::BeginCombo("##ControlSchemes", control_scheme_display_names[(int)Machine.control_scheme]))
+		{
+			for (auto scheme : schemes)
+			{
+				if (ImGui::Selectable(control_scheme_names[(int)scheme]))
+					Machine.control_scheme = scheme;
+				if (Machine.control_scheme == scheme)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+
 		ImGui::EndMainMenuBar();
 	}
 }

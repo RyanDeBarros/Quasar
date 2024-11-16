@@ -21,6 +21,7 @@ struct Palette : public Panel
 	std::function<RGBA()> get_picker_alt_rgba;
 	std::function<bool()> use_primary;
 	std::function<bool()> use_alternate;
+	std::function<void()> swap_picker_colors;
 
 	Palette();
 	Palette(const Palette&) = delete;
@@ -32,6 +33,13 @@ struct Palette : public Panel
 	void draw() override;
 	void render_widget();
 	Scale minimum_screen_display() const override;
+
+	void new_color();
+	void overwrite_color();
+	void delete_color();
+	void new_subpalette();
+	void rename_subpalette();
+	void delete_subpalette();
 
 private:
 	void initialize_widget();
