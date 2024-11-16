@@ -43,7 +43,8 @@ struct ColorSubpalette : public Widget
 	bool get_visible_square_under_pos(Position pos, int& index) const;
 	void switch_primary_and_alternate();
 	void update_primary_color_in_picker() const;
-	void focus(bool update_primary_color);
+	void update_alternate_color_in_picker() const;
+	void focus(bool update_gfx);
 
 	void scroll_by(int delta);
 	void scroll_to_view(int i);
@@ -54,8 +55,14 @@ struct ColorSubpalette : public Widget
 	bool is_square_visible(int i) const;
 	Position cursor_world_pos() const;
 
-	void overwrite_current_color(RGBA color, bool update_in_picker);
-	void new_color(RGBA color, bool adjacent, bool update_primary, bool create_action);
+	void overwrite_primary_color(RGBA color, bool update_in_picker);
+	void overwrite_alternate_color(RGBA color, bool update_in_picker);
+	void new_color_from_primary(RGBA color, bool adjacent, bool update_primary, bool create_action);
+	void new_color_from_alternate(RGBA color, bool adjacent, bool update_alternate, bool create_action);
+private:
+	void insert_color_setup(RGBA color, int index);
+	void send_inserted_color(RGBA color, int index, bool adjacent);
+public:
 	void send_color(size_t i, RGBA color);
 	void send_color(size_t i);
 	void remove_square_under_cursor(bool send_vb, bool create_action);
@@ -144,12 +151,25 @@ private:
 public:
 	int row_count() const { return _row_count; }
 	int col_count() const { return _col_count; }
-	
-	const std::function<void(RGBA)>* primary_color_update;
-	const std::function<RGBA()>* get_picker_rgba;
 
-	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
-		const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba);
+	struct Reflection
+	{
+		const std::function<void(RGBA)>* pri_color_update;
+		const std::function<void(RGBA)>* alt_color_update;
+		const std::function<RGBA()>* get_picker_pri_rgba;
+		const std::function<RGBA()>* get_picker_alt_rgba;
+		const std::function<bool()>* use_primary;
+		const std::function<bool()>* use_alternate;
+
+		Reflection(const std::function<void(RGBA)>* pri_color_update, const std::function<void(RGBA)>* alt_color_update,
+			const std::function<RGBA()>* get_picker_pri_rgba, const std::function<RGBA()>* get_picker_alt_rgba,
+			const std::function<bool()>* use_primary, const std::function<bool()>* use_alternate)
+			: pri_color_update(pri_color_update), alt_color_update(alt_color_update), get_picker_pri_rgba(get_picker_pri_rgba),
+			get_picker_alt_rgba(get_picker_alt_rgba), use_primary(use_primary), use_alternate(use_alternate) {}
+		Reflection(const Reflection&) = default;
+	} reflection;
+
+	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler, const Reflection& reflection);
 	ColorPalette(const ColorPalette&) = delete;
 	ColorPalette(ColorPalette&&) noexcept = delete;
 	~ColorPalette();
@@ -165,8 +185,8 @@ public:
 	void insert_subpalette(size_t pos, std::shared_ptr<ColorSubpalette>&& subpalette);
 	void new_subpalette();
 	void delete_subpalette(size_t pos);
-	void switch_to_subpalette(size_t pos, bool update_primary_color);
-	void switch_to_subpalette(ColorSubpalette* subpalette, bool update_primary_color);
+	void switch_to_subpalette(size_t pos, bool update_gfx);
+	void switch_to_subpalette(ColorSubpalette* subpalette, bool update_gfx);
 	size_t num_subpalettes() const;
 	void set_size(Scale pos, bool sync);
 	Scale minimum_display() const;

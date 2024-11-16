@@ -47,6 +47,8 @@
 
 ### Color picker
 
+* The primary/alternate color preview at the bottom is also a button. Left click it to switch to primary color picking, and right click it to switch to alternate color picking. They overlap, allowing the user to view how the two colors blend.
+
 ### Color palette
 
 * Left click on the color palette to select the primary color, and right click on the color palette to select the secondary color.

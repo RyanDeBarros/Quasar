@@ -15,8 +15,12 @@ struct Palette : public Panel
 
 	Widget widget;
 
-	std::function<void(RGBA)> update_primary_color;
-	std::function<RGBA()> get_picker_rgba;
+	std::function<void(RGBA)> update_pri_color;
+	std::function<void(RGBA)> update_alt_color;
+	std::function<RGBA()> get_picker_pri_rgba;
+	std::function<RGBA()> get_picker_alt_rgba;
+	std::function<bool()> use_primary;
+	std::function<bool()> use_alternate;
 
 	Palette();
 	Palette(const Palette&) = delete;

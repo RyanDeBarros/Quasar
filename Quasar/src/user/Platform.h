@@ -199,6 +199,8 @@ typedef InputEventHandler<DisplayScaleEvent> DisplayScaleHandler;
 struct WindowHandle
 {
 	unsigned char flags = 0;
+
+	~WindowHandle();
 	
 	static const unsigned char OWN_CURSOR = 0b1;
 	static const unsigned char OWN_MOUSE_MODE = 0b10;

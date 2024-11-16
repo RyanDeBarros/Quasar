@@ -10,8 +10,9 @@
 #include "variety/Geometry.h"
 #include "Button.h"
 
-struct ColorPicker : public Widget
+class ColorPicker : public Widget
 {
+public:
 	enum class State
 	{
 		GRAPHIC_QUAD = 0b1,
@@ -56,12 +57,23 @@ private:
 
 	bool escape_to_close_popup = false;
 	
-	WindowHandle wh_interactable;
+	WindowHandle wh_interactable, wh_preview;
 
 	int current_widget_control = -1;
-
-	RGBA current_action_color;
-
+	
+public:
+	enum class EditingColor
+	{
+		PRIMARY,
+		ALTERNATE
+	};
+private:
+	EditingColor editing_color = EditingColor::PRIMARY;
+	
+	ColorFrame picker_color = RGBA::WHITE;
+	ColorFrame pri_color = RGBA::WHITE;
+	ColorFrame alt_color = RGBA::WHITE;
+	
 public:
 	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
 	ColorPicker(const ColorPicker&) = delete;
@@ -71,12 +83,21 @@ public:
 	virtual void draw() override;
 	void process();
 	void send_vp();
-	ColorFrame get_color() const;
-	void set_color(ColorFrame color);
+	ColorFrame get_pri_color() const { return pri_color; }
+	ColorFrame get_alt_color() const { return alt_color; }
+	EditingColor get_editing_color() const { return editing_color; }
+	void set_pri_color(ColorFrame color, bool toggle_on);
+	void set_alt_color(ColorFrame color, bool toggle_on);
 	void set_size(Scale size, bool sync);
 	Scale minimum_display() const;
 	
 private:
+	void sync_preview_color_with_picker();
+	void set_picker_color_from_gfx();
+	void set_gfx_from_picker_color();
+	void set_editing_color(EditingColor ec);
+	void toggle_editing_color();
+
 	void process_mb_down_events();
 
 	void cp_render_gui_back();
@@ -135,7 +156,8 @@ public:
 	enum : size_t
 	{
 		// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
-		PREVIEW,						// quad
+		PREVIEW_PRI,					// quad
+		PREVIEW_ALT,					// quad
 		ALPHA_SLIDER,					// quad
 		ALPHA_SLIDER_CURSOR,			// circle_cursor
 		GRAPHIC_QUAD,					// quad
@@ -181,6 +203,7 @@ public:
 		BUTTON_RGB_SLIDER,				// separate widget
 		BUTTON_HSV_SLIDER,				// separate widget
 		BUTTON_HSL_SLIDER,				// separate widget
+		BUTTON_TOGGLE_PRI_AND_ALT,		// separate widget
 		_W_COUNT
 	};
 
@@ -189,7 +212,8 @@ public:
 		BLACK,
 		WHITE,
 		TRANSPARENT,
-		PREVIEW,
+		PREVIEW_PRI,
+		PREVIEW_ALT,
 		ALPHA_SLIDER,
 		GRAPHIC_QUAD,
 		GRAPHIC_VALUE_SLIDER,
