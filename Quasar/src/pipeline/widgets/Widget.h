@@ -207,6 +207,8 @@ struct W_UnitRenderable : public Widget
 	std::unique_ptr<UnitRenderable> ur;
 
 	W_UnitRenderable(Shader* shader, unsigned char num_vertices = 4) : ur(std::make_unique<UnitRenderable>(shader, num_vertices)) {}
+
+	virtual void draw() override { ur->draw(); }
 };
 
 inline UnitRenderable& ur_wget(Widget& w, size_t i)
@@ -224,6 +226,8 @@ struct W_UnitMultiRenderable : public Widget
 	std::unique_ptr<UnitMultiRenderable> umr;
 
 	W_UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned char unit_num_vertices = 4) : umr(std::make_unique<UnitMultiRenderable>(shader, num_units, unit_num_vertices)) {}
+
+	virtual void draw() override { umr->draw(); }
 };
 
 inline UnitMultiRenderable& umr_wget(Widget& w, size_t i)
@@ -241,6 +245,8 @@ struct W_IndexedRenderable : public Widget
 	std::unique_ptr<IndexedRenderable> ir;
 
 	W_IndexedRenderable(Shader* shader) : ir(std::make_unique<IndexedRenderable>(shader)) {}
+
+	virtual void draw() override { ir->draw(); }
 };
 
 inline IndexedRenderable& ir_wget(Widget& w, size_t i)

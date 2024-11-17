@@ -1,5 +1,7 @@
 #include "Palette.h"
 
+#include <glm/gtc/type_ptr.inl>
+
 #include "user/Machine.h"
 #include "variety/GLutility.h"
 #include "../render/Uniforms.h"
@@ -31,7 +33,7 @@ const Scale color_picker_scale = Scale(0.9f);
 const float padding = 20;
 
 Palette::Palette()
-	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
+	: bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")),
 	widget(_W_COUNT)
 {
 	update_pri_color = [this](RGBA color) { color_picker(this).set_pri_color(color, false); };
@@ -66,40 +68,12 @@ Palette::Palette()
 		std::make_shared<ColorSubscheme>("test#2", std::move(colors2))
 		}), false); // LATER this would be true when importing a new scheme, but false for default color scheme upon opening application/new file
 	// ##########################################################
-
-	static constexpr size_t num_quads = 1;
-	varr = new GLfloat[num_quads * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
-	background.varr = varr;
-	background.initialize_varr();
-
-	GLuint IARR[num_quads * 6]{
-		0, 1, 2, 2, 3, 0
-	};
-	initialize_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
-	
-	background.sync_texture_slot(-1.0f);
-	background.set_image(nullptr, 1, 1);
-	background.set_modulation(ColorFrame(RGB(0.2f, 0.1f, 0.3f), 0.1f));
-}
-
-Palette::~Palette()
-{
-	delete_vao_buffers(vao, vb, ib);
-	delete[] varr;
 }
 
 void Palette::draw()
 {
-	// bind
-	bind_shader(sprite_shader);
-	// background
-	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
-	// widget
+	ur_wget(widget, BACKGROUND).draw();
 	render_widget();
-	// unbind
-	unbind_vao_buffers();
-	unbind_shader();
 }
 
 void Palette::render_widget()
@@ -159,6 +133,10 @@ void Palette::delete_subpalette()
 
 void Palette::initialize_widget()
 {
+	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
+	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec()));
+	ur_wget(widget, BACKGROUND).send_buffer();
+
 	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
 	widget.wp_at(COLOR_PICKER).transform.scale = Scale(color_picker_scale);
 
@@ -167,20 +145,16 @@ void Palette::initialize_widget()
 	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(color_palette_scale);
 }
 
-void Palette::subsend_background_vao() const
+void Palette::sync_widget()
 {
-	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), background.varr));
-	unbind_vao_buffers();
-}
-
-void Palette::_send_view()
-{
-	background.transform.scale = get_app_size();
-	background.sync_transform();
-	subsend_background_vao();
-	vp = vp_matrix();
-	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
+	widget.wp_at(BACKGROUND).transform.scale = get_app_size();
+	WidgetPlacement wp = widget.wp_at(BACKGROUND).relative_to(widget.self.transform);
+	UnitRenderable& bkg = ur_wget(widget, BACKGROUND);
+	bkg.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
+	bkg.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
+	bkg.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
+	bkg.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
+	bkg.send_buffer();
 
 	float view_height = (to_view_coordinates({}) - to_view_coordinates({ 0, bounds.clip().screen_h })).y;
 	const float free_space_y = view_height - 3 * padding;
@@ -196,5 +170,12 @@ void Palette::_send_view()
 	color_palette(this).set_size(color_palette_size, false);
 	widget.wp_at(COLOR_PALETTE).transform.position = { 0, -0.5f * view_height + color_palette_size.y * widget.wp_at(COLOR_PALETTE).transform.scale.y * 0.5f + padding };
 	color_palette(this).send_vp();
+}
+
+void Palette::_send_view()
+{
+	vp = vp_matrix();
+	Uniforms::send_matrix3(bkg_shader, "u_VP", vp);
 	unbind_shader();
+	sync_widget();
 }

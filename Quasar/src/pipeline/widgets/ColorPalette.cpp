@@ -12,7 +12,7 @@
 // LATER put somewhere else?
 #define ACTION_EQUALS_OVERRIDE(structname)\
 bool operator==(const structname&) const = default;\
-bool equals(const ActionBase& other) const override { auto p = dynamic_cast<const structname*>(&other); return p && *this == *p; }
+virtual bool equals(const ActionBase& other) const override { auto p = dynamic_cast<const structname*>(&other); return p && *this == *p; }
 
 struct ColorOverwriteAction : public ActionBase
 {
@@ -21,8 +21,8 @@ struct ColorOverwriteAction : public ActionBase
 	ColorPicker::EditingColor editing_color;
 	ColorOverwriteAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA prev_c, RGBA new_c, ColorPicker::EditingColor editing_color)
 		: subpalette(std::move(subpalette)), prev_c(prev_c), new_c(new_c), editing_color(editing_color) { weight = sizeof(ColorOverwriteAction); }
-	void forward() override { execute(new_c, true); }
-	void backward() override { execute(prev_c, false); }
+	virtual void forward() override { execute(new_c, true); }
+	virtual void backward() override { execute(prev_c, false); }
 	void execute(RGBA c, bool update_picker) const
 	{
 		subpalette->focus(true);
@@ -61,8 +61,8 @@ struct ColorMove1DAction : public ActionBase
 	int initial_index, target_index;
 	ColorMove1DAction(std::shared_ptr<ColorSubpalette>&& subpalette, int initial_index, int target_index)
 		: subpalette(std::move(subpalette)), initial_index(initial_index), target_index(target_index) { weight = sizeof(ColorMove1DAction); }
-	void forward() override { execute(initial_index, target_index); }
-	void backward() override { execute(target_index, initial_index); }
+	virtual void forward() override { execute(initial_index, target_index); }
+	virtual void backward() override { execute(target_index, initial_index); }
 	void execute(int initial, int target) const
 	{
 		subpalette->focus(true);
@@ -94,8 +94,8 @@ struct ColorMove2DAction : public ActionBase
 	int initial_index, target_index;
 	ColorMove2DAction(std::shared_ptr<ColorSubpalette>&& subpalette, int initial_index, int target_index)
 		: subpalette(std::move(subpalette)), initial_index(initial_index), target_index(target_index) { weight = sizeof(ColorMove2DAction); }
-	void forward() override { execute(); }
-	void backward() override { execute(); }
+	virtual void forward() override { execute(); }
+	virtual void backward() override { execute(); }
 	void execute() const
 	{
 		subpalette->focus(false);
@@ -124,8 +124,8 @@ struct InsertColorAction : public ActionBase
 		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
 		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
 		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = sizeof(InsertColorAction); }
-	void forward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
-	void backward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
+	virtual void forward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
+	virtual void backward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
 	ACTION_EQUALS_OVERRIDE(InsertColorAction)
 };
 
@@ -138,8 +138,8 @@ struct RemoveColorAction : public ActionBase
 		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
 		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
 		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = sizeof(RemoveColorAction); }
-	void forward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_2, alternate_index_2, true); }
-	void backward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_1, alternate_index_1, color); }
+	virtual void forward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_2, alternate_index_2, true); }
+	virtual void backward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_1, alternate_index_1, color); }
 	ACTION_EQUALS_OVERRIDE(RemoveColorAction)
 };
 
@@ -155,8 +155,8 @@ struct SubpaletteRenameAction : public ActionBase
 		name_combo += new_name;
 		weight = sizeof(SubpaletteRenameAction) + name_combo.size() * sizeof(char);
 	}
-	void forward() override { execute(divider, -1); }
-	void backward() override { execute(0, divider); }
+	virtual void forward() override { execute(divider, -1); }
+	virtual void backward() override { execute(0, divider); }
 	void execute(size_t start, size_t len) const
 	{
 		subpalette->focus(true);
@@ -174,8 +174,8 @@ struct SubpaletteNewAction : public ActionBase
 	SubpaletteNewAction(ColorPalette* palette, std::shared_ptr<ColorSubpalette>&& subpalette, size_t index)
 		: palette(palette), subpalette(std::move(subpalette)), index(index) { weight = sizeof(SubpaletteNewAction) + sizeof(ColorSubpalette) + this->subpalette->subscheme->colors.size() * sizeof(RGBA); }
 
-	void forward() override { if (palette) palette->insert_subpalette(index, subpalette); }
-	void backward() override { if (palette) palette->delete_subpalette(index); }
+	virtual void forward() override { if (palette) palette->insert_subpalette(index, subpalette); }
+	virtual void backward() override { if (palette) palette->delete_subpalette(index); }
 	ACTION_EQUALS_OVERRIDE(SubpaletteNewAction)
 };
 
@@ -188,8 +188,8 @@ struct SubpaletteDeleteAction : public ActionBase
 	SubpaletteDeleteAction(ColorPalette* palette, std::shared_ptr<ColorSubpalette>&& subpalette, size_t index)
 		: palette(palette), subpalette(std::move(subpalette)), index(index) { weight = sizeof(SubpaletteDeleteAction) + sizeof(ColorSubpalette) + this->subpalette->subscheme->colors.size() * sizeof(RGBA); }
 
-	void forward() override { if (palette) palette->delete_subpalette(index); }
-	void backward() override { if (palette) palette->insert_subpalette(index, subpalette); }
+	virtual void forward() override { if (palette) palette->delete_subpalette(index); }
+	virtual void backward() override { if (palette) palette->insert_subpalette(index, subpalette); }
 	ACTION_EQUALS_OVERRIDE(SubpaletteDeleteAction)
 };
 
@@ -203,8 +203,8 @@ struct AssignColorSubschemeAction : public ActionBase
 		: palette(palette), prev_subscheme(std::move(prev_subscheme)), new_subscheme(new_subscheme), index(index)
 	{ weight = sizeof(AssignColorSubschemeAction) + 2 * sizeof(ColorSubscheme) + this->prev_subscheme->colors.size() * sizeof(RGBA) + this->new_subscheme->colors.size() * sizeof(RGBA); }
 
-	void forward() override { if (palette) palette->assign_color_subscheme(index, new_subscheme, false); }
-	void backward() override { if (palette) palette->assign_color_subscheme(index, prev_subscheme, false); }
+	virtual void forward() override { if (palette) palette->assign_color_subscheme(index, new_subscheme, false); }
+	virtual void backward() override { if (palette) palette->assign_color_subscheme(index, prev_subscheme, false); }
 	ACTION_EQUALS_OVERRIDE(AssignColorSubschemeAction)
 };
 
@@ -223,8 +223,8 @@ struct ImportColorSchemeAction : public ActionBase
 		for (const auto& subscheme : this->new_cs->subschemes)
 			weight += subscheme->colors.size() * sizeof(RGBA);
 	}
-	void forward() override { if (palette) palette->import_color_scheme(new_cs, false); }
-	void backward() override { if (palette) palette->import_color_scheme(prev_cs, false); }
+	virtual void forward() override { if (palette) palette->import_color_scheme(new_cs, false); }
+	virtual void backward() override { if (palette) palette->import_color_scheme(prev_cs, false); }
 	ACTION_EQUALS_OVERRIDE(ImportColorSchemeAction)
 };
 
@@ -953,7 +953,7 @@ const float button_y = 55;
 ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler, const Reflection& reflection)
 	: Widget(SUBPALETTE_START), vp(vp), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), parent_scroll_handler(parent_scroll_handler),
 	grid_shader(FileSystem::shader_path("palette/black_grid.vert"), FileSystem::shader_path("palette/black_grid.frag")),
-	color_square_shader(FileSystem::shader_path("palette/color_square.vert"), FileSystem::shader_path("palette/color_square.frag")),
+	color_square_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")),
 	outline_rect_shader(FileSystem::shader_path("palette/outline_rect.vert"), FileSystem::shader_path("palette/outline_rect.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")), reflection(reflection), scheme(std::make_shared<ColorScheme>())
 {

@@ -7,12 +7,8 @@
 
 struct Palette : public Panel
 {
-	GLfloat* varr = nullptr;
-	SharedFlatSprite background;
-	GLuint vao = 0, vb = 0, ib = 0;
-	Shader sprite_shader;
+	Shader bkg_shader;
 	glm::mat3 vp;
-
 	Widget widget;
 
 	std::function<void(RGBA)> update_pri_color;
@@ -26,13 +22,11 @@ struct Palette : public Panel
 	Palette();
 	Palette(const Palette&) = delete;
 	Palette(Palette&&) noexcept = delete;
-	~Palette();
 
-	void subsend_background_vao() const;
-	void _send_view() override;
-	void draw() override;
+	virtual void _send_view() override;
+	virtual void draw() override;
 	void render_widget();
-	Scale minimum_screen_display() const override;
+	virtual Scale minimum_screen_display() const override;
 
 	void new_color();
 	void overwrite_color();
@@ -43,10 +37,12 @@ struct Palette : public Panel
 
 private:
 	void initialize_widget();
+	void sync_widget();
 
 public:
 	enum : size_t
 	{
+		BACKGROUND,
 		COLOR_PICKER,
 		COLOR_PALETTE,
 		_W_COUNT

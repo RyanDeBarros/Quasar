@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Panel.h"
+#include "user/Platform.h"
 #include "../render/FlatSprite.h"
 #include "../render/Shader.h"
-#include "user/Platform.h"
+#include "../widgets/Widget.h"
 
-// TODO convert Gridlines to widget
 struct Gridlines
 {
 	unsigned short width = 0, height = 0;
@@ -40,11 +40,11 @@ public:
 	void set_color(ColorFrame color) const;
 };
 
-// TODO convert Canvas to widget
-struct Canvas
+// TODO checkerboard should use separate renderable
+struct Canvas : public Widget
 {
-	SharedFlatSprite sprite;
-	SharedFlatSprite checkerboard;
+	FlatSprite sprite;
+	FlatSprite checkerboard;
 	RGBA checker1, checker2;
 
 	Gridlines minor_gridlines;
@@ -55,15 +55,12 @@ public:
 	glm::ivec2 get_checker_size() const { return { roundf(1.0f / checker_size_inv.x), roundf(1.0f / checker_size_inv.y) }; }
 	void set_checker_size(glm::ivec2 checker_size);
 
+	Canvas(Shader* sprite_shader);
+	Canvas(const Canvas&) = delete;
+	Canvas(Canvas&&) noexcept = delete;
+
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
-
-	FlatTransform& transform() { return sprite.transform; }
-	const FlatTransform& transform() const { return sprite.transform; }
-	Position& position() { return sprite.transform.position; }
-	const Position& position() const { return sprite.transform.position; }
-	Scale& scale() { return sprite.transform.scale; }
-	const Scale& scale() const { return sprite.transform.scale; }
 
 	void sync_transform();
 
@@ -75,14 +72,10 @@ public:
 
 struct Easel : public Panel
 {
-	constexpr static float CHECKERBOARD_TSLOT = 0.0f;
-	constexpr static float CANVAS_SPRITE_TSLOT = 1.0f;
-
-	GLfloat* varr = nullptr;
-	Canvas canvas;
-	GLuint vao = 0, vb = 0, ib = 0;
-	SharedFlatSprite background;
+	Shader bkg_shader;
 	Shader sprite_shader;
+	Widget widget;
+	Canvas canvas;
 
 	bool canvas_visible = false;
 
@@ -98,16 +91,15 @@ public:
 	Easel();
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
-	~Easel();
 
-	void draw() override;
+	void initialize_widget();
 
-	void subsend_background_vao() const;
-	void subsend_checkerboard_vao() const;
-	void subsend_canvas_sprite_vao() const;
+	virtual void draw() override;
+
 	void send_gridlines_vao(const Gridlines& gridlines) const;
 	
-	void _send_view() override;
+	virtual void _send_view() override;
+	void sync_widget();
 	
 	void sync_canvas_transform();
 	
@@ -152,4 +144,11 @@ public:
 	void cancel_panning();
 	void update_panning();
 	void zoom_by(float zoom);
+	void reset_camera();
+
+	enum : size_t
+	{
+		BACKGROUND,
+		_W_COUNT
+	};
 };

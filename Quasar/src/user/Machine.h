@@ -92,11 +92,6 @@ struct MachineImpl
 	bool cursor_in_palette() const;
 
 	// Canvas
-	FlatTransform& canvas_transform() const;
-	Position& canvas_position() const { return canvas_transform().position; }
-	Scale& canvas_scale() const { return canvas_transform().scale; }
-	void sync_canvas_transform() const;
-
 	bool canvas_image_ready() const;
 	bool canvas_is_panning() const;
 	void canvas_begin_panning() const;

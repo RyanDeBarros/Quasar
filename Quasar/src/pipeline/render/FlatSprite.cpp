@@ -1,212 +1,75 @@
 #include "FlatSprite.h"
 
+#include <glm/gtc/type_ptr.inl>
+
 #include "variety/GLutility.h"
 
-FlatSprite::FlatSprite()
-{
-	varr = new GLfloat[NUM_VERTICES * STRIDE]{
-		-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
-	};
-}
+constexpr size_t SHADER_POS_TEXTURE = 0;
+constexpr size_t SHADER_POS_VERT_POS = 1;
+constexpr size_t SHADER_POS_UV = 2;
+constexpr size_t SHADER_POS_PACKED = 3;
+constexpr size_t SHADER_POS_MODULATE = 4;
 
-FlatSprite::FlatSprite(const FlatSprite& other)
-	: image(other.image), transform(other.transform)
+FlatSprite::FlatSprite(Shader* shader)
+	: W_UnitRenderable(shader)
 {
-	varr = new GLfloat[NUM_VERTICES * STRIDE];
-	memcpy(varr, other.varr, VLEN_BYTES);
-}
-
-FlatSprite::FlatSprite(FlatSprite&& other) noexcept
-	: image(std::move(other.image)), transform(other.transform), varr(other.varr)
-{
-	other.varr = nullptr;
-}
-
-FlatSprite& FlatSprite::operator=(const FlatSprite& other)
-{
-	if (this != &other)
-	{
-		memcpy(varr, other.varr, VLEN_BYTES);
-		image = other.image;
-		transform = other.transform;
-	}
-	return *this;
-}
-
-FlatSprite& FlatSprite::operator=(FlatSprite&& other) noexcept
-{
-	if (this != &other)
-	{
-		delete[] varr;
-		varr = other.varr;
-		other.varr = nullptr;
-		image = std::move(other.image);
-		transform = other.transform;
-	}
-	return *this;
-}
-
-FlatSprite::~FlatSprite()
-{
-	delete[] varr;
+	set_texture_slot(0);
+	set_image_dimensions();
+	set_uvs(Bounds{ 0, 1, 0, 1 });
+	sync_transform();
+	set_modulation(glm::vec4{ 1, 1, 1, 1 });
 }
 
 void FlatSprite::sync_transform() const
 {
-	auto p = transform.packed();
-	GLfloat* row = varr;
-	for (size_t i = 0; i < NUM_VERTICES; ++i)
-	{
-		memcpy(row + SHADER_POS_PACKED, &p[0], sizeof(p));
-		row += STRIDE;
-	}
+	// TODO use vertex positions instead, as they can be calculated here. eventually don't even use packed() honestly.
+	ur->set_attribute(SHADER_POS_PACKED, glm::value_ptr(self.transform.packed()));
 }
 
-void FlatSprite::sync_image_dimensions(Dim v_width, Dim v_height) const
+void FlatSprite::set_image_dimensions(Dim v_width, Dim v_height) const
 {
 	Dim w = v_width >= 0 ? v_width : (image ? image->buf.width : 0);
 	Dim h = v_height >= 0 ? v_height : (image ? image->buf.height : 0);
 
-	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS] = -0.5f * w;
-	varr[size_t(0) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;
-	varr[size_t(1) * STRIDE + SHADER_POS_VERT_POS] = 0.5f * w;
-	varr[size_t(1) * STRIDE + SHADER_POS_VERT_POS + 1] = -0.5f * h;
-	varr[size_t(2) * STRIDE + SHADER_POS_VERT_POS] = 0.5f * w;
-	varr[size_t(2) * STRIDE + SHADER_POS_VERT_POS + 1] = 0.5f * h;
-	varr[size_t(3) * STRIDE + SHADER_POS_VERT_POS] = -0.5f * w;
-	varr[size_t(3) * STRIDE + SHADER_POS_VERT_POS + 1] = 0.5f * h;
+	ur->set_attribute_single_vertex(0, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ -0.5f * w, -0.5f * h }));
+	ur->set_attribute_single_vertex(1, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ 0.5f * w, -0.5f * h}));
+	ur->set_attribute_single_vertex(2, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ -0.5f * w, 0.5f * h}));
+	ur->set_attribute_single_vertex(3, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ 0.5f * w, 0.5f * h}));
 }
 
-void FlatSprite::sync_texture_slot(float texture_slot) const
+void FlatSprite::set_texture_slot(float texture_slot) const
 {
-	GLfloat* row = varr;
-	for (size_t i = 0; i < NUM_VERTICES; ++i)
-	{
-		row[SHADER_POS_TEXTURE] = texture_slot;
-		row += STRIDE;
-	}
+	ur->set_attribute(SHADER_POS_TEXTURE, &texture_slot);
 }
 
 glm::vec4 FlatSprite::modulation() const
 {
-	return glm::vec4{ varr[SHADER_POS_MODULATE], varr[SHADER_POS_MODULATE + 1], varr[SHADER_POS_MODULATE + 2], varr[SHADER_POS_MODULATE + 3] };
+	glm::vec4 v;
+	ur->get_attribute(0, SHADER_POS_MODULATE, glm::value_ptr(v));
+	return v;
 }
 
 void FlatSprite::set_modulation(const glm::vec4& color) const
 {
-	GLfloat* row = varr;
-	for (size_t i = 0; i < NUM_VERTICES; ++i)
-	{
-		memcpy(row + SHADER_POS_MODULATE, &color[0], 4 * sizeof(GLfloat));
-		row += STRIDE;
-	}
+	ur->set_attribute(SHADER_POS_MODULATE, glm::value_ptr(color));
 }
 
 ColorFrame FlatSprite::modulation_color_frame() const
 {
-	return ColorFrame(RGB(varr[SHADER_POS_MODULATE], varr[SHADER_POS_MODULATE + 1], varr[SHADER_POS_MODULATE + 2]), varr[SHADER_POS_MODULATE + 3]);
+	glm::vec4 v;
+	ur->get_attribute(0, SHADER_POS_MODULATE, glm::value_ptr(v));
+	return ColorFrame(RGB(v.r, v.g, v.b), v.a);
 }
 
 void FlatSprite::set_modulation(ColorFrame color) const
 {
-	GLfloat* row = varr;
-	glm::vec4 cvec = color.rgba().as_vec();
-	for (size_t i = 0; i < NUM_VERTICES; ++i)
-	{
-		memcpy(row + SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
-		row += STRIDE;
-	}
+	ur->set_attribute(SHADER_POS_MODULATE, glm::value_ptr(color.rgba().as_vec()));
 }
 
 void FlatSprite::set_uvs(const Bounds& bounds) const
 {
-	bounds.pass_uvs(varr + SHADER_POS_UV, STRIDE);
-}
-
-void SharedFlatSprite::initialize_varr() const
-{
-	static GLfloat initial[FlatSprite::NUM_VERTICES * FlatSprite::STRIDE]{
-		-1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-		-1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
-	};
-	memcpy(varr, initial, sizeof(initial));
-}
-
-void SharedFlatSprite::sync_transform() const
-{
-	auto p = transform.packed();
-	GLfloat* row = varr;
-	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
-	{
-		memcpy(row + FlatSprite::SHADER_POS_PACKED, &p[0], sizeof(p));
-		row += FlatSprite::STRIDE;
-	}
-}
-
-void SharedFlatSprite::sync_image_dimensions(Dim v_width, Dim v_height) const
-{
-	Dim w = v_width >= 0 ? v_width : (image ? image->buf.width : 0);
-	Dim h = v_height >= 0 ? v_height : (image ? image->buf.height : 0);
-
-	varr[size_t(0) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS] = -0.5f * w;
-	varr[size_t(0) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS + 1] = -0.5f * h;
-	varr[size_t(1) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS] = 0.5f * w;
-	varr[size_t(1) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS + 1] = -0.5f * h;
-	varr[size_t(2) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS] = 0.5f * w;
-	varr[size_t(2) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS + 1] = 0.5f * h;
-	varr[size_t(3) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS] = -0.5f * w;
-	varr[size_t(3) * FlatSprite::STRIDE + FlatSprite::SHADER_POS_VERT_POS + 1] = 0.5f * h;
-}
-
-void SharedFlatSprite::sync_texture_slot(float texture_slot) const
-{
-	GLfloat* row = varr;
-	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
-	{
-		row[FlatSprite::SHADER_POS_TEXTURE] = texture_slot;
-		row += FlatSprite::STRIDE;
-	}
-}
-
-glm::vec4 SharedFlatSprite::modulation() const
-{
-	return glm::vec4{ varr[FlatSprite::SHADER_POS_MODULATE], varr[FlatSprite::SHADER_POS_MODULATE + 1],
-		varr[FlatSprite::SHADER_POS_MODULATE + 2], varr[FlatSprite::SHADER_POS_MODULATE + 3] };
-}
-
-void SharedFlatSprite::set_modulation(const glm::vec4& color) const
-{
-	GLfloat* row = varr;
-	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
-	{
-		memcpy(row + FlatSprite::SHADER_POS_MODULATE, &color[0], 4 * sizeof(GLfloat));
-		row += FlatSprite::STRIDE;
-	}
-}
-
-ColorFrame SharedFlatSprite::modulation_color_frame() const
-{
-	return ColorFrame(RGB(varr[FlatSprite::SHADER_POS_MODULATE], varr[FlatSprite::SHADER_POS_MODULATE + 1],
-		varr[FlatSprite::SHADER_POS_MODULATE + 2]), varr[FlatSprite::SHADER_POS_MODULATE + 3]);
-}
-
-void SharedFlatSprite::set_modulation(ColorFrame color) const
-{
-	GLfloat* row = varr;
-	glm::vec4 cvec = color.rgba().as_vec();
-	for (size_t i = 0; i < FlatSprite::NUM_VERTICES; ++i)
-	{
-		memcpy(row + FlatSprite::SHADER_POS_MODULATE, &cvec[0], 4 * sizeof(GLfloat));
-		row += FlatSprite::STRIDE;
-	}
-}
-
-void SharedFlatSprite::set_uvs(const Bounds& bounds) const
-{
-	bounds.pass_uvs(varr + FlatSprite::SHADER_POS_UV, FlatSprite::STRIDE);
+	ur->set_attribute_single_vertex(0, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y1 }));
+	ur->set_attribute_single_vertex(1, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y1 }));
+	ur->set_attribute_single_vertex(2, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y2 }));
+	ur->set_attribute_single_vertex(3, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y2 }));
 }

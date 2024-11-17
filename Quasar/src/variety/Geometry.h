@@ -206,21 +206,6 @@ struct Bounds
 {
 	GLfloat x1, x2;
 	GLfloat y1, y2;
-
-	void pass_uvs(GLfloat* buffer_at_uvs, size_t stride) const
-	{
-		buffer_at_uvs[0] = x1;
-		buffer_at_uvs[1] = y1;
-		buffer_at_uvs += stride;
-		buffer_at_uvs[0] = x2;
-		buffer_at_uvs[1] = y1;
-		buffer_at_uvs += stride;
-		buffer_at_uvs[0] = x2;
-		buffer_at_uvs[1] = y2;
-		buffer_at_uvs += stride;
-		buffer_at_uvs[0] = x1;
-		buffer_at_uvs[1] = y2;
-	}
 };
 
 struct IntBounds
