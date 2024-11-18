@@ -212,11 +212,16 @@ void Gridlines::set_visible(bool visible, const Canvas& canvas)
 	}
 }
 
+constexpr GLuint CHECKERBOARD_TSLOT = 0;
+constexpr GLuint CANVAS_SPRITE_TSLOT = 1;
+
 Canvas::Canvas(Shader* sprite_shader)
 	: Widget(_W_COUNT)
 {
 	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(sprite_shader));
+	fs_wget(*this, CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
 	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(sprite_shader));
+	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 }
 
 void Canvas::create_checkerboard_image()
@@ -320,14 +325,12 @@ void Canvas::sync_transform()
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
 }
 
-constexpr GLuint CHECKERBOARD_TSLOT = 0;
-constexpr GLuint CANVAS_SPRITE_TSLOT = 1;
-
 Easel::Easel()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) }}),
 	bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
 {
 	initialize_widget();
+	connect_input_handlers();
 }
 
 void Easel::initialize_widget()
@@ -344,9 +347,41 @@ void Easel::initialize_widget()
 	cnvs.checker2 = Machine.preferences.checker2;
 	cnvs.set_checker_size(Machine.preferences.checker_size);
 	cnvs.sync_checkerboard_colors();
-	// TODO put these in Canvas ???
-	fs_wget(cnvs, Canvas::CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
-	fs_wget(cnvs, Canvas::SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
+}
+
+void Easel::connect_input_handlers()
+{
+	mb_handler.callback = [this](const MouseButtonEvent& mb) {
+		if (ImGui::GetIO().WantCaptureMouse)
+			return;
+		if (mb.button == MouseButton::MIDDLE)
+		{
+			if (mb.action == IAction::PRESS && cursor_in_clipping())
+			{
+				mb.consumed = true;
+				begin_panning();
+			}
+			else if (mb.action == IAction::RELEASE)
+				end_panning();
+		}
+		else if (mb.button == MouseButton::LEFT)
+		{
+			if (mb.action == IAction::PRESS && Machine.main_window->is_key_pressed(Key::SPACE) && cursor_in_clipping())
+			{
+				mb.consumed = true;
+				begin_panning();
+			}
+			else if (mb.action == IAction::RELEASE)
+				end_panning();
+		}
+		};
+	scroll_handler.callback = [this](const ScrollEvent& s) {
+		if (!panning_info.panning && cursor_in_clipping())
+		{
+			s.consumed = true;
+			zoom_by(s.yoff);
+		}
+		};
 }
 
 void Easel::draw()

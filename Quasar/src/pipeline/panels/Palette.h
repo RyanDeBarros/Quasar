@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Panel.h"
+#include "user/Platform.h"
 #include "../render/FlatSprite.h"
 #include "../render/Shader.h"
 #include "../widgets/Widget.h"
@@ -10,6 +11,10 @@ struct Palette : public Panel
 	Shader bkg_shader;
 	glm::mat3 vp;
 	Widget widget;
+
+	KeyHandler key_handler;
+	MouseButtonHandler mb_handler;
+	ScrollHandler scroll_handler;
 
 	std::function<void(RGBA)> update_pri_color;
 	std::function<void(RGBA)> update_alt_color;

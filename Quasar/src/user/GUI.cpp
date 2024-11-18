@@ -4,21 +4,34 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 #include "Machine.h"
+#include "ControlScheme.h"
 
-// TODO close menu items on MMB and RMB click in addition to LMB click (which is default).
+static const char* key_shortcut_in_scheme(const char* shortcut, ControlScheme scheme)
+{
+	return Machine.get_control_scheme() == scheme ? shortcut : nullptr;
+}
 
+static const char* key_shortcut_in_file_scheme(const char* shortcut)
+{
+	return key_shortcut_in_scheme(shortcut, ControlScheme::FILE);
+}
+
+// LATER put these in main menu panel, and use new imgui key handler to consume ESCAPE pressed and close menus if they are open.
 void render_main_menu_bar()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	if (ImGui::BeginMainMenuBar())
 	{
+		const bool close_menu = ImGui::IsMouseClicked(ImGuiMouseButton_Middle) && !ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
 		ImGui::PopStyleVar();
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("New Quasar file", "CTRL+N")) { Machine.new_file(); }
-			if (ImGui::MenuItem("Open Quasar file", "CTRL+O")) { Machine.open_file(); }
-			if (ImGui::MenuItem("Import image file", "CTRL+I")) { Machine.import_file(); }
-			if (ImGui::MenuItem("Export image file", "CTRL+E", false, Machine.canvas_image_ready())) { Machine.export_file(); }
+			if (close_menu)
+				ImGui::CloseCurrentPopup();
+			if (ImGui::MenuItem("New Quasar file", key_shortcut_in_file_scheme("CTRL+N"))) { Machine.new_file(); }
+			if (ImGui::MenuItem("Open Quasar file", key_shortcut_in_file_scheme("CTRL+O"))) { Machine.open_file(); }
+			if (ImGui::MenuItem("Import image file", key_shortcut_in_file_scheme("CTRL+I"))) { Machine.import_file(); }
+			if (ImGui::MenuItem("Export image file", key_shortcut_in_file_scheme("CTRL+E"), false, Machine.canvas_image_ready())) { Machine.export_file(); }
 			ImGui::Separator();
 			if (ImGui::MenuItem("Save", "CTRL+S")) { Machine.save_file(); }
 			if (ImGui::BeginMenu("Open recent Quasar file", !Machine.recent_files.empty()))
@@ -46,6 +59,8 @@ void render_main_menu_bar()
 		}
 		if (ImGui::BeginMenu("Edit"))
 		{
+			if (close_menu)
+				ImGui::CloseCurrentPopup();
 			if (ImGui::MenuItem("Undo", "CTRL+Z", false, Machine.undo_enabled())) { Machine.undo(); }
 			if (ImGui::MenuItem("Redo", "CTRL+SHIFT+Z", false, Machine.redo_enabled())) { Machine.redo(); }
 			ImGui::Separator();
@@ -58,6 +73,8 @@ void render_main_menu_bar()
 		}
 		if (ImGui::BeginMenu("View"))
 		{
+			if (close_menu)
+				ImGui::CloseCurrentPopup();
 			if (Machine.brush_panel_visible())
 			{
 				if (ImGui::MenuItem("Close brush panel")) { Machine.close_brush_panel(); }
@@ -104,26 +121,29 @@ void render_main_menu_bar()
 		}
 		if (ImGui::BeginMenu("Help"))
 		{
+			if (close_menu)
+				ImGui::CloseCurrentPopup();
 			if (ImGui::MenuItem("Download user manual")) { Machine.download_user_manual(); }
 			ImGui::EndMenu();
 		}
 
+		// TODO make into menu?
 		ImGui::SameLine(ImGui::GetCursorPosX() + 100);
 		ImGui::Text("Control Scheme:");
 		ImGui::SetNextItemWidth(ImGui::CalcTextSize("PALETTE").x + ImGui::GetStyle().FramePadding.x * 2 + ImGui::GetFontSize() + ImGui::GetStyle().ItemInnerSpacing.x * 2);
 		static const char* control_scheme_display_names[] = { "FILE", "PALETTE" };
 		static const char* control_scheme_names[] = {
-			"FILE    (CTRL+1)",
-			"PALETTE (CTRL+2)"
+			"FILE    (CTRL+1) (Row)",
+			"PALETTE (CTRL+2) (Row)"
 		};
-		static MachineImpl::ControlScheme schemes[] = { MachineImpl::ControlScheme::FILE, MachineImpl::ControlScheme::PALETTE };
-		if (ImGui::BeginCombo("##ControlSchemes", control_scheme_display_names[(int)Machine.control_scheme]))
+		static ControlScheme schemes[] = { ControlScheme::FILE, ControlScheme::PALETTE };
+		if (ImGui::BeginCombo("##ControlSchemes", control_scheme_display_names[(int)Machine.get_control_scheme()]))
 		{
 			for (auto scheme : schemes)
 			{
 				if (ImGui::Selectable(control_scheme_names[(int)scheme]))
-					Machine.control_scheme = scheme;
-				if (Machine.control_scheme == scheme)
+					Machine.set_control_scheme(scheme);
+				if (Machine.get_control_scheme() == scheme)
 					ImGui::SetItemDefaultFocus();
 			}
 			ImGui::EndCombo();

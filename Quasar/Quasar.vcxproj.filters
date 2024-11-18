@@ -33,7 +33,7 @@
     <ClCompile Include="src\user\Platform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\user\UserInput.cpp">
+    <ClCompile Include="src\user\ControlScheme.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="vendor\imgui\imgui.cpp">
@@ -1094,7 +1094,7 @@
     <ClInclude Include="src\pipeline\panels\Panel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\user\UserInput.h">
+    <ClInclude Include="src\user\ControlScheme.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Logger.h">

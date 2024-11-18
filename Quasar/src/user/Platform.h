@@ -315,6 +315,7 @@ struct Window
 	bool is_alt_pressed() const { return is_key_pressed(Key::LEFT_ALT) || is_key_pressed(Key::RIGHT_ALT); }
 	bool is_super_pressed() const { return is_key_pressed(Key::LEFT_SUPER) || is_key_pressed(Key::RIGHT_SUPER); }
 	bool is_mouse_button_pressed(MouseButton mb) const { return glfwGetMouseButton(window, int(mb)) != int(IAction::RELEASE); }
+	bool any_mouse_button_pressed() const { return is_mouse_button_pressed(MouseButton::LEFT) || is_mouse_button_pressed(MouseButton::MIDDLE) || is_mouse_button_pressed(MouseButton::RIGHT); }
 
 	bool is_cursor_available(const WindowHandle* owner) const;
 	bool owns_cursor(const WindowHandle* owner) const;

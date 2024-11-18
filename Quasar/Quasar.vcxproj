@@ -194,7 +194,7 @@
     <ClCompile Include="src\Quasar.cpp" />
     <ClCompile Include="src\pipeline\render\Shader.cpp" />
     <ClCompile Include="src\user\Platform.cpp" />
-    <ClCompile Include="src\user\UserInput.cpp" />
+    <ClCompile Include="src\user\ControlScheme.cpp" />
     <ClCompile Include="vendor\glm\detail\glm.cpp" />
     <ClCompile Include="vendor\glm\glm.cppm" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
@@ -229,7 +229,7 @@
     <ClInclude Include="src\pipeline\widgets\RoundRect.h" />
     <ClInclude Include="src\pipeline\widgets\Widget.h" />
     <ClInclude Include="src\user\Preferences.h" />
-    <ClInclude Include="src\user\UserInput.h" />
+    <ClInclude Include="src\user\ControlScheme.h" />
     <ClInclude Include="src\variety\FileSystem.h" />
     <ClInclude Include="src\user\GUI.h" />
     <ClInclude Include="src\user\Machine.h" />

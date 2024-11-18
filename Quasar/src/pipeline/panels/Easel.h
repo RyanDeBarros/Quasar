@@ -72,7 +72,7 @@ public:
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
 
-	void sync_transform(); // TODO --> sync_widget()
+	void sync_transform();
 
 	void create_checkerboard_image();
 	void sync_checkerboard_colors() const;
@@ -93,12 +93,18 @@ struct Easel : public Panel
 	Shader sprite_shader;
 	Widget widget;
 
+	MouseButtonHandler mb_handler;
+	ScrollHandler scroll_handler;
+
 	Easel();
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
 
+private:
 	void initialize_widget();
+	void connect_input_handlers();
 
+public:
 	virtual void draw() override;
 	virtual void _send_view() override;
 	

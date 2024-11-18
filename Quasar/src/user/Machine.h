@@ -2,11 +2,11 @@
 
 #include <string>
 
+#include "Platform.h"
+#include "Preferences.h"
 #include "variety/Geometry.h"
 #include "variety/History.h"
 #include "variety/FileSystem.h"
-#include "Platform.h"
-#include "Preferences.h"
 
 struct MachineImpl
 {
@@ -20,11 +20,6 @@ struct MachineImpl
 
 	WindowSizeHandler resize_handler;
 	DisplayScaleHandler rescale_handler;
-	MouseButtonHandler easel_mb_handler;
-	MouseButtonHandler palette_mb_handler;
-	KeyHandler palette_key_handler;
-	ScrollHandler easel_scroll_handler;
-	ScrollHandler palette_scroll_handler;
 	KeyHandler global_key_handler;
 	PathDropHandler path_drop_handler;
 
@@ -48,17 +43,6 @@ struct MachineImpl
 
 	std::vector<std::string> recent_files;
 	std::vector<std::string> recent_image_files;
-
-	int vsync = 0;
-	void update_vsync() const { glfwSwapInterval(vsync); }
-	bool raw_mouse_motion = true;
-	void update_raw_mouse_motion() const { main_window->set_raw_mouse_motion(raw_mouse_motion); }
-
-	enum class ControlScheme
-	{
-		FILE,
-		PALETTE
-	} control_scheme = ControlScheme::FILE;
 
 	bool create_main_window();
 	void init_renderer();
@@ -85,6 +69,15 @@ struct MachineImpl
 	Position cursor_screen_y() const;
 	Position cursor_world_pos(const glm::mat3& inverse_vp) const;
 
+	int vsync = 0;
+	void update_vsync() const { glfwSwapInterval(vsync); }
+	bool raw_mouse_motion = true;
+	void update_raw_mouse_motion() const { main_window->set_raw_mouse_motion(raw_mouse_motion); }
+
+	// Control Scheme
+	enum class ControlScheme get_control_scheme() const;
+	void set_control_scheme(enum class ControlScheme scheme) const;
+
 	// Panels
 	glm::vec2 easel_cursor_world_pos() const;
 	glm::vec2 palette_cursor_world_pos() const;
@@ -94,10 +87,7 @@ struct MachineImpl
 	// Canvas
 	bool canvas_image_ready() const;
 	bool canvas_is_panning() const;
-	void canvas_begin_panning() const;
-	void canvas_end_panning() const;
 	void canvas_cancel_panning() const;
-	void canvas_zoom_by(float zoom) const;
 
 	// Palette
 	void palette_insert_color();

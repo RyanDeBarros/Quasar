@@ -137,11 +137,11 @@ void Palette::initialize_widget()
 	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec()));
 	ur_wget(widget, BACKGROUND).send_buffer();
 
-	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, Machine.palette_mb_handler, Machine.palette_key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
+	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, mb_handler, key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
 	widget.wp_at(COLOR_PICKER).transform.scale = Scale(color_picker_scale);
 
-	assign_widget(&widget, COLOR_PALETTE, std::make_shared<ColorPalette>(&vp, Machine.palette_mb_handler, Machine.palette_key_handler,
-		Machine.palette_scroll_handler, ColorPalette::Reflection(&update_pri_color, &update_alt_color, &get_picker_pri_rgba, &get_picker_alt_rgba, &use_primary, &use_alternate, &swap_picker_colors)));
+	assign_widget(&widget, COLOR_PALETTE, std::make_shared<ColorPalette>(&vp, mb_handler, key_handler, scroll_handler,
+		ColorPalette::Reflection(&update_pri_color, &update_alt_color, &get_picker_pri_rgba, &get_picker_alt_rgba, &use_primary, &use_alternate, &swap_picker_colors)));
 	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(color_palette_scale);
 }
 

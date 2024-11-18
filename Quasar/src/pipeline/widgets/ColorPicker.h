@@ -10,6 +10,8 @@
 #include "variety/Geometry.h"
 #include "Button.h"
 
+// LATER implement scroll handler for more precise control in sliders?
+
 class ColorPicker : public Widget
 {
 public:

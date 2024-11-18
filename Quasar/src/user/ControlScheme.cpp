@@ -1,43 +1,6 @@
-#include "UserInput.h"
+#include "ControlScheme.h"
 
 #include "Machine.h"
-#include "variety/Utils.h"
-
-// LATER put these as data members on Easel, and put these functions there. Honestly, get rid of UserInput.h/cpp altogether.
-void attach_canvas_controls()
-{
-	// Panning
-	Machine.easel_mb_handler.callback = [](const MouseButtonEvent& mb) {
-		if (mb.button == MouseButton::MIDDLE)
-		{
-			if (mb.action == IAction::PRESS && Machine.cursor_in_easel())
-			{
-				mb.consumed = true;
-				Machine.canvas_begin_panning();
-			}
-			else if (mb.action == IAction::RELEASE)
-				Machine.canvas_end_panning();
-		}
-		else if (mb.button == MouseButton::LEFT)
-		{
-			if (mb.action == IAction::PRESS && Machine.cursor_in_easel() && Machine.main_window->is_key_pressed(Key::SPACE))
-			{
-				mb.consumed = true;
-				Machine.canvas_begin_panning();
-			}
-			else if (mb.action == IAction::RELEASE)
-				Machine.canvas_end_panning();
-		}
-		};
-	// Zooming
-	Machine.easel_scroll_handler.callback = [](const ScrollEvent& s) {
-		if (Machine.cursor_in_easel() && !Machine.canvas_is_panning())
-		{
-			Machine.canvas_zoom_by(s.yoff);
-			s.consumed = true;
-		}
-		};
-}
 
 static void global_key_handler_file(const KeyEvent& k)
 {
@@ -117,14 +80,15 @@ static void global_key_handler_neutral(const KeyEvent& k)
 		case Key::ROW1:
 			if (Machine.main_window->is_ctrl_pressed())
 			{
-				Machine.control_scheme = MachineImpl::ControlScheme::FILE;
+				// TODO abstract Machine control scheme interactions so that control scheme doesn't go in Machine header
+				Machine.set_control_scheme(ControlScheme::FILE);
 				k.consumed = true;
 			}
 			break;
 		case Key::ROW2:
 			if (Machine.main_window->is_ctrl_pressed())
 			{
-				Machine.control_scheme = MachineImpl::ControlScheme::PALETTE;
+				Machine.set_control_scheme(ControlScheme::PALETTE);
 				k.consumed = true;
 			}
 			break;
@@ -205,18 +169,19 @@ static void global_key_handler_neutral(const KeyEvent& k)
 	}
 }
 
+// LATER these would go in main menu panel
 void attach_global_user_controls()
 {
 	Machine.global_key_handler.callback = [](const KeyEvent& k) {
 		global_key_handler_neutral(k);
 		if (!k.consumed)
 		{
-			switch (Machine.control_scheme)
+			switch (Machine.get_control_scheme())
 			{
-			case MachineImpl::ControlScheme::FILE:
+			case ControlScheme::FILE:
 				global_key_handler_file(k);
 				break;
-			case MachineImpl::ControlScheme::PALETTE:
+			case ControlScheme::PALETTE:
 				global_key_handler_palette(k);
 				break;
 			}

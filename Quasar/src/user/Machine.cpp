@@ -2,7 +2,7 @@
 
 #include <tinyfd/tinyfiledialogs.h>
 
-#include "UserInput.h"
+#include "ControlScheme.h"
 #include "GUI.h"
 #include "pipeline/panels/Panel.h"
 #include "pipeline/panels/Easel.h"
@@ -10,7 +10,6 @@
 #include "pipeline/text/TextRender.h"
 #include "pipeline/text/CommonFonts.h"
 #include "variety/GLutility.h"
-#include "variety/Utils.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
@@ -35,6 +34,8 @@ namespace Data
 		static double held_time = 0.0;
 		static const double held_interval = 0.1, held_start_interval = 0.5; // SETTINGS not const, but editable
 	}
+
+	static ControlScheme control_scheme = ControlScheme::FILE;
 }
 
 static PanelGroup* panels = nullptr;
@@ -91,16 +92,6 @@ bool MachineImpl::create_main_window()
 		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
-
-		main_window->root_window_size.children.push_back(&resize_handler);
-		main_window->root_display_scale.children.push_back(&rescale_handler);
-		main_window->root_mouse_button.children.push_back(&palette_mb_handler);
-		main_window->root_mouse_button.children.push_back(&easel_mb_handler);
-		main_window->root_key.children.push_back(&palette_key_handler);
-		main_window->root_scroll.children.push_back(&palette_scroll_handler);
-		main_window->root_scroll.children.push_back(&easel_scroll_handler);
-		main_window->root_key.children.push_back(&global_key_handler);
-		main_window->root_path_drop.children.push_back(&path_drop_handler);
 		return true;
 	}
 	return false;
@@ -120,6 +111,16 @@ void MachineImpl::init_renderer()
 	panels->panels.push_back(std::make_unique<Easel>());
 	panels->panels.push_back(std::make_unique<Palette>());
 
+	main_window->root_window_size.children.push_back(&resize_handler);
+	main_window->root_display_scale.children.push_back(&rescale_handler);
+	main_window->root_mouse_button.children.push_back(&palette()->mb_handler);
+	main_window->root_mouse_button.children.push_back(&easel()->mb_handler);
+	main_window->root_key.children.push_back(&palette()->key_handler);
+	main_window->root_scroll.children.push_back(&palette()->scroll_handler);
+	main_window->root_scroll.children.push_back(&easel()->scroll_handler);
+	main_window->root_key.children.push_back(&global_key_handler);
+	main_window->root_path_drop.children.push_back(&path_drop_handler);
+
 	init_panels_layout();
 
 	panels->sync_panels();
@@ -138,7 +139,6 @@ void MachineImpl::init_renderer()
 		};
 
 	canvas_reset_camera();
-	attach_canvas_controls();
 	attach_global_user_controls();
 	
 	easel()->canvas().minor_gridlines.set_color(ColorFrame(RGBA(31, 63, 107, 255))); // SETTINGS
@@ -279,24 +279,9 @@ bool MachineImpl::canvas_is_panning() const
 	return easel()->panning_info.panning;
 }
 
-void MachineImpl::canvas_begin_panning() const
-{
-	easel()->begin_panning();
-}
-
-void MachineImpl::canvas_end_panning() const
-{
-	easel()->end_panning();
-}
-
 void MachineImpl::canvas_cancel_panning() const
 {
-	easel()->cancel_panning();
-}
-
-void MachineImpl::canvas_zoom_by(float z) const
-{
-	easel()->zoom_by(z);
+	return easel()->cancel_panning();
 }
 
 void MachineImpl::palette_insert_color()
@@ -399,6 +384,16 @@ Position MachineImpl::cursor_screen_y() const
 Position MachineImpl::cursor_world_pos(const glm::mat3& inverse_vp) const
 {
 	return to_world_coordinates(main_window->cursor_pos(), inverse_vp);
+}
+
+ControlScheme MachineImpl::get_control_scheme() const
+{
+	return Data::control_scheme;
+}
+
+void MachineImpl::set_control_scheme(ControlScheme scheme) const
+{
+	Data::control_scheme = scheme;
 }
 
 glm::vec2 MachineImpl::easel_cursor_world_pos() const
