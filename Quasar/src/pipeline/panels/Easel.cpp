@@ -5,6 +5,7 @@
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 #include "../render/Uniforms.h"
+#include "../render/FlatSprite.h"
 
 Gridlines::Gridlines()
 	: shader(FileSystem::shader_path("gridlines.vert"), FileSystem::shader_path("gridlines.frag"))
@@ -54,11 +55,10 @@ void Gridlines::update_scale(Scale scale) const
 		lwy /= scale.y;
 	if (2.0f * lwx >= scale.x * line_spacing.x - self_intersection_threshold || 2.0f * lwy >= scale.y * line_spacing.y - self_intersection_threshold)
 	{
-		_visible = false;
+		_nonobstructing = false;
 		return;
 	}
-	else
-		_visible = true;
+	_nonobstructing = true;
 
 	float x1 = -width * 0.5f - lwx;
 	float y1 = -height * 0.5f - lwy;
@@ -137,7 +137,7 @@ void Gridlines::update_scale(Scale scale) const
 
 void Gridlines::draw() const
 {
-	if (_visible)
+	if (_visible && _nonobstructing)
 	{
 		bind_shader(shader);
 		bind_vao_buffers(vao, vb);
@@ -160,20 +160,82 @@ void Gridlines::set_color(ColorFrame color) const
 	Uniforms::send_4(shader, "u_Color", color.rgba().as_vec(), 0, true);
 }
 
+void Gridlines::send_buffer() const
+{
+	bind_vao_buffers(vao, vb);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, num_vertices() * shader.stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
+	unbind_vao_buffers();
+}
+
+void Gridlines::send_flat_transform(FlatTransform canvas_transform) const
+{
+	if (_visible)
+	{
+		Uniforms::send_4(shader, "u_FlatTransform", canvas_transform.packed());
+		update_scale(canvas_transform.scale);
+		send_buffer();
+		_send_flat_transform = false;
+	}
+	else
+		_send_flat_transform = true;
+}
+
+void Gridlines::sync_with_image(const Buffer& buf, Scale canvas_scale)
+{
+	if (_visible)
+	{
+		width = buf.width;
+		height = buf.height;
+		resize_grid(canvas_scale);
+		send_buffer();
+		_sync_with_image = false;
+	}
+	else
+		_sync_with_image = true;
+}
+
+void Gridlines::set_visible(bool visible, const Canvas& canvas)
+{
+	if (!_visible && visible)
+	{
+		_visible = true;
+		if (_send_flat_transform)
+			send_flat_transform(canvas.self.transform);
+		if (_sync_with_image)
+			sync_with_image(fs_wget(canvas, Canvas::SPRITE).image->buf, canvas.self.transform.scale);
+	}
+	else if (_visible && !visible)
+	{
+		_visible = false;
+		_send_flat_transform = false;
+		_sync_with_image = false;
+	}
+}
+
+Canvas::Canvas(Shader* sprite_shader)
+	: Widget(_W_COUNT)
+{
+	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(sprite_shader));
+	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(sprite_shader));
+}
+
 void Canvas::create_checkerboard_image()
 {
-	Image* img = new Image();
+	auto img = std::make_shared<Image>();
 	img->buf.width = 2;
 	img->buf.height = 2;
 	img->buf.chpp = 4;
 	img->buf.pxnew();
 	img->gen_texture();
-	checkerboard.set_image(std::shared_ptr<Image>(img));
+	wp_at(CHECKERBOARD).transform.scale = { img->buf.width, img->buf.height };
+	fs_wget(*this, CHECKERBOARD).image = std::move(img);
+	fs_wget(*this, CHECKERBOARD).update_transform();
 	set_checkerboard_uv_size(0, 0);
 }
 
 void Canvas::sync_checkerboard_colors() const
 {
+	const FlatSprite& checkerboard = fs_wget(*this, CHECKERBOARD);
 	if (checkerboard.image)
 	{
 		for (size_t i = 0; i < 2; ++i)
@@ -196,6 +258,7 @@ void Canvas::sync_checkerboard_colors() const
 
 void Canvas::sync_checkerboard_texture() const
 {
+	const FlatSprite& checkerboard = fs_wget(*this, CHECKERBOARD);
 	if (checkerboard.image)
 	{
 		checkerboard.image->resend_texture();
@@ -208,7 +271,7 @@ void Canvas::sync_checkerboard_texture() const
 
 void Canvas::set_checkerboard_uv_size(float width, float height) const
 {
-	checkerboard.set_uvs(Bounds{ 0.0f, width, 0.0f, height });
+	fs_wget(*this, CHECKERBOARD).set_uvs(Bounds{ 0.0f, width, 0.0f, height });
 }
 
 void Canvas::set_checker_size(glm::ivec2 checker_size)
@@ -217,69 +280,54 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 	major_gridlines.line_spacing = checker_size;
 }
 
-Canvas::Canvas(Shader* sprite_shader)
-	: sprite(sprite_shader), checkerboard(sprite_shader)
-{
-}
-
 void Canvas::set_image(const std::shared_ptr<Image>& img)
 {
-	sprite.set_image(img);
+	FlatSprite& sprite = fs_wget(*this, SPRITE);
+	sprite.image = img;
 	if (sprite.image)
 	{
-		set_checkerboard_uv_size(0.5f * sprite.image->buf.width * checker_size_inv.x, 0.5f * sprite.image->buf.height * checker_size_inv.y);
-		checkerboard.set_modulation(ColorFrame());
+		const Buffer& buf = sprite.image->buf;
+		sprite.self.transform.scale = { buf.width, buf.height };
+		sprite.update_transform();
+		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
+		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
+		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
 	}
 	else
-		checkerboard.set_modulation(ColorFrame(0));
-	checkerboard.ur->send_buffer();
+		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
 }
 
 void Canvas::set_image(std::shared_ptr<Image>&& img)
 {
-	sprite.set_image(std::move(img));
+	FlatSprite& sprite = fs_wget(*this, SPRITE);
+	sprite.image = std::move(img);
 	if (sprite.image)
 	{
-		set_checkerboard_uv_size(0.5f * sprite.image->buf.width * checker_size_inv.x, 0.5f * sprite.image->buf.height * checker_size_inv.y);
-		checkerboard.set_modulation(ColorFrame());
+		const Buffer& buf = sprite.image->buf;
+		sprite.self.transform.scale = { buf.width, buf.height };
+		sprite.update_transform();
+		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
+		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
+		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
 	}
 	else
-		checkerboard.set_modulation(ColorFrame(0));
-	checkerboard.ur->send_buffer();
+		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
 }
 
 void Canvas::sync_transform()
 {
-	sprite.self.transform = self.transform;
-	sprite.sync_transform();
-	sprite.ur->send_buffer();
-	// TODO flat sprite's should use global transforms, instead of directly assigning parent to them here
-	checkerboard.self.transform = self.transform;
-	if (sprite.image)
-		checkerboard.self.transform.scale *= glm::vec2{ sprite.image->buf.width * 0.5f, sprite.image->buf.height * 0.5f };
-	checkerboard.sync_transform();
-	checkerboard.ur->send_buffer();
+	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
+	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
 }
 
-constexpr float CHECKERBOARD_TSLOT = 0.0f;
-constexpr float CANVAS_SPRITE_TSLOT = 1.0f;
+constexpr GLuint CHECKERBOARD_TSLOT = 0;
+constexpr GLuint CANVAS_SPRITE_TSLOT = 1;
 
 Easel::Easel()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) }}),
-	bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT), canvas(&sprite_shader)
+	bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
 {
 	initialize_widget();
-
-	canvas.create_checkerboard_image();
-	canvas.set_image(nullptr);
-
-	canvas.checker1 = Machine.preferences.checker1;
-	canvas.checker2 = Machine.preferences.checker2;
-	canvas.set_checker_size(Machine.preferences.checker_size);
-	canvas.sync_checkerboard_colors();
-
-	canvas.checkerboard.set_texture_slot(CHECKERBOARD_TSLOT);
-	canvas.sprite.set_texture_slot(CANVAS_SPRITE_TSLOT);
 }
 
 void Easel::initialize_widget()
@@ -287,41 +335,31 @@ void Easel::initialize_widget()
 	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
 	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(HSV(0.5f, 0.15f, 0.15f).to_rgb(), 0.5f).as_vec()));
 	ur_wget(widget, BACKGROUND).send_buffer();
+
+	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&sprite_shader));
+	Canvas& cnvs = canvas();
+	cnvs.create_checkerboard_image();
+	cnvs.set_image(nullptr);
+	cnvs.checker1 = Machine.preferences.checker1;
+	cnvs.checker2 = Machine.preferences.checker2;
+	cnvs.set_checker_size(Machine.preferences.checker_size);
+	cnvs.sync_checkerboard_colors();
+	// TODO put these in Canvas ???
+	fs_wget(cnvs, Canvas::CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
+	fs_wget(cnvs, Canvas::SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 }
 
 void Easel::draw()
 {
 	ur_wget(widget, BACKGROUND).draw();
-	// bind
-	bind_shader(sprite_shader);
-	// canvas
-	if (canvas_visible)
+	Canvas& cnvs = canvas();
+	if (cnvs.visible)
 	{
-		// checkerboard
-		bind_texture(canvas.checkerboard.image->tid, GLuint(CHECKERBOARD_TSLOT));
-		canvas.checkerboard.draw();
-		if (canvas.sprite.image)
-		{
-			bind_texture(canvas.sprite.image->tid, GLuint(CANVAS_SPRITE_TSLOT));
-			canvas.sprite.draw();
-		}
-		// minor gridlines
-		if (minor_gridlines_visible)
-			canvas.minor_gridlines.draw();
-		// major gridlines
-		if (major_gridlines_visible)
-			canvas.major_gridlines.draw();
+		fs_wget(cnvs, Canvas::CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
+		fs_wget(cnvs, Canvas::SPRITE).draw(CANVAS_SPRITE_TSLOT);
+		cnvs.minor_gridlines.draw();
+		cnvs.major_gridlines.draw();
 	}
-	// unbind
-	unbind_vao_buffers();
-	unbind_shader();
-}
-
-void Easel::send_gridlines_vao(const Gridlines& gridlines) const
-{
-	bind_vao_buffers(gridlines.vao, gridlines.vb);
-	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, gridlines.num_vertices() * gridlines.shader.stride * sizeof(GLfloat), gridlines.varr, GL_DYNAMIC_DRAW));
-	unbind_vao_buffers();
 }
 
 void Easel::_send_view()
@@ -329,8 +367,8 @@ void Easel::_send_view()
 	glm::mat3 cameraVP = vp_matrix();
 	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
 	Uniforms::send_matrix3(bkg_shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(canvas.minor_gridlines.shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(canvas.major_gridlines.shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", cameraVP);
 	unbind_shader();
 	sync_widget();
 }
@@ -349,111 +387,71 @@ void Easel::sync_widget()
 
 void Easel::sync_canvas_transform()
 {
-	canvas.sync_transform();
-	if (minor_gridlines_visible)
-		gridlines_send_flat_transform(canvas.minor_gridlines);
-	else
-		_buffer_minor_gridlines_send_flat_transform = true;
-	if (major_gridlines_visible)
-		gridlines_send_flat_transform(canvas.major_gridlines);
-	else
-		_buffer_major_gridlines_send_flat_transform = true;
-	unbind_shader();
-}
-
-void Easel::gridlines_send_flat_transform(Gridlines& gridlines) const
-{
-	Uniforms::send_4(gridlines.shader, "u_FlatTransform", canvas.self.transform.packed());
-	update_gridlines_scale(gridlines);
-}
-
-void Easel::resize_gridlines(Gridlines& gridlines) const
-{
-	gridlines.resize_grid(canvas.self.transform.scale);
-	send_gridlines_vao(gridlines);
-}
-
-void Easel::update_gridlines_scale(const Gridlines& gridlines) const
-{
-	gridlines.update_scale(canvas.self.transform.scale);
-	send_gridlines_vao(gridlines);
-}
-
-void Easel::gridlines_sync_with_image(Gridlines& gridlines) const
-{
-	gridlines.width = canvas.sprite.image->buf.width;
-	gridlines.height = canvas.sprite.image->buf.height;
-	resize_gridlines(gridlines);
-	send_gridlines_vao(gridlines);
+	canvas().sync_transform();
+	canvas().minor_gridlines.send_flat_transform(canvas().self.transform);
+	canvas().major_gridlines.send_flat_transform(canvas().self.transform);
 }
 
 void Easel::set_canvas_image(const std::shared_ptr<Image>& img)
 {
-	canvas.set_image(img);
-	canvas_visible = true;
-	if (minor_gridlines_visible)
-		gridlines_sync_with_image(canvas.minor_gridlines);
-	else
-		_buffer_minor_gridlines_sync_with_image = true;
-	if (major_gridlines_visible)
-		gridlines_sync_with_image(canvas.major_gridlines);
-	else
-		_buffer_major_gridlines_sync_with_image = true;
+	bool nonnull = img.get();
+	canvas().set_image(img);
+	if (nonnull)
+	{
+		canvas().visible = true;
+		canvas().minor_gridlines.sync_with_image(fs_wget(canvas(), Canvas::SPRITE).image->buf, canvas().self.transform.scale);
+		canvas().major_gridlines.sync_with_image(fs_wget(canvas(), Canvas::SPRITE).image->buf, canvas().self.transform.scale);
+	}
 }
 
 void Easel::set_canvas_image(std::shared_ptr<Image>&& img)
 {
-	canvas.set_image(std::move(img));
-	canvas_visible = true;
-	if (minor_gridlines_visible)
-		gridlines_sync_with_image(canvas.minor_gridlines);
-	else
-		_buffer_minor_gridlines_sync_with_image = true;
-	if (major_gridlines_visible)
-		gridlines_sync_with_image(canvas.major_gridlines);
-	else
-		_buffer_major_gridlines_sync_with_image = true;
+	bool nonnull = img.get();
+	canvas().set_image(std::move(img));
+	if (nonnull)
+	{
+		canvas().visible = true;
+		canvas().minor_gridlines.sync_with_image(fs_wget(canvas(), Canvas::SPRITE).image->buf, canvas().self.transform.scale);
+		canvas().major_gridlines.sync_with_image(fs_wget(canvas(), Canvas::SPRITE).image->buf, canvas().self.transform.scale);
+	}
+}
+
+void Easel::update_canvas_image()
+{
+	set_canvas_image(fs_wget(canvas(), Canvas::SPRITE).image);
+	canvas().sync_transform();
+}
+
+Image* Easel::canvas_image() const
+{
+	return fs_wget(canvas(), Canvas::SPRITE).image.get();
+}
+
+bool Easel::minor_gridlines_are_visible() const
+{
+	return canvas().minor_gridlines.visible();
 }
 
 void Easel::set_minor_gridlines_visibility(bool visible)
 {
-	if (!minor_gridlines_visible && visible)
-	{
-		if (_buffer_minor_gridlines_send_flat_transform)
-			gridlines_send_flat_transform(canvas.minor_gridlines);
-		if (_buffer_minor_gridlines_sync_with_image)
-			gridlines_sync_with_image(canvas.minor_gridlines);
-	}
-	else if (minor_gridlines_visible && !visible)
-	{
-		_buffer_minor_gridlines_send_flat_transform = false;
-		_buffer_minor_gridlines_sync_with_image = false;
-	}
-	minor_gridlines_visible = visible;
+	canvas().minor_gridlines.set_visible(visible, canvas());
+}
+
+bool Easel::major_gridlines_are_visible() const
+{
+	return canvas().major_gridlines.visible();
 }
 
 void Easel::set_major_gridlines_visibility(bool visible)
 {
-	if (!major_gridlines_visible && visible)
-	{
-		if (_buffer_major_gridlines_send_flat_transform)
-			gridlines_send_flat_transform(canvas.major_gridlines);
-		if (_buffer_major_gridlines_sync_with_image)
-			gridlines_sync_with_image(canvas.major_gridlines);
-	}
-	else if (major_gridlines_visible && !visible)
-	{
-		_buffer_major_gridlines_send_flat_transform = false;
-		_buffer_major_gridlines_sync_with_image = false;
-	}
-	major_gridlines_visible = visible;
+	canvas().major_gridlines.set_visible(visible, canvas());
 }
 
 void Easel::begin_panning()
 {
 	if (!panning_info.panning)
 	{
-		panning_info.initial_canvas_pos = canvas.self.transform.position;
+		panning_info.initial_canvas_pos = canvas().self.transform.position;
 		panning_info.initial_cursor_pos = get_app_cursor_pos();
 		panning_info.panning = true;
 		Machine.main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
@@ -475,7 +473,7 @@ void Easel::cancel_panning()
 	if (panning_info.panning)
 	{
 		panning_info.panning = false;
-		canvas.self.transform.position = panning_info.initial_canvas_pos;
+		canvas().self.transform.position = panning_info.initial_canvas_pos;
 		sync_canvas_transform();
 		Machine.main_window->release_cursor(&panning_info.wh);
 		Machine.main_window->release_mouse_mode(&panning_info.wh);
@@ -495,8 +493,11 @@ void Easel::update_panning()
 			else
 				pos.y = panning_info.initial_canvas_pos.y;
 		}
-		canvas.self.transform.position = pos;
-		sync_canvas_transform();
+		if (canvas().self.transform.position != pos)
+		{
+			canvas().self.transform.position = pos;
+			sync_canvas_transform();
+		}
 
 		if (!Machine.main_window->owns_mouse_mode(&panning_info.wh) && !cursor_in_clipping())
 			Machine.main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
@@ -514,9 +515,9 @@ void Easel::zoom_by(float zoom)
 	float factor = Machine.main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
 	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, zoom), zoom_info.in_min, zoom_info.in_max);
 	float zoom_change = new_zoom / zoom_info.zoom;
-	canvas.self.transform.scale *= zoom_change;
-	Position delta_position = (canvas.self.transform.position - cursor_world) * zoom_change;
-	canvas.self.transform.position = cursor_world + delta_position;
+	canvas().self.transform.scale *= zoom_change;
+	Position delta_position = (canvas().self.transform.position - cursor_world) * zoom_change;
+	canvas().self.transform.position = cursor_world + delta_position;
 
 	sync_canvas_transform();
 	zoom_info.zoom = new_zoom;
@@ -525,13 +526,13 @@ void Easel::zoom_by(float zoom)
 void Easel::reset_camera()
 {
 	zoom_info.zoom = zoom_info.initial;
-	canvas.self.transform = {};
+	canvas().self.transform = {};
 	if (canvas_image())
 	{
 		float fit_scale = std::min(get_app_width() / canvas_image()->buf.width, get_app_height() / canvas_image()->buf.height);
 		if (fit_scale < 1.0f)
 		{
-			canvas.self.transform.scale *= fit_scale;
+			canvas().self.transform.scale *= fit_scale;
 			zoom_info.zoom *= fit_scale;
 		}
 		else
@@ -539,7 +540,7 @@ void Easel::reset_camera()
 			fit_scale /= Machine.preferences.min_initial_image_window_proportion;
 			if (fit_scale > 1.0f)
 			{
-				canvas.self.transform.scale *= fit_scale;
+				canvas().self.transform.scale *= fit_scale;
 				zoom_info.zoom *= fit_scale;
 			}
 		}

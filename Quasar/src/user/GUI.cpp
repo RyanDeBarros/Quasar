@@ -5,6 +5,8 @@
 
 #include "Machine.h"
 
+// TODO close menu items on MMB and RMB click in addition to LMB click (which is default).
+
 void render_main_menu_bar()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);

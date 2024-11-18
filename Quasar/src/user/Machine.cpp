@@ -141,10 +141,10 @@ void MachineImpl::init_renderer()
 	attach_canvas_controls();
 	attach_global_user_controls();
 	
-	easel()->canvas.minor_gridlines.set_color(ColorFrame(RGBA(31, 63, 107, 255))); // SETTINGS
-	easel()->canvas.minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
-	easel()->canvas.major_gridlines.set_color(ColorFrame(RGBA(31, 72, 127, 255))); // SETTINGS
-	easel()->canvas.major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
+	easel()->canvas().minor_gridlines.set_color(ColorFrame(RGBA(31, 63, 107, 255))); // SETTINGS
+	easel()->canvas().minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
+	easel()->canvas().major_gridlines.set_color(ColorFrame(RGBA(31, 72, 127, 255))); // SETTINGS
+	easel()->canvas().major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
 
 	set_app_scale(main_window->display_scale());
 
@@ -430,7 +430,7 @@ bool MachineImpl::new_file()
 		if (response == 1) if (!save_file()) return false;
 	}
 	current_filepath.clear();
-	easel()->canvas_visible = false;
+	easel()->canvas().visible = false;
 	mark();
 	// LATER clear palletes/frames/layers/etc.
 	return true;

@@ -2,9 +2,10 @@
 
 #include "Panel.h"
 #include "user/Platform.h"
-#include "../render/FlatSprite.h"
 #include "../render/Shader.h"
 #include "../widgets/Widget.h"
+#include "edit/color/Color.h"
+#include "edit/image/Image.h"
 
 struct Gridlines
 {
@@ -20,9 +21,12 @@ struct Gridlines
 	GLsizei* arrays_counts = nullptr;
 
 private:
-	mutable bool _visible = true;
-public:
+	bool _visible = false;
+	mutable bool _nonobstructing = true;
+	mutable bool _send_flat_transform = false;
+	mutable bool _sync_with_image = false;
 
+public:
 	Gridlines();
 	Gridlines(const Gridlines&) = delete;
 	Gridlines(Gridlines&&) noexcept = delete;
@@ -32,23 +36,29 @@ public:
 	void update_scale(Scale scale) const;
 	void draw() const;
 
+	bool visible() const { return _visible; }
 	unsigned short num_cols() const;
 	unsigned short num_rows() const;
 	GLsizei num_quads() const { return num_rows() + num_cols(); }
 	GLsizei num_vertices() const { return num_quads() * 4; }
 
 	void set_color(ColorFrame color) const;
+
+	void send_buffer() const;
+	void send_flat_transform(FlatTransform canvas_transform) const;
+	void sync_with_image(const Buffer& buf, Scale canvas_scale);
+
+	void set_visible(bool visible, const struct Canvas& canvas);
 };
 
-// TODO checkerboard should use separate renderable
 struct Canvas : public Widget
 {
-	FlatSprite sprite;
-	FlatSprite checkerboard;
 	RGBA checker1, checker2;
-
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
+
+	bool visible = false;
+
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
 public:
@@ -62,12 +72,19 @@ public:
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
 
-	void sync_transform();
+	void sync_transform(); // TODO --> sync_widget()
 
 	void create_checkerboard_image();
 	void sync_checkerboard_colors() const;
 	void sync_checkerboard_texture() const;
 	void set_checkerboard_uv_size(float width, float height) const;
+
+	enum : size_t
+	{
+		CHECKERBOARD,
+		SPRITE, // LATER SPRITE_START
+		_W_COUNT
+	};
 };
 
 struct Easel : public Panel
@@ -75,19 +92,7 @@ struct Easel : public Panel
 	Shader bkg_shader;
 	Shader sprite_shader;
 	Widget widget;
-	Canvas canvas;
 
-	bool canvas_visible = false;
-
-private:
-	bool minor_gridlines_visible = false;
-	bool _buffer_minor_gridlines_send_flat_transform = false;
-	bool _buffer_minor_gridlines_sync_with_image = false;
-	bool major_gridlines_visible = false;
-	bool _buffer_major_gridlines_send_flat_transform = false;
-	bool _buffer_major_gridlines_sync_with_image = false;
-
-public:
 	Easel();
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
@@ -95,28 +100,19 @@ public:
 	void initialize_widget();
 
 	virtual void draw() override;
-
-	void send_gridlines_vao(const Gridlines& gridlines) const;
-	
 	virtual void _send_view() override;
+	
 	void sync_widget();
-	
 	void sync_canvas_transform();
-	
-	void resize_gridlines(Gridlines& gridlines) const;
-	void update_gridlines_scale(const Gridlines& gridlines) const;
-	void gridlines_send_flat_transform(Gridlines& gridlines) const;
-	void gridlines_sync_with_image(Gridlines& gridlines) const;
 	
 	void set_canvas_image(const std::shared_ptr<Image>& image);
 	void set_canvas_image(std::shared_ptr<Image>&& image);
-	void update_canvas_image() { set_canvas_image(canvas.sprite.image); sync_canvas_transform(); }
-	Image* canvas_image() const { return canvas.sprite.image.get(); }
-	std::shared_ptr<Image> canvas_image_ref() const { return canvas.sprite.image; }
+	void update_canvas_image();
+	Image* canvas_image() const;
 
-	bool minor_gridlines_are_visible() const { return minor_gridlines_visible; }
+	bool minor_gridlines_are_visible() const;
 	void set_minor_gridlines_visibility(bool visible);
-	bool major_gridlines_are_visible() const { return major_gridlines_visible; }
+	bool major_gridlines_are_visible() const;
 	void set_major_gridlines_visibility(bool visible);
 
 	struct
@@ -146,9 +142,13 @@ public:
 	void zoom_by(float zoom);
 	void reset_camera();
 
+	Canvas& canvas() { return *widget.get<Canvas>(CANVAS); }
+	const Canvas& canvas() const { return *widget.get<Canvas>(CANVAS); }
+
 	enum : size_t
 	{
 		BACKGROUND,
+		CANVAS,
 		_W_COUNT
 	};
 };
