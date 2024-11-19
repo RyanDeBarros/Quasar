@@ -66,9 +66,6 @@
     <ClCompile Include="src\user\Machine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\user\GUI.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\variety\FileSystem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -139,6 +136,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\variety\Geometry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\panels\Menu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\panels\BrushesPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\panels\ScenePanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1073,9 +1079,6 @@
     <ClInclude Include="src\user\Machine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\user\GUI.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\variety\FileSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1155,6 +1158,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\edit\image\Image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\panels\Menu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\panels\BrushesPanel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\panels\ScenePanel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

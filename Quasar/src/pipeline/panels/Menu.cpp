@@ -1,10 +1,11 @@
-#include "GUI.h"
+#include "Menu.h"
 
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
+#include "user/Machine.h"
+#include "user/ControlScheme.h"
 
-#include "Machine.h"
-#include "ControlScheme.h"
+void MenuPanel::_send_view()
+{
+}
 
 static const char* key_shortcut_in_scheme(const char* shortcut, ControlScheme scheme)
 {
@@ -16,8 +17,8 @@ static const char* key_shortcut_in_file_scheme(const char* shortcut)
 	return key_shortcut_in_scheme(shortcut, ControlScheme::FILE);
 }
 
-// LATER put these in main menu panel, and use new imgui key handler to consume ESCAPE pressed and close menus if they are open.
-void render_main_menu_bar()
+// TODO imgui key handler to consume ESCAPE pressed and close menus if they are open.
+void MenuPanel::draw()
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	if (ImGui::BeginMainMenuBar())
@@ -75,13 +76,13 @@ void render_main_menu_bar()
 		{
 			if (close_menu)
 				ImGui::CloseCurrentPopup();
-			if (Machine.brush_panel_visible())
+			if (Machine.brushes_panel_visible())
 			{
-				if (ImGui::MenuItem("Close brush panel")) { Machine.close_brush_panel(); }
+				if (ImGui::MenuItem("Close brushes panel")) { Machine.close_brushes_panel(); }
 			}
 			else
 			{
-				if (ImGui::MenuItem("Open brush panel")) { Machine.open_brush_panel(); }
+				if (ImGui::MenuItem("Open brushes panel")) { Machine.open_brushes_panel(); }
 			}
 			if (Machine.palette_panel_visible())
 			{
@@ -91,13 +92,13 @@ void render_main_menu_bar()
 			{
 				if (ImGui::MenuItem("Open palette panel")) { Machine.open_palette_panel(); }
 			}
-			if (Machine.views_panel_visible())
+			if (Machine.scene_panel_visible())
 			{
-				if (ImGui::MenuItem("Close views panel")) { Machine.close_views_panel(); }
+				if (ImGui::MenuItem("Close scene panel")) { Machine.close_scene_panel(); }
 			}
 			else
 			{
-				if (ImGui::MenuItem("Open views panel")) { Machine.open_views_panel(); }
+				if (ImGui::MenuItem("Open scene panel")) { Machine.open_scene_panel(); }
 			}
 			ImGui::Separator();
 			if (ImGui::MenuItem("Reset canvas view", "0 (Row)", false, Machine.canvas_image_ready())) { Machine.canvas_reset_camera(); }
@@ -127,7 +128,7 @@ void render_main_menu_bar()
 			ImGui::EndMenu();
 		}
 
-		// TODO make into menu?
+		// LATER make into menu?
 		ImGui::SameLine(ImGui::GetCursorPosX() + 100);
 		ImGui::Text("Control Scheme:");
 		ImGui::SetNextItemWidth(ImGui::CalcTextSize("PALETTE").x + ImGui::GetStyle().FramePadding.x * 2 + ImGui::GetFontSize() + ImGui::GetStyle().ItemInnerSpacing.x * 2);

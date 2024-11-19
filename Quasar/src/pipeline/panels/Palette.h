@@ -6,7 +6,7 @@
 #include "../render/Shader.h"
 #include "../widgets/Widget.h"
 
-struct Palette : public Panel
+struct PalettePanel : public Panel
 {
 	Shader bkg_shader;
 	glm::mat3 vp;
@@ -24,9 +24,9 @@ struct Palette : public Panel
 	std::function<bool()> use_alternate;
 	std::function<void()> swap_picker_colors;
 
-	Palette();
-	Palette(const Palette&) = delete;
-	Palette(Palette&&) noexcept = delete;
+	PalettePanel();
+	PalettePanel(const PalettePanel&) = delete;
+	PalettePanel(PalettePanel&&) noexcept = delete;
 
 	virtual void _send_view() override;
 	virtual void draw() override;

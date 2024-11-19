@@ -4,13 +4,8 @@
 #include <imgui/imgui_internal.h>
 
 #include "variety/GLutility.h"
-#include "edit/color/Color.h"
 #include "user/Machine.h"
-#include "user/GUI.h"
 #include "../render/Uniforms.h"
-#include "RoundRect.h"
-#include "../text/TextRender.h"
-#include "../text/CommonFonts.h"
 #include "Button.h"
 
 static const size_t MAIN_TABBAR_BUTTONS[] {

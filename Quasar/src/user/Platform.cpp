@@ -4,7 +4,6 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 #include "Machine.h"
-#include "GUI.h"
 
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {

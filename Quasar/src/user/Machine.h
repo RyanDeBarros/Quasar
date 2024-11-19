@@ -30,11 +30,11 @@ struct MachineImpl
 		constexpr static int initial_menu_panel_height = 32;
 		constexpr static int initial_brush_panel_width = 380;
 		constexpr static int initial_palette_panel_width = 380;
-		constexpr static int initial_views_panel_height = 288;
+		constexpr static int initial_scene_panel_height = 288;
 		int menu_panel_height = initial_menu_panel_height;
-		int brush_panel_width = initial_brush_panel_width;
+		int brushes_panel_width = initial_brush_panel_width;
 		int palette_panel_width = initial_palette_panel_width;
-		int views_panel_height = initial_views_panel_height;
+		int scene_panel_height = initial_scene_panel_height;
 	} window_layout_info;
 
 	FilePath current_filepath = "";
@@ -46,7 +46,6 @@ struct MachineImpl
 
 	bool create_main_window();
 	void init_renderer();
-	void init_panels_layout();
 	void destroy();
 	void exit() const { main_window->request_close(); }
 	bool should_exit() const;
@@ -125,15 +124,15 @@ struct MachineImpl
 	void rotate_270();
 
 	// View menu
-	bool brush_panel_visible() const;
-	void open_brush_panel() const;
-	void close_brush_panel() const;
+	bool brushes_panel_visible() const;
+	void open_brushes_panel() const;
+	void close_brushes_panel() const;
 	bool palette_panel_visible() const;
 	void open_palette_panel() const;
 	void close_palette_panel() const;
-	bool views_panel_visible() const;
-	void open_views_panel() const;
-	void close_views_panel() const;
+	bool scene_panel_visible() const;
+	void open_scene_panel() const;
+	void close_scene_panel() const;
 	void canvas_reset_camera() const;
 	bool minor_gridlines_visible() const;
 	void show_minor_gridlines() const;

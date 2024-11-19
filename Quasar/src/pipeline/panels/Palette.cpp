@@ -8,31 +8,31 @@
 #include "../widgets/ColorPicker.h"
 #include "../widgets/ColorPalette.h"
 
-static ColorPicker& color_picker(Palette* palette)
+static ColorPicker& color_picker(PalettePanel* palette)
 {
-	return cpk_wget(palette->widget, Palette::COLOR_PICKER);
+	return cpk_wget(palette->widget, PalettePanel::COLOR_PICKER);
 }
 
-static const ColorPicker& color_picker(const Palette* palette)
+static const ColorPicker& color_picker(const PalettePanel* palette)
 {
-	return cpk_wget(palette->widget, Palette::COLOR_PICKER);
+	return cpk_wget(palette->widget, PalettePanel::COLOR_PICKER);
 }
 
-static ColorPalette& color_palette(Palette* palette)
+static ColorPalette& color_palette(PalettePanel* palette)
 {
-	return cpl_wget(palette->widget, Palette::COLOR_PALETTE);
+	return cpl_wget(palette->widget, PalettePanel::COLOR_PALETTE);
 }
 
-static const ColorPalette& color_palette(const Palette* palette)
+static const ColorPalette& color_palette(const PalettePanel* palette)
 {
-	return cpl_wget(palette->widget, Palette::COLOR_PALETTE);
+	return cpl_wget(palette->widget, PalettePanel::COLOR_PALETTE);
 }
 
 const Scale color_palette_scale = Scale(0.9f);
 const Scale color_picker_scale = Scale(0.9f);
 const float padding = 20;
 
-Palette::Palette()
+PalettePanel::PalettePanel()
 	: bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")),
 	widget(_W_COUNT)
 {
@@ -70,13 +70,13 @@ Palette::Palette()
 	// ##########################################################
 }
 
-void Palette::draw()
+void PalettePanel::draw()
 {
 	ur_wget(widget, BACKGROUND).draw();
 	render_widget();
 }
 
-void Palette::render_widget()
+void PalettePanel::render_widget()
 {
 	color_picker(this).process();
 	color_palette(this).process();
@@ -84,12 +84,12 @@ void Palette::render_widget()
 	color_palette(this).draw();
 }
 
-Scale Palette::minimum_screen_display() const
+Scale PalettePanel::minimum_screen_display() const
 {
 	return to_screen_coordinates(color_picker_scale * color_picker(this).minimum_display() + color_palette_scale * color_palette(this).minimum_display() + Scale{ 2 * padding, 3 * padding }) - to_screen_coordinates({});
 }
 
-void Palette::new_color()
+void PalettePanel::new_color()
 {
 	bool adjacent = !Machine.main_window->is_shift_pressed();
 	bool update_selector = Machine.main_window->is_ctrl_pressed();
@@ -99,7 +99,7 @@ void Palette::new_color()
 		color_palette(this).current_subpalette().new_color_from_primary(color_picker(this).get_pri_color().rgba(), adjacent, update_selector, true);
 }
 
-void Palette::overwrite_color()
+void PalettePanel::overwrite_color()
 {
 	if (Machine.main_window->is_alt_pressed())
 		color_palette(this).subpalette_overwrite_alternate(true);
@@ -107,7 +107,7 @@ void Palette::overwrite_color()
 		color_palette(this).subpalette_overwrite_primary(true);
 }
 
-void Palette::delete_color()
+void PalettePanel::delete_color()
 {
 	ColorSubpalette& subpalette = color_palette(this).current_subpalette();
 	if (Machine.main_window->is_alt_pressed())
@@ -116,22 +116,22 @@ void Palette::delete_color()
 		subpalette.remove_square_under_index(subpalette.primary_index, true, true);
 }
 
-void Palette::new_subpalette()
+void PalettePanel::new_subpalette()
 {
 	color_palette(this).new_subpalette(true);
 }
 
-void Palette::rename_subpalette()
+void PalettePanel::rename_subpalette()
 {
 	color_palette(this).rename_subpalette();
 }
 
-void Palette::delete_subpalette()
+void PalettePanel::delete_subpalette()
 {
 	color_palette(this).delete_current_subpalette(true);
 }
 
-void Palette::initialize_widget()
+void PalettePanel::initialize_widget()
 {
 	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
 	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec()));
@@ -145,7 +145,7 @@ void Palette::initialize_widget()
 	widget.wp_at(COLOR_PALETTE).transform.scale = Scale(color_palette_scale);
 }
 
-void Palette::sync_widget()
+void PalettePanel::sync_widget()
 {
 	widget.wp_at(BACKGROUND).transform.scale = get_app_size();
 	WidgetPlacement wp = widget.wp_at(BACKGROUND).relative_to(widget.self.transform);
@@ -172,7 +172,7 @@ void Palette::sync_widget()
 	color_palette(this).send_vp();
 }
 
-void Palette::_send_view()
+void PalettePanel::_send_view()
 {
 	vp = vp_matrix();
 	Uniforms::send_matrix3(bkg_shader, "u_VP", vp);

@@ -3,10 +3,12 @@
 #include <tinyfd/tinyfiledialogs.h>
 
 #include "ControlScheme.h"
-#include "GUI.h"
 #include "pipeline/panels/Panel.h"
 #include "pipeline/panels/Easel.h"
 #include "pipeline/panels/Palette.h"
+#include "pipeline/panels/BrushesPanel.h"
+#include "pipeline/panels/ScenePanel.h"
+#include "pipeline/panels/Menu.h"
 #include "pipeline/text/TextRender.h"
 #include "pipeline/text/CommonFonts.h"
 #include "variety/GLutility.h"
@@ -40,41 +42,75 @@ namespace Data
 
 static PanelGroup* panels = nullptr;
 
-static Easel* easel()
+static Easel* easel() { return dynamic_cast<Easel*>(panels->panels[0].get()); }
+static PalettePanel* palette() { return dynamic_cast<PalettePanel*>(panels->panels[1].get()); }
+static BrushesPanel* brushes() { return dynamic_cast<BrushesPanel*>(panels->panels[2].get()); }
+static ScenePanel* scene() { return dynamic_cast<ScenePanel*>(panels->panels[3].get()); }
+static MenuPanel* menu() { return dynamic_cast<MenuPanel*>(panels->panels[4].get()); }
+
+static void create_panels()
 {
-	return dynamic_cast<Easel*>(panels->panels[0].get());
+	panels = new PanelGroup();
+	panels->panels.push_back(std::make_unique<Easel>());
+	panels->panels.push_back(std::make_unique<PalettePanel>());
+	panels->panels.push_back(std::make_unique<BrushesPanel>());
+	panels->panels.push_back(std::make_unique<ScenePanel>());
+	panels->panels.push_back(std::make_unique<MenuPanel>());
 }
 
-static Palette* palette()
+static void init_panels_layout()
 {
-	return dynamic_cast<Palette*>(panels->panels[1].get());
-}
-
-void MachineImpl::init_panels_layout()
-{
-	easel()->bounds.x1 = window_layout_info.initial_brush_panel_width;
-	easel()->bounds.x2 = window_layout_info.initial_width - window_layout_info.initial_palette_panel_width;
-	easel()->bounds.y1 = window_layout_info.initial_views_panel_height;
-	easel()->bounds.y2 = window_layout_info.initial_height - window_layout_info.initial_menu_panel_height;
+	auto& layout = Machine.window_layout_info;
+	
+	menu()->bounds.x1 = 0;
+	menu()->bounds.x2 = layout.initial_width;
+	menu()->bounds.y1 = layout.initial_height - layout.initial_menu_panel_height;
+	menu()->bounds.y2 = layout.initial_height;
+	
+	easel()->bounds.x1 = layout.initial_brush_panel_width;
+	easel()->bounds.x2 = layout.initial_width - layout.initial_palette_panel_width;
+	easel()->bounds.y1 = layout.initial_scene_panel_height;
+	easel()->bounds.y2 = layout.initial_height - layout.initial_menu_panel_height;
+	
 	palette()->bounds.x1 = easel()->bounds.x2;
-	palette()->bounds.x2 = window_layout_info.initial_width;
+	palette()->bounds.x2 = layout.initial_width;
 	palette()->bounds.y1 = easel()->bounds.y1;
 	palette()->bounds.y2 = easel()->bounds.y2;
+	
+	brushes()->bounds.x1 = 0;
+	brushes()->bounds.x2 = easel()->bounds.x1;
+	brushes()->bounds.y1 = easel()->bounds.y1;
+	brushes()->bounds.y2 = easel()->bounds.y2;
+	
+	scene()->bounds.x1 = 0;
+	scene()->bounds.x2 = layout.initial_width;
+	scene()->bounds.y1 = 0;
+	scene()->bounds.y2 = layout.initial_scene_panel_height;
 }
 
 static void update_panels_to_window_size(int width, int height)
 {
-	//easel()->bounds.x1 = 
-	if (palette()->visible)
-		easel()->bounds.x2 = width - Machine.window_layout_info.initial_palette_panel_width;
-	else
-		easel()->bounds.x2 = width;
-	//easel()->bounds.y1 = 
-	easel()->bounds.y2 = height - Machine.window_layout_info.initial_menu_panel_height;
+	auto& layout = Machine.window_layout_info;
+
+	menu()->bounds.x2 = width;
+	menu()->bounds.y1 = height - layout.menu_panel_height;
+	menu()->bounds.y2 = height;
+
+	easel()->bounds.x1 = brushes()->visible ? layout.brushes_panel_width : 0;
+	easel()->bounds.x2 = palette()->visible ? width - layout.palette_panel_width : width;
+	easel()->bounds.y1 = scene()->visible ? layout.scene_panel_height : 0;
+	easel()->bounds.y2 = height - layout.menu_panel_height; // menu()->visible is always true
+
 	palette()->bounds.x1 = easel()->bounds.x2;
 	palette()->bounds.x2 = width;
 	palette()->bounds.y1 = easel()->bounds.y1;
 	palette()->bounds.y2 = easel()->bounds.y2;
+
+	brushes()->bounds.x2 = easel()->bounds.x1;
+	brushes()->bounds.y1 = easel()->bounds.y1;
+	brushes()->bounds.y2 = easel()->bounds.y2;
+
+	scene()->bounds.x2 = width;
 }
 
 MachineImpl::MachineImpl()
@@ -107,10 +143,8 @@ void MachineImpl::init_renderer()
 	
 	Fonts::load_common_fonts();
 
-	panels = new PanelGroup();
-	panels->panels.push_back(std::make_unique<Easel>());
-	panels->panels.push_back(std::make_unique<Palette>());
-
+	create_panels();
+	
 	main_window->root_window_size.children.push_back(&resize_handler);
 	main_window->root_display_scale.children.push_back(&rescale_handler);
 	main_window->root_mouse_button.children.push_back(&palette()->mb_handler);
@@ -149,9 +183,9 @@ void MachineImpl::init_renderer()
 	set_app_scale(main_window->display_scale());
 
 	main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
-		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
+		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_scene_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
 		//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
-		window_layout_info.menu_panel_height + window_layout_info.views_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
+		window_layout_info.menu_panel_height + window_layout_info.scene_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	
 	Data::update_time();
 
@@ -179,7 +213,6 @@ void MachineImpl::on_render()
 	main_window->new_frame();
 	panels->render();
 	main_window_clip().scissor();
-	render_main_menu_bar();
 	update_currently_bound_shader();
 	main_window->end_frame();
 }
@@ -649,18 +682,22 @@ void MachineImpl::rotate_270()
 	history.execute(a);
 }
 
-bool MachineImpl::brush_panel_visible() const
+bool MachineImpl::brushes_panel_visible() const
 {
-	return true;
+	return brushes()->visible;
 }
 
-void MachineImpl::open_brush_panel() const
+void MachineImpl::open_brushes_panel() const
 {
+	brushes()->visible = true;
+	brushes()->bounds.x2 = easel()->bounds.x1 = window_layout_info.brushes_panel_width;
 	panels->set_projection();
 }
 
-void MachineImpl::close_brush_panel() const
+void MachineImpl::close_brushes_panel() const
 {
+	brushes()->visible = false;
+	brushes()->bounds.x2 = easel()->bounds.x1 = 0;
 	panels->set_projection();
 }
 
@@ -672,31 +709,33 @@ bool MachineImpl::palette_panel_visible() const
 void MachineImpl::open_palette_panel() const
 {
 	palette()->visible = true;
-	easel()->bounds.x2 = main_window->width() - window_layout_info.initial_palette_panel_width;
-	palette()->bounds.x1 = easel()->bounds.x2;
-	palette()->bounds.x2 = main_window->width();
+	palette()->bounds.x1 = easel()->bounds.x2 = main_window->width() - window_layout_info.palette_panel_width;
 	panels->set_projection();
 }
 
 void MachineImpl::close_palette_panel() const
 {
 	palette()->visible = false;
-	easel()->bounds.x2 = main_window->width();
+	palette()->bounds.x1 = easel()->bounds.x2 = main_window->width();
 	panels->set_projection();
 }
 
-bool MachineImpl::views_panel_visible() const
+bool MachineImpl::scene_panel_visible() const
 {
-	return true;
+	return scene()->visible;
 }
 
-void MachineImpl::open_views_panel() const
+void MachineImpl::open_scene_panel() const
 {
+	scene()->visible = true;
+	scene()->bounds.y2 = brushes()->bounds.y1 = palette()->bounds.y1 = easel()->bounds.y1 = window_layout_info.scene_panel_height;
 	panels->set_projection();
 }
 
-void MachineImpl::close_views_panel() const
+void MachineImpl::close_scene_panel() const
 {
+	scene()->visible = false;
+	scene()->bounds.y2 = brushes()->bounds.y1 = palette()->bounds.y1 = easel()->bounds.y1 = 0;
 	panels->set_projection();
 }
 

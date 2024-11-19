@@ -80,7 +80,6 @@ static void global_key_handler_neutral(const KeyEvent& k)
 		case Key::ROW1:
 			if (Machine.main_window->is_ctrl_pressed())
 			{
-				// TODO abstract Machine control scheme interactions so that control scheme doesn't go in Machine header
 				Machine.set_control_scheme(ControlScheme::FILE);
 				k.consumed = true;
 			}
