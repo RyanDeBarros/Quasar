@@ -633,7 +633,7 @@ void MachineImpl::open_file(const FilePath& filepath)
 
 void MachineImpl::import_file(const FilePath& filepath)
 {	
-	easel()->set_canvas_image(std::make_shared<Image>(filepath));
+	easel()->canvas().set_image(std::make_shared<Image>(filepath));
 	auto title = "Quasar - " + filepath.filename();
 	main_window->set_title(title.c_str()); // LATER don't set title of window. put image filename in bottom status bar
 	canvas_reset_camera();

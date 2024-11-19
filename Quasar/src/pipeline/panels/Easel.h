@@ -71,8 +71,10 @@ public:
 
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
-
+	void sync_checkerboard_with_image();
+	void sync_gridlines_with_image();
 	void sync_transform();
+	void sync_gfx_with_image();
 
 	void create_checkerboard_image();
 	void sync_checkerboard_colors() const;
@@ -111,9 +113,6 @@ public:
 	void sync_widget();
 	void sync_canvas_transform();
 
-	void set_canvas_image(const std::shared_ptr<Image>& image);
-	void set_canvas_image(std::shared_ptr<Image>&& image);
-	void update_canvas_image();
 	Image* canvas_image() const;
 
 	bool minor_gridlines_are_visible() const;

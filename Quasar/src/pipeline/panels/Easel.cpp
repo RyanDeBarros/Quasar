@@ -287,8 +287,19 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
 {
+	fs_wget(*this, SPRITE).image = img;
+	sync_gfx_with_image();
+}
+
+void Canvas::set_image(std::shared_ptr<Image>&& img)
+{
+	fs_wget(*this, SPRITE).image = std::move(img);
+	sync_gfx_with_image();
+}
+
+void Canvas::sync_checkerboard_with_image()
+{
 	FlatSprite& sprite = fs_wget(*this, SPRITE);
-	sprite.image = img;
 	if (sprite.image)
 	{
 		const Buffer& buf = sprite.image->buf;
@@ -302,27 +313,28 @@ void Canvas::set_image(const std::shared_ptr<Image>& img)
 		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
 }
 
-void Canvas::set_image(std::shared_ptr<Image>&& img)
+void Canvas::sync_gridlines_with_image()
 {
-	FlatSprite& sprite = fs_wget(*this, SPRITE);
-	sprite.image = std::move(img);
-	if (sprite.image)
+	Image* img = fs_wget(*this, SPRITE).image.get();
+	if (img)
 	{
-		const Buffer& buf = sprite.image->buf;
-		sprite.self.transform.scale = { buf.width, buf.height };
-		sprite.update_transform();
-		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
-		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
-		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
+		visible = true;
+		minor_gridlines.sync_with_image(img->buf, self.transform.scale);
+		major_gridlines.sync_with_image(img->buf, self.transform.scale);
 	}
-	else
-		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
 }
 
 void Canvas::sync_transform()
 {
 	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
+}
+
+void Canvas::sync_gfx_with_image()
+{
+	sync_checkerboard_with_image();
+	sync_gridlines_with_image();
+	sync_transform();
 }
 
 Easel::Easel()
@@ -425,36 +437,6 @@ void Easel::sync_canvas_transform()
 	canvas().sync_transform();
 	canvas().minor_gridlines.send_flat_transform(canvas().self.transform);
 	canvas().major_gridlines.send_flat_transform(canvas().self.transform);
-}
-
-void Easel::set_canvas_image(const std::shared_ptr<Image>& img)
-{
-	bool nonnull = img.get();
-	canvas().set_image(img);
-	if (nonnull)
-	{
-		canvas().visible = true;
-		canvas().minor_gridlines.sync_with_image(fs_wget(canvas(), Canvas::SPRITE).image->buf, canvas().self.transform.scale);
-		canvas().major_gridlines.sync_with_image(fs_wget(canvas(), Canvas::SPRITE).image->buf, canvas().self.transform.scale);
-	}
-}
-
-void Easel::set_canvas_image(std::shared_ptr<Image>&& img)
-{
-	bool nonnull = img.get();
-	canvas().set_image(std::move(img));
-	if (nonnull)
-	{
-		canvas().visible = true;
-		canvas().minor_gridlines.sync_with_image(fs_wget(canvas(), Canvas::SPRITE).image->buf, canvas().self.transform.scale);
-		canvas().major_gridlines.sync_with_image(fs_wget(canvas(), Canvas::SPRITE).image->buf, canvas().self.transform.scale);
-	}
-}
-
-void Easel::update_canvas_image()
-{
-	set_canvas_image(fs_wget(canvas(), Canvas::SPRITE).image); // TODO don't set image redundantly. do gridlines/checkerboard logic in separate function
-	canvas().sync_transform();
 }
 
 Image* Easel::canvas_image() const
@@ -673,8 +655,8 @@ void Easel::rotate_image_90()
 	{
 		Easel* easel;
 		Rotate90Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate90Action); }
-		virtual void forward() override { if (easel) { easel->canvas_image()->rotate_90_del_old(); easel->update_canvas_image(); } }
-		virtual void backward() override { if (easel) { easel->canvas_image()->rotate_270_del_old(); easel->update_canvas_image(); } }
+		virtual void forward() override { if (easel) { easel->canvas_image()->rotate_90_del_old(); easel->canvas().sync_gfx_with_image(); } }
+		virtual void backward() override { if (easel) { easel->canvas_image()->rotate_270_del_old(); easel->canvas().sync_gfx_with_image(); } }
 		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate90Action)
 	};
 	struct Rotate90Action_Perf : public ActionBase
@@ -695,8 +677,8 @@ void Easel::rotate_image_90()
 			if (easel)
 			{
 				std::swap(buf, easel->canvas_image()->buf);
-				easel->update_canvas_image();
 				easel->canvas_image()->resend_texture();
+				easel->canvas().sync_gfx_with_image();
 			}
 		}
 		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate90Action_Perf)
@@ -713,8 +695,8 @@ void Easel::rotate_image_180()
 	{
 		Easel* easel;
 		Rotate180Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate180Action); }
-		virtual void forward() override { if (easel) { easel->canvas_image()->rotate_180(); easel->update_canvas_image(); } }
-		virtual void backward() override { if (easel) { easel->canvas_image()->rotate_180(); easel->update_canvas_image(); } }
+		virtual void forward() override { if (easel) easel->canvas_image()->rotate_180(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->rotate_180(); }
 		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate180Action)
 	};
 	struct Rotate180Action_Perf : public ActionBase
@@ -755,8 +737,8 @@ void Easel::rotate_image_270()
 	{
 		Easel* easel;
 		Rotate270Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate270Action); }
-		virtual void forward() override { if (easel) { easel->canvas_image()->rotate_270_del_old(); easel->update_canvas_image(); } }
-		virtual void backward() override { if (easel) { easel->canvas_image()->rotate_90_del_old(); easel->update_canvas_image(); } }
+		virtual void forward() override { if (easel) { easel->canvas_image()->rotate_270_del_old(); easel->canvas().sync_gfx_with_image(); } }
+		virtual void backward() override { if (easel) { easel->canvas_image()->rotate_90_del_old(); easel->canvas().sync_gfx_with_image(); } }
 		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate270Action)
 	};
 	struct Rotate270Action_Perf : public ActionBase
@@ -778,7 +760,7 @@ void Easel::rotate_image_270()
 			{
 				std::swap(buf, easel->canvas_image()->buf);
 				easel->canvas_image()->resend_texture();
-				easel->update_canvas_image();
+				easel->canvas().sync_gfx_with_image();
 			}
 		}
 		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate270Action_Perf)
