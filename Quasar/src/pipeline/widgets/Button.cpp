@@ -7,7 +7,7 @@ void TButton::init(const WidgetPlacement& wp, std::shared_ptr<TextRender>&& txt)
 	children.resize(_W_COUNT);
 	assign_widget(this, TEXT, std::move(txt));
 	if (parent_mbh)
-		parent_mbh->children.push_back(&handler);
+		parent_mbh->add_child(&handler);
 	handler.callback = [this](const MouseButtonEvent& m) {
 		if (m.action == IAction::PRESS)
 		{
@@ -78,12 +78,6 @@ TButton::TButton(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, fl
 {
 	init(wp, std::make_shared<TextRender>(frange, font_size, "", glm::vec2{ 0.5f, 0.5f }));
 	text().set_text(std::move(txt));
-}
-
-TButton::~TButton()
-{
-	if (parent_mbh)
-		parent_mbh->remove_child(&handler);
 }
 
 void TButton::draw()

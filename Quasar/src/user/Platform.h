@@ -32,13 +32,31 @@ enum class MouseMode
 
 enum class Key
 {
+	A = GLFW_KEY_A,
+	B = GLFW_KEY_B,
+	C = GLFW_KEY_C,
+	D = GLFW_KEY_D,
 	E = GLFW_KEY_E,
+	F = GLFW_KEY_F,
 	G = GLFW_KEY_G,
+	H = GLFW_KEY_H,
 	I = GLFW_KEY_I,
+	J = GLFW_KEY_J,
+	K = GLFW_KEY_K,
+	L = GLFW_KEY_L,
+	M = GLFW_KEY_M,
 	N = GLFW_KEY_N,
 	O = GLFW_KEY_O,
+	P = GLFW_KEY_P,
+	Q = GLFW_KEY_Q,
+	R = GLFW_KEY_R,
 	S = GLFW_KEY_S,
+	T = GLFW_KEY_T,
+	U = GLFW_KEY_U,
+	V = GLFW_KEY_V,
+	W = GLFW_KEY_W,
 	X = GLFW_KEY_X,
+	Y = GLFW_KEY_Y,
 	Z = GLFW_KEY_Z,
 	LEFT_SHIFT = GLFW_KEY_LEFT_SHIFT,
 	RIGHT_SHIFT = GLFW_KEY_RIGHT_SHIFT,
@@ -53,8 +71,23 @@ enum class Key
 	SPACE = GLFW_KEY_SPACE,
 	F11 = GLFW_KEY_F11,
 	ROW0 = GLFW_KEY_0,
+	ROW1 = GLFW_KEY_1,
+	ROW2 = GLFW_KEY_2,
+	ROW3 = GLFW_KEY_3,
+	ROW4 = GLFW_KEY_4,
+	ROW5 = GLFW_KEY_5,
+	ROW6 = GLFW_KEY_6,
+	ROW7 = GLFW_KEY_7,
+	ROW8 = GLFW_KEY_8,
+	ROW9 = GLFW_KEY_9,
 	ENTER = GLFW_KEY_ENTER,
 	ESCAPE = GLFW_KEY_ESCAPE,
+	DELETE = GLFW_KEY_DELETE,
+	INSERT = GLFW_KEY_INSERT,
+	RIGHT = GLFW_KEY_RIGHT,
+	LEFT = GLFW_KEY_LEFT,
+	DOWN = GLFW_KEY_DOWN,
+	UP = GLFW_KEY_UP,
 };
 
 enum class MouseButton
@@ -94,7 +127,17 @@ template<std::derived_from<InputEvent> Event>
 struct InputEventHandler
 {
 	std::function<void(const Event&)> callback = [](const Event&) {};
+private:
+	InputEventHandler<Event>* parent = nullptr;
 	std::vector<InputEventHandler<Event>*> children;
+public:
+	~InputEventHandler()
+	{
+		if (parent)
+			parent->remove_child(this);
+		for (InputEventHandler<Event>* child : children)
+			child->parent = nullptr;
+	}
 
 	void on_callback(const Event& event) const
 	{
@@ -107,11 +150,44 @@ struct InputEventHandler
 		callback(event);
 	}
 
-	void remove_child(const InputEventHandler<Event>* child)
+	void add_child(InputEventHandler<Event>* child)
 	{
-		auto iter = std::find(children.begin(), children.end(), child);
-		if (iter != children.end())
-			children.erase(iter);
+		if (child)
+		{
+			child->parent = this;
+			children.push_back(child);
+		}
+	}
+
+	void insert_child(size_t pos, InputEventHandler<Event>* child)
+	{
+		if (child)
+		{
+			child->parent = this;
+			children.insert(children.begin() + pos, child);
+		}
+	}
+
+	void remove_child(InputEventHandler<Event>* child)
+	{
+		if (child)
+		{
+			auto iter = std::find(children.begin(), children.end(), child);
+			if (iter != children.end())
+			{
+				child->parent = nullptr;
+				children.erase(iter);
+			}
+		}
+	}
+
+	void fast_remove_child(size_t pos, InputEventHandler<Event>* child)
+	{
+		if (child && pos < children.size() && children[pos] == child)
+		{
+			child->parent = nullptr;
+			children.erase(children.begin() + pos);
+		}
 	}
 };
 
@@ -199,6 +275,8 @@ typedef InputEventHandler<DisplayScaleEvent> DisplayScaleHandler;
 struct WindowHandle
 {
 	unsigned char flags = 0;
+
+	~WindowHandle();
 	
 	static const unsigned char OWN_CURSOR = 0b1;
 	static const unsigned char OWN_MOUSE_MODE = 0b10;
@@ -280,6 +358,7 @@ struct Window
 	bool is_alt_pressed() const { return is_key_pressed(Key::LEFT_ALT) || is_key_pressed(Key::RIGHT_ALT); }
 	bool is_super_pressed() const { return is_key_pressed(Key::LEFT_SUPER) || is_key_pressed(Key::RIGHT_SUPER); }
 	bool is_mouse_button_pressed(MouseButton mb) const { return glfwGetMouseButton(window, int(mb)) != int(IAction::RELEASE); }
+	bool any_mouse_button_pressed() const { return is_mouse_button_pressed(MouseButton::LEFT) || is_mouse_button_pressed(MouseButton::MIDDLE) || is_mouse_button_pressed(MouseButton::RIGHT); }
 
 	bool is_cursor_available(const WindowHandle* owner) const;
 	bool owns_cursor(const WindowHandle* owner) const;

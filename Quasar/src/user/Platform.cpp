@@ -4,7 +4,6 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 #include "Machine.h"
-#include "GUI.h"
 
 static void window_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -153,29 +152,22 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
 		{
 			k.consumed = true;
-			if (!is_maximized())
-				toggle_fullscreen();
+			if (is_maximized())
+				maximized = false;
+			toggle_fullscreen();
 			Machine.on_render();
 		}
 		else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mods::ALT)
 		{
 			k.consumed = true;
 			if (!is_fullscreen())
+			{
 				toggle_maximized();
-			Machine.on_render();
+				Machine.on_render();
+			}
 		}
 		};
-	root_key.children.push_back(&window_maximizer);
-
-	root_key.callback = [this](const KeyEvent& k) {
-		if (k.key == Key::ESCAPE && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
-		{
-			k.consumed = true;
-			set_fullscreen(false);
-			set_maximized(false);
-			Machine.on_render();
-		}
-		};
+	root_key.add_child(&window_maximizer);
 }
 
 Window::~Window()
@@ -407,4 +399,13 @@ void Window::end_frame() const
 void Window::set_size_limits(int minwidth, int minheight, int maxwidth, int maxheight) const
 {
 	glfwSetWindowSizeLimits(window, minwidth, minheight, maxwidth, maxheight);
+}
+
+WindowHandle::~WindowHandle()
+{
+	if (Machine.main_window)
+	{
+		Machine.main_window->release_cursor(this);
+		Machine.main_window->release_mouse_mode(this);
+	}
 }

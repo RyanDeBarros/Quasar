@@ -1,8 +1,11 @@
 #include "Easel.h"
 
+#include <glm/gtc/type_ptr.inl>
+
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 #include "../render/Uniforms.h"
+#include "../render/FlatSprite.h"
 
 Gridlines::Gridlines()
 	: shader(FileSystem::shader_path("gridlines.vert"), FileSystem::shader_path("gridlines.frag"))
@@ -52,11 +55,10 @@ void Gridlines::update_scale(Scale scale) const
 		lwy /= scale.y;
 	if (2.0f * lwx >= scale.x * line_spacing.x - self_intersection_threshold || 2.0f * lwy >= scale.y * line_spacing.y - self_intersection_threshold)
 	{
-		_visible = false;
+		_nonobstructing = false;
 		return;
 	}
-	else
-		_visible = true;
+	_nonobstructing = true;
 
 	float x1 = -width * 0.5f - lwx;
 	float y1 = -height * 0.5f - lwy;
@@ -135,7 +137,7 @@ void Gridlines::update_scale(Scale scale) const
 
 void Gridlines::draw() const
 {
-	if (_visible)
+	if (_visible && _nonobstructing)
 	{
 		bind_shader(shader);
 		bind_vao_buffers(vao, vb);
@@ -158,20 +160,87 @@ void Gridlines::set_color(ColorFrame color) const
 	Uniforms::send_4(shader, "u_Color", color.rgba().as_vec(), 0, true);
 }
 
+void Gridlines::send_buffer() const
+{
+	bind_vao_buffers(vao, vb);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, num_vertices() * shader.stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
+	unbind_vao_buffers();
+}
+
+void Gridlines::send_flat_transform(FlatTransform canvas_transform) const
+{
+	if (_visible)
+	{
+		Uniforms::send_4(shader, "u_FlatTransform", canvas_transform.packed());
+		update_scale(canvas_transform.scale);
+		send_buffer();
+		_send_flat_transform = false;
+	}
+	else
+		_send_flat_transform = true;
+}
+
+void Gridlines::sync_with_image(const Buffer& buf, Scale canvas_scale)
+{
+	if (_visible)
+	{
+		width = buf.width;
+		height = buf.height;
+		resize_grid(canvas_scale);
+		send_buffer();
+		_sync_with_image = false;
+	}
+	else
+		_sync_with_image = true;
+}
+
+void Gridlines::set_visible(bool visible, const Canvas& canvas)
+{
+	if (!_visible && visible)
+	{
+		_visible = true;
+		if (_send_flat_transform)
+			send_flat_transform(canvas.self.transform);
+		if (_sync_with_image)
+			sync_with_image(fs_wget(canvas, Canvas::SPRITE).image->buf, canvas.self.transform.scale);
+	}
+	else if (_visible && !visible)
+	{
+		_visible = false;
+		_send_flat_transform = false;
+		_sync_with_image = false;
+	}
+}
+
+constexpr GLuint CHECKERBOARD_TSLOT = 0;
+constexpr GLuint CANVAS_SPRITE_TSLOT = 1;
+
+Canvas::Canvas(Shader* sprite_shader)
+	: Widget(_W_COUNT)
+{
+	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(sprite_shader));
+	fs_wget(*this, CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
+	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(sprite_shader));
+	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
+}
+
 void Canvas::create_checkerboard_image()
 {
-	Image* img = new Image();
+	auto img = std::make_shared<Image>();
 	img->buf.width = 2;
 	img->buf.height = 2;
 	img->buf.chpp = 4;
 	img->buf.pxnew();
 	img->gen_texture();
-	checkerboard.set_image(std::shared_ptr<Image>(img));
+	wp_at(CHECKERBOARD).transform.scale = { img->buf.width, img->buf.height };
+	fs_wget(*this, CHECKERBOARD).image = std::move(img);
+	fs_wget(*this, CHECKERBOARD).update_transform();
 	set_checkerboard_uv_size(0, 0);
 }
 
 void Canvas::sync_checkerboard_colors() const
 {
+	const FlatSprite& checkerboard = fs_wget(*this, CHECKERBOARD);
 	if (checkerboard.image)
 	{
 		for (size_t i = 0; i < 2; ++i)
@@ -194,6 +263,7 @@ void Canvas::sync_checkerboard_colors() const
 
 void Canvas::sync_checkerboard_texture() const
 {
+	const FlatSprite& checkerboard = fs_wget(*this, CHECKERBOARD);
 	if (checkerboard.image)
 	{
 		checkerboard.image->resend_texture();
@@ -206,7 +276,7 @@ void Canvas::sync_checkerboard_texture() const
 
 void Canvas::set_checkerboard_uv_size(float width, float height) const
 {
-	checkerboard.set_uvs(Bounds{ 0.0f, width, 0.0f, height });
+	fs_wget(*this, CHECKERBOARD).set_uvs(Bounds{ 0.0f, width, 0.0f, height });
 }
 
 void Canvas::set_checker_size(glm::ivec2 checker_size)
@@ -217,255 +287,486 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
 {
-	sprite.set_image(img);
-	if (sprite.image)
-	{
-		set_checkerboard_uv_size(0.5f * sprite.image->buf.width * checker_size_inv.x, 0.5f * sprite.image->buf.height * checker_size_inv.y);
-		checkerboard.set_modulation(ColorFrame());
-	}
-	else
-		checkerboard.set_modulation(ColorFrame(0));
+	fs_wget(*this, SPRITE).image = img;
+	sync_gfx_with_image();
 }
 
 void Canvas::set_image(std::shared_ptr<Image>&& img)
 {
-	sprite.set_image(std::move(img));
+	fs_wget(*this, SPRITE).image = std::move(img);
+	sync_gfx_with_image();
+}
+
+void Canvas::sync_checkerboard_with_image()
+{
+	FlatSprite& sprite = fs_wget(*this, SPRITE);
 	if (sprite.image)
 	{
-		set_checkerboard_uv_size(0.5f * sprite.image->buf.width * checker_size_inv.x, 0.5f * sprite.image->buf.height * checker_size_inv.y);
-		checkerboard.set_modulation(ColorFrame());
+		const Buffer& buf = sprite.image->buf;
+		sprite.self.transform.scale = { buf.width, buf.height };
+		sprite.update_transform();
+		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
+		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
+		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
 	}
 	else
-		checkerboard.set_modulation(ColorFrame(0));
+		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
+}
+
+void Canvas::sync_gridlines_with_image()
+{
+	Image* img = fs_wget(*this, SPRITE).image.get();
+	if (img)
+	{
+		visible = true;
+		minor_gridlines.sync_with_image(img->buf, self.transform.scale);
+		major_gridlines.sync_with_image(img->buf, self.transform.scale);
+	}
 }
 
 void Canvas::sync_transform()
 {
-	sprite.sync_transform();
-	checkerboard.transform = sprite.transform;
-	if (sprite.image)
-		checkerboard.transform.scale *= glm::vec2{ sprite.image->buf.width * 0.5f, sprite.image->buf.height * 0.5f };
-	checkerboard.sync_transform();
+	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
+	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
+}
+
+void Canvas::sync_gfx_with_image()
+{
+	sync_checkerboard_with_image();
+	sync_gridlines_with_image();
+	sync_transform();
 }
 
 Easel::Easel()
-	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) }})
+	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
+	bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
 {
-	static constexpr size_t num_quads = 3;
-
-	varr = new GLfloat[num_quads * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE];
-	background.varr = varr;
-	canvas.checkerboard.varr = background.varr + FlatSprite::NUM_VERTICES * FlatSprite::STRIDE;
-	canvas.sprite.varr = canvas.checkerboard.varr + FlatSprite::NUM_VERTICES * FlatSprite::STRIDE;
-	background.initialize_varr();
-	canvas.checkerboard.initialize_varr();
-	canvas.sprite.initialize_varr();
-	canvas.create_checkerboard_image();
-	canvas.set_image(nullptr);
-
-	canvas.checker1 = Machine.preferences.checker1;
-	canvas.checker2 = Machine.preferences.checker2;
-	canvas.set_checker_size(Machine.preferences.checker_size);
-	canvas.sync_checkerboard_colors();
-
-	GLuint IARR[num_quads * 6]{
-		0, 1, 2, 2, 3, 0,
-		4, 5, 6, 6, 7, 4,
-		8, 9, 10, 10, 11, 8
-	};
-	initialize_dynamic_vao(vao, vb, ib, num_quads * FlatSprite::NUM_VERTICES, sprite_shader.stride, sizeof(IARR) / sizeof(*IARR), varr, IARR, sprite_shader.attributes);
-
-	background.sync_texture_slot(-1.0f);
-	canvas.checkerboard.sync_texture_slot(CHECKERBOARD_TSLOT);
-	canvas.sprite.sync_texture_slot(CANVAS_SPRITE_TSLOT);
-
-	background.set_image(nullptr, 1, 1);
-	background.set_modulation(ColorFrame(HSV(0.5f, 0.15f, 0.15f), 0.5f));
+	initialize_widget();
+	connect_input_handlers();
 }
 
-Easel::~Easel()
+void Easel::initialize_widget()
 {
-	delete_vao_buffers(vao, vb, ib);
-	delete[] varr;
+	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
+	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(HSV(0.5f, 0.15f, 0.15f).to_rgb(), 0.5f).as_vec()));
+	ur_wget(widget, BACKGROUND).send_buffer();
+
+	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&sprite_shader));
+	Canvas& cnvs = canvas();
+	cnvs.create_checkerboard_image();
+	cnvs.set_image(nullptr);
+	cnvs.checker1 = Machine.preferences.checker1;
+	cnvs.checker2 = Machine.preferences.checker2;
+	cnvs.set_checker_size(Machine.preferences.checker_size);
+	cnvs.sync_checkerboard_colors();
+}
+
+void Easel::connect_input_handlers()
+{
+	mb_handler.callback = [this](const MouseButtonEvent& mb) {
+		if (ImGui::GetIO().WantCaptureMouse)
+			return;
+		if (mb.button == MouseButton::MIDDLE)
+		{
+			if (mb.action == IAction::PRESS && cursor_in_clipping())
+			{
+				mb.consumed = true;
+				begin_panning();
+			}
+			else if (mb.action == IAction::RELEASE)
+				end_panning();
+		}
+		else if (mb.button == MouseButton::LEFT)
+		{
+			if (mb.action == IAction::PRESS && Machine.main_window->is_key_pressed(Key::SPACE) && cursor_in_clipping())
+			{
+				mb.consumed = true;
+				begin_panning();
+			}
+			else if (mb.action == IAction::RELEASE)
+				end_panning();
+		}
+		};
+	scroll_handler.callback = [this](const ScrollEvent& s) {
+		if (!panning_info.panning && cursor_in_clipping())
+		{
+			s.consumed = true;
+			zoom_by(s.yoff);
+		}
+		};
 }
 
 void Easel::draw()
 {
-	// bind
-	bind_shader(sprite_shader);
-	// background
-	bind_vao_buffers(vao, vb, ib);
-	// canvas
-	if (!canvas_visible)
+	ur_wget(widget, BACKGROUND).draw();
+	Canvas& cnvs = canvas();
+	if (cnvs.visible)
 	{
-		QUASAR_GL(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0));
+		fs_wget(cnvs, Canvas::CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
+		fs_wget(cnvs, Canvas::SPRITE).draw(CANVAS_SPRITE_TSLOT);
+		cnvs.minor_gridlines.draw();
+		cnvs.major_gridlines.draw();
 	}
-	else
-	{
-		// checkerboard
-		bind_texture(canvas.checkerboard.image->tid, GLuint(CHECKERBOARD_TSLOT));
-		if (!canvas.sprite.image)
-		{
-			QUASAR_GL(glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0));
-		}
-		else
-		{
-			// canvas sprite
-			bind_texture(canvas.sprite.image->tid, GLuint(CANVAS_SPRITE_TSLOT));
-			QUASAR_GL(glDrawElements(GL_TRIANGLES, 18, GL_UNSIGNED_INT, 0));
-		}
-		// minor gridlines
-		if (minor_gridlines_visible)
-			canvas.minor_gridlines.draw();
-		// major gridlines
-		if (major_gridlines_visible)
-			canvas.major_gridlines.draw();
-	}
-	// unbind
-	unbind_vao_buffers();
-	unbind_shader();
-}
-
-void Easel::subsend_background_vao() const
-{
-	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, 4 * sprite_shader.stride * sizeof(GLfloat), background.varr));
-	unbind_vao_buffers();
-}
-
-void Easel::subsend_checkerboard_vao() const
-{
-	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, FlatSprite::NUM_VERTICES * FlatSprite::STRIDE * sizeof(GLfloat), 4 * sprite_shader.stride * sizeof(GLfloat), canvas.checkerboard.varr));
-	unbind_vao_buffers();
-}
-
-void Easel::subsend_canvas_sprite_vao() const
-{
-	bind_vao_buffers(vao, vb, ib);
-	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 2 * FlatSprite::NUM_VERTICES * FlatSprite::STRIDE * sizeof(GLfloat), 4 * sprite_shader.stride * sizeof(GLfloat), canvas.sprite.varr));
-	unbind_vao_buffers();
-}
-
-void Easel::send_gridlines_vao(const Gridlines& gridlines) const
-{
-	bind_vao_buffers(gridlines.vao, gridlines.vb);
-	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, gridlines.num_vertices() * gridlines.shader.stride * sizeof(GLfloat), gridlines.varr, GL_DYNAMIC_DRAW));
-	unbind_vao_buffers();
 }
 
 void Easel::_send_view()
 {
-	background.transform.scale = get_app_size();
-	background.sync_transform();
-	subsend_background_vao();
 	glm::mat3 cameraVP = vp_matrix();
 	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(canvas.minor_gridlines.shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(canvas.major_gridlines.shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(bkg_shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", cameraVP);
+	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", cameraVP);
 	unbind_shader();
+	sync_widget();
+}
+
+void Easel::sync_widget()
+{
+	widget.wp_at(BACKGROUND).transform.scale = get_app_size();
+	WidgetPlacement wp = widget.wp_at(BACKGROUND).relative_to(widget.self.transform);
+	UnitRenderable& bkg = ur_wget(widget, BACKGROUND);
+	bkg.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
+	bkg.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
+	bkg.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
+	bkg.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
+	bkg.send_buffer();
 }
 
 void Easel::sync_canvas_transform()
 {
-	canvas.sync_transform();
-	subsend_canvas_sprite_vao();
-	subsend_checkerboard_vao();
-	if (minor_gridlines_visible)
-		gridlines_send_flat_transform(canvas.minor_gridlines);
-	else
-		_buffer_minor_gridlines_send_flat_transform = true;
-	if (major_gridlines_visible)
-		gridlines_send_flat_transform(canvas.major_gridlines);
-	else
-		_buffer_major_gridlines_send_flat_transform = true;
-	unbind_shader();
+	canvas().sync_transform();
+	canvas().minor_gridlines.send_flat_transform(canvas().self.transform);
+	canvas().major_gridlines.send_flat_transform(canvas().self.transform);
 }
 
-void Easel::gridlines_send_flat_transform(Gridlines& gridlines) const
+Image* Easel::canvas_image() const
 {
-	Uniforms::send_4(gridlines.shader, "u_FlatTransform", canvas.transform().packed());
-	update_gridlines_scale(gridlines);
+	return fs_wget(canvas(), Canvas::SPRITE).image.get();
 }
 
-void Easel::resize_gridlines(Gridlines& gridlines) const
+bool Easel::minor_gridlines_are_visible() const
 {
-	gridlines.resize_grid(canvas.scale());
-	send_gridlines_vao(gridlines);
-}
-
-void Easel::update_gridlines_scale(const Gridlines& gridlines) const
-{
-	gridlines.update_scale(canvas.scale());
-	send_gridlines_vao(gridlines);
-}
-
-void Easel::gridlines_sync_with_image(Gridlines& gridlines) const
-{
-	gridlines.width = canvas.sprite.image->buf.width;
-	gridlines.height = canvas.sprite.image->buf.height;
-	resize_gridlines(gridlines);
-	send_gridlines_vao(gridlines);
-}
-
-void Easel::set_canvas_image(const std::shared_ptr<Image>& img)
-{
-	canvas.set_image(img);
-	canvas_visible = true;
-	if (minor_gridlines_visible)
-		gridlines_sync_with_image(canvas.minor_gridlines);
-	else
-		_buffer_minor_gridlines_sync_with_image = true;
-	if (major_gridlines_visible)
-		gridlines_sync_with_image(canvas.major_gridlines);
-	else
-		_buffer_major_gridlines_sync_with_image = true;
-}
-
-void Easel::set_canvas_image(std::shared_ptr<Image>&& img)
-{
-	canvas.set_image(std::move(img));
-	canvas_visible = true;
-	if (minor_gridlines_visible)
-		gridlines_sync_with_image(canvas.minor_gridlines);
-	else
-		_buffer_minor_gridlines_sync_with_image = true;
-	if (major_gridlines_visible)
-		gridlines_sync_with_image(canvas.major_gridlines);
-	else
-		_buffer_major_gridlines_sync_with_image = true;
+	return canvas().minor_gridlines.visible();
 }
 
 void Easel::set_minor_gridlines_visibility(bool visible)
 {
-	if (!minor_gridlines_visible && visible)
-	{
-		if (_buffer_minor_gridlines_send_flat_transform)
-			gridlines_send_flat_transform(canvas.minor_gridlines);
-		if (_buffer_minor_gridlines_sync_with_image)
-			gridlines_sync_with_image(canvas.minor_gridlines);
-	}
-	else if (minor_gridlines_visible && !visible)
-	{
-		_buffer_minor_gridlines_send_flat_transform = false;
-		_buffer_minor_gridlines_sync_with_image = false;
-	}
-	minor_gridlines_visible = visible;
+	canvas().minor_gridlines.set_visible(visible, canvas());
+}
+
+bool Easel::major_gridlines_are_visible() const
+{
+	return canvas().major_gridlines.visible();
 }
 
 void Easel::set_major_gridlines_visibility(bool visible)
 {
-	if (!major_gridlines_visible && visible)
+	canvas().major_gridlines.set_visible(visible, canvas());
+}
+
+void Easel::begin_panning()
+{
+	if (!panning_info.panning)
 	{
-		if (_buffer_major_gridlines_send_flat_transform)
-			gridlines_send_flat_transform(canvas.major_gridlines);
-		if (_buffer_major_gridlines_sync_with_image)
-			gridlines_sync_with_image(canvas.major_gridlines);
+		panning_info.initial_canvas_pos = canvas().self.transform.position;
+		panning_info.initial_cursor_pos = get_app_cursor_pos();
+		panning_info.panning = true;
+		Machine.main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
 	}
-	else if (major_gridlines_visible && !visible)
+}
+
+void Easel::end_panning()
+{
+	if (panning_info.panning)
 	{
-		_buffer_major_gridlines_send_flat_transform = false;
-		_buffer_major_gridlines_sync_with_image = false;
+		panning_info.panning = false;
+		Machine.main_window->release_cursor(&panning_info.wh);
+		Machine.main_window->release_mouse_mode(&panning_info.wh);
 	}
-	major_gridlines_visible = visible;
+}
+
+void Easel::cancel_panning()
+{
+	if (panning_info.panning)
+	{
+		panning_info.panning = false;
+		canvas().self.transform.position = panning_info.initial_canvas_pos;
+		sync_canvas_transform();
+		Machine.main_window->release_cursor(&panning_info.wh);
+		Machine.main_window->release_mouse_mode(&panning_info.wh);
+	}
+}
+
+void Easel::update_panning()
+{
+	if (panning_info.panning)
+	{
+		Position pan_delta = get_app_cursor_pos() - panning_info.initial_cursor_pos;
+		Position pos = pan_delta + panning_info.initial_canvas_pos;
+		if (Machine.main_window->is_shift_pressed())
+		{
+			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
+				pos.x = panning_info.initial_canvas_pos.x;
+			else
+				pos.y = panning_info.initial_canvas_pos.y;
+		}
+		if (canvas().self.transform.position != pos)
+		{
+			canvas().self.transform.position = pos;
+			sync_canvas_transform();
+		}
+
+		if (!Machine.main_window->owns_mouse_mode(&panning_info.wh) && !cursor_in_clipping())
+			Machine.main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
+		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
+		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
+	}
+}
+
+void Easel::zoom_by(float zoom)
+{
+	Position cursor_world;
+	if (!Machine.main_window->is_ctrl_pressed())
+		cursor_world = to_world_coordinates(Machine.cursor_screen_pos());
+
+	float factor = Machine.main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
+	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, zoom), zoom_info.in_min, zoom_info.in_max);
+	float zoom_change = new_zoom / zoom_info.zoom;
+	canvas().self.transform.scale *= zoom_change;
+	Position delta_position = (canvas().self.transform.position - cursor_world) * zoom_change;
+	canvas().self.transform.position = cursor_world + delta_position;
+
+	sync_canvas_transform();
+	zoom_info.zoom = new_zoom;
+}
+
+void Easel::reset_camera()
+{
+	zoom_info.zoom = zoom_info.initial;
+	canvas().self.transform = {};
+	if (canvas_image())
+	{
+		float fit_scale = std::min(get_app_width() / canvas_image()->buf.width, get_app_height() / canvas_image()->buf.height);
+		if (fit_scale < 1.0f)
+		{
+			canvas().self.transform.scale *= fit_scale;
+			zoom_info.zoom *= fit_scale;
+		}
+		else
+		{
+			fit_scale /= Machine.preferences.min_initial_image_window_proportion;
+			if (fit_scale > 1.0f)
+			{
+				canvas().self.transform.scale *= fit_scale;
+				zoom_info.zoom *= fit_scale;
+			}
+		}
+	}
+	sync_canvas_transform();
+}
+
+void Easel::flip_image_horizontally()
+{
+	struct FlipHorizontallyAction : public ActionBase
+	{
+		Easel* easel;
+		FlipHorizontallyAction(Easel* easel) : easel(easel) { weight = sizeof(FlipHorizontallyAction); }
+		virtual void forward() override { if (easel) easel->canvas_image()->flip_horizontally(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->flip_horizontally(); }
+		QUASAR_ACTION_EQUALS_OVERRIDE(FlipHorizontallyAction)
+	};
+	struct FlipHorizontallyAction_Perf : public ActionBase
+	{
+		Easel* easel;
+		Buffer buf;
+		FlipHorizontallyAction_Perf(Easel* easel) : easel(easel)
+		{
+			weight = sizeof(FlipHorizontallyAction_Perf);
+			buf = easel->canvas_image()->buf;
+			buf.pxnew();
+			subbuffer_copy(buf, easel->canvas_image()->buf);
+			buf.flip_horizontally();
+			weight += buf.bytes();
+		}
+		~FlipHorizontallyAction_Perf() { delete[] buf.pixels; }
+		virtual void forward() override { execute(); }
+		virtual void backward() override { execute(); }
+		void execute()
+		{
+			if (easel)
+			{
+				std::swap(buf, easel->canvas_image()->buf);
+				easel->canvas_image()->update_texture();
+			}
+		}
+		QUASAR_ACTION_EQUALS_OVERRIDE(FlipHorizontallyAction_Perf)
+	};
+	if (image_edit_perf_mode)
+		Machine.history.execute(std::make_shared<FlipHorizontallyAction_Perf>(this));
+	else
+		Machine.history.execute(std::make_shared<FlipHorizontallyAction>(this));
+}
+
+void Easel::flip_image_vertically()
+{
+	struct FlipVerticallyAction : public ActionBase
+	{
+		Easel* easel;
+		FlipVerticallyAction(Easel* easel) : easel(easel) { weight = sizeof(FlipVerticallyAction); }
+		virtual void forward() override { if (easel) easel->canvas_image()->flip_vertically(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->flip_vertically(); }
+		QUASAR_ACTION_EQUALS_OVERRIDE(FlipVerticallyAction)
+	};
+	struct FlipVerticallyAction_Perf : public ActionBase
+	{
+		Easel* easel;
+		Buffer buf;
+		FlipVerticallyAction_Perf(Easel* easel) : easel(easel)
+		{
+			weight = sizeof(FlipVerticallyAction_Perf);
+			buf = easel->canvas_image()->buf;
+			buf.pxnew();
+			subbuffer_copy(buf, easel->canvas_image()->buf);
+			buf.flip_vertically();
+			weight += buf.bytes();
+		}
+		~FlipVerticallyAction_Perf() { delete[] buf.pixels; }
+		virtual void forward() override { execute(); }
+		virtual void backward() override { execute(); }
+		void execute()
+		{
+			if (easel)
+			{
+				std::swap(buf, easel->canvas_image()->buf);
+				easel->canvas_image()->update_texture();
+			}
+		}
+		QUASAR_ACTION_EQUALS_OVERRIDE(FlipVerticallyAction_Perf)
+	};
+	if (image_edit_perf_mode)
+		Machine.history.execute(std::make_shared<FlipVerticallyAction_Perf>(this));
+	else
+		Machine.history.execute(std::make_shared<FlipVerticallyAction>(this));
+}
+
+void Easel::rotate_image_90()
+{
+	struct Rotate90Action : public ActionBase
+	{
+		Easel* easel;
+		Rotate90Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate90Action); }
+		virtual void forward() override { if (easel) { easel->canvas_image()->rotate_90_del_old(); easel->canvas().sync_gfx_with_image(); } }
+		virtual void backward() override { if (easel) { easel->canvas_image()->rotate_270_del_old(); easel->canvas().sync_gfx_with_image(); } }
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate90Action)
+	};
+	struct Rotate90Action_Perf : public ActionBase
+	{
+		Easel* easel;
+		Buffer buf;
+		Rotate90Action_Perf(Easel* easel) : easel(easel)
+		{
+			weight = sizeof(Rotate90Action_Perf);
+			buf = easel->canvas_image()->buf.rotate_90_ret_new();
+			weight += buf.bytes();
+		}
+		~Rotate90Action_Perf() { delete[] buf.pixels; }
+		virtual void forward() override { execute(); }
+		virtual void backward() override { execute(); }
+		void execute()
+		{
+			if (easel)
+			{
+				std::swap(buf, easel->canvas_image()->buf);
+				easel->canvas_image()->resend_texture();
+				easel->canvas().sync_gfx_with_image();
+			}
+		}
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate90Action_Perf)
+	};
+	if (image_edit_perf_mode)
+		Machine.history.execute(std::make_shared<Rotate90Action_Perf>(this));
+	else
+		Machine.history.execute(std::make_shared<Rotate90Action>(this));
+}
+
+void Easel::rotate_image_180()
+{
+	struct Rotate180Action : public ActionBase
+	{
+		Easel* easel;
+		Rotate180Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate180Action); }
+		virtual void forward() override { if (easel) easel->canvas_image()->rotate_180(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->rotate_180(); }
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate180Action)
+	};
+	struct Rotate180Action_Perf : public ActionBase
+	{
+		Easel* easel;
+		Buffer buf;
+		Rotate180Action_Perf(Easel* easel) : easel(easel)
+		{
+			weight = sizeof(Rotate180Action_Perf);
+			buf = easel->canvas_image()->buf;
+			buf.pxnew();
+			subbuffer_copy(buf, easel->canvas_image()->buf);
+			buf.rotate_180();
+			weight += buf.bytes();
+		}
+		~Rotate180Action_Perf() { delete[] buf.pixels; }
+		virtual void forward() override { execute(); }
+		virtual void backward() override { execute(); }
+		void execute()
+		{
+			if (easel)
+			{
+				std::swap(buf, easel->canvas_image()->buf);
+				easel->canvas_image()->update_texture();
+			}
+		}
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate180Action_Perf)
+	};
+	if (image_edit_perf_mode)
+		Machine.history.execute(std::make_shared<Rotate180Action_Perf>(this));
+	else
+		Machine.history.execute(std::make_shared<Rotate180Action>(this));
+}
+
+void Easel::rotate_image_270()
+{
+	struct Rotate270Action : public ActionBase
+	{
+		Easel* easel;
+		Rotate270Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate270Action); }
+		virtual void forward() override { if (easel) { easel->canvas_image()->rotate_270_del_old(); easel->canvas().sync_gfx_with_image(); } }
+		virtual void backward() override { if (easel) { easel->canvas_image()->rotate_90_del_old(); easel->canvas().sync_gfx_with_image(); } }
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate270Action)
+	};
+	struct Rotate270Action_Perf : public ActionBase
+	{
+		Easel* easel;
+		Buffer buf;
+		Rotate270Action_Perf(Easel* easel) : easel(easel)
+		{
+			weight = sizeof(Rotate270Action_Perf);
+			buf = easel->canvas_image()->buf.rotate_270_ret_new();
+			weight += buf.bytes();
+		}
+		~Rotate270Action_Perf() { delete[] buf.pixels; }
+		virtual void forward() override { execute(); }
+		virtual void backward() override { execute(); }
+		void execute()
+		{
+			if (easel)
+			{
+				std::swap(buf, easel->canvas_image()->buf);
+				easel->canvas_image()->resend_texture();
+				easel->canvas().sync_gfx_with_image();
+			}
+		}
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate270Action_Perf)
+	};
+	if (image_edit_perf_mode)
+		Machine.history.execute(std::make_shared<Rotate270Action_Perf>(this));
+	else
+		Machine.history.execute(std::make_shared<Rotate270Action>(this));
 }

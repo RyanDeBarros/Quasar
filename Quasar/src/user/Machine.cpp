@@ -2,15 +2,16 @@
 
 #include <tinyfd/tinyfiledialogs.h>
 
-#include "UserInput.h"
-#include "GUI.h"
+#include "ControlScheme.h"
 #include "pipeline/panels/Panel.h"
 #include "pipeline/panels/Easel.h"
 #include "pipeline/panels/Palette.h"
+#include "pipeline/panels/BrushesPanel.h"
+#include "pipeline/panels/ScenePanel.h"
+#include "pipeline/panels/Menu.h"
 #include "pipeline/text/TextRender.h"
 #include "pipeline/text/CommonFonts.h"
 #include "variety/GLutility.h"
-#include "variety/Utils.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;
@@ -35,45 +36,89 @@ namespace Data
 		static double held_time = 0.0;
 		static const double held_interval = 0.1, held_start_interval = 0.5; // SETTINGS not const, but editable
 	}
+
+	static ControlScheme control_scheme = ControlScheme::FILE;
+
+	namespace Input
+	{
+		static WindowSizeHandler* resize_handler = nullptr;
+		static DisplayScaleHandler* rescale_handler = nullptr;
+		static KeyHandler* global_key_handler = nullptr;
+		static PathDropHandler* path_drop_handler = nullptr;
+	}
 }
 
 static PanelGroup* panels = nullptr;
 
-static Easel* easel()
+static Easel* easel() { return dynamic_cast<Easel*>(panels->panels[0].get()); }
+static PalettePanel* palette() { return dynamic_cast<PalettePanel*>(panels->panels[1].get()); }
+static BrushesPanel* brushes() { return dynamic_cast<BrushesPanel*>(panels->panels[2].get()); }
+static ScenePanel* scene() { return dynamic_cast<ScenePanel*>(panels->panels[3].get()); }
+static MenuPanel* menu() { return dynamic_cast<MenuPanel*>(panels->panels[4].get()); }
+
+static void create_panels()
 {
-	return dynamic_cast<Easel*>(panels->panels[0].get());
+	panels = new PanelGroup();
+	panels->panels.push_back(std::make_unique<Easel>());
+	panels->panels.push_back(std::make_unique<PalettePanel>());
+	panels->panels.push_back(std::make_unique<BrushesPanel>());
+	panels->panels.push_back(std::make_unique<ScenePanel>());
+	panels->panels.push_back(std::make_unique<MenuPanel>());
 }
 
-static Palette* palette()
+static void init_panels_layout()
 {
-	return dynamic_cast<Palette*>(panels->panels[1].get());
-}
-
-void MachineImpl::init_panels_layout()
-{
-	easel()->bounds.x1 = window_layout_info.initial_brush_panel_width;
-	easel()->bounds.x2 = window_layout_info.initial_width - window_layout_info.initial_palette_panel_width;
-	easel()->bounds.y1 = window_layout_info.initial_views_panel_height;
-	easel()->bounds.y2 = window_layout_info.initial_height - window_layout_info.initial_menu_panel_height;
+	auto& layout = Machine.window_layout_info;
+	
+	menu()->bounds.x1 = 0;
+	menu()->bounds.x2 = layout.initial_width;
+	menu()->bounds.y1 = layout.initial_height - layout.initial_menu_panel_height;
+	menu()->bounds.y2 = layout.initial_height;
+	
+	easel()->bounds.x1 = layout.initial_brush_panel_width;
+	easel()->bounds.x2 = layout.initial_width - layout.initial_palette_panel_width;
+	easel()->bounds.y1 = layout.initial_scene_panel_height;
+	easel()->bounds.y2 = layout.initial_height - layout.initial_menu_panel_height;
+	
 	palette()->bounds.x1 = easel()->bounds.x2;
-	palette()->bounds.x2 = window_layout_info.initial_width;
+	palette()->bounds.x2 = layout.initial_width;
 	palette()->bounds.y1 = easel()->bounds.y1;
 	palette()->bounds.y2 = easel()->bounds.y2;
+	
+	brushes()->bounds.x1 = 0;
+	brushes()->bounds.x2 = easel()->bounds.x1;
+	brushes()->bounds.y1 = easel()->bounds.y1;
+	brushes()->bounds.y2 = easel()->bounds.y2;
+	
+	scene()->bounds.x1 = 0;
+	scene()->bounds.x2 = layout.initial_width;
+	scene()->bounds.y1 = 0;
+	scene()->bounds.y2 = layout.initial_scene_panel_height;
 }
 
 static void update_panels_to_window_size(int width, int height)
 {
-	//easel()->bounds.x1 = 
-	if (palette()->visible)
-		easel()->bounds.x2 = width - Machine.window_layout_info.initial_palette_panel_width;
-	else
-		easel()->bounds.x2 = width;
-	//easel()->bounds.y1 = 
-	easel()->bounds.y2 = height - Machine.window_layout_info.initial_menu_panel_height;
+	auto& layout = Machine.window_layout_info;
+
+	menu()->bounds.x2 = width;
+	menu()->bounds.y1 = height - layout.menu_panel_height;
+	menu()->bounds.y2 = height;
+
+	easel()->bounds.x1 = brushes()->visible ? layout.brushes_panel_width : 0;
+	easel()->bounds.x2 = palette()->visible ? width - layout.palette_panel_width : width;
+	easel()->bounds.y1 = scene()->visible ? layout.scene_panel_height : 0;
+	easel()->bounds.y2 = height - layout.menu_panel_height; // menu()->visible is always true
+
 	palette()->bounds.x1 = easel()->bounds.x2;
 	palette()->bounds.x2 = width;
 	palette()->bounds.y1 = easel()->bounds.y1;
 	palette()->bounds.y2 = easel()->bounds.y2;
+
+	brushes()->bounds.x2 = easel()->bounds.x1;
+	brushes()->bounds.y1 = easel()->bounds.y1;
+	brushes()->bounds.y2 = easel()->bounds.y2;
+
+	scene()->bounds.x2 = width;
 }
 
 MachineImpl::MachineImpl()
@@ -91,19 +136,74 @@ bool MachineImpl::create_main_window()
 		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
-
-		main_window->root_window_size.children.push_back(&resize_handler);
-		main_window->root_display_scale.children.push_back(&rescale_handler);
-		main_window->root_mouse_button.children.push_back(&easel_mb_handler);
-		main_window->root_mouse_button.children.push_back(&palette_mb_handler);
-		main_window->root_key.children.push_back(&palette_key_handler);
-		main_window->root_scroll.children.push_back(&easel_scroll_handler);
-		main_window->root_scroll.children.push_back(&palette_scroll_handler);
-		main_window->root_key.children.push_back(&global_key_handler);
-		main_window->root_path_drop.children.push_back(&path_drop_handler);
 		return true;
 	}
 	return false;
+}
+
+static void init_handlers()
+{
+	Data::Input::resize_handler = new WindowSizeHandler();
+	Data::Input::rescale_handler = new DisplayScaleHandler();
+	Data::Input::global_key_handler = new KeyHandler();
+	Data::Input::path_drop_handler = new PathDropHandler();
+
+	Window& window = *Machine.main_window;
+	window.root_window_size.add_child(Data::Input::resize_handler);
+	window.root_display_scale.add_child(Data::Input::rescale_handler);
+	window.root_mouse_button.add_child(&palette()->mb_handler);
+	window.root_mouse_button.add_child(&easel()->mb_handler);
+	window.root_key.add_child(&menu()->key_handler);
+	window.root_key.add_child(&palette()->key_handler);
+	window.root_scroll.add_child(&palette()->scroll_handler);
+	window.root_scroll.add_child(&easel()->scroll_handler);
+	window.root_key.add_child(Data::Input::global_key_handler);
+	window.root_path_drop.add_child(Data::Input::path_drop_handler);
+
+	Data::Input::resize_handler->callback = [](const WindowSizeEvent& ws) {
+		update_panels_to_window_size(ws.width, ws.height);
+		panels->set_projection();
+		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
+		// LATER while resizing, just color window (block content) until resizing is done, for smoother transitioning.
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		Machine.main_window->swap_buffers();
+		Machine.on_render();
+		};
+	Data::Input::rescale_handler->callback = [](const DisplayScaleEvent& ds) {
+		Machine.set_app_scale(ds.scale);
+		};
+	Data::Input::path_drop_handler->callback = [](const PathDropEvent& pd) {
+		if (pd.num_paths >= 1 && Machine.cursor_in_easel())
+		{
+			FilePath filepath = pd.paths[0];
+			static const size_t num_image_formats = 6;
+			static const char* image_formats[num_image_formats] = { ".png", ".jpg", ".gif", ".bmp", ".tga", ".hdr" };
+			static const size_t num_quasar_formats = 1;
+			static const char* quasar_formats[num_quasar_formats] = { ".qua" };
+			if (filepath.has_any_extension(image_formats, num_image_formats))
+			{
+				pd.consumed = true;
+				Machine.main_window->focus();
+				Machine.import_file(filepath);
+			}
+			else if (filepath.has_any_extension(quasar_formats, num_quasar_formats))
+			{
+				pd.consumed = true;
+				Machine.main_window->focus();
+				Machine.open_file(filepath);
+			}
+			// LATER note no error popup otherwise?
+		}
+		};
+	Data::Input::global_key_handler->callback = &handle_global_key_event;
+}
+
+static void invalidate_handlers()
+{
+	QUASAR_INVALIDATE_PTR(Data::Input::resize_handler);
+	QUASAR_INVALIDATE_PTR(Data::Input::rescale_handler);
+	QUASAR_INVALIDATE_PTR(Data::Input::path_drop_handler);
+	QUASAR_INVALIDATE_PTR(Data::Input::global_key_handler);
 }
 
 void MachineImpl::init_renderer()
@@ -116,47 +216,28 @@ void MachineImpl::init_renderer()
 	
 	Fonts::load_common_fonts();
 
-	panels = new PanelGroup();
-	panels->panels.push_back(std::make_unique<Easel>());
-	panels->panels.push_back(std::make_unique<Palette>());
-
+	create_panels();
 	init_panels_layout();
-
+	init_handlers();
 	panels->sync_panels();
-
-	resize_handler.callback = [this](const WindowSizeEvent& ws) {
-		update_panels_to_window_size(ws.width, ws.height);
-		panels->set_projection();
-		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
-		// LATER while resizing, just color window (block content) until resizing is done, for smoother transitioning.
-		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
-		main_window->swap_buffers();
-		Machine.on_render();
-		};
-	rescale_handler.callback = [](const DisplayScaleEvent& ds) {
-		Machine.set_app_scale(ds.scale);
-		};
-
 	canvas_reset_camera();
-	attach_canvas_controls();
-	attach_global_user_controls();
 	
-	easel()->canvas.minor_gridlines.set_color(ColorFrame(RGBA(31, 63, 107, 255))); // SETTINGS
-	easel()->canvas.minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
-	easel()->canvas.major_gridlines.set_color(ColorFrame(RGBA(31, 72, 127, 255))); // SETTINGS
-	easel()->canvas.major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
+	easel()->canvas().minor_gridlines.set_color(ColorFrame(RGBA(31, 63, 107, 255))); // SETTINGS
+	easel()->canvas().minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
+	easel()->canvas().major_gridlines.set_color(ColorFrame(RGBA(31, 72, 127, 255))); // SETTINGS
+	easel()->canvas().major_gridlines.line_width = 4.0f; // cannot be < 1.0 // SETTINGS
 
 	set_app_scale(main_window->display_scale());
 
 	main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
-		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_views_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
+		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_scene_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
 		//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
-		window_layout_info.menu_panel_height + window_layout_info.views_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
+		window_layout_info.menu_panel_height + window_layout_info.scene_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	
 	Data::update_time();
 
 	import_file(FileSystem::workspace_path("ex/flag.png"));
-	//show_major_gridlines();
+	easel()->image_edit_perf_mode = true;
 }
 
 void MachineImpl::destroy()
@@ -165,7 +246,7 @@ void MachineImpl::destroy()
 	QUASAR_INVALIDATE_PTR(panels);
 	Fonts::invalidate_common_fonts();
 	history.clear_history();
-	main_window->release_cursor(&panning_info.wh);
+	invalidate_handlers();
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 
@@ -180,7 +261,6 @@ void MachineImpl::on_render()
 	main_window->new_frame();
 	panels->render();
 	main_window_clip().scissor();
-	render_main_menu_bar();
 	update_currently_bound_shader();
 	main_window->end_frame();
 }
@@ -250,11 +330,12 @@ static void process_redo()
 void MachineImpl::process()
 {
 	Data::update_time();
-	canvas_update_panning();
+	easel()->update_panning();
 	if (Data::History::held_undo)
 		process_undo();
 	else if (Data::History::held_redo)
 		process_redo();
+	LOG << LOG.flush; // flush all pending logs so that elsewhere, LOG.nl can be used without LOG.endl unless necessary.
 }
 
 void MachineImpl::mark()
@@ -269,19 +350,49 @@ void MachineImpl::unmark()
 	// LATER remove (*) from title if it exists
 }
 
-FlatTransform& MachineImpl::canvas_transform() const
-{
-	return easel()->canvas.transform();
-}
-
-void MachineImpl::sync_canvas_transform() const
-{
-	easel()->sync_canvas_transform();
-}
-
 bool MachineImpl::canvas_image_ready() const
 {
 	return easel()->canvas_image();
+}
+
+bool MachineImpl::canvas_is_panning() const
+{
+	return easel()->panning_info.panning;
+}
+
+void MachineImpl::canvas_cancel_panning() const
+{
+	return easel()->cancel_panning();
+}
+
+void MachineImpl::palette_insert_color()
+{
+	palette()->new_color();
+}
+
+void MachineImpl::palette_overwrite_color()
+{
+	palette()->overwrite_color();
+}
+
+void MachineImpl::palette_delete_color()
+{
+	palette()->delete_color();
+}
+
+void MachineImpl::palette_new_subpalette()
+{
+	palette()->new_subpalette();
+}
+
+void MachineImpl::palette_rename_subpalette()
+{
+	palette()->rename_subpalette();
+}
+
+void MachineImpl::palette_delete_subpalette()
+{
+	palette()->delete_subpalette();
 }
 
 Scale MachineImpl::inv_app_scale() const
@@ -299,7 +410,7 @@ void MachineImpl::set_app_scale(Scale scale) const
 	Data::app_inverse_scale = 1.0f / scale;
 	panels->set_projection();
 	float scale1d = mean2d1d(scale.x, scale.y);
-	static const float gui_scale_factor = 1.25f; // SETTINGS
+	static const float gui_scale_factor = 1.15f; // SETTINGS
 	float gui_scale = scale1d * gui_scale_factor;
 	ImGui::GetStyle().ScaleAllSizes(gui_scale);
 	ImGui::GetIO().FontGlobalScale = gui_scale;
@@ -356,6 +467,16 @@ Position MachineImpl::cursor_world_pos(const glm::mat3& inverse_vp) const
 	return to_world_coordinates(main_window->cursor_pos(), inverse_vp);
 }
 
+ControlScheme MachineImpl::get_control_scheme() const
+{
+	return Data::control_scheme;
+}
+
+void MachineImpl::set_control_scheme(ControlScheme scheme) const
+{
+	Data::control_scheme = scheme;
+}
+
 glm::vec2 MachineImpl::easel_cursor_world_pos() const
 {
 	return easel()->to_world_coordinates(cursor_screen_pos());
@@ -385,7 +506,7 @@ bool MachineImpl::new_file()
 		if (response == 1) if (!save_file()) return false;
 	}
 	current_filepath.clear();
-	easel()->canvas_visible = false;
+	easel()->canvas().visible = false;
 	mark();
 	// LATER clear palletes/frames/layers/etc.
 	return true;
@@ -512,7 +633,7 @@ void MachineImpl::open_file(const FilePath& filepath)
 
 void MachineImpl::import_file(const FilePath& filepath)
 {	
-	easel()->set_canvas_image(std::make_shared<Image>(filepath));
+	easel()->canvas().set_image(std::make_shared<Image>(filepath));
 	auto title = "Quasar - " + filepath.filename();
 	main_window->set_title(title.c_str()); // LATER don't set title of window. put image filename in bottom status bar
 	canvas_reset_camera();
@@ -539,156 +660,47 @@ void MachineImpl::start_held_redo()
 	Data::History::on_starting_interval = true;
 }
 
-void MachineImpl::canvas_begin_panning()
-{
-	if (!panning_info.panning)
-	{
-		panning_info.initial_canvas_pos = canvas_position();
-		panning_info.initial_cursor_pos = easel()->get_app_cursor_pos();
-		panning_info.panning = true;
-		main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
-	}
-}
-
-void MachineImpl::canvas_end_panning()
-{
-	if (panning_info.panning)
-	{
-		panning_info.panning = false;
-		main_window->release_cursor(&panning_info.wh);
-		main_window->release_mouse_mode(&panning_info.wh);
-	}
-}
-
-void MachineImpl::canvas_cancel_panning()
-{
-	if (panning_info.panning)
-	{
-		panning_info.panning = false;
-		canvas_position() = panning_info.initial_canvas_pos;
-		sync_canvas_transform();
-		main_window->release_cursor(&panning_info.wh);
-		main_window->release_mouse_mode(&panning_info.wh);
-	}
-}
-
-void MachineImpl::canvas_update_panning()
-{
-	if (panning_info.panning)
-	{
-		Position pan_delta = easel()->get_app_cursor_pos() - panning_info.initial_cursor_pos;
-		Position pos = pan_delta + panning_info.initial_canvas_pos;
-		if (main_window->is_shift_pressed())
-		{
-			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
-				pos.x = panning_info.initial_canvas_pos.x;
-			else
-				pos.y = panning_info.initial_canvas_pos.y;
-		}
-		canvas_position() = pos;
-		sync_canvas_transform();
-
-		if (!main_window->owns_mouse_mode(&panning_info.wh) && !easel()->cursor_in_clipping())
-			main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
-		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
-		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
-	}
-}
-
-void MachineImpl::canvas_zoom_by(float z)
-{
-	Position cursor_world;
-	if (!main_window->is_alt_pressed())
-		cursor_world = easel()->to_world_coordinates(cursor_screen_pos());
-
-	float factor = main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
-	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, z), zoom_info.in_min, zoom_info.in_max);
-	float zoom_change = new_zoom / zoom_info.zoom;
-	canvas_scale() *= zoom_change;
-	Position delta_position = (canvas_position() - cursor_world) * zoom_change;
-	canvas_position() = cursor_world + delta_position;
-
-	sync_canvas_transform();
-	zoom_info.zoom = new_zoom;
-}
-
-struct FlipHorizontallyAction : public ActionBase
-{
-	FlipHorizontallyAction() { weight = sizeof(FlipHorizontallyAction); }
-	void forward() override { easel()->canvas_image()->flip_horizontally(); }
-	void backward() override { easel()->canvas_image()->flip_horizontally(); }
-};
-
 void MachineImpl::flip_horizontally()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<FlipHorizontallyAction>();
-	history.execute(a);
+	easel()->flip_image_horizontally();
 }
-
-struct FlipVerticallyAction : public ActionBase
-{
-	FlipVerticallyAction() { weight = sizeof(FlipVerticallyAction); }
-	void forward() override { easel()->canvas_image()->flip_vertically(); }
-	void backward() override { easel()->canvas_image()->flip_vertically(); }
-};
 
 void MachineImpl::flip_vertically()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<FlipVerticallyAction>();
-	history.execute(a);
+	easel()->flip_image_vertically();
 }
-
-struct Rotate90Action : public ActionBase
-{
-	Rotate90Action() { weight = sizeof(Rotate90Action); }
-	void forward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
-	void backward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
-};
 
 void MachineImpl::rotate_90()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate90Action>();
-	history.execute(a);
+	easel()->rotate_image_90();
 }
-
-struct Rotate180Action : public ActionBase
-{
-	Rotate180Action() { weight = sizeof(Rotate180Action); }
-	void forward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
-	void backward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
-};
 
 void MachineImpl::rotate_180()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate180Action>();
-	history.execute(a);
+	easel()->rotate_image_180();
 }
-
-struct Rotate270Action : public ActionBase
-{
-	Rotate270Action() { weight = sizeof(Rotate270Action); }
-	void forward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
-	void backward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
-};
 
 void MachineImpl::rotate_270()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate270Action>();
-	history.execute(a);
+	easel()->rotate_image_270();
 }
 
-bool MachineImpl::brush_panel_visible() const
+bool MachineImpl::brushes_panel_visible() const
 {
-	return true;
+	return brushes()->visible;
 }
 
-void MachineImpl::open_brush_panel() const
+void MachineImpl::open_brushes_panel() const
 {
+	brushes()->visible = true;
+	brushes()->bounds.x2 = easel()->bounds.x1 = window_layout_info.brushes_panel_width;
 	panels->set_projection();
 }
 
-void MachineImpl::close_brush_panel() const
+void MachineImpl::close_brushes_panel() const
 {
+	brushes()->visible = false;
+	brushes()->bounds.x2 = easel()->bounds.x1 = 0;
 	panels->set_projection();
 }
 
@@ -700,90 +712,72 @@ bool MachineImpl::palette_panel_visible() const
 void MachineImpl::open_palette_panel() const
 {
 	palette()->visible = true;
-	easel()->bounds.x2 = main_window->width() - window_layout_info.initial_palette_panel_width;
-	palette()->bounds.x1 = easel()->bounds.x2;
-	palette()->bounds.x2 = main_window->width();
+	palette()->bounds.x1 = easel()->bounds.x2 = main_window->width() - window_layout_info.palette_panel_width;
 	panels->set_projection();
 }
 
 void MachineImpl::close_palette_panel() const
 {
 	palette()->visible = false;
-	easel()->bounds.x2 = main_window->width();
+	palette()->bounds.x1 = easel()->bounds.x2 = main_window->width();
 	panels->set_projection();
 }
 
-bool MachineImpl::views_panel_visible() const
+bool MachineImpl::scene_panel_visible() const
 {
-	return true;
+	return scene()->visible;
 }
 
-void MachineImpl::open_views_panel() const
+void MachineImpl::open_scene_panel() const
 {
+	scene()->visible = true;
+	scene()->bounds.y2 = brushes()->bounds.y1 = palette()->bounds.y1 = easel()->bounds.y1 = window_layout_info.scene_panel_height;
 	panels->set_projection();
 }
 
-void MachineImpl::close_views_panel() const
+void MachineImpl::close_scene_panel() const
 {
+	scene()->visible = false;
+	scene()->bounds.y2 = brushes()->bounds.y1 = palette()->bounds.y1 = easel()->bounds.y1 = 0;
 	panels->set_projection();
 }
 
-void MachineImpl::canvas_reset_camera()
+void MachineImpl::canvas_reset_camera() const
 {
-	zoom_info.zoom = zoom_info.initial;
-	canvas_transform() = {};
-	if (easel()->canvas_image())
-	{
-		float fit_scale = std::min(easel()->get_app_width() / easel()->canvas_image()->buf.width, easel()->get_app_height() / easel()->canvas_image()->buf.height);
-		if (fit_scale < 1.0f)
-		{
-			canvas_scale() *= fit_scale;
-			zoom_info.zoom *= fit_scale;
-		}
-		else
-		{
-			fit_scale /= preferences.min_initial_image_window_proportion;
-			if (fit_scale > 1.0f)
-			{
-				canvas_scale() *= fit_scale;
-				zoom_info.zoom *= fit_scale;
-			}
-		}
-	}
-	sync_canvas_transform();
+	easel()->reset_camera();
 }
 
-bool MachineImpl::minor_gridlines_visible()
+bool MachineImpl::minor_gridlines_visible() const
 {
 	return easel()->minor_gridlines_are_visible();
 }
 
-void MachineImpl::show_minor_gridlines()
+void MachineImpl::show_minor_gridlines() const
 {
 	easel()->set_minor_gridlines_visibility(true);
 }
 
-void MachineImpl::hide_minor_gridlines()
+void MachineImpl::hide_minor_gridlines() const
 {
 	easel()->set_minor_gridlines_visibility(false);
 }
 
-bool MachineImpl::major_gridlines_visible()
+bool MachineImpl::major_gridlines_visible() const
 {
 	return easel()->major_gridlines_are_visible();
 }
 
-void MachineImpl::show_major_gridlines()
+void MachineImpl::show_major_gridlines() const
 {
 	easel()->set_major_gridlines_visibility(true);
 }
 
-void MachineImpl::hide_major_gridlines()
+void MachineImpl::hide_major_gridlines() const
 {
 	easel()->set_major_gridlines_visibility(false);
 }
 
-void MachineImpl::download_user_manual()
+void MachineImpl::download_user_manual() const
 {
 	static const int num_filters = 1;
 	static const char* filters[num_filters] = { "md" };

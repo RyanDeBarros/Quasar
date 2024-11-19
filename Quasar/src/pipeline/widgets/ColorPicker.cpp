@@ -4,32 +4,9 @@
 #include <imgui/imgui_internal.h>
 
 #include "variety/GLutility.h"
-#include "edit/color/Color.h"
 #include "user/Machine.h"
-#include "user/GUI.h"
 #include "../render/Uniforms.h"
-#include "RoundRect.h"
-#include "../text/TextRender.h"
-#include "../text/CommonFonts.h"
 #include "Button.h"
-
-struct RGBAChangeAction : public ActionBase
-{
-	ColorPicker& picker;
-	RGBA prev_c, new_c;
-
-	RGBAChangeAction(ColorPicker& picker, const RGBA& prev_c, const RGBA& new_c) : picker(picker), prev_c(prev_c), new_c(new_c) { weight = sizeof(RGBAChangeAction); }
-
-	void forward() override
-	{
-		picker.set_color(new_c, false);
-	}
-
-	void backward() override
-	{
-		picker.set_color(prev_c, false);
-	}
-};
 
 static const size_t MAIN_TABBAR_BUTTONS[] {
 	ColorPicker::BUTTON_GRAPHIC,
@@ -73,6 +50,7 @@ const float preview_x = 0;
 const float preview_y = slider4_y - 60;
 const float preview_w = 80;
 const float preview_h = 40;
+const float preview_overlap_offset = 10;
 
 const float left_text_x = -94;
 const float text_sep = 70;
@@ -116,14 +94,8 @@ ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, K
 	send_gradient_color_uniform(quad_shader, GradientIndex::TRANSPARENT, ColorFrame(0));
 	initialize_widget();
 	connect_input_handlers();
-	set_color(ColorFrame(), false);
-}
-
-ColorPicker::~ColorPicker()
-{
-	parent_mb_handler.remove_child(&mb_handler);
-	parent_key_handler.remove_child(&key_handler);
-	Machine.main_window->release_cursor(&wh_interactable);
+	set_pri_color(ColorFrame(), false);
+	set_alt_color(ColorFrame(), false);
 }
 
 void ColorPicker::draw()
@@ -172,7 +144,16 @@ void ColorPicker::draw()
 		break;
 	}
 	cp_render_gui_front();
-	ur_wget(*this, PREVIEW).draw();
+	if (editing_color == EditingColor::PRIMARY)
+	{
+		ur_wget(*this, PREVIEW_ALT).draw();
+		ur_wget(*this, PREVIEW_PRI).draw();
+	}
+	else if (editing_color == EditingColor::ALTERNATE)
+	{
+		ur_wget(*this, PREVIEW_PRI).draw();
+		ur_wget(*this, PREVIEW_ALT).draw();
+	}
 }
 
 void ColorPicker::process()
@@ -190,6 +171,11 @@ void ColorPicker::process()
 			b_t_wget(*this, BUTTON_QUAD).process();
 			b_t_wget(*this, BUTTON_WHEEL).process();
 		}
+		Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
+		if (wp_at(PREVIEW_PRI).contains_point(local_cursor_pos) || wp_at(PREVIEW_ALT).contains_point(local_cursor_pos))
+			Machine.main_window->request_cursor(&wh_preview, StandardCursor::HAND);
+		else
+			Machine.main_window->release_cursor(&wh_preview);
 	}
 	else
 	{
@@ -203,11 +189,14 @@ void ColorPicker::process()
 			b_t_wget(*this, BUTTON_QUAD).unhover();
 			b_t_wget(*this, BUTTON_WHEEL).unhover();
 		}
+		Machine.main_window->release_cursor(&wh_preview);
 	}
 }
 
 void ColorPicker::cp_render_gui_back()
 {
+	bool update_gfx = false;
+
 	ImGui::SetNextWindowBgAlpha(0);
 	ImGui::SetNextWindowPos({ gui_transform.position.x, gui_transform.position.y });
 	ImGui::SetNextWindowSize({ gui_transform.scale.x, gui_transform.scale.y });
@@ -217,9 +206,8 @@ void ColorPicker::cp_render_gui_back()
 		ImGuiWindowFlags_NoMove |
 		ImGuiWindowFlags_NoScrollbar |
 		ImGuiWindowFlags_NoSavedSettings |
-		ImGuiWindowFlags_NoDecoration |
-		ImGuiWindowFlags_NoBackground;
-	if (ImGui::Begin("##color-picker", nullptr, window_flags))
+		ImGuiWindowFlags_NoDecoration;
+	if (ImGui::Begin("##color-picker", nullptr, window_flags | ImGuiWindowFlags_NoBackground))
 	{
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
 		ImGui::SetWindowFontScale(scale1d() * font_window_scale);
@@ -228,36 +216,43 @@ void ColorPicker::cp_render_gui_back()
 		{
 			if (showing_hex_popup)
 			{
-				Scale psz = { 0.5f * gui_transform.scale.x, 0.18f * gui_transform.scale.y };
+				Scale psz = { 0.6f * gui_transform.scale.x, 0.18f * gui_transform.scale.y };
 				ImGui::SetNextWindowSize({ psz.x, psz.y });
 				ImGui::SetNextWindowPos(ImVec2(gui_transform.position.x + 0.5f * gui_transform.scale.x - 0.5f * psz.x,
 					gui_transform.position.y + 0.475f * gui_transform.scale.y - 0.5f * psz.y));
-				ImGui::OpenPopup("hex-popup", ImGuiPopupFlags_MouseButtonLeft);
-			}
-			if (ImGui::BeginPopup("hex-popup", ImGuiWindowFlags_NoMove))
-			{
-				popup_hovered = ImGui::IsWindowHovered();
-				if (escape_to_close_popup)
+
+				if (ImGui::Begin("##rgb-hex-code-popup", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize | window_flags))
 				{
-					escape_to_close_popup = false;
-					tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
+					popup_hovered |= ImGui::IsWindowHovered();
+					if (escape_to_close_popup)
+					{
+						escape_to_close_popup = false;
+						tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
+					}
+					else
+					{
+						ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("RGB hex code").x) * 0.5f);
+						ImGui::Text("RGB hex code");
+						if (ImGui::BeginChild("##rgb-hex-code-input"))
+						{
+							popup_hovered |= ImGui::IsWindowHovered();
+							ImGui::Text("#");
+							ImGui::SameLine();
+							ImGui::SetNextItemWidth(100 * self.transform.scale.x);
+							if (ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size))
+							{
+								RGB prev_rgb = picker_color.rgb();
+								update_rgb_hex();
+								update_gfx |= prev_rgb != picker_color.rgb();
+							}
+							ImGui::EndChild();
+						}
+					}
+					ImGui::End();
 				}
-				if (showing_hex_popup)
-				{
-					ImGui::Text("RGB hex code");
-					ImGui::Text("#");
-					ImGui::SameLine();
-					ImGui::SetNextItemWidth(100 * self.transform.scale.x);
-					if (ImGui::InputText("##hex-popup-txtfld", rgb_hex, rgb_hex_size))
-						update_rgb_hex();
-				}
-				else
-					ImGui::CloseCurrentPopup();
-				ImGui::EndPopup();
 			}
 		}
 
-		float alpha = get_color().alpha;
 		const float imgui_slider_w = 200;
 		const float imgui_y_1 = 145 * self.transform.scale.y;
 		const float imgui_y_2 = imgui_y_1 + slider_sep * Machine.get_app_scale().y * self.transform.scale.y;
@@ -266,7 +261,7 @@ void ColorPicker::cp_render_gui_back()
 		const float imgui_sml_x = 120 * self.transform.scale.x;
 		if (state & State::SLIDER_RGB)
 		{
-			RGB rgb = get_color().rgb();
+			RGB rgb = picker_color.rgb();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				bool mod = false;
@@ -283,7 +278,10 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-blue", &b, 5, 10);
 				if (mod)
-					set_color(ColorFrame(RGB(r, g, b), alpha), true);
+				{
+					picker_color.set_rgb(RGB(r, g, b));
+					update_gfx = true;
+				}
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
@@ -299,12 +297,15 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-blue", &b, 5, 10, "%.2f");
 				if (mod)
-					set_color(RGBA(r * 0.01f, g * 0.01f, b * 0.01f, alpha), true);
+				{
+					picker_color.set_rgb(RGB(r * 0.01f, g * 0.01f, b * 0.01f));
+					update_gfx = true;
+				}
 			}
 		}
 		else if (state & State::SLIDER_HSV)
 		{
-			HSV hsv = get_color().hsv();
+			HSV hsv = picker_color.hsv();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				bool mod = false;
@@ -319,7 +320,10 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-value", &v, 5, 10);
 				if (mod)
-					set_color(ColorFrame(HSV(h, s, v), alpha), true);
+				{
+					picker_color.set_hsv(HSV(h, s, v));
+					update_gfx = true;
+				}
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
@@ -335,12 +339,15 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-value", &v, 5, 10, "%.2f");
 				if (mod)
-					set_color(HSVA(h * 0.01f, s * 0.01f, v * 0.01f, alpha), true);
+				{
+					picker_color.set_hsv(HSV(h * 0.01f, s * 0.01f, v * 0.01f));
+					update_gfx = true;
+				}
 			}
 		}
 		else if (state & State::SLIDER_HSL)
 		{
-			HSL hsl = get_color().hsl();
+			HSL hsl = picker_color.hsl();
 			if (txtfld_mode == TextFieldMode::NUMBER)
 			{
 				bool mod = false;
@@ -355,7 +362,10 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputInt("##it-light", &l, 5, 10);
 				if (mod)
-					set_color(ColorFrame(HSL(h, s, l), alpha), true);
+				{
+					picker_color.set_hsl(HSL(h, s, l));
+					update_gfx = true;
+				}
 			}
 			else if (txtfld_mode == TextFieldMode::PERCENT)
 			{
@@ -371,29 +381,39 @@ void ColorPicker::cp_render_gui_back()
 				ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 				mod |= ImGui::InputFloat("##it-light", &l, 5, 10, "%.2f");
 				if (mod)
-					set_color(HSLA(h * 0.01f, s * 0.01f, l * 0.01f, alpha), true);
+				{
+					picker_color.set_hsl(HSL(h * 0.01f, s * 0.01f, l * 0.01f));
+					update_gfx = true;
+				}
 			}
 		}
 		if (txtfld_mode == TextFieldMode::NUMBER)
 		{
-			ColorFrame color = get_color();
-			int a = color.get_pixel_a();
+			int a = picker_color.get_pixel_a();
 			ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_4)); 
 			ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 			if (ImGui::InputInt("##it-alpha", &a, 5, 10))
 			{
-				color.set_pixel_a(a);
-				set_color(color, true);
+				picker_color.set_pixel_a(a);
+				update_gfx = true;
 			}
 		}
 		else if (txtfld_mode == TextFieldMode::PERCENT)
 		{
-			ColorFrame color = get_color();
-			float a = color.alpha * 100;
+			float a = picker_color.alpha * 100;
 			ImGui::SetCursorPos(ImVec2(imgui_sml_x, imgui_y_4));
 			ImGui::SetNextItemWidth(imgui_slider_w * self.transform.scale.x);
 			if (ImGui::InputFloat("##it-alpha", &a, 5, 10, "%.2f"))
-				set_color(ColorFrame(color.rgb(), a * 0.01f), true);
+			{
+				picker_color.alpha = a * 0.01f;
+				update_gfx = true;
+			}
+		}
+
+		if (update_gfx)
+		{
+			sync_preview_color_with_picker();
+			set_gfx_from_picker_color();
 		}
 
 		ImGui::SetWindowFontScale(font_window_scale);
@@ -459,7 +479,7 @@ void ColorPicker::update_rgb_hex()
 		else
 			hex |= (rgb_hex[i] - '0') << (4 * (rgb_hex_size - 2 - i));
 	}
-	set_color(RGBA(RGB(hex), slider_normal_x(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR)), true);
+	picker_color.set_rgb(RGB(hex));
 }
 
 void ColorPicker::set_state(State _state)
@@ -474,9 +494,8 @@ void ColorPicker::set_state(State _state)
 			last_graphic_state = state;
 
 		release_cursor();
-		ColorFrame pre_color = get_color();
 		state = _state;
-		set_color(pre_color, false);
+		set_gfx_from_picker_color();
 
 		b_t_wget(*this, BUTTON_RGB_HEX_CODE).enabled = state & State::SLIDER_RGB;
 		b_t_wget(*this, BUTTON_QUAD).enabled = b_t_wget(*this, BUTTON_WHEEL).enabled = state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL);
@@ -687,15 +706,27 @@ void ColorPicker::initialize_widget()
 
 	// ---------- PREVIEW ----------
 	
-	assign_widget(this, PREVIEW, std::make_shared<W_UnitRenderable>(&quad_shader));
-	setup_rect_uvs(PREVIEW);
-	setup_gradient(PREVIEW, (GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW,
-		(GLint)GradientIndex::PREVIEW, (GLint)GradientIndex::PREVIEW);
-	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, ColorFrame());
-	wp_at(PREVIEW).transform.position.x = preview_x;
-	wp_at(PREVIEW).transform.position.y = preview_y;
-	wp_at(PREVIEW).transform.scale = { preview_w, preview_h };
-	wp_at(PREVIEW).pivot.y = 1;
+	assign_widget(this, PREVIEW_PRI, std::make_shared<W_UnitRenderable>(&quad_shader));
+	setup_rect_uvs(PREVIEW_PRI);
+	setup_gradient(PREVIEW_PRI, (GLint)GradientIndex::PREVIEW_PRI, (GLint)GradientIndex::PREVIEW_PRI,
+		(GLint)GradientIndex::PREVIEW_PRI, (GLint)GradientIndex::PREVIEW_PRI);
+	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, ColorFrame());
+	wp_at(PREVIEW_PRI).transform.position.x = preview_x + preview_overlap_offset;
+	wp_at(PREVIEW_PRI).transform.position.y = preview_y;
+	wp_at(PREVIEW_PRI).transform.scale = { preview_w, preview_h };
+	wp_at(PREVIEW_PRI).pivot.x = 1;
+	wp_at(PREVIEW_PRI).pivot.y = 1;
+
+	assign_widget(this, PREVIEW_ALT, std::make_shared<W_UnitRenderable>(&quad_shader));
+	setup_rect_uvs(PREVIEW_ALT);
+	setup_gradient(PREVIEW_ALT, (GLint)GradientIndex::PREVIEW_ALT, (GLint)GradientIndex::PREVIEW_ALT,
+		(GLint)GradientIndex::PREVIEW_ALT, (GLint)GradientIndex::PREVIEW_ALT);
+	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, ColorFrame());
+	wp_at(PREVIEW_ALT).transform.position.x = preview_x - preview_overlap_offset;
+	wp_at(PREVIEW_ALT).transform.position.y = preview_y;
+	wp_at(PREVIEW_ALT).transform.scale = { preview_w, preview_h };
+	wp_at(PREVIEW_ALT).pivot.x = 0;
+	wp_at(PREVIEW_ALT).pivot.y = 1;
 
 	// ---------- BACKGROUND ----------
 
@@ -841,16 +872,27 @@ void ColorPicker::initialize_widget()
 
 void ColorPicker::connect_input_handlers()
 {
-	parent_mb_handler.children.push_back(&mb_handler);
+	parent_mb_handler.add_child(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (showing_hex_popup && cursor_in_bkg())
 		{
-			mb.consumed = true;
-			if (mb.action == IAction::PRESS && showing_hex_popup && !popup_hovered)
-				tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
-			return;
+			if (mb.action == IAction::PRESS && mb.button != MouseButton::MIDDLE && showing_hex_popup && !popup_hovered)
+			{
+				mb.consumed = true;
+				Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
+				if (wp_at(PREVIEW_PRI).contains_point(local_cursor_pos) || wp_at(PREVIEW_ALT).contains_point(local_cursor_pos))
+				{
+					if (mb.button == MouseButton::LEFT)
+						set_editing_color(EditingColor::PRIMARY);
+					else if (mb.button == MouseButton::RIGHT)
+						set_editing_color(EditingColor::ALTERNATE);
+				}
+				else
+					tb_t_wget(*this, BUTTON_RGB_HEX_CODE).deselect();
+				return;
+			}
 		}
-		if (mb.button != MouseButton::LEFT)
+		if (mb.button != MouseButton::LEFT && mb.button != MouseButton::RIGHT)
 			return;
 		if (mb.action == IAction::PRESS && cursor_in_bkg())
 		{
@@ -859,6 +901,13 @@ void ColorPicker::connect_input_handlers()
 				Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 				if (wp_at(ALPHA_SLIDER).contains_point(local_cursor_pos))
 					mouse_handler_horizontal_slider(ALPHA_SLIDER, current_widget_control = ALPHA_SLIDER_CURSOR, local_cursor_pos);
+				else if (wp_at(PREVIEW_PRI).contains_point(local_cursor_pos) || wp_at(PREVIEW_ALT).contains_point(local_cursor_pos))
+				{
+					if (mb.button == MouseButton::LEFT)
+						set_editing_color(EditingColor::PRIMARY);
+					else
+						set_editing_color(EditingColor::ALTERNATE);
+				}
 				else if (state & State::GRAPHIC_QUAD)
 				{
 					if (wp_at(GRAPHIC_QUAD).contains_point(local_cursor_pos))
@@ -911,7 +960,7 @@ void ColorPicker::connect_input_handlers()
 				{
 					take_over_cursor();
 					mb.consumed = true;
-					current_action_color = get_color().rgba();
+					set_picker_color_from_gfx();
 					update_display_colors();
 				}
 			}
@@ -922,12 +971,11 @@ void ColorPicker::connect_input_handlers()
 			{
 				mb.consumed = true;
 				release_cursor();
-				Machine.history.push(std::make_shared<RGBAChangeAction>(*this, current_action_color, get_color().rgba()));
 			}
 		}
 	};
 
-	parent_key_handler.children.push_back(&key_handler);
+	parent_key_handler.add_child(&key_handler);
 	key_handler.callback = [this](const KeyEvent& k) {
 		if (ImGui::GetIO().WantCaptureKeyboard)
 			k.consumed = true;
@@ -935,6 +983,11 @@ void ColorPicker::connect_input_handlers()
 		{
 			k.consumed = true;
 			escape_to_close_popup = true;
+		}
+		else if (k.action == IAction::PRESS && k.key == Key::X && Machine.main_window->is_key_pressed(Key::SPACE))
+		{
+			k.consumed = true;
+			swap_picker_colors();
 		}
 		};
 }
@@ -975,7 +1028,10 @@ void ColorPicker::process_mb_down_events()
 		mouse_handler_horizontal_slider(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, local_cursor_pos);
 
 	if (current_widget_control >= 0)
+	{
+		set_picker_color_from_gfx();
 		update_display_colors();
+	}
 }
 
 void ColorPicker::take_over_cursor()
@@ -989,54 +1045,66 @@ void ColorPicker::release_cursor()
 	{
 		Machine.main_window->release_cursor(&wh_interactable);
 		current_widget_control = -1;
+		set_picker_color_from_gfx();
+		if (editing_color == EditingColor::PRIMARY)
+			send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
+		else if (editing_color == EditingColor::ALTERNATE)
+			send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, alt_color);
 	}
 }
 
-ColorFrame ColorPicker::get_color() const
+void ColorPicker::sync_preview_color_with_picker()
 {
-	ColorFrame color(slider_normal_x(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR));
+	if (editing_color == EditingColor::PRIMARY)
+		pri_color = picker_color;
+	else if (editing_color == EditingColor::ALTERNATE)
+		alt_color = picker_color;
+}
+
+void ColorPicker::set_picker_color_from_gfx()
+{
+	picker_color.alpha = slider_normal_x(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR);
 	if (state & State::GRAPHIC_QUAD)
 	{
 		glm::vec2 sv = get_graphic_quad_sat_and_value();
-		color.set_hsv(HSV(slider_normal_y(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR), sv[0], sv[1]));
+		picker_color.set_hsv(HSV(slider_normal_y(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR), sv[0], sv[1]));
 	}
 	else if (state & State::GRAPHIC_WHEEL)
 	{
 		glm::vec2 hs = get_graphic_wheel_hue_and_sat();
-		color.set_hsv(HSV(hs[0], hs[1], slider_normal_y(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR)));
+		picker_color.set_hsv(HSV(hs[0], hs[1], slider_normal_y(GRAPHIC_VALUE_SLIDER, GRAPHIC_VALUE_SLIDER_CURSOR)));
 	}
 	else if (state & State::SLIDER_RGB)
 	{
 		float r = slider_normal_x(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR);
 		float g = slider_normal_x(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR);
 		float b = slider_normal_x(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR);
-		color.set_rgb(RGB(r, g, b));
+		picker_color.set_rgb(RGB(r, g, b));
 	}
 	else if (state & State::SLIDER_HSV)
 	{
 		float h = slider_normal_x(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR);
 		float s = slider_normal_x(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR);
 		float v = slider_normal_x(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR);
-		color.set_hsv(HSV(h, s, v));
+		picker_color.set_hsv(HSV(h, s, v));
 	}
 	else if (state & State::SLIDER_HSL)
 	{
 		float h = slider_normal_x(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR);
 		float s = slider_normal_x(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR);
 		float l = slider_normal_x(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR);
-		color.set_hsl(HSL(h, s, l));
+		picker_color.set_hsl(HSL(h, s, l));
 	}
-	return color;
+	sync_preview_color_with_picker();
 }
 
-void ColorPicker::set_color(ColorFrame color, bool create_action)
+void ColorPicker::set_gfx_from_picker_color()
 {
-	ColorFrame prev_color = get_color();
-	move_slider_cursor_x_relative(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, color.alpha);
+	move_slider_cursor_x_relative(ALPHA_SLIDER, ALPHA_SLIDER_CURSOR, picker_color.alpha);
 	sync_single_standard_ur_transform(ALPHA_SLIDER_CURSOR);
 	if (state & State::GRAPHIC_QUAD)
 	{
-		HSV hsv = color.hsv();
+		HSV hsv = picker_color.hsv();
 		wp_at(GRAPHIC_QUAD_CURSOR).transform.position.x = wp_at(GRAPHIC_QUAD).interp_x(hsv.s);
 		wp_at(GRAPHIC_QUAD_CURSOR).transform.position.y = wp_at(GRAPHIC_QUAD).interp_y(hsv.v);
 		move_slider_cursor_y_relative(GRAPHIC_HUE_SLIDER, GRAPHIC_HUE_SLIDER_CURSOR, hsv.h);
@@ -1045,7 +1113,7 @@ void ColorPicker::set_color(ColorFrame color, bool create_action)
 	}
 	else if (state & State::GRAPHIC_WHEEL)
 	{
-		HSV hsv = color.hsv();
+		HSV hsv = picker_color.hsv();
 		float x = hsv.s * glm::cos(glm::tau<float>() * hsv.h);
 		float y = -hsv.s * glm::sin(glm::tau<float>() * hsv.h);
 		wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position.x = wp_at(GRAPHIC_HUE_WHEEL).interp_x(0.5f * (x + 1));
@@ -1056,7 +1124,7 @@ void ColorPicker::set_color(ColorFrame color, bool create_action)
 	}
 	else if (state & State::SLIDER_RGB)
 	{
-		RGB rgb = color.rgb();
+		RGB rgb = picker_color.rgb();
 		move_slider_cursor_x_relative(RGB_R_SLIDER, RGB_R_SLIDER_CURSOR, rgb.r);
 		move_slider_cursor_x_relative(RGB_G_SLIDER, RGB_G_SLIDER_CURSOR, rgb.g);
 		move_slider_cursor_x_relative(RGB_B_SLIDER, RGB_B_SLIDER_CURSOR, rgb.b);
@@ -1066,7 +1134,7 @@ void ColorPicker::set_color(ColorFrame color, bool create_action)
 	}
 	else if (state & State::SLIDER_HSV)
 	{
-		HSV hsv = color.hsv();
+		HSV hsv = picker_color.hsv();
 		move_slider_cursor_x_relative(HSV_H_SLIDER, HSV_H_SLIDER_CURSOR, hsv.h);
 		move_slider_cursor_x_relative(HSV_S_SLIDER, HSV_S_SLIDER_CURSOR, hsv.s);
 		move_slider_cursor_x_relative(HSV_V_SLIDER, HSV_V_SLIDER_CURSOR, hsv.v);
@@ -1076,7 +1144,7 @@ void ColorPicker::set_color(ColorFrame color, bool create_action)
 	}
 	else if (state & State::SLIDER_HSL)
 	{
-		HSL hsl = color.hsl();
+		HSL hsl = picker_color.hsl();
 		move_slider_cursor_x_relative(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR, hsl.h);
 		move_slider_cursor_x_relative(HSL_S_SLIDER, HSL_S_SLIDER_CURSOR, hsl.s);
 		move_slider_cursor_x_relative(HSL_L_SLIDER, HSL_L_SLIDER_CURSOR, hsl.l);
@@ -1085,12 +1153,63 @@ void ColorPicker::set_color(ColorFrame color, bool create_action)
 		sync_single_standard_ur_transform(HSL_L_SLIDER_CURSOR);
 	}
 	update_display_colors();
+}
 
-	if (create_action && color != prev_color)
+void ColorPicker::set_editing_color(EditingColor ec)
+{
+	if (editing_color != ec)
+		toggle_editing_color();
+}
+
+void ColorPicker::toggle_editing_color()
+{
+	editing_color = editing_color == EditingColor::PRIMARY ? EditingColor::ALTERNATE : EditingColor::PRIMARY;
+	picker_color = editing_color == EditingColor::PRIMARY ? pri_color : alt_color;
+	set_gfx_from_picker_color();
+}
+
+void ColorPicker::set_pri_color(ColorFrame color, bool toggle_on)
+{
+	pri_color = color;
+	if (toggle_on)
+		editing_color = EditingColor::PRIMARY;
+	if (editing_color == EditingColor::PRIMARY)
 	{
-		auto action = std::make_shared<RGBAChangeAction>(*this, prev_color.rgba(), color.rgba());
-		Machine.history.push(std::move(action));
+		picker_color = pri_color;
+		set_gfx_from_picker_color();
 	}
+	else
+		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
+}
+
+void ColorPicker::set_alt_color(ColorFrame color, bool toggle_on)
+{
+	alt_color = color;
+	if (toggle_on)
+		editing_color = EditingColor::ALTERNATE;
+	if (editing_color == EditingColor::ALTERNATE)
+	{
+		picker_color = alt_color;
+		set_gfx_from_picker_color();
+	}
+	else
+		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, alt_color);
+}
+
+void ColorPicker::swap_picker_colors()
+{
+	std::swap(pri_color, alt_color);
+	if (editing_color == EditingColor::PRIMARY)
+	{
+		picker_color = pri_color;
+		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, alt_color);
+	}
+	else if (editing_color == EditingColor::ALTERNATE)
+	{
+		picker_color = alt_color;
+		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
+	}
+	set_gfx_from_picker_color();
 }
 
 void ColorPicker::set_size(Scale size, bool sync)
@@ -1156,16 +1275,18 @@ void ColorPicker::move_slider_cursor_y_relative(size_t control, size_t cursor, f
 
 void ColorPicker::update_display_colors()
 {
-	ColorFrame color = get_color();
 	// preview
-	send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW, color);
+	if (editing_color == EditingColor::PRIMARY)
+		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
+	else if (editing_color == EditingColor::ALTERNATE)
+		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, alt_color);
 	// alpha
-	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, ColorFrame(color.rgb()));
-	set_circle_cursor_value(ALPHA_SLIDER_CURSOR, contrast_wb_value_complex_hsva(color.hsva()));
+	send_gradient_color_uniform(quad_shader, GradientIndex::ALPHA_SLIDER, ColorFrame(picker_color.rgb()));
+	set_circle_cursor_value(ALPHA_SLIDER_CURSOR, contrast_wb_value_complex_hsva(picker_color.hsva()));
 	send_cpwc_buffer(ALPHA_SLIDER_CURSOR);
 	if (state & State::GRAPHIC_QUAD)
 	{
-		HSV hsv = color.hsv();
+		HSV hsv = picker_color.hsv();
 		set_circle_cursor_value(GRAPHIC_QUAD_CURSOR, contrast_wb_value_complex_hsv(hsv));
 		send_cpwc_buffer(GRAPHIC_QUAD_CURSOR);
 		send_graphic_quad_hue_to_uniform(hsv.h);
@@ -1174,7 +1295,7 @@ void ColorPicker::update_display_colors()
 	}
 	else if (state & State::GRAPHIC_WHEEL)
 	{
-		HSV hsv = color.hsv();
+		HSV hsv = picker_color.hsv();
 		set_circle_cursor_value(GRAPHIC_HUE_WHEEL_CURSOR, contrast_wb_value_simple_hue_and_sat(hsv.h, hsv.s));
 		send_cpwc_buffer(GRAPHIC_HUE_WHEEL_CURSOR);
 		send_graphic_value_slider_hue_and_sat_to_uniform(hsv.h, hsv.s);
@@ -1185,9 +1306,9 @@ void ColorPicker::update_display_colors()
 	}
 	else if (state & State::SLIDER_RGB)
 	{
-		RGB rgb = color.rgb();
 		// LATER cursor contrast ? possibly not necessary
 		// hex
+		RGB rgb = picker_color.rgb();
 		rgb_hex[0] = to_hex(rgb.get_pixel_r() >> 4);
 		rgb_hex[1] = to_hex(rgb.get_pixel_r() & 0xF);
 		rgb_hex[2] = to_hex(rgb.get_pixel_g() >> 4);
@@ -1198,7 +1319,7 @@ void ColorPicker::update_display_colors()
 	}
 	else if (state & State::SLIDER_HSV)
 	{
-		HSV hsv = color.hsv();
+		HSV hsv = picker_color.hsv();
 		set_circle_cursor_value(HSV_H_SLIDER_CURSOR, contrast_wb_value_simple_hue(hsv.h));
 		set_circle_cursor_value(HSV_S_SLIDER_CURSOR, contrast_wb_value_complex_hsv(hsv));
 		set_circle_cursor_value(HSV_V_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_value(hsv.h, hsv.v));
@@ -1209,7 +1330,7 @@ void ColorPicker::update_display_colors()
 	}
 	else if (state & State::SLIDER_HSL)
 	{
-		HSL hsl = color.hsl();
+		HSL hsl = picker_color.hsl();
 		set_circle_cursor_value(HSL_H_SLIDER_CURSOR, contrast_wb_value_simple_hue(slider_normal_x(HSL_H_SLIDER, HSL_H_SLIDER_CURSOR)));
 		set_circle_cursor_value(HSL_S_SLIDER_CURSOR, contrast_wb_value_complex_hsl(hsl));
 		set_circle_cursor_value(HSL_L_SLIDER_CURSOR, contrast_wb_value_simple_hue_and_lightness(hsl.h, hsl.l));
@@ -1310,7 +1431,8 @@ void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, G
 
 void ColorPicker::sync_widget_with_vp()
 {
-	sync_single_standard_ur_transform(PREVIEW);
+	sync_single_standard_ur_transform(PREVIEW_PRI);
+	sync_single_standard_ur_transform(PREVIEW_ALT);
 	sync_single_standard_ur_transform(ALPHA_SLIDER);
 	sync_single_standard_ur_transform(ALPHA_SLIDER_CURSOR);
 	sync_single_standard_ur_transform(GRAPHIC_QUAD);

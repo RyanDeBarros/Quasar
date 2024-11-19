@@ -1,8 +1,11 @@
 #pragma once
 
 #include "Panel.h"
-#include "../render/FlatSprite.h"
+#include "user/Platform.h"
 #include "../render/Shader.h"
+#include "../widgets/Widget.h"
+#include "edit/color/Color.h"
+#include "edit/image/Image.h"
 
 struct Gridlines
 {
@@ -18,9 +21,12 @@ struct Gridlines
 	GLsizei* arrays_counts = nullptr;
 
 private:
-	mutable bool _visible = true;
-public:
+	bool _visible = false;
+	mutable bool _nonobstructing = true;
+	mutable bool _send_flat_transform = false;
+	mutable bool _sync_with_image = false;
 
+public:
 	Gridlines();
 	Gridlines(const Gridlines&) = delete;
 	Gridlines(Gridlines&&) noexcept = delete;
@@ -30,97 +36,132 @@ public:
 	void update_scale(Scale scale) const;
 	void draw() const;
 
+	bool visible() const { return _visible; }
 	unsigned short num_cols() const;
 	unsigned short num_rows() const;
 	GLsizei num_quads() const { return num_rows() + num_cols(); }
 	GLsizei num_vertices() const { return num_quads() * 4; }
 
 	void set_color(ColorFrame color) const;
+
+	void send_buffer() const;
+	void send_flat_transform(FlatTransform canvas_transform) const;
+	void sync_with_image(const Buffer& buf, Scale canvas_scale);
+
+	void set_visible(bool visible, const struct Canvas& canvas);
 };
 
-struct Canvas
+struct Canvas : public Widget
 {
-	SharedFlatSprite sprite;
-	SharedFlatSprite checkerboard;
 	RGBA checker1, checker2;
-
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
+
+	bool visible = false;
+
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
 public:
 	glm::ivec2 get_checker_size() const { return { roundf(1.0f / checker_size_inv.x), roundf(1.0f / checker_size_inv.y) }; }
 	void set_checker_size(glm::ivec2 checker_size);
 
+	Canvas(Shader* sprite_shader);
+	Canvas(const Canvas&) = delete;
+	Canvas(Canvas&&) noexcept = delete;
+
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
-
-	FlatTransform& transform() { return sprite.transform; }
-	const FlatTransform& transform() const { return sprite.transform; }
-	Position& position() { return sprite.transform.position; }
-	const Position& position() const { return sprite.transform.position; }
-	Scale& scale() { return sprite.transform.scale; }
-	const Scale& scale() const { return sprite.transform.scale; }
-
+	void sync_checkerboard_with_image();
+	void sync_gridlines_with_image();
 	void sync_transform();
+	void sync_gfx_with_image();
 
 	void create_checkerboard_image();
 	void sync_checkerboard_colors() const;
 	void sync_checkerboard_texture() const;
 	void set_checkerboard_uv_size(float width, float height) const;
+
+	enum : size_t
+	{
+		CHECKERBOARD,
+		SPRITE, // LATER SPRITE_START
+		_W_COUNT
+	};
 };
 
 struct Easel : public Panel
 {
-	constexpr static float CHECKERBOARD_TSLOT = 0.0f;
-	constexpr static float CANVAS_SPRITE_TSLOT = 1.0f;
-
-	GLfloat* varr = nullptr;
-	Canvas canvas;
-	GLuint vao = 0, vb = 0, ib = 0;
-	SharedFlatSprite background;
+	Shader bkg_shader;
 	Shader sprite_shader;
+	Widget widget;
 
-	bool canvas_visible = false;
-
-private:
-	bool minor_gridlines_visible = false;
-	bool _buffer_minor_gridlines_send_flat_transform = false;
-	bool _buffer_minor_gridlines_sync_with_image = false;
-	bool major_gridlines_visible = false;
-	bool _buffer_major_gridlines_send_flat_transform = false;
-	bool _buffer_major_gridlines_sync_with_image = false;
-public:
+	MouseButtonHandler mb_handler;
+	ScrollHandler scroll_handler;
 
 	Easel();
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
-	~Easel();
 
-	void draw() override;
+private:
+	void initialize_widget();
+	void connect_input_handlers();
 
-	void subsend_background_vao() const;
-	void subsend_checkerboard_vao() const;
-	void subsend_canvas_sprite_vao() const;
-	void send_gridlines_vao(const Gridlines& gridlines) const;
-	
-	void _send_view() override;
-	
+public:
+	virtual void draw() override;
+	virtual void _send_view() override;
+
+	void sync_widget();
 	void sync_canvas_transform();
-	
-	void resize_gridlines(Gridlines& gridlines) const;
-	void update_gridlines_scale(const Gridlines& gridlines) const;
-	void gridlines_send_flat_transform(Gridlines& gridlines) const;
-	void gridlines_sync_with_image(Gridlines& gridlines) const;
-	
-	void set_canvas_image(const std::shared_ptr<Image>& image);
-	void set_canvas_image(std::shared_ptr<Image>&& image);
-	void update_canvas_image() { set_canvas_image(canvas.sprite.image); sync_canvas_transform(); }
-	Image* canvas_image() const { return canvas.sprite.image.get(); }
-	std::shared_ptr<Image> canvas_image_ref() const { return canvas.sprite.image; }
 
-	bool minor_gridlines_are_visible() const { return minor_gridlines_visible; }
+	Image* canvas_image() const;
+
+	bool minor_gridlines_are_visible() const;
 	void set_minor_gridlines_visibility(bool visible);
-	bool major_gridlines_are_visible() const { return major_gridlines_visible; }
+	bool major_gridlines_are_visible() const;
 	void set_major_gridlines_visibility(bool visible);
+
+	struct
+	{
+		Position initial_cursor_pos{};
+		Position initial_canvas_pos{};
+		bool panning = false;
+	private:
+		friend Easel;
+		WindowHandle wh;
+	} panning_info;
+	struct
+	{
+		// SETTINGS (only some of them?)
+		constexpr static float initial = 0.5f;
+		constexpr static float in_min = 0.01f;
+		constexpr static float in_max = 100.0f;
+		constexpr static float factor = 1.5f;
+		constexpr static float factor_shift = 1.05f;
+		float zoom = initial;
+	} zoom_info;
+
+	void begin_panning();
+	void end_panning();
+	void cancel_panning();
+	void update_panning();
+	void zoom_by(float zoom);
+	void reset_camera();
+
+	bool image_edit_perf_mode = false; // SETTINGS this mode prioritizes performance over memory usage in action history. good for high-end computers, bad for low-end computers.
+
+	void flip_image_horizontally();
+	void flip_image_vertically();
+	void rotate_image_90();
+	void rotate_image_180();
+	void rotate_image_270();
+
+	Canvas& canvas() { return *widget.get<Canvas>(CANVAS); }
+	const Canvas& canvas() const { return *widget.get<Canvas>(CANVAS); }
+
+	enum : size_t
+	{
+		BACKGROUND,
+		CANVAS,
+		_W_COUNT
+	};
 };

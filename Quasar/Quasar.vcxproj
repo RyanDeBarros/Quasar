@@ -169,6 +169,9 @@
     <ClCompile Include="src\edit\image\PixelBuffer.cpp" />
     <ClCompile Include="src\edit\image\PixelBufferPaths.cpp" />
     <ClCompile Include="src\Logger.cpp" />
+    <ClCompile Include="src\pipeline\panels\BrushesPanel.cpp" />
+    <ClCompile Include="src\pipeline\panels\Menu.cpp" />
+    <ClCompile Include="src\pipeline\panels\ScenePanel.cpp" />
     <ClCompile Include="src\pipeline\text\CommonFonts.cpp" />
     <ClCompile Include="src\pipeline\text\Font.cpp" />
     <ClCompile Include="src\pipeline\text\TextRender.cpp" />
@@ -186,7 +189,6 @@
     <ClCompile Include="src\pipeline\render\Uniforms.cpp" />
     <ClCompile Include="src\pipeline\render\Renderable.cpp" />
     <ClCompile Include="src\pipeline\widgets\RoundRect.cpp" />
-    <ClCompile Include="src\user\GUI.cpp" />
     <ClCompile Include="src\user\Machine.cpp" />
     <ClCompile Include="src\variety\FileSystem.cpp" />
     <ClCompile Include="src\variety\IO.cpp" />
@@ -194,7 +196,7 @@
     <ClCompile Include="src\Quasar.cpp" />
     <ClCompile Include="src\pipeline\render\Shader.cpp" />
     <ClCompile Include="src\user\Platform.cpp" />
-    <ClCompile Include="src\user\UserInput.cpp" />
+    <ClCompile Include="src\user\ControlScheme.cpp" />
     <ClCompile Include="vendor\glm\detail\glm.cpp" />
     <ClCompile Include="vendor\glm\glm.cppm" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
@@ -212,6 +214,9 @@
     <ClInclude Include="src\edit\image\PixelBuffer.h" />
     <ClInclude Include="src\edit\image\PixelBufferPaths.h" />
     <ClInclude Include="src\Logger.h" />
+    <ClInclude Include="src\pipeline\panels\BrushesPanel.h" />
+    <ClInclude Include="src\pipeline\panels\Menu.h" />
+    <ClInclude Include="src\pipeline\panels\ScenePanel.h" />
     <ClInclude Include="src\pipeline\text\CommonFonts.h" />
     <ClInclude Include="src\pipeline\text\Font.h" />
     <ClInclude Include="src\pipeline\text\TextRender.h" />
@@ -229,9 +234,8 @@
     <ClInclude Include="src\pipeline\widgets\RoundRect.h" />
     <ClInclude Include="src\pipeline\widgets\Widget.h" />
     <ClInclude Include="src\user\Preferences.h" />
-    <ClInclude Include="src\user\UserInput.h" />
+    <ClInclude Include="src\user\ControlScheme.h" />
     <ClInclude Include="src\variety\FileSystem.h" />
-    <ClInclude Include="src\user\GUI.h" />
     <ClInclude Include="src\user\Machine.h" />
     <ClInclude Include="src\variety\Debug.h" />
     <ClInclude Include="src\variety\Geometry.h" />

@@ -42,8 +42,7 @@ public:
 	TButton(glm::mat3* vp, const WidgetPlacement& wp, FontRange& frange, float font_size, Shader* bkg_shader, MouseButtonHandler* parent_mbh, UTF::String&& text);
 	TButton(const TButton&) = delete;
 	TButton(TButton&&) noexcept = delete;
-	~TButton();
-
+	
 	virtual void draw() override;
 	void send_vp() const;
 	void process();

@@ -131,17 +131,11 @@ struct Image
 	bool write_to_file(const FilePath& filepath, ImageFormat format, JPGQuality jpg_quality = JPGQuality::HIGHEST) const;
 
 	// buffer operations
-	void _flip_vertically() const;
-	void _flip_horizontally() const;
-	void flip_vertically() const { _flip_vertically(); update_texture(); }
-	void flip_horizontally() const { _flip_horizontally(); update_texture(); }
-
-	void _rotate_90();
-	void rotate_90() { _rotate_90(); resend_texture(); }
-	void _rotate_180() const;
-	void rotate_180() const { _rotate_180(); update_texture(); }
-	void _rotate_270();
-	void rotate_270() { _rotate_270(); resend_texture(); }
+	void flip_horizontally() const;
+	void flip_vertically() const;
+	void rotate_90_del_old();
+	void rotate_180() const;
+	void rotate_270_del_old();
 
 	// LATER change bpp
 	// LATER crop width / height --> create new image and return it, so old image isn't lost?

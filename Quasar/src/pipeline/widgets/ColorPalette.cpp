@@ -7,64 +7,26 @@
 #include "RoundRect.h"
 #include "user/Machine.h"
 #include "Button.h"
-
-struct PrimarySelectorAction : public ActionBase
-{
-	std::shared_ptr<ColorSubpalette> subpalette;
-	int prev_i, new_i;
-	PrimarySelectorAction(std::shared_ptr<ColorSubpalette>&& subpalette, int prev_i, int new_i)
-		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = sizeof(PrimarySelectorAction); }
-	void forward() override { execute(new_i); }
-	void backward() override { execute(prev_i); }
-	void execute(int i) const
-	{
-		subpalette->focus(false);
-		subpalette->set_primary_selector(i);
-		subpalette->update_primary_color_in_picker();
-	}
-};
-
-struct AlternateSelectorAction : public ActionBase
-{
-	std::shared_ptr<ColorSubpalette> subpalette;
-	int prev_i, new_i;
-	AlternateSelectorAction(std::shared_ptr<ColorSubpalette>&& subpalette, int prev_i, int new_i)
-		: subpalette(std::move(subpalette)), prev_i(prev_i), new_i(new_i) { weight = sizeof(AlternateSelectorAction); }
-	void forward() override { execute(new_i); }
-	void backward() override { execute(prev_i); }
-	void execute(int i) const
-	{
-		subpalette->focus(true);
-		subpalette->set_alternate_selector(i);
-	}
-};
-
-struct SelectorSwitchAction : public ActionBase
-{
-	std::shared_ptr<ColorSubpalette> subpalette;
-	SelectorSwitchAction(std::shared_ptr<ColorSubpalette>&& subpalette) : subpalette(std::move(subpalette)) { weight = sizeof(SelectorSwitchAction); }
-	void forward() override { execute(); }
-	void backward() override { execute(); }
-	void execute() const
-	{
-		subpalette->focus(true);
-		subpalette->switch_primary_and_alternate();
-	}
-};
+#include "ColorPicker.h"
 
 struct ColorOverwriteAction : public ActionBase
 {
 	std::shared_ptr<ColorSubpalette> subpalette;
 	RGBA prev_c, new_c;
-	ColorOverwriteAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA prev_c, RGBA new_c)
-		: subpalette(std::move(subpalette)), prev_c(prev_c), new_c(new_c) { weight = sizeof(ColorOverwriteAction); }
-	void forward() override { execute(new_c, true); }
-	void backward() override { execute(prev_c, false); }
+	ColorPicker::EditingColor editing_color;
+	ColorOverwriteAction(std::shared_ptr<ColorSubpalette>&& subpalette, RGBA prev_c, RGBA new_c, ColorPicker::EditingColor editing_color)
+		: subpalette(std::move(subpalette)), prev_c(prev_c), new_c(new_c), editing_color(editing_color) { weight = sizeof(ColorOverwriteAction); }
+	virtual void forward() override { execute(new_c, true); }
+	virtual void backward() override { execute(prev_c, false); }
 	void execute(RGBA c, bool update_picker) const
 	{
 		subpalette->focus(true);
-		subpalette->overwrite_current_color(c, update_picker);
+		if (editing_color == ColorPicker::EditingColor::PRIMARY)
+			subpalette->overwrite_primary_color(c, update_picker);
+		else if (editing_color == ColorPicker::EditingColor::ALTERNATE)
+			subpalette->overwrite_alternate_color(c, update_picker);
 	}
+	QUASAR_ACTION_EQUALS_OVERRIDE(ColorOverwriteAction)
 };
 
 // LATER move these two to Utils.h
@@ -94,8 +56,8 @@ struct ColorMove1DAction : public ActionBase
 	int initial_index, target_index;
 	ColorMove1DAction(std::shared_ptr<ColorSubpalette>&& subpalette, int initial_index, int target_index)
 		: subpalette(std::move(subpalette)), initial_index(initial_index), target_index(target_index) { weight = sizeof(ColorMove1DAction); }
-	void forward() override { execute(initial_index, target_index); }
-	void backward() override { execute(target_index, initial_index); }
+	virtual void forward() override { execute(initial_index, target_index); }
+	virtual void backward() override { execute(target_index, initial_index); }
 	void execute(int initial, int target) const
 	{
 		subpalette->focus(true);
@@ -118,6 +80,7 @@ struct ColorMove1DAction : public ActionBase
 			subpalette->set_alternate_selector(rotated_index(target, initial, initial, subpalette->alternate_index));
 		}
 	}
+	QUASAR_ACTION_EQUALS_OVERRIDE(ColorMove1DAction)
 };
 
 struct ColorMove2DAction : public ActionBase
@@ -126,8 +89,8 @@ struct ColorMove2DAction : public ActionBase
 	int initial_index, target_index;
 	ColorMove2DAction(std::shared_ptr<ColorSubpalette>&& subpalette, int initial_index, int target_index)
 		: subpalette(std::move(subpalette)), initial_index(initial_index), target_index(target_index) { weight = sizeof(ColorMove2DAction); }
-	void forward() override { execute(); }
-	void backward() override { execute(); }
+	virtual void forward() override { execute(); }
+	virtual void backward() override { execute(); }
 	void execute() const
 	{
 		subpalette->focus(false);
@@ -144,6 +107,7 @@ struct ColorMove2DAction : public ActionBase
 		else if (subpalette->alternate_index == target_index)
 			subpalette->set_alternate_selector(initial_index);
 	}
+	QUASAR_ACTION_EQUALS_OVERRIDE(ColorMove2DAction)
 };
 
 struct InsertColorAction : public ActionBase
@@ -155,8 +119,9 @@ struct InsertColorAction : public ActionBase
 		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
 		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
 		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = sizeof(InsertColorAction); }
-	void forward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
-	void backward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
+	virtual void forward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
+	virtual void backward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
+	QUASAR_ACTION_EQUALS_OVERRIDE(InsertColorAction)
 };
 
 struct RemoveColorAction : public ActionBase
@@ -168,8 +133,9 @@ struct RemoveColorAction : public ActionBase
 		int primary_index_1, int primary_index_2, int alternate_index_1, int alternate_index_2)
 		: subpalette(std::move(subpalette)), color(color), index(index), primary_index_1(primary_index_1),
 		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = sizeof(RemoveColorAction); }
-	void forward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_2, alternate_index_2, true); }
-	void backward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_1, alternate_index_1, color); }
+	virtual void forward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_2, alternate_index_2, true); }
+	virtual void backward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_1, alternate_index_1, color); }
+	QUASAR_ACTION_EQUALS_OVERRIDE(RemoveColorAction)
 };
 
 struct SubpaletteRenameAction : public ActionBase
@@ -184,13 +150,14 @@ struct SubpaletteRenameAction : public ActionBase
 		name_combo += new_name;
 		weight = sizeof(SubpaletteRenameAction) + name_combo.size() * sizeof(char);
 	}
-	void forward() override { execute(divider, -1); }
-	void backward() override { execute(0, divider); }
+	virtual void forward() override { execute(divider, -1); }
+	virtual void backward() override { execute(0, divider); }
 	void execute(size_t start, size_t len) const
 	{
 		subpalette->focus(true);
 		subpalette->subscheme->name = std::move(name_combo.substr(start, len));
 	}
+	QUASAR_ACTION_EQUALS_OVERRIDE(SubpaletteRenameAction)
 };
 
 struct SubpaletteNewAction : public ActionBase
@@ -202,8 +169,9 @@ struct SubpaletteNewAction : public ActionBase
 	SubpaletteNewAction(ColorPalette* palette, std::shared_ptr<ColorSubpalette>&& subpalette, size_t index)
 		: palette(palette), subpalette(std::move(subpalette)), index(index) { weight = sizeof(SubpaletteNewAction) + sizeof(ColorSubpalette) + this->subpalette->subscheme->colors.size() * sizeof(RGBA); }
 
-	void forward() override { if (palette) palette->insert_subpalette(index, subpalette); }
-	void backward() override { if (palette) palette->delete_subpalette(index); }
+	virtual void forward() override { if (palette) palette->insert_subpalette(index, subpalette); }
+	virtual void backward() override { if (palette) palette->delete_subpalette(index); }
+	QUASAR_ACTION_EQUALS_OVERRIDE(SubpaletteNewAction)
 };
 
 struct SubpaletteDeleteAction : public ActionBase
@@ -215,8 +183,9 @@ struct SubpaletteDeleteAction : public ActionBase
 	SubpaletteDeleteAction(ColorPalette* palette, std::shared_ptr<ColorSubpalette>&& subpalette, size_t index)
 		: palette(palette), subpalette(std::move(subpalette)), index(index) { weight = sizeof(SubpaletteDeleteAction) + sizeof(ColorSubpalette) + this->subpalette->subscheme->colors.size() * sizeof(RGBA); }
 
-	void forward() override { if (palette) palette->delete_subpalette(index); }
-	void backward() override { if (palette) palette->insert_subpalette(index, subpalette); }
+	virtual void forward() override { if (palette) palette->delete_subpalette(index); }
+	virtual void backward() override { if (palette) palette->insert_subpalette(index, subpalette); }
+	QUASAR_ACTION_EQUALS_OVERRIDE(SubpaletteDeleteAction)
 };
 
 // LATER import subpalette files and test this action
@@ -229,8 +198,9 @@ struct AssignColorSubschemeAction : public ActionBase
 		: palette(palette), prev_subscheme(std::move(prev_subscheme)), new_subscheme(new_subscheme), index(index)
 	{ weight = sizeof(AssignColorSubschemeAction) + 2 * sizeof(ColorSubscheme) + this->prev_subscheme->colors.size() * sizeof(RGBA) + this->new_subscheme->colors.size() * sizeof(RGBA); }
 
-	void forward() override { if (palette) palette->assign_color_subscheme(index, new_subscheme, false); }
-	void backward() override { if (palette) palette->assign_color_subscheme(index, prev_subscheme, false); }
+	virtual void forward() override { if (palette) palette->assign_color_subscheme(index, new_subscheme, false); }
+	virtual void backward() override { if (palette) palette->assign_color_subscheme(index, prev_subscheme, false); }
+	QUASAR_ACTION_EQUALS_OVERRIDE(AssignColorSubschemeAction)
 };
 
 // LATER test importing schemes and undo/redo. remember about ColorPalette::clear_history_on_import setting
@@ -248,8 +218,9 @@ struct ImportColorSchemeAction : public ActionBase
 		for (const auto& subscheme : this->new_cs->subschemes)
 			weight += subscheme->colors.size() * sizeof(RGBA);
 	}
-	void forward() override { if (palette) palette->import_color_scheme(new_cs, false); }
-	void backward() override { if (palette) palette->import_color_scheme(prev_cs, false); }
+	virtual void forward() override { if (palette) palette->import_color_scheme(new_cs, false); }
+	virtual void backward() override { if (palette) palette->import_color_scheme(prev_cs, false); }
+	QUASAR_ACTION_EQUALS_OVERRIDE(ImportColorSchemeAction)
 };
 
 ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader)
@@ -297,7 +268,7 @@ const ColorPalette& ColorSubpalette::palette() const
 	return *dynamic_cast<const ColorPalette*>(parent);
 }
 
-void ColorSubpalette::reload_subscheme()
+void ColorSubpalette::reload_subscheme(bool update_picker_colors)
 {
 	if (subscheme->colors.empty())
 		subscheme->colors.push_back(RGBA::WHITE);
@@ -308,7 +279,11 @@ void ColorSubpalette::reload_subscheme()
 	squares.push_back_quads(subscheme->colors.size());
 	squares.send_both_buffers_resized();
 	sync_with_palette();
-	update_primary_color_in_picker();
+	if (update_picker_colors)
+	{
+		update_primary_color_in_picker();
+		update_alternate_color_in_picker();
+	}
 }
 
 void ColorSubpalette::draw()
@@ -543,19 +518,33 @@ void ColorSubpalette::switch_primary_and_alternate()
 	std::swap(primary_index, alternate_index);
 	resync_primary_selector();
 	resync_alternate_selector();
-	update_primary_color_in_picker();
+	(*palette().reflection.swap_picker_colors)();
 }
 
 void ColorSubpalette::update_primary_color_in_picker() const
 {
 	if (&palette().current_subpalette() == this)
-		(*palette().primary_color_update)(subscheme->colors[primary_index]);
+		(*palette().reflection.pri_color_update)(subscheme->colors[primary_index]);
 }
 
-void ColorSubpalette::focus(bool update_primary_color)
+void ColorSubpalette::update_alternate_color_in_picker() const
+{
+	if (&palette().current_subpalette() == this)
+		(*palette().reflection.alt_color_update)(subscheme->colors[alternate_index]);
+}
+
+void ColorSubpalette::focus(bool update_gfx)
 {
 	if (&palette().current_subpalette() != this)
-		palette().switch_to_subpalette(this, update_primary_color);
+		palette().switch_to_subpalette(this, update_gfx);
+}
+
+void ColorSubpalette::cycle_primary_through(int delta)
+{
+	primary_index = std::clamp(primary_index + delta, 0, (int)subscheme->colors.size() - 1);
+	resync_primary_selector();
+	scroll_to_view(primary_index);
+	update_primary_color_in_picker();
 }
 
 void ColorSubpalette::scroll_by(int delta)
@@ -615,7 +604,7 @@ Position ColorSubpalette::cursor_world_pos() const
 	return Machine.cursor_world_pos(glm::inverse(*palette().vp));
 }
 
-void ColorSubpalette::overwrite_current_color(RGBA color, bool update_in_picker)
+void ColorSubpalette::overwrite_primary_color(RGBA color, bool update_in_picker)
 {
 	if (color != subscheme->colors[primary_index])
 	{
@@ -626,25 +615,80 @@ void ColorSubpalette::overwrite_current_color(RGBA color, bool update_in_picker)
 	}
 }
 
-void ColorSubpalette::new_color(RGBA color, bool adjacent, bool update_primary, bool create_action)
+void ColorSubpalette::overwrite_alternate_color(RGBA color, bool update_in_picker)
+{
+	if (color != subscheme->colors[alternate_index])
+	{
+		subscheme->colors[alternate_index] = color;
+		send_color(alternate_index, color);
+		if (update_in_picker)
+			update_alternate_color_in_picker();
+	}
+}
+
+void ColorSubpalette::new_color_from_primary(RGBA color, bool adjacent, bool update_primary, bool create_action)
 {
 	int index = int(adjacent ? primary_index + 1 : subscheme->colors.size());
 	int initial_primary_index = primary_index;
 	int initial_alternate_index = alternate_index;
+
+	insert_color_setup(color, index);
+	if (adjacent && alternate_index >= index)
+	{
+		++alternate_index;
+		resync_alternate_selector();
+	}
+	send_inserted_color(color, index, adjacent);
+	if (update_primary)
+	{
+		primary_index = index;
+		resync_primary_selector();
+	}
+	scroll_to_view(primary_index);
+
+	if (create_action)
+		Machine.history.push(std::make_shared<InsertColorAction>(palette().subpalette_ref(this), color, index, initial_primary_index, primary_index, initial_alternate_index, alternate_index));
+}
+
+void ColorSubpalette::new_color_from_alternate(RGBA color, bool adjacent, bool update_alternate, bool create_action)
+{
+	int index = int(adjacent ? alternate_index + 1 : subscheme->colors.size());
+	int initial_primary_index = primary_index;
+	int initial_alternate_index = alternate_index;
+
+	insert_color_setup(color, index);
+	if (adjacent && primary_index >= index)
+	{
+		++primary_index;
+		resync_primary_selector();
+	}
+	send_inserted_color(color, index, adjacent);
+	if (update_alternate)
+	{
+		alternate_index = index;
+		resync_alternate_selector();
+	}
+	scroll_to_view(primary_index);
+
+	if (create_action)
+		Machine.history.push(std::make_shared<InsertColorAction>(palette().subpalette_ref(this), color, index, initial_primary_index, primary_index, initial_alternate_index, alternate_index));
+}
+
+void ColorSubpalette::insert_color_setup(RGBA color, int index)
+{
 	subscheme->insert(color, index);
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	squares.insert_vertices(4, 4 * index);
 	squares.push_back_quads(1);
 	setup_color_buffer(index, squares);
+}
 
+void ColorSubpalette::send_inserted_color(RGBA color, int index, bool adjacent)
+{
+	IndexedRenderable& squares = ir_wget(*this, SQUARES);
+	
 	if (adjacent)
 	{
-		if (alternate_index >= index)
-		{
-			++alternate_index;
-			resync_alternate_selector();
-		}
-
 		size_t num_colors = subscheme->colors.size();
 		for (size_t i = index + 1; i < num_colors; ++i)
 		{
@@ -655,18 +699,8 @@ void ColorSubpalette::new_color(RGBA color, bool adjacent, bool update_primary, 
 			squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
 		}
 	}
-
+	
 	squares.send_both_buffers_resized();
-
-	if (update_primary)
-	{
-		primary_index = index;
-		resync_primary_selector();
-	}
-	scroll_to_view(primary_index);
-
-	if (create_action)
-		Machine.history.push(std::make_shared<InsertColorAction>(palette().subpalette_ref(this), color, index, initial_primary_index, primary_index, initial_alternate_index, alternate_index));
 }
 
 void ColorSubpalette::send_color(size_t i, RGBA color)
@@ -702,13 +736,17 @@ void ColorSubpalette::remove_square_under_cursor(bool send_vb, bool create_actio
 	int index;
 	if (!get_visible_square_under_pos(cursor_world_pos(), index))
 		return;
+	remove_square_under_index(index, send_vb, create_action);
+}
 
+void ColorSubpalette::remove_square_under_index(int index, bool send_vb, bool create_action)
+{
 	int initial_primary = primary_index;
 	int initial_alternate = alternate_index;
 	RGBA color = subscheme->colors[index];
 
 	subscheme->remove(index);
-	
+
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	size_t num_colors = subscheme->colors.size();
 	for (size_t i = index; i < num_colors; ++i)
@@ -721,10 +759,7 @@ void ColorSubpalette::remove_square_under_cursor(bool send_vb, bool create_actio
 	{
 		primary_index = (int)subscheme->colors.size() - 1;
 		resync_primary_selector();
-		update_primary_color_in_picker();
 	}
-	else if (index == primary_index)
-		update_primary_color_in_picker();
 	else if (index < primary_index)
 	{
 		--primary_index;
@@ -781,10 +816,7 @@ void ColorSubpalette::insert_color_at(int index, int to_primary_index, int to_al
 	{
 		primary_index = to_primary_index;
 		resync_primary_selector();
-		update_primary_color_in_picker();
 	}
-	else if (index == primary_index)
-		update_primary_color_in_picker();
 	if (to_alternate_index != alternate_index)
 	{
 		alternate_index = to_alternate_index;
@@ -810,10 +842,7 @@ void ColorSubpalette::remove_color_at(int index, int to_primary_index, int to_al
 	{
 		primary_index = to_primary_index;
 		resync_primary_selector();
-		update_primary_color_in_picker();
 	}
-	else if (index == primary_index)
-		update_primary_color_in_picker();
 	if (alternate_index != to_alternate_index)
 	{
 		alternate_index = to_alternate_index;
@@ -916,25 +945,16 @@ const float button1_x = -110;
 const float button2_x = 25;
 const float button_y = 55;
 
-ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler,
-	const std::function<void(RGBA)>* primary_color_update, const std::function<RGBA()>* get_picker_rgba)
+ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler, const Reflection& reflection)
 	: Widget(SUBPALETTE_START), vp(vp), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), parent_scroll_handler(parent_scroll_handler),
 	grid_shader(FileSystem::shader_path("palette/black_grid.vert"), FileSystem::shader_path("palette/black_grid.frag")),
-	color_square_shader(FileSystem::shader_path("palette/color_square.vert"), FileSystem::shader_path("palette/color_square.frag")),
+	color_square_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")),
 	outline_rect_shader(FileSystem::shader_path("palette/outline_rect.vert"), FileSystem::shader_path("palette/outline_rect.frag")),
-	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
-	primary_color_update(primary_color_update), get_picker_rgba(get_picker_rgba), scheme(std::make_shared<ColorScheme>())
+	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")), reflection(reflection), scheme(std::make_shared<ColorScheme>())
 {
 	initialize_widget();
 	connect_input_handlers();
-	new_subpalette(); // always have at least one subpalette
-}
-
-ColorPalette::~ColorPalette()
-{
-	parent_mb_handler.remove_child(&mb_handler);
-	parent_key_handler.remove_child(&key_handler);
-	parent_scroll_handler.remove_child(&scroll_handler);
+	new_subpalette(false); // always have at least one subpalette
 }
 
 void ColorPalette::draw()
@@ -947,13 +967,13 @@ void ColorPalette::draw()
 	// LATER use StandardIButton instead of StandardTButton
 	for (size_t button : BUTTONS)
 		sb_t_wget(*this, button).draw();
-	if (imgui_editing || renaming_subpalette)
+	if (imgui_combo_open || renaming_subpalette)
 		rr_wget(*this, BACKGROUND).draw();
 }
 
 void ColorPalette::process()
 {
-	if (!imgui_editing && !renaming_subpalette && cursor_in_bkg())
+	if (!imgui_combo_open && !renaming_subpalette && cursor_in_bkg())
 	{
 		current_subpalette().process();
 		for (size_t button : BUTTONS)
@@ -1010,7 +1030,7 @@ void ColorPalette::assign_color_subscheme(size_t pos, const std::shared_ptr<Colo
 	std::shared_ptr<ColorSubscheme> prev_subscheme = current_subpalette().subscheme;
 	scheme->subschemes[pos] = subscheme;
 	current_subpalette().subscheme = subscheme;
-	current_subpalette().reload_subscheme();
+	current_subpalette().reload_subscheme(true);
 	if (create_action)
 		Machine.history.push(std::make_shared<AssignColorSubschemeAction>(this, std::move(prev_subscheme), subscheme, pos));
 }
@@ -1023,7 +1043,7 @@ void ColorPalette::assign_color_subscheme(size_t pos, std::shared_ptr<ColorSubsc
 	std::shared_ptr<ColorSubscheme> prev_subscheme = current_subpalette().subscheme;
 	scheme->subschemes[pos] = std::move(subscheme);
 	current_subpalette().subscheme = scheme->subschemes[pos];
-	current_subpalette().reload_subscheme();
+	current_subpalette().reload_subscheme(true);
 	if (create_action)
 		Machine.history.push(std::make_shared<AssignColorSubschemeAction>(this, std::move(prev_subscheme), scheme->subschemes[pos], pos));
 }
@@ -1036,6 +1056,7 @@ void ColorPalette::insert_subpalette(size_t pos, const std::shared_ptr<ColorSubp
 	current_subpalette().self.transform.position.y = subpalette_pos_y();
 	current_subpalette().sync_with_palette();
 	current_subpalette().update_primary_color_in_picker();
+	current_subpalette().update_alternate_color_in_picker();
 }
 
 void ColorPalette::insert_subpalette(size_t pos, std::shared_ptr<ColorSubpalette>&& subpalette)
@@ -1047,9 +1068,10 @@ void ColorPalette::insert_subpalette(size_t pos, std::shared_ptr<ColorSubpalette
 	current_subpalette().self.transform.position.y = subpalette_pos_y();
 	current_subpalette().sync_with_palette();
 	current_subpalette().update_primary_color_in_picker();
+	current_subpalette().update_alternate_color_in_picker();
 }
 
-void ColorPalette::new_subpalette()
+void ColorPalette::new_subpalette(bool create_action)
 {
 	attach_widget(this, std::make_shared<ColorSubpalette>(&color_square_shader, &outline_rect_shader));
 	size_t last = num_subpalettes() - 1;
@@ -1057,7 +1079,18 @@ void ColorPalette::new_subpalette()
 	switch_to_subpalette(last, false);
 	current_subpalette().subscheme = scheme->subschemes[current_subscheme];
 	current_subpalette().self.transform.position.y = subpalette_pos_y();
-	current_subpalette().reload_subscheme();
+	current_subpalette().reload_subscheme(true);
+	if (create_action)
+		Machine.history.push(std::make_shared<SubpaletteNewAction>(this, current_subpalette_ref(), current_subscheme));
+}
+
+void ColorPalette::rename_subpalette()
+{
+	if (!renaming_subpalette)
+	{
+		renaming_subpalette = true;
+		renaming_subpalette_start = true;
+	}
 }
 
 void ColorPalette::delete_subpalette(size_t pos)
@@ -1067,22 +1100,39 @@ void ColorPalette::delete_subpalette(size_t pos)
 	detach_widget(this, SUBPALETTE_START + pos);
 	scheme->subschemes.erase(scheme->subschemes.begin() + pos);
 	if (num_subpalettes() == 0)
-		new_subpalette();
+		new_subpalette(false);
 	if (current_subscheme >= num_subpalettes())
 		switch_to_subpalette(num_subpalettes() - 1, true);
 }
 
-void ColorPalette::switch_to_subpalette(size_t pos, bool update_primary_color)
+void ColorPalette::delete_current_subpalette(bool create_action)
 {
-	if (current_subscheme != pos)
+	if (create_action)
+	{
+		std::shared_ptr<ColorSubpalette> subpalette = current_subpalette_ref();
+		size_t index = current_subscheme;
+		delete_subpalette(current_subscheme);
+		Machine.history.push(std::make_shared<SubpaletteDeleteAction>(this, std::move(subpalette), index));
+	}
+	else
+		delete_subpalette(current_subscheme);
+		
+}
+
+void ColorPalette::switch_to_subpalette(size_t pos, bool update_gfx)
+{
+	if (current_subscheme != pos && pos < num_subpalettes())
 	{
 		current_subscheme = pos;
-		if (update_primary_color)
+		if (update_gfx)
+		{
 			current_subpalette().update_primary_color_in_picker();
+			current_subpalette().update_alternate_color_in_picker();
+		}
 	}
 }
 
-void ColorPalette::switch_to_subpalette(ColorSubpalette* subpalette, bool update_primary_color)
+void ColorPalette::switch_to_subpalette(ColorSubpalette* subpalette, bool update_gfx)
 {
 	size_t num = num_subpalettes();
 	for (size_t i = 0; i < num; ++i)
@@ -1090,8 +1140,11 @@ void ColorPalette::switch_to_subpalette(ColorSubpalette* subpalette, bool update
 		if (children[subpalette_index_in_widget(i)].get() == subpalette)
 		{
 			current_subscheme = i;
-			if (update_primary_color)
+			if (update_gfx)
+			{
 				current_subpalette().update_primary_color_in_picker();
+				current_subpalette().update_alternate_color_in_picker();
+			}
 			return;
 		}
 	}
@@ -1121,16 +1174,22 @@ void ColorPalette::render_imgui()
 		float font_window_scale = ImGui::GetCurrentWindow()->FontWindowScale;
 		ImGui::SetWindowFontScale(scale1d() * font_window_scale);
 
-		imgui_editing = false;
+		imgui_combo_open = false;
 
 		ImGui::BeginDisabled(renaming_subpalette || current_subpalette().is_moving_a_color());
 
 		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-		if (ImGui::BeginCombo("##Subschemes", current_subpalette().subscheme->name.c_str()))
+		if (ImGui::BeginCombo("##Subschemes", current_subpalette().subscheme->name.c_str(), ImGuiComboFlags_HeightLarge))
 		{
-			imgui_editing = true;
-			size_t num_subs = num_subpalettes();
-			for (int i = 0; i < num_subs; ++i)
+			if (escape_to_close_popup)
+			{
+				escape_to_close_popup = false;
+				ImGui::CloseCurrentPopup();
+			}
+			else
+				imgui_combo_open = true;
+			int num_subs = (int)num_subpalettes();
+			for (int i = num_subs - 1; i >= 0; --i)
 			{
 				if (ImGui::Selectable(get_subpalette(i).subscheme->name.c_str(), i == current_subscheme))
 					switch_to_subpalette(i, true);
@@ -1175,11 +1234,11 @@ void ColorPalette::render_imgui()
 
 void ColorPalette::connect_input_handlers()
 {
-	parent_mb_handler.children.push_back(&mb_handler);
+	parent_mb_handler.add_child(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (mb.action == IAction::RELEASE && mb.button != MouseButton::RIGHT && current_subpalette().is_moving_a_color())
 			current_subpalette().stop_moving_color();
-		if (imgui_editing || renaming_subpalette || !cursor_in_bkg())
+		if (imgui_combo_open || renaming_subpalette || !cursor_in_bkg())
 			return;
 		else if (mb.action == IAction::RELEASE && mb.button == MouseButton::LEFT && (mb.mods & Mods::CONTROL))
 		{
@@ -1197,7 +1256,6 @@ void ColorPalette::connect_input_handlers()
 				{
 					mb.consumed = true;
 					current_subpalette().update_primary_color_in_picker();
-					Machine.history.push(std::make_shared<PrimarySelectorAction>(current_subpalette_ref(), prev_i, current_subpalette().primary_index));
 				}
 			}
 			else if (mb.button == MouseButton::RIGHT)
@@ -1206,7 +1264,7 @@ void ColorPalette::connect_input_handlers()
 				if (current_subpalette().check_alternate())
 				{
 					mb.consumed = true;
-					Machine.history.push(std::make_shared<AlternateSelectorAction>(current_subpalette_ref(), prev_i, current_subpalette().alternate_index));
+					current_subpalette().update_alternate_color_in_picker();
 				}
 			}
 		}
@@ -1216,30 +1274,79 @@ void ColorPalette::connect_input_handlers()
 			current_subpalette().begin_moving_color_under_cursor(!(mb.mods & Mods::ALT));
 		}
 		};
-	parent_key_handler.children.push_back(&key_handler);
+	parent_key_handler.add_child(&key_handler);
 	key_handler.callback = [this](const KeyEvent& k) {
-		if (!imgui_editing && !renaming_subpalette && k.action == IAction::RELEASE && k.key == Key::X)
+		if (renaming_subpalette)
 		{
-			k.consumed = true;
-			current_subpalette().switch_primary_and_alternate();
-			Machine.history.push(std::make_shared<SelectorSwitchAction>(current_subpalette_ref()));
+			if (!imgui_combo_open && k.action == IAction::PRESS && k.key == Key::ESCAPE)
+			{
+				k.consumed = true;
+				renaming_subpalette = false;
+				renaming_subpalette_start = false;
+				return;
+			}
 		}
-		else if (renaming_subpalette && !imgui_editing && k.action == IAction::PRESS && k.key == Key::ESCAPE)
+		else if (k.action == IAction::PRESS)
 		{
-			k.consumed = true;
-			renaming_subpalette = false;
-			renaming_subpalette_start = false;
+			if (imgui_combo_open)
+			{
+				if (k.key == Key::ESCAPE)
+				{
+					k.consumed = true;
+					escape_to_close_popup = true;
+					return;
+				}
+			}
+			else
+			{
+				if (k.key == Key::X)
+				{
+					k.consumed = true;
+					current_subpalette().switch_primary_and_alternate();
+					return;
+				}
+			}
+			if (k.mods & Mods::CONTROL)
+			{
+				if (k.key == Key::UP)
+				{
+					k.consumed = true;
+					switch_to_subpalette(current_subscheme + 1, true);
+					return;
+				}
+				else if (k.key == Key::DOWN)
+				{
+					k.consumed = true;
+					switch_to_subpalette(current_subscheme - 1, true);
+					return;
+				}
+			}
+
 		}
 		};
-	parent_scroll_handler.children.push_back(&scroll_handler);
+	parent_scroll_handler.add_child(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {
-		if (!imgui_editing && !renaming_subpalette && cursor_in_bkg())
+		if (!imgui_combo_open && !renaming_subpalette)
 		{
-			s.consumed = true;
-			scroll_backlog -= s.yoff;
-			float amount;
-			scroll_backlog = modf(scroll_backlog, &amount);
-			current_subpalette().scroll_by((int)amount);
+			if (Machine.main_window->is_alt_pressed())
+			{
+				s.consumed = true;
+				cycle_backlog -= s.yoff;
+				float amount;
+				cycle_backlog = modf(cycle_backlog, &amount);
+				current_subpalette().cycle_primary_through((int)amount);
+			}
+			else
+			{
+				if (cursor_in_bkg())
+				{
+					s.consumed = true;
+					scroll_backlog -= s.yoff;
+					float amount;
+					scroll_backlog = modf(scroll_backlog, &amount);
+					current_subpalette().scroll_by((int)amount);
+				}
+			}
 		}
 		};
 }
@@ -1260,16 +1367,16 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 26;
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
-	sba.is_hoverable = [this]() { return !imgui_editing && !renaming_subpalette && !current_subpalette().is_moving_a_color(); };
-	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_editing && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
+	sba.is_hoverable = [this]() { return !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); };
+	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
 	
 	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";
 	sba.on_select = fconv_st_on_action([this]() {
-		RGBA prev_c = current_subpalette().subscheme->colors[current_subpalette().primary_index];
-		RGBA new_c = (*get_picker_rgba)();
-		current_subpalette().overwrite_current_color(new_c, false);
-		Machine.history.push(std::make_shared<ColorOverwriteAction>(current_subpalette_ref(), prev_c, new_c));
+		if ((*reflection.use_primary)())
+			subpalette_overwrite_primary(true);
+		else if ((*reflection.use_alternate)())
+			subpalette_overwrite_alternate(true);
 		});
 	assign_widget(this, BUTTON_OVERWRITE_COLOR, std::make_shared<StandardTButton>(sba));
 	b_t_wget(*this, BUTTON_OVERWRITE_COLOR).text().self.transform.position = { 0.05f, -0.05f };
@@ -1278,9 +1385,18 @@ void ColorPalette::initialize_widget()
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "+";
 	sba.on_select = fconv_st_on_action([this]() {
-		bool adjacent = !Machine.main_window->is_shift_pressed();
-		bool update_primary = Machine.main_window->is_ctrl_pressed();
-		current_subpalette().new_color((*get_picker_rgba)(), adjacent, update_primary, true);
+		if ((*reflection.use_primary)())
+		{
+			bool adjacent = !Machine.main_window->is_shift_pressed();
+			bool update_primary = Machine.main_window->is_ctrl_pressed();
+			current_subpalette().new_color_from_primary((*reflection.get_picker_pri_rgba)(), adjacent, update_primary, true);
+		}
+		else if ((*reflection.use_alternate)())
+		{
+			bool adjacent = !Machine.main_window->is_shift_pressed();
+			bool update_alternate = Machine.main_window->is_ctrl_pressed();
+			current_subpalette().new_color_from_alternate((*reflection.get_picker_alt_rgba)(), adjacent, update_alternate, true);
+		}
 		});
 	assign_widget(this, BUTTON_INSERT_NEW_COLOR, std::make_shared<StandardTButton>(sba));
 	b_t_wget(*this, BUTTON_INSERT_NEW_COLOR).text().self.transform.position = { 0.1f, -0.15f };
@@ -1291,25 +1407,17 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 22;
 	sba.transform.position.x = button2_x;
 	sba.text = "N";
-	sba.on_select = fconv_st_on_action([this]() {
-		new_subpalette();
-		Machine.history.push(std::make_shared<SubpaletteNewAction>(this, current_subpalette_ref(), current_subscheme));
-		});
+	sba.on_select = fconv_st_on_action([this]() { new_subpalette(true); });
 	assign_widget(this, BUTTON_SUBPALETTE_NEW, std::make_shared<StandardTButton>(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "R";
-	sba.on_select = fconv_st_on_action([this]() { renaming_subpalette = true; renaming_subpalette_start = true; });
+	sba.on_select = fconv_st_on_action([this]() { rename_subpalette(); });
 	assign_widget(this, BUTTON_SUBPALETTE_RENAME, std::make_shared<StandardTButton>(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "D";
-	sba.on_select = fconv_st_on_action([this]() {
-		std::shared_ptr<ColorSubpalette> subpalette = current_subpalette_ref();
-		size_t index = current_subscheme;
-		delete_subpalette(current_subscheme);
-		Machine.history.push(std::make_shared<SubpaletteDeleteAction>(this, std::move(subpalette), index));
-		});
+	sba.on_select = fconv_st_on_action([this]() { delete_current_subpalette(true); });
 	assign_widget(this, BUTTON_SUBPALETTE_DELETE, std::make_shared<StandardTButton>(sba));
 }
 
@@ -1321,7 +1429,7 @@ void ColorPalette::import_color_scheme()
 		for (size_t i = 0; i < scheme->subschemes.size(); ++i)
 		{
 			get_subpalette(i).subscheme = scheme->subschemes[i];
-			get_subpalette(i).reload_subscheme();
+			get_subpalette(i).reload_subscheme(true);
 		}
 		for (size_t i = scheme->subschemes.size(); i < num_subs; ++i)
 			detach_widget(this, subpalette_index_in_widget(i));
@@ -1332,14 +1440,14 @@ void ColorPalette::import_color_scheme()
 		for (size_t i = 0; i < num_subs; ++i)
 		{
 			get_subpalette(i).subscheme = scheme->subschemes[i];
-			get_subpalette(i).reload_subscheme();
+			get_subpalette(i).reload_subscheme(true);
 		}
 		for (size_t i = num_subs; i < scheme->subschemes.size(); ++i)
 		{
 			attach_widget(this, std::make_shared<ColorSubpalette>(&color_square_shader, &outline_rect_shader));
 			get_subpalette(i).subscheme = scheme->subschemes[i];
 			get_subpalette(i).self.transform.position.y = subpalette_pos_y();
-			get_subpalette(i).reload_subscheme();
+			get_subpalette(i).reload_subscheme(true);
 		}
 	}
 }
@@ -1419,6 +1527,32 @@ void ColorPalette::set_size(Scale size, bool sync)
 Scale ColorPalette::minimum_display() const
 {
 	return Scale { grid_padding_x1 + grid_padding_x2 + 100, grid_padding_y1 + grid_padding_y2 + 50 };
+}
+
+void ColorPalette::subpalette_overwrite_primary(bool create_action)
+{
+	if (create_action)
+	{
+		RGBA prev_c = current_subpalette().subscheme->colors[current_subpalette().primary_index];
+		RGBA new_c = (*reflection.get_picker_pri_rgba)();
+		current_subpalette().overwrite_primary_color(new_c, false);
+		Machine.history.push(std::make_shared<ColorOverwriteAction>(current_subpalette_ref(), prev_c, new_c, ColorPicker::EditingColor::PRIMARY));
+	}
+	else
+		current_subpalette().overwrite_primary_color((*reflection.get_picker_pri_rgba)(), false);
+}
+
+void ColorPalette::subpalette_overwrite_alternate(bool create_action)
+{
+	if (create_action)
+	{
+		RGBA prev_c = current_subpalette().subscheme->colors[current_subpalette().alternate_index];
+		RGBA new_c = (*reflection.get_picker_alt_rgba)();
+		current_subpalette().overwrite_alternate_color(new_c, false);
+		Machine.history.push(std::make_shared<ColorOverwriteAction>(current_subpalette_ref(), prev_c, new_c, ColorPicker::EditingColor::ALTERNATE));
+	}
+	else
+		current_subpalette().overwrite_alternate_color((*reflection.get_picker_alt_rgba)(), false);
 }
 
 bool ColorPalette::cursor_in_bkg() const

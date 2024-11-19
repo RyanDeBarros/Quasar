@@ -1,40 +1,53 @@
 #pragma once
 
 #include "Panel.h"
+#include "user/Platform.h"
 #include "../render/FlatSprite.h"
 #include "../render/Shader.h"
 #include "../widgets/Widget.h"
 
-struct Palette : public Panel
+struct PalettePanel : public Panel
 {
-	GLfloat* varr = nullptr;
-	SharedFlatSprite background;
-	GLuint vao = 0, vb = 0, ib = 0;
-	Shader sprite_shader;
+	Shader bkg_shader;
 	glm::mat3 vp;
-
 	Widget widget;
 
-	std::function<void(RGBA)> update_primary_color;
-	std::function<RGBA()> get_picker_rgba;
+	KeyHandler key_handler;
+	MouseButtonHandler mb_handler;
+	ScrollHandler scroll_handler;
 
-	Palette();
-	Palette(const Palette&) = delete;
-	Palette(Palette&&) noexcept = delete;
-	~Palette();
+	std::function<void(RGBA)> update_pri_color;
+	std::function<void(RGBA)> update_alt_color;
+	std::function<RGBA()> get_picker_pri_rgba;
+	std::function<RGBA()> get_picker_alt_rgba;
+	std::function<bool()> use_primary;
+	std::function<bool()> use_alternate;
+	std::function<void()> swap_picker_colors;
 
-	void subsend_background_vao() const;
-	void _send_view() override;
-	void draw() override;
+	PalettePanel();
+	PalettePanel(const PalettePanel&) = delete;
+	PalettePanel(PalettePanel&&) noexcept = delete;
+
+	virtual void _send_view() override;
+	virtual void draw() override;
 	void render_widget();
-	Scale minimum_screen_display() const override;
+	virtual Scale minimum_screen_display() const override;
+
+	void new_color();
+	void overwrite_color();
+	void delete_color();
+	void new_subpalette();
+	void rename_subpalette();
+	void delete_subpalette();
 
 private:
 	void initialize_widget();
+	void sync_widget();
 
 public:
 	enum : size_t
 	{
+		BACKGROUND,
 		COLOR_PICKER,
 		COLOR_PALETTE,
 		_W_COUNT

@@ -2,11 +2,11 @@
 
 #include <string>
 
+#include "Platform.h"
+#include "Preferences.h"
 #include "variety/Geometry.h"
 #include "variety/History.h"
 #include "variety/FileSystem.h"
-#include "Platform.h"
-#include "Preferences.h"
 
 struct MachineImpl
 {
@@ -18,16 +18,6 @@ struct MachineImpl
 	ActionHistory history;
 	Window* main_window = nullptr;
 
-	WindowSizeHandler resize_handler;
-	DisplayScaleHandler rescale_handler;
-	MouseButtonHandler easel_mb_handler;
-	MouseButtonHandler palette_mb_handler;
-	KeyHandler palette_key_handler;
-	ScrollHandler easel_scroll_handler;
-	ScrollHandler palette_scroll_handler;
-	KeyHandler global_key_handler;
-	PathDropHandler path_drop_handler;
-
 	struct
 	{
 		constexpr static int initial_width = 2160;
@@ -35,11 +25,11 @@ struct MachineImpl
 		constexpr static int initial_menu_panel_height = 32;
 		constexpr static int initial_brush_panel_width = 380;
 		constexpr static int initial_palette_panel_width = 380;
-		constexpr static int initial_views_panel_height = 288;
+		constexpr static int initial_scene_panel_height = 288;
 		int menu_panel_height = initial_menu_panel_height;
-		int brush_panel_width = initial_brush_panel_width;
+		int brushes_panel_width = initial_brush_panel_width;
 		int palette_panel_width = initial_palette_panel_width;
-		int views_panel_height = initial_views_panel_height;
+		int scene_panel_height = initial_scene_panel_height;
 	} window_layout_info;
 
 	FilePath current_filepath = "";
@@ -49,35 +39,8 @@ struct MachineImpl
 	std::vector<std::string> recent_files;
 	std::vector<std::string> recent_image_files;
 
-	int vsync = 0;
-	void update_vsync() const { glfwSwapInterval(vsync); }
-	bool raw_mouse_motion = true;
-	void update_raw_mouse_motion() const { main_window->set_raw_mouse_motion(raw_mouse_motion); }
-
-	// Canvas camera
-	struct
-	{
-		Position initial_cursor_pos{};
-		Position initial_canvas_pos{};
-		bool panning = false;
-	private:
-		friend MachineImpl;
-		WindowHandle wh;
-	} panning_info;
-	struct
-	{
-		// SETTINGS (only some of them?)
-		constexpr static float initial = 0.5f;
-		constexpr static float in_min = 0.01f;
-		constexpr static float in_max = 100.0f;
-		constexpr static float factor = 1.5f;
-		constexpr static float factor_shift = 1.05f;
-		float zoom = initial;
-	} zoom_info;
-
 	bool create_main_window();
 	void init_renderer();
-	void init_panels_layout();
 	void destroy();
 	void exit() const { main_window->request_close(); }
 	bool should_exit() const;
@@ -100,6 +63,15 @@ struct MachineImpl
 	Position cursor_screen_y() const;
 	Position cursor_world_pos(const glm::mat3& inverse_vp) const;
 
+	int vsync = 0;
+	void update_vsync() const { glfwSwapInterval(vsync); }
+	bool raw_mouse_motion = true;
+	void update_raw_mouse_motion() const { main_window->set_raw_mouse_motion(raw_mouse_motion); }
+
+	// Control Scheme
+	enum class ControlScheme get_control_scheme() const;
+	void set_control_scheme(enum class ControlScheme scheme) const;
+
 	// Panels
 	glm::vec2 easel_cursor_world_pos() const;
 	glm::vec2 palette_cursor_world_pos() const;
@@ -107,11 +79,17 @@ struct MachineImpl
 	bool cursor_in_palette() const;
 
 	// Canvas
-	FlatTransform& canvas_transform() const;
-	Position& canvas_position() const { return canvas_transform().position; }
-	Scale& canvas_scale() const { return canvas_transform().scale; }
-	void sync_canvas_transform() const;
 	bool canvas_image_ready() const;
+	bool canvas_is_panning() const;
+	void canvas_cancel_panning() const;
+
+	// Palette
+	void palette_insert_color();
+	void palette_overwrite_color();
+	void palette_delete_color();
+	void palette_new_subpalette();
+	void palette_rename_subpalette();
+	void palette_delete_subpalette();
 
 	// File menu
 	bool new_file();
@@ -133,13 +111,6 @@ struct MachineImpl
 	void start_held_undo();
 	void start_held_redo();
 
-	// User controls
-	void canvas_begin_panning();
-	void canvas_end_panning();
-	void canvas_cancel_panning();
-	void canvas_update_panning();
-	void canvas_zoom_by(float zoom);
-
 	// Edit menu
 	void flip_horizontally();
 	void flip_vertically();
@@ -148,25 +119,25 @@ struct MachineImpl
 	void rotate_270();
 
 	// View menu
-	bool brush_panel_visible() const;
-	void open_brush_panel() const;
-	void close_brush_panel() const;
+	bool brushes_panel_visible() const;
+	void open_brushes_panel() const;
+	void close_brushes_panel() const;
 	bool palette_panel_visible() const;
 	void open_palette_panel() const;
 	void close_palette_panel() const;
-	bool views_panel_visible() const;
-	void open_views_panel() const;
-	void close_views_panel() const;
-	void canvas_reset_camera();
-	bool minor_gridlines_visible();
-	void show_minor_gridlines();
-	void hide_minor_gridlines();
-	bool major_gridlines_visible();
-	void show_major_gridlines();
-	void hide_major_gridlines();
+	bool scene_panel_visible() const;
+	void open_scene_panel() const;
+	void close_scene_panel() const;
+	void canvas_reset_camera() const;
+	bool minor_gridlines_visible() const;
+	void show_minor_gridlines() const;
+	void hide_minor_gridlines() const;
+	bool major_gridlines_visible() const;
+	void show_major_gridlines() const;
+	void hide_major_gridlines() const;
 
 	// Help menu
-	void download_user_manual();
+	void download_user_manual() const;
 };
 
 inline MachineImpl Machine;
