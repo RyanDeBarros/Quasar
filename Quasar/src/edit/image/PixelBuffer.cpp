@@ -2,6 +2,155 @@
 
 #include <memory>
 
+#include "PixelBufferPaths.h"
+
+void Buffer::flip_horizontally() const
+{
+	Dim strd = stride();
+	Byte* temp = new Byte[chpp];
+	Byte* row = pixels;
+	Byte* left = nullptr;
+	Byte* right = nullptr;
+	for (Dim _ = 0; _ < height; ++_)
+	{
+		left = row;
+		right = row + (width - 1) * chpp;
+		for (Dim i = 0; i < width >> 1; ++i)
+		{
+			memcpy(temp, left, chpp);
+			memcpy(left, right, chpp);
+			memcpy(right, temp, chpp);
+			left += chpp;
+			right -= chpp;
+		}
+		row += strd;
+	}
+	delete[] temp;
+}
+
+void Buffer::flip_vertically() const
+{
+	Dim strd = stride();
+	Byte* temp = new Byte[strd];
+	Byte* bottom = pixels;
+	Byte* top = pixels + (height - 1) * strd;
+	for (Dim _ = 0; _ < height >> 1; ++_)
+	{
+		memcpy(temp, bottom, strd);
+		memcpy(bottom, top, strd);
+		memcpy(top, temp, strd);
+		bottom += strd;
+		top -= strd;
+	}
+	delete[] temp;
+}
+
+Buffer Buffer::rotate_90_ret_new() const
+{
+	Buffer new_buffer = *this;
+	std::swap(new_buffer.width, new_buffer.height);
+	new_buffer.pxnew();
+
+	Dim x0 = 0, x1 = width - 1, y0 = 0, y1 = height - 1;
+	Subbuffer ring_subbuffer_old, ring_subbuffer_new;
+	ring_subbuffer_old.buf = *this;
+	ring_subbuffer_new.buf = new_buffer;
+
+	Ring ring_old(x0, x1, y0, y1);
+	Ring ring_new(y0, y1, x0, x1);
+	bool old_valid = ring_old.valid();
+	bool new_valid = ring_new.valid();
+	while (old_valid && new_valid)
+	{
+		ring_subbuffer_old.path = &ring_old;
+		ring_subbuffer_new.path = &ring_new;
+		auto dest_offset = ring_new.width() - 1;
+		auto length = ring_new.length();
+		if (ring_new.height() == 1)
+		{
+			std::swap(ring_new.bottom.x0, ring_new.bottom.x1); // this is a hack. do not do this under normal circumstances.
+			dest_offset = 0;
+		}
+		subbuffer_copy(ring_subbuffer_new, ring_subbuffer_old, dest_offset, 0, length);
+		old_valid = ring_old.to_inner();
+		new_valid = ring_new.to_inner();
+	}
+	return new_buffer;
+}
+
+void Buffer::rotate_180() const
+{
+	UprightRect full;
+	full.x1 = width - 1;
+	full.y1 = height / 2 - 1;
+	Byte* temp = new Byte[chpp];
+	iterate_path(full, [this, temp](PathIterator& pit) {
+		Byte* p1 = pit.pos(*this);
+		Byte* p2 = PathIterator{ width - 1 - pit.x, height - 1 - pit.y }.pos(*this);
+		memcpy(temp, p1, chpp);
+		memcpy(p1, p2, chpp);
+		memcpy(p2, temp, chpp);
+		});
+	if (height % 2 == 1)
+	{
+		Byte* p1 = pixels + stride() * (height / 2);
+		Byte* p2 = pixels + stride() * (height / 2 + 1) - chpp;
+		for (size_t i = 0; i < width / 2; ++i)
+		{
+			memcpy(temp, p1, chpp);
+			memcpy(p1, p2, chpp);
+			memcpy(p2, temp, chpp);
+			p1 += chpp;
+			p2 -= chpp;
+		}
+	}
+	delete[] temp;
+}
+
+Buffer Buffer::rotate_270_ret_new() const
+{
+	Buffer new_buffer = *this;
+	std::swap(new_buffer.width, new_buffer.height);
+	new_buffer.pxnew();
+
+	Dim x0 = 0, x1 = width - 1, y0 = 0, y1 = height - 1;
+	Subbuffer ring_subbuffer_old, ring_subbuffer_new;
+	ring_subbuffer_old.buf = *this;
+	ring_subbuffer_new.buf = new_buffer;
+
+	Ring ring_old(x0, x1, y0, y1);
+	Ring ring_new(y0, y1, x0, x1);
+	bool old_valid = ring_old.valid();
+	bool new_valid = ring_new.valid();
+	while (old_valid && new_valid)
+	{
+		ring_subbuffer_old.path = &ring_old;
+		ring_subbuffer_new.path = &ring_new;
+		auto dest_offset = ring_new.width() - 1;
+		auto length = ring_new.length();
+		if (ring_new.height() == 1)
+		{
+			std::swap(ring_new.bottom.x0, ring_new.bottom.x1); // this is a hack. do not do this under normal circumstances.
+			dest_offset = 0;
+		}
+		auto src_offset = ring_old.length() / 2;
+		if (ring_old.shape == Ring::VERTI)
+		{
+			std::swap(ring_old.right.y0, ring_old.right.y1); // this is a hack. do not do this under normal circumstances.
+			src_offset = 0;
+		}
+		else if (ring_old.shape == Ring::HORIZ)
+		{
+			std::swap(ring_old.bottom.x0, ring_old.bottom.x1); // this is a hack. do not do this under normal circumstances.
+			src_offset = 0;
+		}
+		subbuffer_copy(ring_subbuffer_new, ring_subbuffer_old, dest_offset, src_offset, length);
+		old_valid = ring_old.to_inner();
+		new_valid = ring_new.to_inner();
+	}
+	return new_buffer;
+}
+
 void Path::move_iter(PathIterator& pit, long long offset) const
 {
 	if (offset > 0)

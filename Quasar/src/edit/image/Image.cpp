@@ -195,161 +195,38 @@ bool Image::write_to_file(const FilePath& filepath, ImageFormat format, JPGQuali
 	return false;
 }
 
-void Image::_flip_vertically() const
+void Image::flip_horizontally() const
 {
-	Dim stride = buf.stride();
-	Byte* temp = new Byte[stride];
-	Byte* bottom = buf.pixels;
-	Byte* top = buf.pixels + (buf.height - 1) * stride;
-	for (Dim _ = 0; _ < buf.height >> 1; ++_)
-	{
-		memcpy(temp, bottom, stride);
-		memcpy(bottom, top, stride);
-		memcpy(top, temp, stride);
-		bottom += stride;
-		top -= stride;
-	}
-	delete[] temp;
+	buf.flip_horizontally();
+	update_texture();
 }
 
-void Image::_flip_horizontally() const
+void Image::flip_vertically() const
 {
-	Dim stride = buf.stride();
-	Byte* temp = new Byte[buf.chpp];
-	Byte* row = buf.pixels;
-	Byte* left = nullptr;
-	Byte* right = nullptr;
-	for (Dim _ = 0; _ < buf.height; ++_)
-	{
-		left = row;
-		right = row + (buf.width - 1) * buf.chpp;
-		for (Dim i = 0; i < buf.width >> 1; ++i)
-		{
-			memcpy(temp, left, buf.chpp);
-			memcpy(left, right, buf.chpp);
-			memcpy(right, temp, buf.chpp);
-			left += buf.chpp;
-			right -= buf.chpp;
-		}
-		row += stride;
-	}
-	delete[] temp;
+	buf.flip_vertically();
+	update_texture();
 }
 
-void Image::_rotate_90()
+void Image::rotate_90_del_old()
 {
-	if (buf.width == 0 || buf.height == 0)
-		return;
-	Buffer new_buffer;
-	new_buffer.width = buf.height;
-	new_buffer.height = buf.width;
-	new_buffer.chpp = buf.chpp;
-	new_buffer.pxnew();
-
-	Dim x0 = 0, x1 = buf.width - 1, y0 = 0, y1 = buf.height - 1;
-	Subbuffer ring_subbuffer_old, ring_subbuffer_new;
-	ring_subbuffer_old.buf = buf;
-	ring_subbuffer_new.buf = new_buffer;
-
-	Ring ring_old(x0, x1, y0, y1);
-	Ring ring_new(y0, y1, x0, x1);
-	bool old_valid = ring_old.valid();
-	bool new_valid = ring_new.valid();
-	while (old_valid && new_valid)
-	{
-		ring_subbuffer_old.path = &ring_old;
-		ring_subbuffer_new.path = &ring_new;
-		auto dest_offset = ring_new.width() - 1;
-		auto length = ring_new.length();
-		if (ring_new.height() == 1)
-		{
-			std::swap(ring_new.bottom.x0, ring_new.bottom.x1); // this is a hack. do not do this under normal circumstances.
-			dest_offset = 0;
-		}
-		subbuffer_copy(ring_subbuffer_new, ring_subbuffer_old, dest_offset, 0, length);
-		old_valid = ring_old.to_inner();
-		new_valid = ring_new.to_inner();
-	}
+	Buffer new_buffer = buf.rotate_90_ret_new();
 	delete_buffer(*this);
 	buf = new_buffer;
+	resend_texture();
 }
 
-void Image::_rotate_180() const
+void Image::rotate_180() const
 {
-	UprightRect full;
-	full.x1 = buf.width - 1;
-	full.y1 = buf.height / 2 - 1;
-	Byte* temp = new Byte[buf.chpp];
-	iterate_path(full, [this, temp](PathIterator& pit) {
-		Byte* p1 = pit.pos(buf);
-		Byte* p2 = PathIterator{ buf.width - 1 - pit.x, buf.height - 1 - pit.y }.pos(buf);
-		memcpy(temp, p1, buf.chpp);
-		memcpy(p1, p2, buf.chpp);
-		memcpy(p2, temp, buf.chpp);
-		});
-	if (buf.height % 2 == 1)
-	{
-		Byte* p1 = buf.pixels + buf.stride() * (buf.height / 2);
-		Byte* p2 = buf.pixels + buf.stride() * (buf.height / 2 + 1) - buf.chpp;
-		for (size_t i = 0; i < buf.width / 2; ++i)
-		{
-			memcpy(temp, p1, buf.chpp);
-			memcpy(p1, p2, buf.chpp);
-			memcpy(p2, temp, buf.chpp);
-			p1 += buf.chpp;
-			p2 -= buf.chpp;
-		}
-	}
-	delete[] temp;
+	buf.rotate_180();
+	update_texture();
 }
 
-void Image::_rotate_270()
+void Image::rotate_270_del_old()
 {
-	if (buf.width == 0 || buf.height == 0)
-		return;
-	Buffer new_buffer;
-	new_buffer.width = buf.height;
-	new_buffer.height = buf.width;
-	new_buffer.chpp = buf.chpp;
-	new_buffer.pxnew();
-
-	Dim x0 = 0, x1 = buf.width - 1, y0 = 0, y1 = buf.height - 1;
-	Subbuffer ring_subbuffer_old, ring_subbuffer_new;
-	ring_subbuffer_old.buf = buf;
-	ring_subbuffer_new.buf = new_buffer;
-	
-	Ring ring_old(x0, x1, y0, y1);
-	Ring ring_new(y0, y1, x0, x1);
-	bool old_valid = ring_old.valid();
-	bool new_valid = ring_new.valid();
-	while (old_valid && new_valid)
-	{
-		ring_subbuffer_old.path = &ring_old;
-		ring_subbuffer_new.path = &ring_new;
-		auto dest_offset = ring_new.width() - 1;
-		auto length = ring_new.length();
-		if (ring_new.height() == 1)
-		{
-			std::swap(ring_new.bottom.x0, ring_new.bottom.x1); // this is a hack. do not do this under normal circumstances.
-			dest_offset = 0;
-		}
-		auto src_offset = ring_old.length() / 2;
-		if (ring_old.shape == Ring::VERTI)
-		{
-			std::swap(ring_old.right.y0, ring_old.right.y1); // this is a hack. do not do this under normal circumstances.
-			src_offset = 0;
-		}
-		else if (ring_old.shape == Ring::HORIZ)
-		{
-			std::swap(ring_old.bottom.x0, ring_old.bottom.x1); // this is a hack. do not do this under normal circumstances.
-			src_offset = 0;
-		}
-		subbuffer_copy(ring_subbuffer_new, ring_subbuffer_old, dest_offset, src_offset, length);
-		old_valid = ring_old.to_inner();
-		new_valid = ring_new.to_inner();
-	}
+	Buffer new_buf = buf.rotate_270_ret_new();
 	delete_buffer(*this);
-	buf = new_buffer;
+	buf = new_buf;
+	resend_texture();
 }
 
 void Image::_set(Byte* pixel, const Path& path) const

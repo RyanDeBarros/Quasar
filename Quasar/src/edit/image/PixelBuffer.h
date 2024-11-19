@@ -16,11 +16,19 @@ struct Buffer
 	Dim height = 0;
 	CHPP chpp = 0;
 
+	bool operator==(const Buffer&) const = default;
+
 	Dim stride() const { return width * chpp; }
 	Dim bytes() const { return width * chpp * height; }
 	Dim area() const { return width * height; }
 
 	void pxnew() { pixels = new Byte[bytes()]; }
+
+	void flip_horizontally() const;
+	void flip_vertically() const;
+	Buffer rotate_90_ret_new() const;
+	void rotate_180() const;
+	Buffer rotate_270_ret_new() const;
 };
 
 struct CHPPMismatchError : public std::runtime_error

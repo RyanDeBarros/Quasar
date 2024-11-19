@@ -107,10 +107,10 @@ private:
 public:
 	virtual void draw() override;
 	virtual void _send_view() override;
-	
+
 	void sync_widget();
 	void sync_canvas_transform();
-	
+
 	void set_canvas_image(const std::shared_ptr<Image>& image);
 	void set_canvas_image(std::shared_ptr<Image>&& image);
 	void update_canvas_image();
@@ -147,6 +147,8 @@ public:
 	void update_panning();
 	void zoom_by(float zoom);
 	void reset_camera();
+
+	bool image_edit_perf_mode = false; // SETTINGS this mode prioritizes performance over memory usage in action history. good for high-end computers, bad for low-end computers.
 
 	void flip_image_horizontally();
 	void flip_image_vertically();

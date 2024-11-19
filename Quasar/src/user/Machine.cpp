@@ -237,7 +237,7 @@ void MachineImpl::init_renderer()
 	Data::update_time();
 
 	import_file(FileSystem::workspace_path("ex/flag.png"));
-	//show_major_gridlines();
+	easel()->image_edit_perf_mode = true;
 }
 
 void MachineImpl::destroy()
