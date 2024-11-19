@@ -152,29 +152,22 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
 		{
 			k.consumed = true;
-			if (!is_maximized())
-				toggle_fullscreen();
+			if (is_maximized())
+				maximized = false;
+			toggle_fullscreen();
 			Machine.on_render();
 		}
 		else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mods::ALT)
 		{
 			k.consumed = true;
 			if (!is_fullscreen())
+			{
 				toggle_maximized();
-			Machine.on_render();
+				Machine.on_render();
+			}
 		}
 		};
-	root_key.children.push_back(&window_maximizer);
-
-	root_key.callback = [this](const KeyEvent& k) {
-		if (k.key == Key::ESCAPE && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
-		{
-			k.consumed = true;
-			set_fullscreen(false);
-			set_maximized(false);
-			Machine.on_render();
-		}
-		};
+	root_key.add_child(&window_maximizer);
 }
 
 Window::~Window()

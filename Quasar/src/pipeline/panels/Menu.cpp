@@ -3,6 +3,17 @@
 #include "user/Machine.h"
 #include "user/ControlScheme.h"
 
+MenuPanel::MenuPanel()
+{
+	key_handler.callback = [this](const KeyEvent& k) {
+		if (k.key == Key::ESCAPE && k.action == IAction::PRESS && submenus_open)
+		{
+			k.consumed = true;
+			escape_to_close_menu = true;
+		}
+		};
+}
+
 void MenuPanel::_send_view()
 {
 }
@@ -17,18 +28,17 @@ static const char* key_shortcut_in_file_scheme(const char* shortcut)
 	return key_shortcut_in_scheme(shortcut, ControlScheme::FILE);
 }
 
-// TODO imgui key handler to consume ESCAPE pressed and close menus if they are open.
 void MenuPanel::draw()
 {
+	submenus_open = false;
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	if (ImGui::BeginMainMenuBar())
 	{
-		const bool close_menu = ImGui::IsMouseClicked(ImGuiMouseButton_Middle) && !ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+		_close_menu = escape_to_close_menu || (ImGui::IsMouseClicked(ImGuiMouseButton_Middle) && !ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows));
 		ImGui::PopStyleVar();
 		if (ImGui::BeginMenu("File"))
 		{
-			if (close_menu)
-				ImGui::CloseCurrentPopup();
+			main_menu_setup();
 			if (ImGui::MenuItem("New Quasar file", key_shortcut_in_file_scheme("CTRL+N"))) { Machine.new_file(); }
 			if (ImGui::MenuItem("Open Quasar file", key_shortcut_in_file_scheme("CTRL+O"))) { Machine.open_file(); }
 			if (ImGui::MenuItem("Import image file", key_shortcut_in_file_scheme("CTRL+I"))) { Machine.import_file(); }
@@ -60,8 +70,7 @@ void MenuPanel::draw()
 		}
 		if (ImGui::BeginMenu("Edit"))
 		{
-			if (close_menu)
-				ImGui::CloseCurrentPopup();
+			main_menu_setup();
 			if (ImGui::MenuItem("Undo", "CTRL+Z", false, Machine.undo_enabled())) { Machine.undo(); }
 			if (ImGui::MenuItem("Redo", "CTRL+SHIFT+Z", false, Machine.redo_enabled())) { Machine.redo(); }
 			ImGui::Separator();
@@ -74,8 +83,7 @@ void MenuPanel::draw()
 		}
 		if (ImGui::BeginMenu("View"))
 		{
-			if (close_menu)
-				ImGui::CloseCurrentPopup();
+			main_menu_setup();
 			if (Machine.brushes_panel_visible())
 			{
 				if (ImGui::MenuItem("Close brushes panel")) { Machine.close_brushes_panel(); }
@@ -122,8 +130,7 @@ void MenuPanel::draw()
 		}
 		if (ImGui::BeginMenu("Help"))
 		{
-			if (close_menu)
-				ImGui::CloseCurrentPopup();
+			main_menu_setup();
 			if (ImGui::MenuItem("Download user manual")) { Machine.download_user_manual(); }
 			ImGui::EndMenu();
 		}
@@ -152,4 +159,15 @@ void MenuPanel::draw()
 
 		ImGui::EndMainMenuBar();
 	}
+}
+
+void MenuPanel::main_menu_setup()
+{
+	if (_close_menu)
+	{
+		ImGui::CloseCurrentPopup();
+		escape_to_close_menu = false;
+	}
+	else
+		submenus_open = true;
 }

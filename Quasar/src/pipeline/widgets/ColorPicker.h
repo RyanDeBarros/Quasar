@@ -80,8 +80,7 @@ public:
 	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
 	ColorPicker(const ColorPicker&) = delete;
 	ColorPicker(ColorPicker&&) noexcept = delete;
-	~ColorPicker();
-
+	
 	virtual void draw() override;
 	void process();
 	void send_vp();

@@ -38,6 +38,14 @@ namespace Data
 	}
 
 	static ControlScheme control_scheme = ControlScheme::FILE;
+
+	namespace Input
+	{
+		static WindowSizeHandler* resize_handler = nullptr;
+		static DisplayScaleHandler* rescale_handler = nullptr;
+		static KeyHandler* global_key_handler = nullptr;
+		static PathDropHandler* path_drop_handler = nullptr;
+	}
 }
 
 static PanelGroup* panels = nullptr;
@@ -133,6 +141,71 @@ bool MachineImpl::create_main_window()
 	return false;
 }
 
+static void init_handlers()
+{
+	Data::Input::resize_handler = new WindowSizeHandler();
+	Data::Input::rescale_handler = new DisplayScaleHandler();
+	Data::Input::global_key_handler = new KeyHandler();
+	Data::Input::path_drop_handler = new PathDropHandler();
+
+	Window& window = *Machine.main_window;
+	window.root_window_size.add_child(Data::Input::resize_handler);
+	window.root_display_scale.add_child(Data::Input::rescale_handler);
+	window.root_mouse_button.add_child(&palette()->mb_handler);
+	window.root_mouse_button.add_child(&easel()->mb_handler);
+	window.root_key.add_child(&menu()->key_handler);
+	window.root_key.add_child(&palette()->key_handler);
+	window.root_scroll.add_child(&palette()->scroll_handler);
+	window.root_scroll.add_child(&easel()->scroll_handler);
+	window.root_key.add_child(Data::Input::global_key_handler);
+	window.root_path_drop.add_child(Data::Input::path_drop_handler);
+
+	Data::Input::resize_handler->callback = [](const WindowSizeEvent& ws) {
+		update_panels_to_window_size(ws.width, ws.height);
+		panels->set_projection();
+		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
+		// LATER while resizing, just color window (block content) until resizing is done, for smoother transitioning.
+		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
+		Machine.main_window->swap_buffers();
+		Machine.on_render();
+		};
+	Data::Input::rescale_handler->callback = [](const DisplayScaleEvent& ds) {
+		Machine.set_app_scale(ds.scale);
+		};
+	Data::Input::path_drop_handler->callback = [](const PathDropEvent& pd) {
+		if (pd.num_paths >= 1 && Machine.cursor_in_easel())
+		{
+			FilePath filepath = pd.paths[0];
+			static const size_t num_image_formats = 6;
+			static const char* image_formats[num_image_formats] = { ".png", ".jpg", ".gif", ".bmp", ".tga", ".hdr" };
+			static const size_t num_quasar_formats = 1;
+			static const char* quasar_formats[num_quasar_formats] = { ".qua" };
+			if (filepath.has_any_extension(image_formats, num_image_formats))
+			{
+				pd.consumed = true;
+				Machine.main_window->focus();
+				Machine.import_file(filepath);
+			}
+			else if (filepath.has_any_extension(quasar_formats, num_quasar_formats))
+			{
+				pd.consumed = true;
+				Machine.main_window->focus();
+				Machine.open_file(filepath);
+			}
+			// LATER note no error popup otherwise?
+		}
+		};
+	Data::Input::global_key_handler->callback = &handle_global_key_event;
+}
+
+static void invalidate_handlers()
+{
+	QUASAR_INVALIDATE_PTR(Data::Input::resize_handler);
+	QUASAR_INVALIDATE_PTR(Data::Input::rescale_handler);
+	QUASAR_INVALIDATE_PTR(Data::Input::path_drop_handler);
+	QUASAR_INVALIDATE_PTR(Data::Input::global_key_handler);
+}
+
 void MachineImpl::init_renderer()
 {
 	QUASAR_GL(glEnable(GL_SCISSOR_TEST));
@@ -144,36 +217,10 @@ void MachineImpl::init_renderer()
 	Fonts::load_common_fonts();
 
 	create_panels();
-	
-	main_window->root_window_size.children.push_back(&resize_handler);
-	main_window->root_display_scale.children.push_back(&rescale_handler);
-	main_window->root_mouse_button.children.push_back(&palette()->mb_handler);
-	main_window->root_mouse_button.children.push_back(&easel()->mb_handler);
-	main_window->root_key.children.push_back(&palette()->key_handler);
-	main_window->root_scroll.children.push_back(&palette()->scroll_handler);
-	main_window->root_scroll.children.push_back(&easel()->scroll_handler);
-	main_window->root_key.children.push_back(&global_key_handler);
-	main_window->root_path_drop.children.push_back(&path_drop_handler);
-
 	init_panels_layout();
-
+	init_handlers();
 	panels->sync_panels();
-
-	resize_handler.callback = [this](const WindowSizeEvent& ws) {
-		update_panels_to_window_size(ws.width, ws.height);
-		panels->set_projection();
-		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
-		// LATER while resizing, just color window (block content) until resizing is done, for smoother transitioning.
-		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
-		main_window->swap_buffers();
-		Machine.on_render();
-		};
-	rescale_handler.callback = [](const DisplayScaleEvent& ds) {
-		Machine.set_app_scale(ds.scale);
-		};
-
 	canvas_reset_camera();
-	attach_global_user_controls();
 	
 	easel()->canvas().minor_gridlines.set_color(ColorFrame(RGBA(31, 63, 107, 255))); // SETTINGS
 	easel()->canvas().minor_gridlines.line_width = 1.0f; // cannot be < 1.0 // SETTINGS
@@ -199,6 +246,7 @@ void MachineImpl::destroy()
 	QUASAR_INVALIDATE_PTR(panels);
 	Fonts::invalidate_common_fonts();
 	history.clear_history();
+	invalidate_handlers();
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 

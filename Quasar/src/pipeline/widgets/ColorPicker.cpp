@@ -98,12 +98,6 @@ ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, K
 	set_alt_color(ColorFrame(), false);
 }
 
-ColorPicker::~ColorPicker()
-{
-	parent_mb_handler.remove_child(&mb_handler);
-	parent_key_handler.remove_child(&key_handler);
-}
-
 void ColorPicker::draw()
 {
 	rr_wget(*this, BACKGROUND).draw();
@@ -878,7 +872,7 @@ void ColorPicker::initialize_widget()
 
 void ColorPicker::connect_input_handlers()
 {
-	parent_mb_handler.children.push_back(&mb_handler);
+	parent_mb_handler.add_child(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (showing_hex_popup && cursor_in_bkg())
 		{
@@ -981,7 +975,7 @@ void ColorPicker::connect_input_handlers()
 		}
 	};
 
-	parent_key_handler.children.push_back(&key_handler);
+	parent_key_handler.add_child(&key_handler);
 	key_handler.callback = [this](const KeyEvent& k) {
 		if (ImGui::GetIO().WantCaptureKeyboard)
 			k.consumed = true;

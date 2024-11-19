@@ -962,13 +962,6 @@ ColorPalette::ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler,
 	new_subpalette(false); // always have at least one subpalette
 }
 
-ColorPalette::~ColorPalette()
-{
-	parent_mb_handler.remove_child(&mb_handler);
-	parent_key_handler.remove_child(&key_handler);
-	parent_scroll_handler.remove_child(&scroll_handler);
-}
-
 void ColorPalette::draw()
 {
 	render_imgui();
@@ -1246,7 +1239,7 @@ void ColorPalette::render_imgui()
 
 void ColorPalette::connect_input_handlers()
 {
-	parent_mb_handler.children.push_back(&mb_handler);
+	parent_mb_handler.add_child(&mb_handler);
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (mb.action == IAction::RELEASE && mb.button != MouseButton::RIGHT && current_subpalette().is_moving_a_color())
 			current_subpalette().stop_moving_color();
@@ -1286,7 +1279,7 @@ void ColorPalette::connect_input_handlers()
 			current_subpalette().begin_moving_color_under_cursor(!(mb.mods & Mods::ALT));
 		}
 		};
-	parent_key_handler.children.push_back(&key_handler);
+	parent_key_handler.add_child(&key_handler);
 	key_handler.callback = [this](const KeyEvent& k) {
 		if (renaming_subpalette)
 		{
@@ -1336,7 +1329,7 @@ void ColorPalette::connect_input_handlers()
 
 		}
 		};
-	parent_scroll_handler.children.push_back(&scroll_handler);
+	parent_scroll_handler.add_child(&scroll_handler);
 	scroll_handler.callback = [this](const ScrollEvent& s) {
 		if (!imgui_combo_open && !renaming_subpalette)
 		{

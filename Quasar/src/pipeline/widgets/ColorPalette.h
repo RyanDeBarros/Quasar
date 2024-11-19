@@ -177,8 +177,7 @@ public:
 	ColorPalette(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, ScrollHandler& parent_scroll_handler, const Reflection& reflection);
 	ColorPalette(const ColorPalette&) = delete;
 	ColorPalette(ColorPalette&&) noexcept = delete;
-	~ColorPalette();
-
+	
 	virtual void draw() override;
 	void process();
 	void send_vp();

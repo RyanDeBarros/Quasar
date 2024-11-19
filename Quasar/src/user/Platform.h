@@ -127,7 +127,17 @@ template<std::derived_from<InputEvent> Event>
 struct InputEventHandler
 {
 	std::function<void(const Event&)> callback = [](const Event&) {};
+private:
+	InputEventHandler<Event>* parent = nullptr;
 	std::vector<InputEventHandler<Event>*> children;
+public:
+	~InputEventHandler()
+	{
+		if (parent)
+			parent->remove_child(this);
+		for (InputEventHandler<Event>* child : children)
+			child->parent = nullptr;
+	}
 
 	void on_callback(const Event& event) const
 	{
@@ -140,11 +150,44 @@ struct InputEventHandler
 		callback(event);
 	}
 
-	void remove_child(const InputEventHandler<Event>* child)
+	void add_child(InputEventHandler<Event>* child)
 	{
-		auto iter = std::find(children.begin(), children.end(), child);
-		if (iter != children.end())
-			children.erase(iter);
+		if (child)
+		{
+			child->parent = this;
+			children.push_back(child);
+		}
+	}
+
+	void insert_child(size_t pos, InputEventHandler<Event>* child)
+	{
+		if (child)
+		{
+			child->parent = this;
+			children.insert(children.begin() + pos, child);
+		}
+	}
+
+	void remove_child(InputEventHandler<Event>* child)
+	{
+		if (child)
+		{
+			auto iter = std::find(children.begin(), children.end(), child);
+			if (iter != children.end())
+			{
+				child->parent = nullptr;
+				children.erase(iter);
+			}
+		}
+	}
+
+	void fast_remove_child(size_t pos, InputEventHandler<Event>* child)
+	{
+		if (child && pos < children.size() && children[pos] == child)
+		{
+			child->parent = nullptr;
+			children.erase(children.begin() + pos);
+		}
 	}
 };
 

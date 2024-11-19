@@ -18,11 +18,6 @@ struct MachineImpl
 	ActionHistory history;
 	Window* main_window = nullptr;
 
-	WindowSizeHandler resize_handler;
-	DisplayScaleHandler rescale_handler;
-	KeyHandler global_key_handler;
-	PathDropHandler path_drop_handler;
-
 	struct
 	{
 		constexpr static int initial_width = 2160;

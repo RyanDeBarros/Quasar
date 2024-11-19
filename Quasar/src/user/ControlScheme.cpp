@@ -168,45 +168,19 @@ static void global_key_handler_neutral(const KeyEvent& k)
 	}
 }
 
-// LATER these would go in main menu panel
-void attach_global_user_controls()
+void handle_global_key_event(const KeyEvent& k)
 {
-	Machine.global_key_handler.callback = [](const KeyEvent& k) {
-		global_key_handler_neutral(k);
-		if (!k.consumed)
+	global_key_handler_neutral(k);
+	if (!k.consumed)
+	{
+		switch (Machine.get_control_scheme())
 		{
-			switch (Machine.get_control_scheme())
-			{
-			case ControlScheme::FILE:
-				global_key_handler_file(k);
-				break;
-			case ControlScheme::PALETTE:
-				global_key_handler_palette(k);
-				break;
-			}
+		case ControlScheme::FILE:
+			global_key_handler_file(k);
+			break;
+		case ControlScheme::PALETTE:
+			global_key_handler_palette(k);
+			break;
 		}
-		};
-	Machine.path_drop_handler.callback = [](const PathDropEvent& pd) {
-		if (pd.num_paths >= 1 && Machine.cursor_in_easel())
-		{
-			FilePath filepath = pd.paths[0];
-			static const size_t num_image_formats = 6;
-			static const char* image_formats[num_image_formats] = { ".png", ".jpg", ".gif", ".bmp", ".tga", ".hdr" };
-			static const size_t num_quasar_formats = 1;
-			static const char* quasar_formats[num_quasar_formats] = { ".qua" };
-			if (filepath.has_any_extension(image_formats, num_image_formats))
-			{
-				pd.consumed = true;
-				Machine.main_window->focus();
-				Machine.import_file(filepath);
-			}
-			else if (filepath.has_any_extension(quasar_formats, num_quasar_formats))
-			{
-				pd.consumed = true;
-				Machine.main_window->focus();
-				Machine.open_file(filepath);
-			}
-			// LATER note no error popup otherwise?
-		}
-		};
+	}
 }
