@@ -582,3 +582,68 @@ void Easel::reset_camera()
 	}
 	sync_canvas_transform();
 }
+
+void Easel::flip_image_horizontally()
+{
+	struct FlipHorizontallyAction : public ActionBase
+	{
+		Easel* easel;
+		FlipHorizontallyAction(Easel* easel) : easel(easel) { weight = sizeof(FlipHorizontallyAction); }
+		virtual void forward() override { if (easel) easel->canvas_image()->flip_horizontally(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->flip_horizontally(); }
+		QUASAR_ACTION_EQUALS_OVERRIDE(FlipHorizontallyAction)
+	};
+	Machine.history.execute(std::make_shared<FlipHorizontallyAction>(this));
+}
+
+void Easel::flip_image_vertically()
+{
+	struct FlipVerticallyAction : public ActionBase
+	{
+		Easel* easel;
+		FlipVerticallyAction(Easel* easel) : easel(easel) { weight = sizeof(FlipVerticallyAction); }
+		virtual void forward() override { if (easel) easel->canvas_image()->flip_vertically(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->flip_vertically(); }
+		QUASAR_ACTION_EQUALS_OVERRIDE(FlipVerticallyAction)
+	};
+	Machine.history.execute(std::make_shared<FlipVerticallyAction>(this));
+}
+
+void Easel::rotate_image_90()
+{
+	struct Rotate90Action : public ActionBase
+	{
+		Easel* easel;
+		Rotate90Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate90Action); }
+		virtual void forward() override { if (easel) easel->canvas_image()->rotate_90(); if (easel) easel->update_canvas_image(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->rotate_270(); if (easel) easel->update_canvas_image(); }
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate90Action)
+	};
+	Machine.history.execute(std::make_shared<Rotate90Action>(this));
+}
+
+void Easel::rotate_image_180()
+{
+	struct Rotate180Action : public ActionBase
+	{
+		Easel* easel;
+		Rotate180Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate180Action); }
+		virtual void forward() override { if (easel) easel->canvas_image()->rotate_180(); if (easel) easel->update_canvas_image(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->rotate_180(); if (easel) easel->update_canvas_image(); }
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate180Action)
+	};
+	Machine.history.execute(std::make_shared<Rotate180Action>(this));
+}
+
+void Easel::rotate_image_270()
+{
+	struct Rotate270Action : public ActionBase
+	{
+		Easel* easel;
+		Rotate270Action(Easel* easel) : easel(easel) { weight = sizeof(Rotate270Action); }
+		virtual void forward() override { if (easel) easel->canvas_image()->rotate_270(); if (easel) easel->update_canvas_image(); }
+		virtual void backward() override { if (easel) easel->canvas_image()->rotate_90(); if (easel) easel->update_canvas_image(); }
+		QUASAR_ACTION_EQUALS_OVERRIDE(Rotate270Action)
+	};
+	Machine.history.execute(std::make_shared<Rotate270Action>(this));
+}

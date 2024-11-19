@@ -4,6 +4,10 @@
 #include <queue>
 #include <memory>
 
+#define QUASAR_ACTION_EQUALS_OVERRIDE(structname)\
+	bool operator==(const structname&) const = default;\
+	virtual bool equals(const ActionBase& other) const override { auto p = dynamic_cast<const structname*>(&other); return p && *this == *p; }
+
 struct ActionBase
 {
 	size_t weight = sizeof(ActionBase);

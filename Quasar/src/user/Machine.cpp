@@ -660,74 +660,29 @@ void MachineImpl::start_held_redo()
 	Data::History::on_starting_interval = true;
 }
 
-struct FlipHorizontallyAction : public ActionBase
-{
-	FlipHorizontallyAction() { weight = sizeof(FlipHorizontallyAction); }
-	virtual void forward() override { easel()->canvas_image()->flip_horizontally(); }
-	virtual void backward() override { easel()->canvas_image()->flip_horizontally(); }
-	virtual bool equals(const ActionBase& other) const override { return dynamic_cast<const FlipHorizontallyAction*>(&other); }
-};
-
 void MachineImpl::flip_horizontally()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<FlipHorizontallyAction>();
-	history.execute(a);
+	easel()->flip_image_horizontally();
 }
-
-struct FlipVerticallyAction : public ActionBase
-{
-	FlipVerticallyAction() { weight = sizeof(FlipVerticallyAction); }
-	virtual void forward() override { easel()->canvas_image()->flip_vertically(); }
-	virtual void backward() override { easel()->canvas_image()->flip_vertically(); }
-	virtual bool equals(const ActionBase& other) const override { return dynamic_cast<const FlipVerticallyAction*>(&other); }
-};
 
 void MachineImpl::flip_vertically()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<FlipVerticallyAction>();
-	history.execute(a);
+	easel()->flip_image_vertically();
 }
-
-struct Rotate90Action : public ActionBase
-{
-	Rotate90Action() { weight = sizeof(Rotate90Action); }
-	virtual void forward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
-	virtual void backward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
-	virtual bool equals(const ActionBase& other) const override { return dynamic_cast<const Rotate90Action*>(&other); }
-};
 
 void MachineImpl::rotate_90()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate90Action>();
-	history.execute(a);
+	easel()->rotate_image_90();
 }
-
-struct Rotate180Action : public ActionBase
-{
-	Rotate180Action() { weight = sizeof(Rotate180Action); }
-	virtual void forward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
-	virtual void backward() override { easel()->canvas_image()->rotate_180(); easel()->update_canvas_image(); }
-	virtual bool equals(const ActionBase& other) const override { return dynamic_cast<const Rotate180Action*>(&other); }
-};
 
 void MachineImpl::rotate_180()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate180Action>();
-	history.execute(a);
+	easel()->rotate_image_180();
 }
-
-struct Rotate270Action : public ActionBase
-{
-	Rotate270Action() { weight = sizeof(Rotate270Action); }
-	virtual void forward() override { easel()->canvas_image()->rotate_270(); easel()->update_canvas_image(); }
-	virtual void backward() override { easel()->canvas_image()->rotate_90(); easel()->update_canvas_image(); }
-	virtual bool equals(const ActionBase& other) const override { return dynamic_cast<const Rotate270Action*>(&other); }
-};
 
 void MachineImpl::rotate_270()
 {
-	static std::shared_ptr<ActionBase> a = std::make_shared<Rotate270Action>();
-	history.execute(a);
+	easel()->rotate_image_270();
 }
 
 bool MachineImpl::brushes_panel_visible() const

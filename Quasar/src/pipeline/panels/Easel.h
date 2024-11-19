@@ -148,6 +148,12 @@ public:
 	void zoom_by(float zoom);
 	void reset_camera();
 
+	void flip_image_horizontally();
+	void flip_image_vertically();
+	void rotate_image_90();
+	void rotate_image_180();
+	void rotate_image_270();
+
 	Canvas& canvas() { return *widget.get<Canvas>(CANVAS); }
 	const Canvas& canvas() const { return *widget.get<Canvas>(CANVAS); }
 

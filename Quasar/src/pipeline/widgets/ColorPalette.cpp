@@ -9,11 +9,6 @@
 #include "Button.h"
 #include "ColorPicker.h"
 
-// LATER put somewhere else?
-#define ACTION_EQUALS_OVERRIDE(structname)\
-bool operator==(const structname&) const = default;\
-virtual bool equals(const ActionBase& other) const override { auto p = dynamic_cast<const structname*>(&other); return p && *this == *p; }
-
 struct ColorOverwriteAction : public ActionBase
 {
 	std::shared_ptr<ColorSubpalette> subpalette;
@@ -31,7 +26,7 @@ struct ColorOverwriteAction : public ActionBase
 		else if (editing_color == ColorPicker::EditingColor::ALTERNATE)
 			subpalette->overwrite_alternate_color(c, update_picker);
 	}
-	ACTION_EQUALS_OVERRIDE(ColorOverwriteAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(ColorOverwriteAction)
 };
 
 // LATER move these two to Utils.h
@@ -85,7 +80,7 @@ struct ColorMove1DAction : public ActionBase
 			subpalette->set_alternate_selector(rotated_index(target, initial, initial, subpalette->alternate_index));
 		}
 	}
-	ACTION_EQUALS_OVERRIDE(ColorMove1DAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(ColorMove1DAction)
 };
 
 struct ColorMove2DAction : public ActionBase
@@ -112,7 +107,7 @@ struct ColorMove2DAction : public ActionBase
 		else if (subpalette->alternate_index == target_index)
 			subpalette->set_alternate_selector(initial_index);
 	}
-	ACTION_EQUALS_OVERRIDE(ColorMove2DAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(ColorMove2DAction)
 };
 
 struct InsertColorAction : public ActionBase
@@ -126,7 +121,7 @@ struct InsertColorAction : public ActionBase
 		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = sizeof(InsertColorAction); }
 	virtual void forward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_2, alternate_index_2, color); }
 	virtual void backward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_1, alternate_index_1, true); }
-	ACTION_EQUALS_OVERRIDE(InsertColorAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(InsertColorAction)
 };
 
 struct RemoveColorAction : public ActionBase
@@ -140,7 +135,7 @@ struct RemoveColorAction : public ActionBase
 		primary_index_2(primary_index_2), alternate_index_1(alternate_index_1), alternate_index_2(alternate_index_2) { weight = sizeof(RemoveColorAction); }
 	virtual void forward() override { subpalette->focus(false); subpalette->remove_color_at(index, primary_index_2, alternate_index_2, true); }
 	virtual void backward() override { subpalette->focus(false); subpalette->insert_color_at(index, primary_index_1, alternate_index_1, color); }
-	ACTION_EQUALS_OVERRIDE(RemoveColorAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(RemoveColorAction)
 };
 
 struct SubpaletteRenameAction : public ActionBase
@@ -162,7 +157,7 @@ struct SubpaletteRenameAction : public ActionBase
 		subpalette->focus(true);
 		subpalette->subscheme->name = std::move(name_combo.substr(start, len));
 	}
-	ACTION_EQUALS_OVERRIDE(SubpaletteRenameAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(SubpaletteRenameAction)
 };
 
 struct SubpaletteNewAction : public ActionBase
@@ -176,7 +171,7 @@ struct SubpaletteNewAction : public ActionBase
 
 	virtual void forward() override { if (palette) palette->insert_subpalette(index, subpalette); }
 	virtual void backward() override { if (palette) palette->delete_subpalette(index); }
-	ACTION_EQUALS_OVERRIDE(SubpaletteNewAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(SubpaletteNewAction)
 };
 
 struct SubpaletteDeleteAction : public ActionBase
@@ -190,7 +185,7 @@ struct SubpaletteDeleteAction : public ActionBase
 
 	virtual void forward() override { if (palette) palette->delete_subpalette(index); }
 	virtual void backward() override { if (palette) palette->insert_subpalette(index, subpalette); }
-	ACTION_EQUALS_OVERRIDE(SubpaletteDeleteAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(SubpaletteDeleteAction)
 };
 
 // LATER import subpalette files and test this action
@@ -205,7 +200,7 @@ struct AssignColorSubschemeAction : public ActionBase
 
 	virtual void forward() override { if (palette) palette->assign_color_subscheme(index, new_subscheme, false); }
 	virtual void backward() override { if (palette) palette->assign_color_subscheme(index, prev_subscheme, false); }
-	ACTION_EQUALS_OVERRIDE(AssignColorSubschemeAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(AssignColorSubschemeAction)
 };
 
 // LATER test importing schemes and undo/redo. remember about ColorPalette::clear_history_on_import setting
@@ -225,7 +220,7 @@ struct ImportColorSchemeAction : public ActionBase
 	}
 	virtual void forward() override { if (palette) palette->import_color_scheme(new_cs, false); }
 	virtual void backward() override { if (palette) palette->import_color_scheme(prev_cs, false); }
-	ACTION_EQUALS_OVERRIDE(ImportColorSchemeAction)
+	QUASAR_ACTION_EQUALS_OVERRIDE(ImportColorSchemeAction)
 };
 
 ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_rect_shader)
