@@ -231,10 +231,13 @@ void MachineImpl::init_renderer()
 
 	set_app_scale(main_window->display_scale());
 
-	main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
-		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_scene_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
-		//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
-		window_layout_info.menu_panel_height + window_layout_info.scene_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	float min_width = max(brushes()->minimum_screen_display().x + palette()->minimum_screen_display().x,
+		menu()->minimum_screen_display().x, scene()->minimum_screen_display().x);
+	float min_height = menu()->minimum_screen_display().y + scene()->minimum_screen_display().y
+		+ max(brushes()->minimum_screen_display().y, palette()->minimum_screen_display().y);
+	min_width = std::max(min_width, (float)window_layout_info.brushes_panel_width + window_layout_info.palette_panel_width);
+	min_height = std::max(min_height, (float)window_layout_info.menu_panel_height + window_layout_info.scene_panel_height);
+	main_window->set_size_limits((int)min_width, (int)min_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	
 	Data::update_time();
 
@@ -447,6 +450,18 @@ Position MachineImpl::to_screen_coordinates(Position world_coordinates, const gl
 		(1.0f + clip_space_pos.x) * 0.5f * main_window->width(),
 		(1.0f + clip_space_pos.y) * 0.5f * main_window->height()
 	};
+}
+
+Scale MachineImpl::to_world_size(Scale screen_size, const glm::mat3& vp) const
+{
+	glm::mat2 vpsz = { { vp[0][0], vp[0][1] }, { vp[1][0], vp[1][1] } };
+	return 2.0f * glm::inverse(vpsz) * (screen_size / Scale(main_window->size()));
+}
+
+Scale MachineImpl::to_screen_size(Scale world_size, const glm::mat3& vp) const
+{
+	glm::mat2 vpsz = { { vp[0][0], vp[0][1] }, { vp[1][0], vp[1][1] } };
+	return 0.5f * Scale(main_window->size()) * (vpsz * world_size);
 }
 
 Position MachineImpl::cursor_screen_pos() const

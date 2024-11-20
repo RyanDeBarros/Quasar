@@ -20,6 +20,7 @@ struct Position : glm::vec2
 	Position(int x, float y) : glm::vec2(x, y) {}
 	Position(float x, int y) : glm::vec2(x, y) {}
 	Position(const glm::vec2& vec) : glm::vec2(vec) {}
+	Position(const glm::ivec2& vec) : glm::vec2(vec.x, vec.y) {}
 
 	Position operator+(Position r) const { return { x + r.x, y + r.y }; }
 	Position& operator+=(Position r) { x += r.x; y += r.y; ; return *this; }
@@ -75,6 +76,7 @@ struct Scale : glm::vec2
 	Scale(int x, float y) : glm::vec2(x, y) {}
 	Scale(float x, int y) : glm::vec2(x, y) {}
 	Scale(const glm::vec2& vec) : glm::vec2(vec) {}
+	Scale(const glm::ivec2& vec) : glm::vec2(vec.x, vec.y) {}
 
 	Scale reciprocal() const { return { x ? 1.0f / x : 0.0f, y ? 1.0f / y : 0.0f }; }
 

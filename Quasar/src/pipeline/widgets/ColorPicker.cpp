@@ -1475,7 +1475,7 @@ void ColorPicker::sync_widget_with_vp()
 
 	gui_transform.scale = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
 	gui_transform.position = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, 0.5f }), *vp);
-	gui_transform.position.y = Machine.main_window->height() - gui_transform.position.y;
+	gui_transform.position.y = roundf(Machine.main_window->height() - gui_transform.position.y);
 }
 
 void ColorPicker::sync_single_standard_ur_transform(size_t control, bool send_buffer) const

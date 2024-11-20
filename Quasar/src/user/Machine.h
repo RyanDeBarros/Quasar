@@ -57,6 +57,8 @@ struct MachineImpl
 
 	Position to_world_coordinates(Position screen_coordinates, const glm::mat3& inverse_vp) const;
 	Position to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const;
+	Scale to_world_size(Scale screen_size, const glm::mat3& vp) const;
+	Scale to_screen_size(Scale world_size, const glm::mat3& vp) const;
 
 	Position cursor_screen_pos() const;
 	Position cursor_screen_x() const;

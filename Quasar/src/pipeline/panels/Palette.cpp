@@ -86,7 +86,9 @@ void PalettePanel::render_widget()
 
 Scale PalettePanel::minimum_screen_display() const
 {
-	return to_screen_coordinates(color_picker_scale * color_picker(this).minimum_display() + color_palette_scale * color_palette(this).minimum_display() + Scale{ 2 * padding, 3 * padding }) - to_screen_coordinates({});
+	Scale cpk = color_picker_scale * color_picker(this).minimum_display();
+	Scale cpl = color_palette_scale * color_palette(this).minimum_display();
+	return to_screen_size({ std::max(cpk.x, cpl.x) + 2 * padding, cpk.y + cpl.y + 3 * padding });
 }
 
 void PalettePanel::new_color()
@@ -156,9 +158,9 @@ void PalettePanel::sync_widget()
 	bkg.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
 	bkg.send_buffer();
 
-	float view_height = (to_view_coordinates({}) - to_view_coordinates({ 0, bounds.clip().screen_h })).y;
+	float view_height = to_view_size({ 0, bounds.clip().screen_h }).y;
 	const float free_space_y = view_height - 3 * padding;
-	const float color_picker_height = 420; // LATER palette min height is at least 420 + 3 * padding + min color palette height, or else scale Palette view down.
+	const float color_picker_height = 420;
 	const float color_palette_height = free_space_y - color_picker_height * color_picker_scale.y;
 
 	Scale color_picker_size{ 240, color_picker_height };

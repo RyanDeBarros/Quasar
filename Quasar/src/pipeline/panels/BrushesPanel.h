@@ -55,8 +55,9 @@ private:
 	void connect_input_handlers();
 
 public:
-	void draw() override;
-	void _send_view() override;
+	virtual void draw() override;
+	virtual void _send_view() override;
+	virtual Scale minimum_screen_display() const override;
 
 private:
 	void sync_widget();
@@ -99,7 +100,7 @@ public:
 	};
 
 private:
-	// TODO implement empties elsewhere as well
+	// LATER implement empties elsewhere as well
 	Widget& w_tip_parent();
 	Widget& w_tool_parent();
 };

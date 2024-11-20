@@ -19,6 +19,7 @@ public:
 
 	virtual void _send_view() override;
 	virtual void draw() override;
+	virtual Scale minimum_screen_display() const override;
 
 private:
 	void main_menu_setup();

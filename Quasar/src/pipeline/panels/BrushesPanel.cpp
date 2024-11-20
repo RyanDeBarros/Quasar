@@ -7,6 +7,20 @@
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 
+// ---------- LAYOUT ----------
+
+const float tip_w_pencil = 60;
+const float tip_w_pen = 40;
+const float tip_w_eraser = 65;
+const float tip_w_select = 65;
+const float starting_tip_h = 25;
+const float tip_full_w = tip_w_pencil + tip_w_pen + tip_w_eraser + tip_w_select;
+const float starting_tip_x = -0.5f * tip_full_w;
+const float starting_tip_y = -10;
+
+const float tool_btn_side = 100;
+const float tool_btn_spacing = 10;
+
 BrushesPanel::BrushesPanel()
 	: bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")), widget(_W_COUNT)
@@ -31,15 +45,6 @@ void BrushesPanel::initialize_widget()
 	tba.pivot = { 0, 1 };
 	tba.frange = Fonts::label_black;
 	tba.font_size = 16;
-
-	const float tip_w_pencil = 60;
-	const float tip_w_pen = 40;
-	const float tip_w_eraser = 65;
-	const float tip_w_select = 65;
-	const float starting_tip_h = 25;
-	const float tip_full_w = tip_w_pencil + tip_w_pen + tip_w_eraser + tip_w_select;
-	const float starting_tip_x = -0.5f * tip_full_w;
-	const float starting_tip_y = -10;
 
 	tba.text = "PENCIL";
 	tba.transform = { { starting_tip_x, starting_tip_y }, { tip_w_pencil, starting_tip_h } };
@@ -72,13 +77,11 @@ void BrushesPanel::initialize_widget()
 		}, BUTTON_TIP_PENCIL);
 
 	Widget* tool_parent = widget.children[EMPTY_BUTTON_TOOL].get();
-	tool_parent->self.transform.position = {};
+	tool_parent->self.transform.position = { 0, starting_tip_y };
 	tool_parent->self.pivot = { 0.5f, 0.5f };
 
 	tba.pivot = { 0.5f, 0.5f };
 	tba.font_size = 18;
-	const float tool_btn_side = 100;
-	const float tool_btn_spacing = 10;
 	tba.transform.scale = { tool_btn_side, tool_btn_side };
 	tba.transform.position.y = 1.5f * (tool_btn_side + tool_btn_spacing);
 	
@@ -222,6 +225,12 @@ void BrushesPanel::_send_view()
 	Uniforms::send_matrix3(round_rect_shader, "u_VP", vp);
 	unbind_shader();
 	sync_widget();
+}
+
+Scale BrushesPanel::minimum_screen_display() const
+{
+	return to_screen_size({ std::max(tip_full_w, 2 * tool_btn_side + tool_btn_spacing) + 20,
+		2 * (-starting_tip_y + starting_tip_h) + 4 * tool_btn_side + 3 * tool_btn_spacing});
 }
 
 void BrushesPanel::sync_widget()

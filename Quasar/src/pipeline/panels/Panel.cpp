@@ -67,6 +67,21 @@ Position Panel::to_screen_coordinates(Position world_coordinates) const
 	return Machine.to_screen_coordinates(world_coordinates, vp_matrix());
 }
 
+Scale Panel::to_view_size(Scale screen_size) const
+{
+	return Machine.to_world_size(screen_size, pgroup->projection);
+}
+
+Scale Panel::to_world_size(Scale screen_size) const
+{
+	return Machine.to_world_size(screen_size, vp_matrix());
+}
+
+Scale Panel::to_screen_size(Scale world_size) const
+{
+	return Machine.to_screen_size(world_size, vp_matrix());
+}
+
 void PanelGroup::sync_panels()
 {
 	for (auto& panel : panels)
