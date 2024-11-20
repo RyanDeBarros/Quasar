@@ -9,28 +9,28 @@ static void global_key_handler_file(const KeyEvent& k)
 		switch (k.key)
 		{
 		case Key::N:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 			{
 				k.consumed = true;
 				Machine.new_file();
 			}
 			break;
 		case Key::O:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 			{
 				k.consumed = true;
 				Machine.open_file();
 			}
 			break;
 		case Key::I:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 			{
 				k.consumed = true;
 				Machine.import_file();
 			}
 			break;
 		case Key::E:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 			{
 				k.consumed = true;
 				Machine.export_file();
@@ -56,15 +56,15 @@ static void global_key_handler_palette(const KeyEvent& k)
 			Machine.palette_delete_color();
 			break;
 		case Key::N:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 				Machine.palette_new_subpalette();
 			break;
 		case Key::R:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 				Machine.palette_rename_subpalette();
 			break;
 		case Key::D:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 				Machine.palette_delete_subpalette();
 			break;
 		}
@@ -78,14 +78,14 @@ static void global_key_handler_neutral(const KeyEvent& k)
 		switch (k.key)
 		{
 		case Key::ROW1:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 			{
 				Machine.set_control_scheme(ControlScheme::FILE);
 				k.consumed = true;
 			}
 			break;
 		case Key::ROW2:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 			{
 				Machine.set_control_scheme(ControlScheme::PALETTE);
 				k.consumed = true;
@@ -96,10 +96,10 @@ static void global_key_handler_neutral(const KeyEvent& k)
 			Machine.canvas_reset_camera();
 			break;
 		case Key::Z:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 			{
 				k.consumed = true;
-				if (Machine.main_window->is_shift_pressed())
+				if (k.mods & Mods::SHIFT)
 				{
 					if (Machine.redo_enabled())
 					{
@@ -118,17 +118,17 @@ static void global_key_handler_neutral(const KeyEvent& k)
 			}
 			break;
 		case Key::S:
-			if (Machine.main_window->is_ctrl_pressed())
+			if (k.mods & Mods::CONTROL)
 			{
-				if (Machine.main_window->is_shift_pressed())
+				if (k.mods & Mods::SHIFT)
 				{
-					if (!Machine.main_window->is_alt_pressed())
+					if (!(k.mods & Mods::ALT))
 					{
 						k.consumed = true;
 						Machine.save_file_as();
 					}
 				}
-				else if (Machine.main_window->is_alt_pressed())
+				else if (k.mods & Mods::ALT)
 				{
 					k.consumed = true;
 					Machine.save_file_copy();
@@ -142,7 +142,7 @@ static void global_key_handler_neutral(const KeyEvent& k)
 			break;
 		case Key::G:
 			k.consumed = true;
-			if (Machine.main_window->is_shift_pressed())
+			if (k.mods & Mods::SHIFT)
 			{
 				if (Machine.major_gridlines_visible())
 					Machine.hide_major_gridlines();

@@ -1368,11 +1368,11 @@ void ColorPalette::initialize_widget()
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
 	sba.is_hoverable = [this]() { return !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); };
-	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
+	sba.is_selectable = fconv_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
 	
 	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";
-	sba.on_select = fconv_st_on_action([this]() {
+	sba.on_select = fconv_on_action([this]() {
 		if ((*reflection.use_primary)())
 			subpalette_overwrite_primary(true);
 		else if ((*reflection.use_alternate)())
@@ -1384,7 +1384,7 @@ void ColorPalette::initialize_widget()
 
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "+";
-	sba.on_select = fconv_st_on_action([this]() {
+	sba.on_select = fconv_on_action([this]() {
 		if ((*reflection.use_primary)())
 		{
 			bool adjacent = !Machine.main_window->is_shift_pressed();
@@ -1407,17 +1407,17 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 22;
 	sba.transform.position.x = button2_x;
 	sba.text = "N";
-	sba.on_select = fconv_st_on_action([this]() { new_subpalette(true); });
+	sba.on_select = fconv_on_action([this]() { new_subpalette(true); });
 	assign_widget(this, BUTTON_SUBPALETTE_NEW, std::make_shared<StandardTButton>(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "R";
-	sba.on_select = fconv_st_on_action([this]() { rename_subpalette(); });
+	sba.on_select = fconv_on_action([this]() { rename_subpalette(); });
 	assign_widget(this, BUTTON_SUBPALETTE_RENAME, std::make_shared<StandardTButton>(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "D";
-	sba.on_select = fconv_st_on_action([this]() { delete_current_subpalette(true); });
+	sba.on_select = fconv_on_action([this]() { delete_current_subpalette(true); });
 	assign_widget(this, BUTTON_SUBPALETTE_DELETE, std::make_shared<StandardTButton>(sba));
 }
 

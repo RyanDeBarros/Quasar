@@ -144,16 +144,8 @@ void ColorPicker::draw()
 		break;
 	}
 	cp_render_gui_front();
-	if (editing_color == EditingColor::PRIMARY)
-	{
-		ur_wget(*this, PREVIEW_ALT).draw();
-		ur_wget(*this, PREVIEW_PRI).draw();
-	}
-	else if (editing_color == EditingColor::ALTERNATE)
-	{
-		ur_wget(*this, PREVIEW_PRI).draw();
-		ur_wget(*this, PREVIEW_ALT).draw();
-	}
+	ur_wget(*this, PREVIEW_ALT).draw();
+	ur_wget(*this, PREVIEW_PRI).draw();
 }
 
 void ColorPicker::process()
@@ -797,7 +789,7 @@ void ColorPicker::initialize_widget()
 	sba.is_hoverable = [this]() { return current_widget_control == -1; };
 	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, std::make_shared<StandardTButton>(sba));
 	StandardTButton& b_txtfld = sb_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE);
-	b_txtfld.on_select = fconv_st_on_action([this, &b_txtfld]() {
+	b_txtfld.on_select = fconv_on_action([this, &b_txtfld]() {
 		if (txtfld_mode == TextFieldMode::NUMBER)
 		{
 			txtfld_mode = TextFieldMode::PERCENT;
@@ -817,21 +809,21 @@ void ColorPicker::initialize_widget()
 	tba.transform = { { button_left_x, button_top_y_2 }, { button_rgb_hex_code_w, button_h } };
 	auto tb = std::make_shared<ToggleTButton>(tba);
 	tb->is_hoverable = [this]() { return state & State::SLIDER_RGB && current_widget_control == -1; };
-	tb->on_select = fconv_tt_on_action([this]() { showing_hex_popup = true; });
-	tb->on_deselect = fconv_tt_on_action([this]() { showing_hex_popup = false; });
+	tb->on_select = fconv_on_action([this]() { showing_hex_popup = true; });
+	tb->on_deselect = fconv_on_action([this]() { showing_hex_popup = false; });
 	assign_widget(this, BUTTON_RGB_HEX_CODE, tb);
 
 	tba.is_hoverable = [this]() { return current_widget_control == -1; };
 	tba.text = "QUAD";
 	tba.transform.scale = { button_quad_w, button_h };
 	tba.is_hoverable = [this]() { return state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL) && current_widget_control == -1; };
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::GRAPHIC_QUAD); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::GRAPHIC_QUAD); });
 	assign_widget(this, BUTTON_QUAD, std::make_shared<ToggleTButton>(tba));
 	
 	tba.text = "WHEEL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.transform.scale.x = button_wheel_w;
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::GRAPHIC_WHEEL); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::GRAPHIC_WHEEL); });
 	assign_widget(this, BUTTON_WHEEL, std::make_shared<ToggleTButton>(tba));
 
 	sub_tab_bar.init({
@@ -843,23 +835,23 @@ void ColorPicker::initialize_widget()
 	tba.transform.position = { button_left_x, button_top_y_1 };
 	tba.transform.scale.x = button_graphic_w;
 	tba.is_hoverable = [this]() { return current_widget_control == -1; };
-	tba.on_select = fconv_tt_on_action([this]() { set_state(last_graphic_state); });
+	tba.on_select = fconv_on_action([this]() { set_state(last_graphic_state); });
 	assign_widget(this, BUTTON_GRAPHIC, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "RGB";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.transform.scale.x = button_rgb_w;
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_RGB); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::SLIDER_RGB); });
 	assign_widget(this, BUTTON_RGB_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "HSV";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_HSV); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::SLIDER_HSV); });
 	assign_widget(this, BUTTON_HSV_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "HSL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_HSL); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::SLIDER_HSL); });
 	assign_widget(this, BUTTON_HSL_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	main_tab_bar.init({

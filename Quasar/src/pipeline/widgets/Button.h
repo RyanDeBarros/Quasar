@@ -58,6 +58,10 @@ inline std::function<void(const MouseButtonEvent&, Position)> fconv_on_action(st
 { return [f = std::move(f)](const MouseButtonEvent&, Position) { f(); }; }
 inline std::function<void(const MouseButtonEvent&, Position)> fconv_on_action(std::function<void(const MouseButtonEvent&)>&& f)
 { return [f = std::move(f)](const MouseButtonEvent& m, Position) { f(m); }; }
+inline std::function<bool(const MouseButtonEvent&, Position)> fconv_check(std::function<bool()>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent&, Position) { return f(); }; }
+inline std::function<bool(const MouseButtonEvent&, Position)> fconv_check(std::function<bool(const MouseButtonEvent&)>&& f)
+{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { return f(m); }; }
 
 inline TButton& b_t_wget(Widget& w, size_t i)
 {
@@ -109,15 +113,6 @@ struct StandardTButtonArgs
 
 	StandardTButtonArgs(MouseButtonHandler* mb_parent, Shader* rr_shader, glm::mat3* vp) : mb_parent(mb_parent), rr_shader(rr_shader), vp(vp) {}
 };
-
-inline std::function<bool(const MouseButtonEvent&, Position)> fconv_st_check(std::function<bool()>&& f)
-{ return [f = std::move(f)](const MouseButtonEvent&, Position) { return f(); }; }
-inline std::function<bool(const MouseButtonEvent&, Position)> fconv_st_check(std::function<bool(const MouseButtonEvent&)>&& f)
-{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { return f(m); }; }
-inline std::function<void(const MouseButtonEvent&, Position)> fconv_st_on_action(std::function<void()>&& f)
-{ return [f = std::move(f)](const MouseButtonEvent&, Position) { f(); }; }
-inline std::function<void(const MouseButtonEvent&, Position)> fconv_st_on_action(std::function<void(const MouseButtonEvent&)>&& f)
-{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { f(m); }; }
 
 struct StandardTButton : public TButton
 {
@@ -173,15 +168,6 @@ struct ToggleTButtonArgs
 	ToggleTButtonArgs(MouseButtonHandler* mb_parent, Shader* rr_shader, glm::mat3* vp) : mb_parent(mb_parent), rr_shader(rr_shader), vp(vp) {}
 };
 
-inline std::function<bool(const MouseButtonEvent&, Position)> fconv_tt_check(std::function<bool()>&& f)
-{ return [f = std::move(f)](const MouseButtonEvent&, Position) { return f(); }; }
-inline std::function<bool(const MouseButtonEvent&, Position)> fconv_tt_check(std::function<bool(const MouseButtonEvent&)>&& f)
-{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { return f(m); }; }
-inline std::function<void(const MouseButtonEvent&, Position)> fconv_tt_on_action(std::function<void()>&& f)
-{ return [f = std::move(f)](const MouseButtonEvent&, Position) { f(); }; }
-inline std::function<void(const MouseButtonEvent&, Position)> fconv_tt_on_action(std::function<void(const MouseButtonEvent&)>&& f)
-{ return [f = std::move(f)](const MouseButtonEvent& m, Position) { f(m); }; }
-
 struct ToggleTButton : public TButton
 {
 	TButtonGDesign g_normal, g_hovered, g_pressed, g_disabled;
@@ -230,6 +216,10 @@ public:
 	void init(std::unordered_map<size_t, ToggleTButton*>&& buttons, size_t starting_btn);
 	void select(size_t btn);
 	void draw();
+	void process();
+	void unhover();
+	void send_vp();
+	void adapt_to_scale(float sc);
 };
 
 // LATER IButton, StandardIButton, ToggleIButton for image buttons. Use b_i_wget, sb_i_wget, and tb_i_wget.

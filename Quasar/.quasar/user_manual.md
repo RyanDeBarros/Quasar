@@ -53,7 +53,7 @@ Pressing ROW0 will reset the camera to the default pan and zoom.
 
 * Maximize with ALT+ENTER.
 * Fullscreen with F11.
-* Exit maximize/fullscreen state with the same combo, or with ESCAPE.
+* Exit maximize/fullscreen state with the same combo.
 
 ## Palette panel
 

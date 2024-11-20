@@ -373,3 +373,27 @@ void ToggleTButtonGroup::draw()
 	for (auto iter = buttons.begin(); iter != buttons.end(); ++iter)
 		iter->second->draw();
 }
+
+void ToggleTButtonGroup::process()
+{
+	for (auto iter = buttons.begin(); iter != buttons.end(); ++iter)
+		iter->second->process();
+}
+
+void ToggleTButtonGroup::unhover()
+{
+	for (auto iter = buttons.begin(); iter != buttons.end(); ++iter)
+		iter->second->unhover();
+}
+
+void ToggleTButtonGroup::send_vp()
+{
+	for (auto iter = buttons.begin(); iter != buttons.end(); ++iter)
+		iter->second->send_vp();
+}
+
+void ToggleTButtonGroup::adapt_to_scale(float sc)
+{
+	for (auto iter = buttons.begin(); iter != buttons.end(); ++iter)
+		iter->second->update_corner_radius(sc).update_thickness(sc);
+}
