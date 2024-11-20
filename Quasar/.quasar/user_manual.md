@@ -79,3 +79,27 @@ If in PALETTE control scheme:
 * CTRL+N creates a new subpalette.
 * CTRL+R renames the current subpalette.
 * CTRL+D deletes the current subpalette.
+
+## Brushes panel
+
+### Brush tips
+
+There are four brush tips to choose from: PENCIL, PEN, ERASER, and SELECT. When painting, PENCIL will blend the applied color with the existing underlying pixel color. PEN will replace the existing pixel, ERASE will ignore the selected color altogether and remove the underlying pixel. SELECT will add the pixel to the current canvas selection. The following key bindings are useful:
+
+* ROW1: Select the PENCIL tool.
+* ROW2: Select the PEN tool.
+* ROW3: Select the ERASER tool.
+* ROW4: Select the SELECT tool. Note that CTRL+A in any mode will select the entire canvas of pixels.
+
+### Brush tools
+
+There are several brush tools to choose from, which determine how pixels are interacted with in canvas, based on mouse input:
+
+* Camera (key shortcut: Z) - Neutral mode that doesn't interact with the canvas aside from navigation.
+* Paint (key shortcut: P) - Freehand draw on canvas.
+* Line (key shortcut: L) - Click and drag to draw a controlled line.
+* Fill (key shortcut: F) - Fill all connected (same color) pixels.
+* Rect Outline (key shortcut: R) - Click and drag to draw a rectangle border.
+* Rect Fill (key shortcut: SHIFT+R) - Click and drag to draw a filled-in rectangle.
+* Ellipse Outline (key shortcut: E) - Click and drag to draw a ellipse border.
+* Ellipse Fill (key shortcut: SHIFT+E) - Click and drag to draw a filled-in ellipse.
