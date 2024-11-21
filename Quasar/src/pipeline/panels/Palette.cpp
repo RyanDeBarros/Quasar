@@ -76,10 +76,14 @@ void PalettePanel::draw()
 	render_widget();
 }
 
-void PalettePanel::render_widget()
+void PalettePanel::process()
 {
 	color_picker(this).process();
 	color_palette(this).process();
+}
+
+void PalettePanel::render_widget()
+{
 	color_picker(this).draw();
 	color_palette(this).draw();
 }

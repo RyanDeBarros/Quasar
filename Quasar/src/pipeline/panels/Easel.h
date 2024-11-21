@@ -65,9 +65,12 @@ public:
 	glm::ivec2 get_checker_size() const { return { roundf(1.0f / checker_size_inv.x), roundf(1.0f / checker_size_inv.y) }; }
 	void set_checker_size(glm::ivec2 checker_size);
 
-	Canvas(Shader* sprite_shader);
+	Canvas(Shader* sprite_shader, Shader* cursor_shader);
 	Canvas(const Canvas&) = delete;
 	Canvas(Canvas&&) noexcept = delete;
+
+	void draw(bool draw_cursor);
+	void sync_cursor_with_widget();
 
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
@@ -81,9 +84,12 @@ public:
 	void sync_checkerboard_texture() const;
 	void set_checkerboard_uv_size(float width, float height) const;
 
+	void hover_pixel_at(Position pos);
+
 	enum : size_t
 	{
 		CHECKERBOARD,
+		CURSOR,
 		SPRITE, // LATER SPRITE_START
 		_W_COUNT
 	};
@@ -91,9 +97,9 @@ public:
 
 struct Easel : public Panel
 {
-	Shader bkg_shader;
-	Shader sprite_shader;
+	Shader bkg_shader, sprite_shader, cursor_shader;
 	Widget widget;
+	glm::mat3 vp;
 
 	MouseButtonHandler mb_handler;
 	ScrollHandler scroll_handler;
@@ -110,7 +116,13 @@ public:
 	virtual void draw() override;
 	virtual void _send_view() override;
 
+	void process();
 	void sync_widget();
+
+private:
+	void sync_ur(size_t subw);
+
+public:
 	void sync_canvas_transform();
 
 	Image* canvas_image() const;
@@ -129,6 +141,7 @@ public:
 		friend Easel;
 		WindowHandle wh;
 	} panning_info;
+	
 	struct
 	{
 		// SETTINGS (only some of them?)
@@ -157,6 +170,10 @@ public:
 
 	Canvas& canvas() { return *widget.get<Canvas>(CANVAS); }
 	const Canvas& canvas() const { return *widget.get<Canvas>(CANVAS); }
+
+	bool show_cursor = false;
+
+	bool hover_pixel_under_cursor();
 
 	enum : size_t
 	{

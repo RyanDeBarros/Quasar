@@ -30,6 +30,7 @@ struct PalettePanel : public Panel
 
 	virtual void _send_view() override;
 	virtual void draw() override;
+	void process();
 	void render_widget();
 	virtual Scale minimum_screen_display() const override;
 

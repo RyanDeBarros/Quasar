@@ -6,6 +6,7 @@
 #include "../render/Uniforms.h"
 #include "variety/GLutility.h"
 #include "user/Machine.h"
+#include "Easel.h"
 
 // ---------- LAYOUT ----------
 
@@ -212,7 +213,6 @@ void BrushesPanel::connect_input_handlers()
 
 void BrushesPanel::draw()
 {
-	process();
 	ur_wget(widget, BACKGROUND).draw();
 	toggle_group_tips.draw();
 	toggle_group_tools.draw();
@@ -291,6 +291,7 @@ void BrushesPanel::select_brush_tool(BrushTool tool)
 
 void BrushesPanel::process()
 {
+	Machine.easel()->show_cursor = false;
 	if (cursor_in_clipping())
 	{
 		toggle_group_tips.process();
@@ -300,6 +301,14 @@ void BrushesPanel::process()
 	{
 		toggle_group_tips.unhover();
 		toggle_group_tools.unhover();
+		if (Machine.cursor_in_easel())
+		{
+			if (Machine.easel()->hover_pixel_under_cursor())
+			{
+				// TODO
+				Machine.easel()->show_cursor = true;
+			}
+		}
 	}
 }
 

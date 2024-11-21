@@ -15,6 +15,12 @@ struct MachineImpl
 	MachineImpl(MachineImpl&&) noexcept = delete;
 	~MachineImpl() = default;
 
+	struct Easel* easel() const;
+	struct PalettePanel* palette() const;
+	struct BrushesPanel* brushes() const;
+	struct ScenePanel* scene() const;
+	struct MenuPanel* menu() const;
+
 	ActionHistory history;
 	Window* main_window = nullptr;
 

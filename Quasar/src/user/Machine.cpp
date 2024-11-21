@@ -50,11 +50,17 @@ namespace Data
 
 static PanelGroup* panels = nullptr;
 
-static Easel* easel() { return dynamic_cast<Easel*>(panels->panels[0].get()); }
-static PalettePanel* palette() { return dynamic_cast<PalettePanel*>(panels->panels[1].get()); }
-static BrushesPanel* brushes() { return dynamic_cast<BrushesPanel*>(panels->panels[2].get()); }
-static ScenePanel* scene() { return dynamic_cast<ScenePanel*>(panels->panels[3].get()); }
-static MenuPanel* menu() { return dynamic_cast<MenuPanel*>(panels->panels[4].get()); }
+Easel* MachineImpl::easel() const { return dynamic_cast<Easel*>(panels->panels[0].get()); }
+PalettePanel* MachineImpl::palette() const { return dynamic_cast<PalettePanel*>(panels->panels[1].get()); }
+BrushesPanel* MachineImpl::brushes() const { return dynamic_cast<BrushesPanel*>(panels->panels[2].get()); }
+ScenePanel* MachineImpl::scene() const { return dynamic_cast<ScenePanel*>(panels->panels[3].get()); }
+MenuPanel* MachineImpl::menu() const { return dynamic_cast<MenuPanel*>(panels->panels[4].get()); }
+
+static Easel* easel() { return Machine.easel(); }
+static PalettePanel* palette() { return Machine.palette(); }
+static BrushesPanel* brushes() { return Machine.brushes(); }
+static ScenePanel* scene() { return Machine.scene(); }
+static MenuPanel* menu() { return Machine.menu(); }
 
 static void create_panels()
 {
@@ -335,7 +341,9 @@ static void process_redo()
 void MachineImpl::process()
 {
 	Data::update_time();
-	easel()->update_panning();
+	palette()->process();
+	brushes()->process();
+	easel()->process();
 	if (Data::History::held_undo)
 		process_undo();
 	else if (Data::History::held_redo)

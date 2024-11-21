@@ -215,13 +215,99 @@ void Gridlines::set_visible(bool visible, const Canvas& canvas)
 constexpr GLuint CHECKERBOARD_TSLOT = 0;
 constexpr GLuint CANVAS_SPRITE_TSLOT = 1;
 
-Canvas::Canvas(Shader* sprite_shader)
+Canvas::Canvas(Shader* sprite_shader, Shader* cursor_shader)
 	: Widget(_W_COUNT)
 {
 	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(sprite_shader));
 	fs_wget(*this, CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
 	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
+	assign_widget(this, CURSOR, std::make_shared<W_UnitRenderable>(cursor_shader));
+	UnitRenderable& cursor = ur_wget(*this, CURSOR);
+	cursor.set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec()));
+	cursor.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }));
+	cursor.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }));
+	cursor.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }));
+	cursor.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }));
+	cursor.send_buffer();
+	wp_at(CURSOR).transform.scale = Scale(1.1f);
+	Uniforms::send_1(*cursor_shader, "u_Padding", 0);
+	Uniforms::send_1(*cursor_shader, "u_Border", 0.11f);
+}
+
+void Canvas::draw(bool show_cursor)
+{
+	fs_wget(*this, CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
+	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
+	minor_gridlines.draw();
+	major_gridlines.draw();
+	if (show_cursor)
+		ur_wget(*this, CURSOR).draw();
+}
+
+void Canvas::sync_cursor_with_widget()
+{
+	UnitRenderable& cursor = ur_wget(*this, CURSOR);
+	Scale sc = global_scale();
+	WidgetPlacement wp = wp_at(CURSOR).relative_to(self.transform);
+	cursor.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
+	cursor.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
+	cursor.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
+	cursor.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
+	cursor.send_buffer();
+}
+
+void Canvas::set_image(const std::shared_ptr<Image>& img)
+{
+	fs_wget(*this, SPRITE).image = img;
+	sync_gfx_with_image();
+}
+
+void Canvas::set_image(std::shared_ptr<Image>&& img)
+{
+	fs_wget(*this, SPRITE).image = std::move(img);
+	sync_gfx_with_image();
+}
+
+void Canvas::sync_checkerboard_with_image()
+{
+	FlatSprite& sprite = fs_wget(*this, SPRITE);
+	if (sprite.image)
+	{
+		const Buffer& buf = sprite.image->buf;
+		sprite.self.transform.scale = { buf.width, buf.height };
+		sprite.update_transform();
+		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
+		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
+		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
+	}
+	else
+		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
+}
+
+void Canvas::sync_gridlines_with_image()
+{
+	Image* img = fs_wget(*this, SPRITE).image.get();
+	if (img)
+	{
+		visible = true;
+		minor_gridlines.sync_with_image(img->buf, self.transform.scale);
+		major_gridlines.sync_with_image(img->buf, self.transform.scale);
+	}
+}
+
+void Canvas::sync_transform()
+{
+	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
+	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
+	sync_cursor_with_widget();
+}
+
+void Canvas::sync_gfx_with_image()
+{
+	sync_checkerboard_with_image();
+	sync_gridlines_with_image();
+	sync_transform();
 }
 
 void Canvas::create_checkerboard_image()
@@ -285,61 +371,16 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 	major_gridlines.line_spacing = checker_size;
 }
 
-void Canvas::set_image(const std::shared_ptr<Image>& img)
+void Canvas::hover_pixel_at(Position pos)
 {
-	fs_wget(*this, SPRITE).image = img;
-	sync_gfx_with_image();
-}
-
-void Canvas::set_image(std::shared_ptr<Image>&& img)
-{
-	fs_wget(*this, SPRITE).image = std::move(img);
-	sync_gfx_with_image();
-}
-
-void Canvas::sync_checkerboard_with_image()
-{
-	FlatSprite& sprite = fs_wget(*this, SPRITE);
-	if (sprite.image)
-	{
-		const Buffer& buf = sprite.image->buf;
-		sprite.self.transform.scale = { buf.width, buf.height };
-		sprite.update_transform();
-		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
-		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
-		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
-	}
-	else
-		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
-}
-
-void Canvas::sync_gridlines_with_image()
-{
-	Image* img = fs_wget(*this, SPRITE).image.get();
-	if (img)
-	{
-		visible = true;
-		minor_gridlines.sync_with_image(img->buf, self.transform.scale);
-		major_gridlines.sync_with_image(img->buf, self.transform.scale);
-	}
-}
-
-void Canvas::sync_transform()
-{
-	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
-	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
-}
-
-void Canvas::sync_gfx_with_image()
-{
-	sync_checkerboard_with_image();
-	sync_gridlines_with_image();
-	sync_transform();
+	wp_at(CURSOR).transform.position = pos;
+	sync_cursor_with_widget();
 }
 
 Easel::Easel()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
-	bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
+	bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")),
+	cursor_shader(FileSystem::shader_path("palette/outline_rect.vert"), FileSystem::shader_path("palette/outline_rect.frag")), widget(_W_COUNT)
 {
 	initialize_widget();
 	connect_input_handlers();
@@ -351,7 +392,7 @@ void Easel::initialize_widget()
 	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(HSV(0.5f, 0.15f, 0.15f).to_rgb(), 0.5f).as_vec()));
 	ur_wget(widget, BACKGROUND).send_buffer();
 
-	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&sprite_shader));
+	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&sprite_shader, &cursor_shader));
 	Canvas& cnvs = canvas();
 	cnvs.create_checkerboard_image();
 	cnvs.set_image(nullptr);
@@ -402,34 +443,43 @@ void Easel::draw()
 	Canvas& cnvs = canvas();
 	if (cnvs.visible)
 	{
-		fs_wget(cnvs, Canvas::CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
-		fs_wget(cnvs, Canvas::SPRITE).draw(CANVAS_SPRITE_TSLOT);
-		cnvs.minor_gridlines.draw();
-		cnvs.major_gridlines.draw();
+		cnvs.draw(show_cursor);
 	}
 }
 
 void Easel::_send_view()
 {
-	glm::mat3 cameraVP = vp_matrix();
-	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(bkg_shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", cameraVP);
+	vp = vp_matrix();
+	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
+	Uniforms::send_matrix3(bkg_shader, "u_VP", vp);
+	Uniforms::send_matrix3(cursor_shader, "u_VP", vp);
+	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", vp);
+	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", vp);
 	unbind_shader();
 	sync_widget();
+}
+
+void Easel::process()
+{
+	update_panning();
 }
 
 void Easel::sync_widget()
 {
 	widget.wp_at(BACKGROUND).transform.scale = get_app_size();
-	WidgetPlacement wp = widget.wp_at(BACKGROUND).relative_to(widget.self.transform);
-	UnitRenderable& bkg = ur_wget(widget, BACKGROUND);
-	bkg.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	bkg.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-	bkg.send_buffer();
+	sync_ur(BACKGROUND);
+	canvas().sync_cursor_with_widget();
+}
+
+void Easel::sync_ur(size_t subw)
+{
+	WidgetPlacement wp = widget.wp_at(subw).relative_to(widget.self.transform);
+	UnitRenderable& ur = ur_wget(widget, subw);
+	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
+	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
+	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
+	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
+	ur.send_buffer();
 }
 
 void Easel::sync_canvas_transform()
@@ -769,4 +819,19 @@ void Easel::rotate_image_270()
 		Machine.history.execute(std::make_shared<Rotate270Action_Perf>(this));
 	else
 		Machine.history.execute(std::make_shared<Rotate270Action>(this));
+}
+
+bool Easel::hover_pixel_under_cursor()
+{
+	Position local_cursor_pos = canvas().local_of(Machine.cursor_world_pos(glm::inverse(vp)));
+	Buffer& buf = canvas_image()->buf;
+	Position buf_cursor_pos = local_cursor_pos + 0.5f * Position(buf.width, buf.height);
+	if (in_diagonal_rect(buf_cursor_pos, {}, { buf.width, buf.height }))
+	{
+		IPosition pos(buf_cursor_pos);
+		canvas().hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
+		// TODO also change color of hover cursor for contrast with underlying pixel.
+		return true;
+	}
+	return false;
 }

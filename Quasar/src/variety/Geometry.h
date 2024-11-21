@@ -15,7 +15,8 @@ constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
 
 struct Position : glm::vec2
 {
-	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
+	Position(float p = 0.0f) : glm::vec2(p) {}
+	Position(float x, float y) : glm::vec2(x, y) {}
 	Position(int x, int y) : glm::vec2(x, y) {}
 	Position(int x, float y) : glm::vec2(x, y) {}
 	Position(float x, int y) : glm::vec2(x, y) {}
@@ -56,6 +57,14 @@ inline bool in_diagonal_rect(Position pos, Position bl, Position tr)
 {
 	return on_interval(pos.x, bl.x, tr.x) && on_interval(pos.y, bl.y, tr.y);
 }
+
+struct IPosition : glm::ivec2
+{
+	IPosition(int p = 0) : glm::ivec2(p) {}
+	IPosition(int x, int y) : glm::ivec2(x, y) {}
+	IPosition(glm::ivec2 v) : glm::ivec2(v) {}
+	IPosition(glm::vec2 v) : glm::ivec2((int)v.x, (int)v.y) {}
+};
 
 struct Rotation
 {
@@ -177,6 +186,7 @@ struct FlatTransform
 };
 
 extern Logger& operator<<(Logger&, const Position&);
+extern Logger& operator<<(Logger&, const IPosition&);
 extern Logger& operator<<(Logger&, const Scale&);
 extern Logger& operator<<(Logger&, const FlatTransform&);
 
