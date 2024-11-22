@@ -79,7 +79,7 @@ void ColorPicker::send_gradient_color_uniform(const Shader& shader, GradientInde
 }
 
 // LATER maybe input handler connections should be made by parent, not child, so that there's no need to pass them in constructor.
-ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler)
+ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, const Reflection& reflection)
 	: quad_shader(FileSystem::shader_path("gradients/quad.vert"), FileSystem::shader_path("gradients/quad.frag.tmpl"),
 		{ {"$MAX_GRADIENT_COLORS", std::to_string((int)GradientIndex::_MAX_GRADIENT_COLORS) } }),
 	linear_hue_shader(FileSystem::shader_path("gradients/linear_hue.vert"), FileSystem::shader_path("gradients/linear_hue.frag")),
@@ -87,15 +87,15 @@ ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, K
 	linear_lightness_shader(FileSystem::shader_path("gradients/linear_lightness.vert"), FileSystem::shader_path("gradients/linear_lightness.frag")),
 	circle_cursor_shader(FileSystem::shader_path("circle_cursor.vert"), FileSystem::shader_path("circle_cursor.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
-	Widget(_W_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), vp(vp)
+	Widget(_W_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), vp(vp), reflection(reflection)
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(HSV(0.0f, 0.0f, 0.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::WHITE, ColorFrame(HSV(0.0f, 0.0f, 1.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::TRANSPARENT, ColorFrame(0));
 	initialize_widget();
 	connect_input_handlers();
-	set_pri_color(ColorFrame(), false);
-	set_alt_color(ColorFrame(), false);
+	//set_pri_color(ColorFrame(), false);
+	//set_alt_color(ColorFrame(), false);
 }
 
 void ColorPicker::draw()
@@ -1047,10 +1047,16 @@ void ColorPicker::release_cursor()
 
 void ColorPicker::sync_preview_color_with_picker()
 {
-	if (editing_color == EditingColor::PRIMARY)
+	if (editing_color == EditingColor::PRIMARY && pri_color != picker_color)
+	{
 		pri_color = picker_color;
-	else if (editing_color == EditingColor::ALTERNATE)
+		(*reflection.emit_modified_primary)(pri_color.rgba());
+	}
+	else if (editing_color == EditingColor::ALTERNATE && alt_color != picker_color)
+	{
 		alt_color = picker_color;
+		(*reflection.emit_modified_alternate)(alt_color.rgba());
+	}
 }
 
 void ColorPicker::set_picker_color_from_gfx()
@@ -1172,6 +1178,7 @@ void ColorPicker::set_pri_color(ColorFrame color, bool toggle_on)
 	}
 	else
 		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
+	(*reflection.emit_modified_primary)(pri_color.rgba());
 }
 
 void ColorPicker::set_alt_color(ColorFrame color, bool toggle_on)
@@ -1186,6 +1193,7 @@ void ColorPicker::set_alt_color(ColorFrame color, bool toggle_on)
 	}
 	else
 		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, alt_color);
+	(*reflection.emit_modified_alternate)(alt_color.rgba());
 }
 
 void ColorPicker::swap_picker_colors()
@@ -1202,6 +1210,8 @@ void ColorPicker::swap_picker_colors()
 		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
 	}
 	set_gfx_from_picker_color();
+	(*reflection.emit_modified_primary)(pri_color.rgba());
+	(*reflection.emit_modified_alternate)(alt_color.rgba());
 }
 
 void ColorPicker::set_size(Scale size, bool sync)
@@ -1335,13 +1345,13 @@ void ColorPicker::update_display_colors()
 
 void ColorPicker::orient_progress_slider(size_t control, Cardinal i) const
 {
-	const UnitRenderable& renderable = ur_wget(*this, control);
 	float zero = 0.0f;
 	float one = 1.0f;
-	renderable.set_attribute_single_vertex(0, 1, i == Cardinal::DOWN || i == Cardinal::LEFT ? &one : &zero);
-	renderable.set_attribute_single_vertex(1, 1, i == Cardinal::RIGHT || i == Cardinal::DOWN ? &one : &zero);
-	renderable.set_attribute_single_vertex(2, 1, i == Cardinal::UP || i == Cardinal::LEFT ? &one : &zero);
-	renderable.set_attribute_single_vertex(3, 1, i == Cardinal::RIGHT || i == Cardinal::UP ? &one : &zero);
+	ur_wget(*this, control)
+		.set_attribute_single_vertex(0, 1, i == Cardinal::DOWN || i == Cardinal::LEFT ? &one : &zero)
+		.set_attribute_single_vertex(1, 1, i == Cardinal::RIGHT || i == Cardinal::DOWN ? &one : &zero)
+		.set_attribute_single_vertex(2, 1, i == Cardinal::UP || i == Cardinal::LEFT ? &one : &zero)
+		.set_attribute_single_vertex(3, 1, i == Cardinal::RIGHT || i == Cardinal::UP ? &one : &zero);
 }
 
 void ColorPicker::send_graphic_quad_hue_to_uniform(float hue) const
@@ -1399,21 +1409,21 @@ float ColorPicker::slider_normal_y(size_t control, size_t cursor) const
 
 void ColorPicker::setup_vertex_positions(size_t control) const
 {
-	const UnitRenderable& ur = ur_wget(*this, control);
 	WidgetPlacement wp = wp_at(control).relative_to(self.transform);
-	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
+	ur_wget(*this, control)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
+		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
 }
 
 void ColorPicker::setup_rect_uvs(size_t control) const
 {
-	const UnitRenderable& ur = ur_wget(*this, control);
-	ur.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0.0f, 0.0f }));
-	ur.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1.0f, 0.0f }));
-	ur.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0.0f, 1.0f }));
-	ur.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1.0f, 1.0f }));
+	ur_wget(*this, control)
+		.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0.0f, 0.0f }))
+		.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1.0f, 0.0f }))
+		.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0.0f, 1.0f }))
+		.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1.0f, 1.0f }));
 }
 
 void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const

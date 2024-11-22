@@ -4,6 +4,7 @@
 
 #include "user/Machine.h"
 #include "variety/GLutility.h"
+#include "Easel.h"
 #include "../render/Uniforms.h"
 #include "../widgets/ColorPicker.h"
 #include "../widgets/ColorPalette.h"
@@ -43,6 +44,8 @@ PalettePanel::PalettePanel()
 	use_primary = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::PRIMARY; };
 	use_alternate = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::ALTERNATE; };
 	swap_picker_colors = [this]() { color_picker(this).swap_picker_colors(); };
+	emit_modified_primary = [this](RGBA rgba) { emit_modified_primary_color(rgba); };
+	emit_modified_alternate = [this](RGBA rgba) { emit_modified_alternate_color(rgba); };
 	initialize_widget();
 
 	// ##########################################################
@@ -140,10 +143,9 @@ void PalettePanel::delete_subpalette()
 void PalettePanel::initialize_widget()
 {
 	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
-	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec()));
-	ur_wget(widget, BACKGROUND).send_buffer();
+	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec())).send_buffer();
 
-	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, mb_handler, key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
+	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, mb_handler, key_handler, ColorPicker::Reflection(&emit_modified_primary, &emit_modified_alternate)));
 	widget.wp_at(COLOR_PICKER).transform.scale = Scale(color_picker_scale);
 
 	assign_widget(&widget, COLOR_PALETTE, std::make_shared<ColorPalette>(&vp, mb_handler, key_handler, scroll_handler,
@@ -155,12 +157,12 @@ void PalettePanel::sync_widget()
 {
 	widget.wp_at(BACKGROUND).transform.scale = get_app_size();
 	WidgetPlacement wp = widget.wp_at(BACKGROUND).relative_to(widget.self.transform);
-	UnitRenderable& bkg = ur_wget(widget, BACKGROUND);
-	bkg.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	bkg.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-	bkg.send_buffer();
+	ur_wget(widget, BACKGROUND)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
+		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
+		.send_buffer();
 
 	float view_height = to_view_size({ 0, bounds.clip().screen_h }).y;
 	const float free_space_y = view_height - 3 * padding;
@@ -176,6 +178,18 @@ void PalettePanel::sync_widget()
 	color_palette(this).set_size(color_palette_size, false);
 	widget.wp_at(COLOR_PALETTE).transform.position = { 0, -0.5f * view_height + color_palette_size.y * widget.wp_at(COLOR_PALETTE).transform.scale.y * 0.5f + padding };
 	color_palette(this).send_vp();
+}
+
+void PalettePanel::emit_modified_primary_color(RGBA color) const
+{
+	if (color_picker(this).get_editing_color() == ColorPicker::EditingColor::PRIMARY)
+		Machine.easel()->canvas().set_hover_color(color);
+}
+
+void PalettePanel::emit_modified_alternate_color(RGBA color) const
+{
+	if (color_picker(this).get_editing_color() == ColorPicker::EditingColor::ALTERNATE)
+		Machine.easel()->canvas().set_hover_color(color);
 }
 
 void PalettePanel::_send_view()

@@ -69,8 +69,9 @@ public:
 	Canvas(const Canvas&) = delete;
 	Canvas(Canvas&&) noexcept = delete;
 
-	void draw(bool draw_cursor);
+	void draw(bool show_cursor);
 	void sync_cursor_with_widget();
+	void sync_ur(size_t subw);
 
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
@@ -85,11 +86,15 @@ public:
 	void set_checkerboard_uv_size(float width, float height) const;
 
 	void hover_pixel_at(Position pos);
+	void set_hover_color(RGBA color);
 
 	enum : size_t
 	{
 		CHECKERBOARD,
-		CURSOR,
+		CURSOR_PENCIL,
+		CURSOR_PEN,
+		CURSOR_ERASER,
+		CURSOR_SELECT,
 		SPRITE, // LATER SPRITE_START
 		_W_COUNT
 	};
@@ -97,12 +102,14 @@ public:
 
 struct Easel : public Panel
 {
-	Shader bkg_shader, sprite_shader, cursor_shader;
+	Shader color_square_shader, sprite_shader;
 	Widget widget;
 	glm::mat3 vp;
 
 	MouseButtonHandler mb_handler;
 	ScrollHandler scroll_handler;
+
+	IPosition current_hovered_pos = { -1, -1 };
 
 	Easel();
 	Easel(const Easel&) = delete;
@@ -173,7 +180,7 @@ public:
 
 	bool show_cursor = false;
 
-	bool hover_pixel_under_cursor();
+	void hover_pixel_under_cursor();
 
 	enum : size_t
 	{

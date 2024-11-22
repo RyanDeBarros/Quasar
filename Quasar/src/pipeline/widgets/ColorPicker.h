@@ -34,6 +34,15 @@ public:
 	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader, round_rect_shader;
 	glm::mat3* vp;
 
+	struct Reflection
+	{
+		std::function<void(RGBA)>* emit_modified_primary;
+		std::function<void(RGBA)>* emit_modified_alternate;
+
+		Reflection(std::function<void(RGBA)>* emit_modified_primary, std::function<void(RGBA)>* emit_modified_alternate)
+			: emit_modified_primary(emit_modified_primary), emit_modified_alternate(emit_modified_alternate) {}
+	} reflection;
+
 private:
 	FlatTransform gui_transform;
 	State last_graphic_state = State::GRAPHIC_QUAD;
@@ -77,7 +86,7 @@ private:
 	ColorFrame alt_color = RGBA::WHITE;
 	
 public:
-	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
+	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, const Reflection& reflection);
 	ColorPicker(const ColorPicker&) = delete;
 	ColorPicker(ColorPicker&&) noexcept = delete;
 	

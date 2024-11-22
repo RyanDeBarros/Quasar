@@ -46,7 +46,7 @@ void UnitRenderable::set_shader(Shader* shader_)
 	unbind_vao_buffers();
 }
 
-void UnitRenderable::set_attribute(size_t attrib, const float* v) const
+const UnitRenderable& UnitRenderable::set_attribute(size_t attrib, const float* v) const
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	GLfloat* buf = varr + shader->attribute_offsets[attrib];
@@ -55,18 +55,47 @@ void UnitRenderable::set_attribute(size_t attrib, const float* v) const
 		memcpy(buf, v, attrib_len * sizeof(GLfloat));
 		buf += shader->stride;
 	}
+	return *this;
 }
 
-void UnitRenderable::set_attribute_single_vertex(unsigned short vertex, size_t attrib, const float* v) const
+const UnitRenderable& UnitRenderable::set_attribute_single_vertex(unsigned short vertex, size_t attrib, const float* v) const
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(varr + shader->attribute_offsets[attrib] + vertex * shader->stride, v, attrib_len * sizeof(GLfloat));
+	return *this;
 }
 
-void UnitRenderable::get_attribute(unsigned short vertex, size_t attrib, float* v) const
+const UnitRenderable& UnitRenderable::get_attribute(unsigned short vertex, size_t attrib, float* v) const
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(v, varr + shader->attribute_offsets[attrib] + vertex * shader->stride, attrib_len * sizeof(GLfloat));
+	return *this;
+}
+
+UnitRenderable& UnitRenderable::set_attribute(size_t attrib, const float* v)
+{
+	unsigned short attrib_len = shader->attributes[attrib];
+	GLfloat* buf = varr + shader->attribute_offsets[attrib];
+	for (unsigned short i = 0; i < num_vertices; ++i)
+	{
+		memcpy(buf, v, attrib_len * sizeof(GLfloat));
+		buf += shader->stride;
+	}
+	return *this;
+}
+
+UnitRenderable& UnitRenderable::set_attribute_single_vertex(unsigned short vertex, size_t attrib, const float* v)
+{
+	unsigned short attrib_len = shader->attributes[attrib];
+	memcpy(varr + shader->attribute_offsets[attrib] + vertex * shader->stride, v, attrib_len * sizeof(GLfloat));
+	return *this;
+}
+
+UnitRenderable& UnitRenderable::get_attribute(unsigned short vertex, size_t attrib, float* v)
+{
+	unsigned short attrib_len = shader->attributes[attrib];
+	memcpy(v, varr + shader->attribute_offsets[attrib] + vertex * shader->stride, attrib_len * sizeof(GLfloat));
+	return *this;
 }
 
 void UnitRenderable::send_buffer() const
@@ -76,11 +105,20 @@ void UnitRenderable::send_buffer() const
 	unbind_vao_buffers();
 }
 
-void UnitRenderable::send_single_vertex(unsigned short vertex) const
+const UnitRenderable& UnitRenderable::send_single_vertex(unsigned short vertex) const
 {
 	bind_vao_buffers(vao, vb);
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr + vertex * shader->stride));
 	unbind_vao_buffers();
+	return *this;
+}
+
+UnitRenderable& UnitRenderable::send_single_vertex(unsigned short vertex)
+{
+	bind_vao_buffers(vao, vb);
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr + vertex * shader->stride));
+	unbind_vao_buffers();
+	return *this;
 }
 
 void UnitRenderable::send_buffer_resized() const
@@ -312,7 +350,7 @@ void IndexedRenderable::push_back_quads(size_t num_quads)
 	}
 }
 
-void IndexedRenderable::set_attribute(size_t attrib, const float* v)
+IndexedRenderable& IndexedRenderable::set_attribute(size_t attrib, const float* v)
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	GLfloat* buf = varr.data() + shader->attribute_offsets[attrib];
@@ -322,54 +360,109 @@ void IndexedRenderable::set_attribute(size_t attrib, const float* v)
 		memcpy(buf, v, attrib_len * sizeof(GLfloat));
 		buf += shader->stride;
 	}
+	return *this;
 }
 
-void IndexedRenderable::set_attribute_single_vertex(size_t vertex, size_t attrib, const float* v)
+IndexedRenderable& IndexedRenderable::set_attribute_single_vertex(size_t vertex, size_t attrib, const float* v)
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(varr.data() + shader->attribute_offsets[attrib] + vertex * shader->stride, v, attrib_len * sizeof(GLfloat));
+	return *this;
 }
 
-void IndexedRenderable::get_attribute(size_t vertex, size_t attrib, float* v) const
+const IndexedRenderable& IndexedRenderable::get_attribute(size_t vertex, size_t attrib, float* v) const
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(v, varr.data() + shader->attribute_offsets[attrib] + vertex * shader->stride, attrib_len * sizeof(GLfloat));
+	return *this;
 }
 
-void IndexedRenderable::send_vertex_buffer() const
+IndexedRenderable& IndexedRenderable::get_attribute(size_t vertex, size_t attrib, float* v)
+{
+	unsigned short attrib_len = shader->attributes[attrib];
+	memcpy(v, varr.data() + shader->attribute_offsets[attrib] + vertex * shader->stride, attrib_len * sizeof(GLfloat));
+	return *this;
+}
+
+const IndexedRenderable& IndexedRenderable::send_vertex_buffer() const
 {
 	// LATER extract to buffer_subdata()
 	bind_vao_buffers(vao, vb, ib);
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, varr.size() * sizeof(GLfloat), varr.data()));
 	unbind_vao_buffers();
+	return *this;
 }
 
-void IndexedRenderable::send_vertex_buffer_resized() const
+IndexedRenderable& IndexedRenderable::send_vertex_buffer()
+{
+	bind_vao_buffers(vao, vb, ib);
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, varr.size() * sizeof(GLfloat), varr.data()));
+	unbind_vao_buffers();
+	return *this;
+}
+
+const IndexedRenderable& IndexedRenderable::send_vertex_buffer_resized() const
 {
 	bind_vao_buffers(vao, vb, ib);
 	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, varr.size() * sizeof(GLfloat), varr.data(), GL_DYNAMIC_DRAW)); // LATER use GL_STATIC_DRAW when not using glBufferSubData often.
 	unbind_vao_buffers();
+	return *this;
 }
 
-void IndexedRenderable::send_index_buffer() const
+IndexedRenderable& IndexedRenderable::send_vertex_buffer_resized()
+{
+	bind_vao_buffers(vao, vb, ib);
+	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, varr.size() * sizeof(GLfloat), varr.data(), GL_DYNAMIC_DRAW)); // LATER use GL_STATIC_DRAW when not using glBufferSubData often.
+	unbind_vao_buffers();
+	return *this;
+}
+
+const IndexedRenderable& IndexedRenderable::send_index_buffer() const
 {
 	bind_vao_buffers(vao, vb, ib);
 	QUASAR_GL(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, iarr.size() * sizeof(GLuint), iarr.data()));
 	unbind_vao_buffers();
+	return *this;
 }
 
-void IndexedRenderable::send_index_buffer_resized() const
+IndexedRenderable& IndexedRenderable::send_index_buffer()
+{
+	bind_vao_buffers(vao, vb, ib);
+	QUASAR_GL(glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, iarr.size() * sizeof(GLuint), iarr.data()));
+	unbind_vao_buffers();
+	return *this;
+}
+
+const IndexedRenderable& IndexedRenderable::send_index_buffer_resized() const
 {
 	bind_vao_buffers(vao, vb, ib);
 	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, iarr.size() * sizeof(GLuint), iarr.data(), GL_DYNAMIC_DRAW));
 	unbind_vao_buffers();
+	return *this;
 }
 
-void IndexedRenderable::send_single_vertex(size_t vertex) const
+IndexedRenderable& IndexedRenderable::send_index_buffer_resized()
+{
+	bind_vao_buffers(vao, vb, ib);
+	QUASAR_GL(glBufferData(GL_ELEMENT_ARRAY_BUFFER, iarr.size() * sizeof(GLuint), iarr.data(), GL_DYNAMIC_DRAW));
+	unbind_vao_buffers();
+	return *this;
+}
+
+const IndexedRenderable& IndexedRenderable::send_single_vertex(size_t vertex) const
 {
 	bind_vao_buffers(vao, vb, ib); // LATER only need to bind index buffer ?
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr.data() + vertex * shader->stride));
 	unbind_vao_buffers();
+	return *this;
+}
+
+IndexedRenderable& IndexedRenderable::send_single_vertex(size_t vertex)
+{
+	bind_vao_buffers(vao, vb, ib); // LATER only need to bind index buffer ?
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr.data() + vertex * shader->stride));
+	unbind_vao_buffers();
+	return *this;
 }
 
 void IndexedRenderable::send_both_buffers() const

@@ -33,8 +33,7 @@ BrushesPanel::BrushesPanel()
 void BrushesPanel::initialize_widget()
 {
 	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
-	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec()));
-	ur_wget(widget, BACKGROUND).send_buffer();
+	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec())).send_buffer();
 
 	assign_widget(&widget, EMPTY_BUTTON_TIP, std::make_shared<Widget>(_W_ETIP_COUNT));
 	assign_widget(&widget, EMPTY_BUTTON_TOOL, std::make_shared<Widget>(_W_ETOOL_COUNT));
@@ -257,12 +256,12 @@ void BrushesPanel::sync_widget()
 void BrushesPanel::sync_ur(size_t subw)
 {
 	WidgetPlacement wp = widget.wp_at(subw).relative_to(widget.self.transform);
-	UnitRenderable& bkg = ur_wget(widget, subw);
-	bkg.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	bkg.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-	bkg.send_buffer();
+	ur_wget(widget, subw)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
+		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
+		.send_buffer();
 }
 
 void BrushesPanel::select_brush_tip(BrushTip tip)
@@ -301,14 +300,6 @@ void BrushesPanel::process()
 	{
 		toggle_group_tips.unhover();
 		toggle_group_tools.unhover();
-		if (Machine.cursor_in_easel())
-		{
-			if (Machine.easel()->hover_pixel_under_cursor())
-			{
-				// TODO
-				Machine.easel()->show_cursor = true;
-			}
-		}
 	}
 }
 

@@ -23,6 +23,8 @@ struct PalettePanel : public Panel
 	std::function<bool()> use_primary;
 	std::function<bool()> use_alternate;
 	std::function<void()> swap_picker_colors;
+	std::function<void(RGBA)> emit_modified_primary;
+	std::function<void(RGBA)> emit_modified_alternate;
 
 	PalettePanel();
 	PalettePanel(const PalettePanel&) = delete;
@@ -44,6 +46,9 @@ struct PalettePanel : public Panel
 private:
 	void initialize_widget();
 	void sync_widget();
+
+	void emit_modified_primary_color(RGBA color) const;
+	void emit_modified_alternate_color(RGBA color) const;
 
 public:
 	enum : size_t

@@ -30,10 +30,10 @@ void FlatSprite::draw(GLuint texture_slot)
 const FlatSprite& FlatSprite::update_transform() const
 {
 	glm::mat3 m = global_matrix();
-	ur->set_attribute_single_vertex(0, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_left(m),  wp_bottom(m) }));
-	ur->set_attribute_single_vertex(1, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_right(m), wp_bottom(m) }));
-	ur->set_attribute_single_vertex(2, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_left(m),  wp_top(m) }));
-	ur->set_attribute_single_vertex(3, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_right(m), wp_top(m) }));
+	ur->set_attribute_single_vertex(0, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_left(m),  wp_bottom(m) }))
+		.set_attribute_single_vertex(1, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_right(m), wp_bottom(m) }))
+		.set_attribute_single_vertex(2, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_left(m),  wp_top(m) }))
+		.set_attribute_single_vertex(3, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_right(m), wp_top(m) }));
 	return *this;
 }
 
@@ -71,9 +71,9 @@ const FlatSprite& FlatSprite::set_modulation(ColorFrame color) const
 
 const FlatSprite& FlatSprite::set_uvs(const Bounds& bounds) const
 {
-	ur->set_attribute_single_vertex(0, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y1 }));
-	ur->set_attribute_single_vertex(1, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y1 }));
-	ur->set_attribute_single_vertex(2, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y2 }));
-	ur->set_attribute_single_vertex(3, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y2 }));
+	ur->set_attribute_single_vertex(0, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y1 }))
+		.set_attribute_single_vertex(1, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y1 }))
+		.set_attribute_single_vertex(2, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y2 }))
+		.set_attribute_single_vertex(3, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y2 }));
 	return *this;
 }

@@ -229,33 +229,25 @@ ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_re
 	assign_widget(this, SQUARES, std::make_shared<W_IndexedRenderable>(color_square_shader));
 	
 	assign_widget(this, HOVER_SELECTOR, std::make_shared<W_UnitRenderable>(outline_rect_shader));
-	UnitRenderable& hur = ur_wget(*this, HOVER_SELECTOR);
-	hur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
-	hur.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }));
-	hur.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }));
-	hur.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }));
-	hur.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }));
-	hur.send_buffer();
+	ur_wget(*this, HOVER_SELECTOR)
+		.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()))
+		.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }))
+		.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }))
+		.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }))
+		.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }))
+		.send_buffer();
 
 	assign_widget(this, PRIMARY_SELECTOR_B, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
-	UnitRenderable& pbur = ur_wget(*this, PRIMARY_SELECTOR_B);
-	pbur.set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec()));
-	pbur.send_buffer();
+	ur_wget(*this, PRIMARY_SELECTOR_B).set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec())).send_buffer();
 
 	assign_widget(this, PRIMARY_SELECTOR_F, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
-	UnitRenderable& pfur = ur_wget(*this, PRIMARY_SELECTOR_F);
-	pfur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
-	pfur.send_buffer();
+	ur_wget(*this, PRIMARY_SELECTOR_F).set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec())).send_buffer();
 
 	assign_widget(this, ALTERNATE_SELECTOR_B, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
-	UnitRenderable& abur = ur_wget(*this, ALTERNATE_SELECTOR_B);
-	abur.set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec()));
-	abur.send_buffer();
+	ur_wget(*this, ALTERNATE_SELECTOR_B).set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec())).send_buffer();
 
 	assign_widget(this, ALTERNATE_SELECTOR_F, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
-	UnitRenderable& afur = ur_wget(*this, ALTERNATE_SELECTOR_F);
-	afur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
-	afur.send_buffer();
+	ur_wget(*this, ALTERNATE_SELECTOR_F).set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec())).send_buffer();
 }
 
 ColorPalette& ColorSubpalette::palette()
@@ -311,12 +303,13 @@ void ColorSubpalette::draw_selectors()
 
 void ColorSubpalette::sync_hover_selector()
 {
-	const UnitRenderable& ur = ur_wget(*this, HOVER_SELECTOR);
-	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.bottom() }));
-	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.bottom() }));
-	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.top() }));
-	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.top() }));
-	ur.send_buffer();
+	// TODO create utility for this somewhere, since this wp calculation for setting vertices is done everywhere. new file? WidgetUtility.h
+	ur_wget(*this, HOVER_SELECTOR)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.bottom() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.bottom() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.top() }))
+		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.top() }))
+		.send_buffer();
 }
 
 const float tri_first_offset = 3;
@@ -327,17 +320,17 @@ void ColorSubpalette::sync_primary_selector()
 {
 	Scale sc = global_scale();
 
-	const UnitRenderable& ubr = ur_wget(*this, PRIMARY_SELECTOR_B);
-	ubr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() }));
-	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_last_offset * sc.x, primary_wp.top()}));
-	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() - tri_last_offset * sc.y }));
-	ubr.send_buffer();
+	ur_wget(*this, PRIMARY_SELECTOR_B)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_last_offset * sc.x, primary_wp.top()}))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() - tri_last_offset * sc.y }))
+		.send_buffer();
 
-	const UnitRenderable& ufr = ur_wget(*this, PRIMARY_SELECTOR_F);
-	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }));
-	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_second_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }));
-	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_second_offset * sc.y }));
-	ufr.send_buffer();
+	ur_wget(*this, PRIMARY_SELECTOR_F)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_second_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_second_offset * sc.y }))
+		.send_buffer();
 }
 
 void ColorSubpalette::resync_primary_selector()
@@ -350,17 +343,17 @@ void ColorSubpalette::sync_alternate_selector()
 {
 	Scale sc = global_scale();
 
-	const UnitRenderable& ubr = ur_wget(*this, ALTERNATE_SELECTOR_B);
-	ubr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() }));
-	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_last_offset * sc.x, alternate_wp.top() }));
-	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() - tri_last_offset * sc.y }));
-	ubr.send_buffer();
+	ur_wget(*this, ALTERNATE_SELECTOR_B)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_last_offset * sc.x, alternate_wp.top() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() - tri_last_offset * sc.y }))
+		.send_buffer();
 
-	const UnitRenderable& ufr = ur_wget(*this, ALTERNATE_SELECTOR_F);
-	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }));
-	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_second_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }));
-	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_second_offset * sc.y }));
-	ufr.send_buffer();
+	ur_wget(*this, ALTERNATE_SELECTOR_F)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_second_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_second_offset * sc.y }))
+		.send_buffer();
 }
 
 void ColorSubpalette::resync_alternate_selector()
@@ -384,11 +377,11 @@ void ColorSubpalette::sync_with_palette()
 void ColorSubpalette::setup_color_buffer(size_t i, IndexedRenderable& squares) const
 {
 	WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
+	glm::vec4 color = subscheme->colors[i].as_vec();
 	squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
 	squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
 	squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
 	squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-	glm::vec4 color = subscheme->colors[i].as_vec();
 	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(color));
 	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(color));
 	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(color));
@@ -705,30 +698,30 @@ void ColorSubpalette::send_inserted_color(RGBA color, int index, bool adjacent)
 
 void ColorSubpalette::send_color(size_t i, RGBA color)
 {
-	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	glm::vec4 rgba = color.as_vec();
-	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba));
-	squares.send_single_vertex(i * 4 + 0);
-	squares.send_single_vertex(i * 4 + 1);
-	squares.send_single_vertex(i * 4 + 2);
-	squares.send_single_vertex(i * 4 + 3);
+	ir_wget(*this, SQUARES)
+		.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba))
+		.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba))
+		.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba))
+		.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba))
+		.send_single_vertex(i * 4 + 0)
+		.send_single_vertex(i * 4 + 1)
+		.send_single_vertex(i * 4 + 2)
+		.send_single_vertex(i * 4 + 3);
 }
 
 void ColorSubpalette::send_color(size_t i)
 {
-	IndexedRenderable& squares = ir_wget(*this, SQUARES);
 	glm::vec4 rgba = subscheme->colors[i].as_vec();
-	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba));
-	squares.send_single_vertex(i * 4 + 0);
-	squares.send_single_vertex(i * 4 + 1);
-	squares.send_single_vertex(i * 4 + 2);
-	squares.send_single_vertex(i * 4 + 3);
+	ir_wget(*this, SQUARES)
+		.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba))
+		.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba))
+		.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba))
+		.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba))
+		.send_single_vertex(i * 4 + 0)
+		.send_single_vertex(i * 4 + 1)
+		.send_single_vertex(i * 4 + 2)
+		.send_single_vertex(i * 4 + 3);
 }
 
 void ColorSubpalette::remove_square_under_cursor(bool send_vb, bool create_action)
@@ -1466,19 +1459,19 @@ void ColorPalette::sync_widget_with_vp()
 	for (size_t button : BUTTONS)
 		b_t_wget(*this, button).send_vp();
 
-	UnitRenderable& ur = ur_wget(*this, BLACK_GRID);
 	FlatTransform global = self.transform;
 	global.scale *= Scale(_col_count * SQUARE_SEP, _row_count * SQUARE_SEP);
 
-	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-	ur.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0, 0 }));
-	ur.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1, 0 }));
-	ur.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0, 1 }));
-	ur.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1, 1 }));
-	ur.send_buffer();
+	ur_wget(*this, BLACK_GRID)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }))
+		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }))
+		.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0, 0 }))
+		.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1, 0 }))
+		.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0, 1 }))
+		.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1, 1 }))
+		.send_buffer();
 
 	// LATER is this necessary, or should only current subpalette be selected, and when selecting a new subpalette, sync it then.
 	for (size_t i = 0; i < num_subpalettes(); ++i)

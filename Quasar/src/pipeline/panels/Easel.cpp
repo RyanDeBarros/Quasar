@@ -4,6 +4,7 @@
 
 #include "variety/GLutility.h"
 #include "user/Machine.h"
+#include "BrushesPanel.h"
 #include "../render/Uniforms.h"
 #include "../render/FlatSprite.h"
 
@@ -222,17 +223,10 @@ Canvas::Canvas(Shader* sprite_shader, Shader* cursor_shader)
 	fs_wget(*this, CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
 	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
-	assign_widget(this, CURSOR, std::make_shared<W_UnitRenderable>(cursor_shader));
-	UnitRenderable& cursor = ur_wget(*this, CURSOR);
-	cursor.set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec()));
-	cursor.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }));
-	cursor.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }));
-	cursor.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }));
-	cursor.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }));
-	cursor.send_buffer();
-	wp_at(CURSOR).transform.scale = Scale(1.1f);
-	Uniforms::send_1(*cursor_shader, "u_Padding", 0);
-	Uniforms::send_1(*cursor_shader, "u_Border", 0.11f);
+	assign_widget(this, CURSOR_PENCIL, std::make_shared<W_UnitRenderable>(cursor_shader));
+	UnitRenderable& cursor_pencil = ur_wget(*this, CURSOR_PENCIL);
+	cursor_pencil.set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec()));
+	cursor_pencil.send_buffer();
 }
 
 void Canvas::draw(bool show_cursor)
@@ -242,19 +236,33 @@ void Canvas::draw(bool show_cursor)
 	minor_gridlines.draw();
 	major_gridlines.draw();
 	if (show_cursor)
-		ur_wget(*this, CURSOR).draw();
+	{
+		switch (Machine.brushes()->get_brush_tip())
+		{
+		case BrushesPanel::BrushTip::PENCIL:
+			ur_wget(*this, CURSOR_PENCIL).draw();
+			break;
+		case BrushesPanel::BrushTip::PEN:
+			ur_wget(*this, CURSOR_PEN).draw();
+			break;
+		}
+	}
 }
 
 void Canvas::sync_cursor_with_widget()
 {
-	UnitRenderable& cursor = ur_wget(*this, CURSOR);
-	Scale sc = global_scale();
-	WidgetPlacement wp = wp_at(CURSOR).relative_to(self.transform);
-	cursor.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	cursor.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	cursor.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	cursor.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-	cursor.send_buffer();
+	sync_ur(CURSOR_PENCIL);
+}
+
+void Canvas::sync_ur(size_t subw)
+{
+	WidgetPlacement wp = wp_at(subw).relative_to(self.transform);
+	ur_wget(*this, subw)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
+		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
+		.send_buffer();
 }
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
@@ -373,14 +381,19 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 
 void Canvas::hover_pixel_at(Position pos)
 {
-	wp_at(CURSOR).transform.position = pos;
+	wp_at(CURSOR_PENCIL).transform.position = pos;
 	sync_cursor_with_widget();
+}
+
+void Canvas::set_hover_color(RGBA color)
+{
+	// TODO CURSOR_PEN with 1.0 alpha channel
+	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(color.as_vec())).send_buffer();
 }
 
 Easel::Easel()
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
-	bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")),
-	cursor_shader(FileSystem::shader_path("palette/outline_rect.vert"), FileSystem::shader_path("palette/outline_rect.frag")), widget(_W_COUNT)
+	color_square_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
 {
 	initialize_widget();
 	connect_input_handlers();
@@ -388,11 +401,10 @@ Easel::Easel()
 
 void Easel::initialize_widget()
 {
-	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
-	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(HSV(0.5f, 0.15f, 0.15f).to_rgb(), 0.5f).as_vec()));
-	ur_wget(widget, BACKGROUND).send_buffer();
+	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&color_square_shader));
+	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(HSV(0.5f, 0.15f, 0.15f).to_rgb(), 0.5f).as_vec())).send_buffer();
 
-	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&sprite_shader, &cursor_shader));
+	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&sprite_shader, &color_square_shader));
 	Canvas& cnvs = canvas();
 	cnvs.create_checkerboard_image();
 	cnvs.set_image(nullptr);
@@ -442,17 +454,14 @@ void Easel::draw()
 	ur_wget(widget, BACKGROUND).draw();
 	Canvas& cnvs = canvas();
 	if (cnvs.visible)
-	{
 		cnvs.draw(show_cursor);
-	}
 }
 
 void Easel::_send_view()
 {
 	vp = vp_matrix();
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
-	Uniforms::send_matrix3(bkg_shader, "u_VP", vp);
-	Uniforms::send_matrix3(cursor_shader, "u_VP", vp);
+	Uniforms::send_matrix3(color_square_shader, "u_VP", vp);
 	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", vp);
 	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", vp);
 	unbind_shader();
@@ -462,6 +471,10 @@ void Easel::_send_view()
 void Easel::process()
 {
 	update_panning();
+	if (cursor_in_clipping())
+	{
+		hover_pixel_under_cursor();
+	}
 }
 
 void Easel::sync_widget()
@@ -474,12 +487,12 @@ void Easel::sync_widget()
 void Easel::sync_ur(size_t subw)
 {
 	WidgetPlacement wp = widget.wp_at(subw).relative_to(widget.self.transform);
-	UnitRenderable& ur = ur_wget(widget, subw);
-	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-	ur.send_buffer();
+	ur_wget(widget, subw)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
+		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
+		.send_buffer();
 }
 
 void Easel::sync_canvas_transform()
@@ -821,7 +834,7 @@ void Easel::rotate_image_270()
 		Machine.history.execute(std::make_shared<Rotate270Action>(this));
 }
 
-bool Easel::hover_pixel_under_cursor()
+void Easel::hover_pixel_under_cursor()
 {
 	Position local_cursor_pos = canvas().local_of(Machine.cursor_world_pos(glm::inverse(vp)));
 	Buffer& buf = canvas_image()->buf;
@@ -829,9 +842,16 @@ bool Easel::hover_pixel_under_cursor()
 	if (in_diagonal_rect(buf_cursor_pos, {}, { buf.width, buf.height }))
 	{
 		IPosition pos(buf_cursor_pos);
-		canvas().hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
-		// TODO also change color of hover cursor for contrast with underlying pixel.
-		return true;
+		if (pos != current_hovered_pos)
+		{
+			current_hovered_pos = pos;
+			canvas().hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
+		}
+		show_cursor = true;
 	}
-	return false;
+	else
+	{
+		current_hovered_pos = { -1, -1 };
+		show_cursor = false;
+	}
 }

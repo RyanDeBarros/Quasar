@@ -32,6 +32,9 @@ private:
 	BrushTool brush_tool = BrushTool::CAMERA;
 
 public:
+	BrushTip get_brush_tip() const { return brush_tip; }
+	BrushTool get_brush_tool() const { return brush_tool; }
+
 	Shader bkg_shader, round_rect_shader;
 	Widget widget;
 	glm::mat3 vp;
