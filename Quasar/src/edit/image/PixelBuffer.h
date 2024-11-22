@@ -85,5 +85,7 @@ extern void subbuffer_copy(const Buffer& dest, const Subbuffer& src, long long d
 extern void subbuffer_copy(const Subbuffer& dest, const Buffer& src, long long dest_offset = 0, long long src_offset = 0, size_t length = -1);
 extern void subbuffer_copy(const Buffer& dest, const Buffer& src, long long dest_offset = 0, long long src_offset = 0, size_t length = -1);
 
+extern void subbuffer_copy_unbalanced(const Buffer& dest, const Buffer& src, long long dest_offset = 0, long long src_offset = 0, size_t length = -1);
+
 extern void iterate_path(const Path& path, const std::function<void(PathIterator&)>& func);
 extern void reverse_iterate_path(const Path& path, const std::function<void(PathIterator&)>& func);

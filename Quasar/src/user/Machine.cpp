@@ -161,6 +161,7 @@ static void init_handlers()
 	window.root_mouse_button.add_child(&palette()->mb_handler);
 	window.root_mouse_button.add_child(&easel()->mb_handler);
 	window.root_key.add_child(&menu()->key_handler);
+	window.root_key.add_child(&easel()->key_handler);
 	window.root_key.add_child(&brushes()->key_handler);
 	window.root_key.add_child(&palette()->key_handler);
 	window.root_scroll.add_child(&palette()->scroll_handler);

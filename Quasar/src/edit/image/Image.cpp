@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "variety/GLutility.h"
+#include "variety/Geometry.h"
 #include "PixelBufferPaths.h"
 
 inline static GLenum chpp_format(CHPP chpp)
@@ -61,7 +62,6 @@ inline static void delete_texture(Image& image)
 
 Image::Image(const FilePath& filepath, bool _gen_texture)
 {
-	stbi_set_flip_vertically_on_load(true);
 	// LATER handle gif file from memory
 	buf.pixels = stbi_load(filepath.c_str(), &buf.width, &buf.height, &buf.chpp, 0);
 	if (buf.pixels && _gen_texture)
@@ -148,6 +148,19 @@ void Image::update_texture() const
 	{
 		bind_texture(tid);
 		QUASAR_GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buf.width, buf.height, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
+	}
+}
+
+void Image::update_texture(int x, int y, int w, int h) const
+{
+	if (tid)
+	{
+		if (x + w >= buf.width)
+			w = buf.width - x;
+		if (y + h >= buf.height)
+			h = buf.height - y;
+		bind_texture(tid);
+		QUASAR_GL(glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pos(x, y)));
 	}
 }
 

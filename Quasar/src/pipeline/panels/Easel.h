@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "Panel.h"
 #include "user/Platform.h"
 #include "../render/Shader.h"
@@ -58,6 +60,15 @@ struct Canvas : public Widget
 	Gridlines major_gridlines;
 
 	bool visible = false;
+	bool cursor_in_canvas = false;
+	enum class CursorState
+	{
+		UP,
+		DOWN_PRIMARY,
+		DOWN_ALTERNATE
+	} cursor_state = CursorState::UP;
+	IPosition brush_pos = { -1, -1 };
+	bool brushing = false;
 
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
@@ -69,10 +80,12 @@ public:
 	Canvas(const Canvas&) = delete;
 	Canvas(Canvas&&) noexcept = delete;
 
-	void draw(bool show_cursor);
+	virtual void draw() override;
 	void sync_cursor_with_widget();
 	void sync_ur(size_t subw);
 
+	const Image* image() const;
+	Image* image();
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
 	void sync_checkerboard_with_image();
@@ -86,8 +99,26 @@ public:
 	void set_checkerboard_uv_size(float width, float height) const;
 
 	void hover_pixel_at(Position pos);
-	void set_hover_color(RGBA color);
+	void set_primary_color(RGBA color);
+	void set_alternate_color(RGBA color);
+	void cursor_press(MouseButton button);
+	void cursor_release();
+	bool cursor_cancel();
 
+private:
+	RGBA primary_color, alternate_color;
+	std::array<Byte, 4> pric_pxs;
+	std::array<Byte, 4> altc_pxs;
+	std::array<Byte, 4> pric_pen_pxs;
+	std::array<Byte, 4> altc_pen_pxs;
+
+	void brush();
+	void brush_submit();
+	void brush_cancel();
+
+	void brush_paint_tool();
+
+public:
 	enum : size_t
 	{
 		CHECKERBOARD,
@@ -107,9 +138,8 @@ struct Easel : public Panel
 	glm::mat3 vp;
 
 	MouseButtonHandler mb_handler;
+	KeyHandler key_handler;
 	ScrollHandler scroll_handler;
-
-	IPosition current_hovered_pos = { -1, -1 };
 
 	Easel();
 	Easel(const Easel&) = delete;
@@ -132,7 +162,8 @@ private:
 public:
 	void sync_canvas_transform();
 
-	Image* canvas_image() const;
+	const Image* canvas_image() const;
+	Image* canvas_image();
 
 	bool minor_gridlines_are_visible() const;
 	void set_minor_gridlines_visibility(bool visible);
@@ -177,8 +208,6 @@ public:
 
 	Canvas& canvas() { return *widget.get<Canvas>(CANVAS); }
 	const Canvas& canvas() const { return *widget.get<Canvas>(CANVAS); }
-
-	bool show_cursor = false;
 
 	void hover_pixel_under_cursor();
 

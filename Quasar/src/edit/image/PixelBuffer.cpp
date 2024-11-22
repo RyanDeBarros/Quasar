@@ -165,6 +165,8 @@ void Path::move_iter(PathIterator& pit, long long offset) const
 	}
 }
 
+// TODO make sure that a buffer being copied doesn't surpass the destination's bounds
+
 void subbuffer_copy(const Subbuffer& dest, const Subbuffer& src, long long dest_offset, long long src_offset, size_t length)
 {
 	assert_same_chpp(dest.buf, src.buf);
@@ -261,6 +263,26 @@ void subbuffer_copy(const Buffer& dest, const Buffer& src, long long dest_offset
 		memcpy(dest.pixels + dest_offset * dest.chpp, src.pixels + src_offset * src.chpp, src.bytes());
 	else
 		memcpy(dest.pixels + dest_offset * dest.chpp, src.pixels + src_offset * src.chpp, length * dest.chpp);
+}
+
+void subbuffer_copy_unbalanced(const Buffer& dest, const Buffer& src, long long dest_offset, long long src_offset, size_t length)
+{
+	if (dest.chpp == src.chpp)
+		subbuffer_copy(dest, src, dest_offset, src_offset, length);
+	else
+	{
+		CHPP chpp = std::min(dest.chpp, src.chpp);
+		if (length == -1)
+			length = src.area();
+		Byte* dest_pixels = dest.pixels + dest_offset * dest.chpp;
+		Byte* src_pixels = src.pixels + src_offset * src.chpp;
+		for (size_t i = 0; i < length; ++i)
+		{
+			memcpy(dest_pixels, src_pixels, chpp);
+			dest_pixels += dest.chpp;
+			src_pixels += src.chpp;
+		}
+	}
 }
 
 void iterate_path(const Path& path, const std::function<void(PathIterator&)>& func)

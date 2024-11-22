@@ -47,9 +47,6 @@ private:
 	void initialize_widget();
 	void sync_widget();
 
-	void emit_modified_primary_color(RGBA color) const;
-	void emit_modified_alternate_color(RGBA color) const;
-
 public:
 	enum : size_t
 	{

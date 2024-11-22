@@ -44,8 +44,8 @@ PalettePanel::PalettePanel()
 	use_primary = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::PRIMARY; };
 	use_alternate = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::ALTERNATE; };
 	swap_picker_colors = [this]() { color_picker(this).swap_picker_colors(); };
-	emit_modified_primary = [this](RGBA rgba) { emit_modified_primary_color(rgba); };
-	emit_modified_alternate = [this](RGBA rgba) { emit_modified_alternate_color(rgba); };
+	emit_modified_primary = [this](RGBA rgba) {	Machine.easel()->canvas().set_primary_color(rgba); };
+	emit_modified_alternate = [this](RGBA rgba) { Machine.easel()->canvas().set_alternate_color(rgba); };
 	initialize_widget();
 
 	// ##########################################################
@@ -178,18 +178,6 @@ void PalettePanel::sync_widget()
 	color_palette(this).set_size(color_palette_size, false);
 	widget.wp_at(COLOR_PALETTE).transform.position = { 0, -0.5f * view_height + color_palette_size.y * widget.wp_at(COLOR_PALETTE).transform.scale.y * 0.5f + padding };
 	color_palette(this).send_vp();
-}
-
-void PalettePanel::emit_modified_primary_color(RGBA color) const
-{
-	if (color_picker(this).get_editing_color() == ColorPicker::EditingColor::PRIMARY)
-		Machine.easel()->canvas().set_hover_color(color);
-}
-
-void PalettePanel::emit_modified_alternate_color(RGBA color) const
-{
-	if (color_picker(this).get_editing_color() == ColorPicker::EditingColor::ALTERNATE)
-		Machine.easel()->canvas().set_hover_color(color);
 }
 
 void PalettePanel::_send_view()

@@ -235,13 +235,13 @@ Canvas::Canvas(Shader* sprite_shader, Shader* cursor_shader)
 	fs_wget(*this, CURSOR_SELECT).set_texture_slot(CURSOR_SELECT_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("select.png"));
 }
 
-void Canvas::draw(bool show_cursor)
+void Canvas::draw()
 {
 	fs_wget(*this, CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
 	minor_gridlines.draw();
 	major_gridlines.draw();
-	if (show_cursor)
+	if (cursor_in_canvas)
 	{
 		switch (Machine.brushes()->get_brush_tip())
 		{
@@ -278,6 +278,16 @@ void Canvas::sync_ur(size_t subw)
 		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
 		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
 		.send_buffer();
+}
+
+const Image* Canvas::image() const
+{
+	return fs_wget(*this, SPRITE).image.get();
+}
+
+Image* Canvas::image()
+{
+	return fs_wget(*this, SPRITE).image.get();
 }
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
@@ -401,12 +411,138 @@ void Canvas::hover_pixel_at(Position pos)
 	wp_at(CURSOR_ERASER).transform.position = pos;
 	wp_at(CURSOR_SELECT).transform.position = pos;
 	sync_cursor_with_widget();
+	if (cursor_state != CursorState::UP)
+		brush();
 }
 
-void Canvas::set_hover_color(RGBA color)
+void Canvas::set_primary_color(RGBA color)
 {
 	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(color.as_vec())).send_buffer();
 	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(color.rgb, 1.0f).as_vec())).send_buffer();
+	primary_color = color;
+	pric_pen_pxs[0] = pric_pxs[0] = color.get_pixel_r();
+	pric_pen_pxs[1] = pric_pxs[1] = color.get_pixel_g();
+	pric_pen_pxs[2] = pric_pxs[2] = color.get_pixel_b();
+	pric_pxs[3] = color.get_pixel_a();
+	pric_pen_pxs[3] = 255;
+}
+
+void Canvas::set_alternate_color(RGBA color)
+{
+	alternate_color = color;
+	altc_pen_pxs[0] = altc_pxs[0] = color.get_pixel_r();
+	altc_pen_pxs[1] = altc_pxs[1] = color.get_pixel_g();
+	altc_pen_pxs[2] = altc_pxs[2] = color.get_pixel_b();
+	altc_pxs[3] = color.get_pixel_a();
+	altc_pen_pxs[3] = 255;
+}
+
+void Canvas::cursor_press(MouseButton button)
+{
+	if (button == MouseButton::LEFT)
+		cursor_state = CursorState::DOWN_PRIMARY;
+	else if (button == MouseButton::RIGHT)
+		cursor_state = CursorState::DOWN_ALTERNATE;
+	if (cursor_in_canvas)
+		brush();
+}
+
+void Canvas::cursor_release()
+{
+	cursor_state = CursorState::UP;
+	brush_submit();
+}
+
+bool Canvas::cursor_cancel()
+{
+	if (cursor_state != CursorState::UP)
+	{
+		cursor_state = CursorState::UP;
+		brush_cancel();
+		return true;
+	}
+	return false;
+}
+
+void Canvas::brush()
+{
+	switch (Machine.brushes()->get_brush_tool())
+	{
+	case BrushesPanel::BrushTool::PAINT:
+		brush_paint_tool();
+		break;
+	}
+}
+
+void Canvas::brush_submit()
+{
+	if (brushing)
+	{
+		// TODO submit batch action
+	}
+	brushing = false;
+}
+
+void Canvas::brush_cancel()
+{
+	brushing = false;
+}
+
+// LATER here and elsewhere, add support for CHPP < 4
+void Canvas::brush_paint_tool()
+{
+	Buffer image_posed_buf = image()->buf;
+	image_posed_buf.pixels += image_posed_buf.byte_offset(brush_pos.x, brush_pos.y);
+	switch (Machine.brushes()->get_brush_tip())
+	{
+	case BrushesPanel::BrushTip::PENCIL:
+	{
+		if (!brushing)
+		{
+			brushing = true;
+			// TODO begin batch action
+		}
+		const std::array<Byte, 4>& color = cursor_state == CursorState::DOWN_PRIMARY ? pric_pxs : altc_pxs;
+		float applied_alpha = cursor_state == CursorState::DOWN_PRIMARY ? primary_color.alpha : alternate_color.alpha;
+		for (CHPP i = 0; i < 3 && i < image_posed_buf.chpp; ++i)
+			image_posed_buf.pixels[i] = std::clamp(roundi(color[i] * applied_alpha + image_posed_buf.pixels[i] * (1 - applied_alpha)), 0, 255);
+		if (image_posed_buf.chpp >= 4)
+			image_posed_buf.pixels[4] = std::clamp(roundi(applied_alpha + image_posed_buf.pixels[4] * (1 - applied_alpha)), 0, 255);
+		image()->update_texture(brush_pos.x, brush_pos.y, 1, 1);
+		break;
+	}
+	case BrushesPanel::BrushTip::PEN:
+	{
+		if (!brushing)
+		{
+			brushing = true;
+			// TODO begin batch action
+		}
+		const std::array<Byte, 4>& color = cursor_state == CursorState::DOWN_PRIMARY ? pric_pen_pxs : altc_pen_pxs;
+		for (CHPP i = 0; i < image_posed_buf.chpp; ++i)
+			image_posed_buf.pixels[i] = color[i];
+		image()->update_texture(brush_pos.x, brush_pos.y, 1, 1);
+		break;
+	}
+	case BrushesPanel::BrushTip::ERASER:
+		if (!brushing)
+		{
+			brushing = true;
+			// TODO begin batch action
+		}
+		for (CHPP i = 0; i < image_posed_buf.chpp; ++i)
+			image_posed_buf.pixels[i] = 0;
+		image()->update_texture(brush_pos.x, brush_pos.y, 1, 1);
+		break;
+	case BrushesPanel::BrushTip::SELECT:
+		if (!brushing)
+		{
+			brushing = true;
+			// LATER begin batch action
+		}
+		// LATER
+		break;
+	}
 }
 
 Easel::Easel()
@@ -449,14 +585,35 @@ void Easel::connect_input_handlers()
 		}
 		else if (mb.button == MouseButton::LEFT)
 		{
-			if (mb.action == IAction::PRESS && Machine.main_window->is_key_pressed(Key::SPACE) && cursor_in_clipping())
+			if (mb.action == IAction::PRESS && cursor_in_clipping())
 			{
 				mb.consumed = true;
-				begin_panning();
+				if (Machine.main_window->is_key_pressed(Key::SPACE))
+					begin_panning();
+				else
+					canvas().cursor_press(mb.button);
 			}
 			else if (mb.action == IAction::RELEASE)
+			{
 				end_panning();
+				canvas().cursor_release();
+			}
 		}
+		else if (mb.button == MouseButton::RIGHT)
+		{
+			if (mb.action == IAction::PRESS)
+			{
+				mb.consumed = true;
+				canvas().cursor_press(mb.button);
+			}
+			else if (mb.action == IAction::RELEASE)
+				canvas().cursor_release();
+		}
+		};
+	// TODO add handler for when mouse is already pressed, and then space is pressed to pan.
+	key_handler.callback = [this](const KeyEvent& k) {
+		if (k.action == IAction::PRESS && k.key == Key::ESCAPE && canvas().cursor_cancel())
+			k.consumed = true;
 		};
 	scroll_handler.callback = [this](const ScrollEvent& s) {
 		if (!panning_info.panning && cursor_in_clipping())
@@ -472,7 +629,7 @@ void Easel::draw()
 	ur_wget(widget, BACKGROUND).draw();
 	Canvas& cnvs = canvas();
 	if (cnvs.visible)
-		cnvs.draw(show_cursor);
+		cnvs.draw();
 }
 
 void Easel::_send_view()
@@ -520,9 +677,14 @@ void Easel::sync_canvas_transform()
 	canvas().major_gridlines.send_flat_transform(canvas().self.transform);
 }
 
-Image* Easel::canvas_image() const
+const Image* Easel::canvas_image() const
 {
-	return fs_wget(canvas(), Canvas::SPRITE).image.get();
+	return canvas().image();
+}
+
+Image* Easel::canvas_image()
+{
+	return canvas().image();
 }
 
 bool Easel::minor_gridlines_are_visible() const
@@ -860,16 +1022,16 @@ void Easel::hover_pixel_under_cursor()
 	if (in_diagonal_rect(buf_cursor_pos, {}, { buf.width, buf.height }))
 	{
 		IPosition pos(buf_cursor_pos);
-		if (pos != current_hovered_pos)
+		if (pos != canvas().brush_pos)
 		{
-			current_hovered_pos = pos;
+			canvas().brush_pos = pos;
 			canvas().hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
 		}
-		show_cursor = true;
+		canvas().cursor_in_canvas = true;
 	}
 	else
 	{
-		current_hovered_pos = { -1, -1 };
-		show_cursor = false;
+		canvas().brush_pos = {-1, -1};
+		canvas().cursor_in_canvas = false;
 	}
 }
