@@ -144,6 +144,7 @@ void ColorPicker::draw()
 		break;
 	}
 	cp_render_gui_front();
+	ur_wget(*this, PREVIEW_BKG).draw();
 	ur_wget(*this, PREVIEW_ALT).draw();
 	ur_wget(*this, PREVIEW_PRI).draw();
 }
@@ -697,6 +698,16 @@ void ColorPicker::initialize_widget()
 	wp_at(ALPHA_SLIDER_CURSOR).transform.position = { wp_at(ALPHA_SLIDER).right(), wp_at(ALPHA_SLIDER).center_y() };
 
 	// ---------- PREVIEW ----------
+	
+	assign_widget(this, PREVIEW_BKG, std::make_shared<W_UnitRenderable>(&quad_shader));
+	setup_rect_uvs(PREVIEW_BKG);
+	setup_gradient(PREVIEW_BKG, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK,
+		(GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK);
+	wp_at(PREVIEW_BKG).transform.position.x = preview_x;
+	wp_at(PREVIEW_BKG).transform.position.y = preview_y;
+	wp_at(PREVIEW_BKG).transform.scale = { 2 * (preview_w - preview_overlap_offset), preview_h };
+	wp_at(PREVIEW_BKG).pivot.x = 0.5f;
+	wp_at(PREVIEW_BKG).pivot.y = 1;
 	
 	assign_widget(this, PREVIEW_PRI, std::make_shared<W_UnitRenderable>(&quad_shader));
 	setup_rect_uvs(PREVIEW_PRI);
@@ -1431,38 +1442,28 @@ void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, G
 	ur_wget(*this, control).set_attribute(2, glm::value_ptr(glm::vec4{ g1, g2, g3, g4 }));
 }
 
+static const size_t STANDARD_URS[]{
+	ColorPicker::PREVIEW_BKG, ColorPicker::PREVIEW_PRI, ColorPicker::PREVIEW_ALT,
+	ColorPicker::ALPHA_SLIDER, ColorPicker::ALPHA_SLIDER_CURSOR,
+	ColorPicker::GRAPHIC_QUAD, ColorPicker::GRAPHIC_QUAD_CURSOR,
+	ColorPicker::GRAPHIC_HUE_SLIDER, ColorPicker::GRAPHIC_HUE_SLIDER_CURSOR,
+	ColorPicker::GRAPHIC_HUE_WHEEL, ColorPicker::GRAPHIC_HUE_WHEEL_CURSOR,
+	ColorPicker::GRAPHIC_VALUE_SLIDER, ColorPicker::GRAPHIC_VALUE_SLIDER_CURSOR,
+	ColorPicker::RGB_R_SLIDER, ColorPicker::RGB_R_SLIDER_CURSOR,
+	ColorPicker::RGB_G_SLIDER, ColorPicker::RGB_G_SLIDER_CURSOR,
+	ColorPicker::RGB_B_SLIDER, ColorPicker::RGB_B_SLIDER_CURSOR,
+	ColorPicker::HSV_H_SLIDER, ColorPicker::HSV_H_SLIDER_CURSOR,
+	ColorPicker::HSV_S_SLIDER, ColorPicker::HSV_S_SLIDER_CURSOR,
+	ColorPicker::HSV_V_SLIDER, ColorPicker::HSV_V_SLIDER_CURSOR,
+	ColorPicker::HSL_H_SLIDER, ColorPicker::HSL_H_SLIDER_CURSOR,
+	ColorPicker::HSL_S_SLIDER, ColorPicker::HSL_S_SLIDER_CURSOR,
+	ColorPicker::HSL_L_SLIDER, ColorPicker::HSL_L_SLIDER_CURSOR
+};
+
 void ColorPicker::sync_widget_with_vp()
 {
-	sync_single_standard_ur_transform(PREVIEW_PRI);
-	sync_single_standard_ur_transform(PREVIEW_ALT);
-	sync_single_standard_ur_transform(ALPHA_SLIDER);
-	sync_single_standard_ur_transform(ALPHA_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(GRAPHIC_QUAD);
-	sync_single_standard_ur_transform(GRAPHIC_QUAD_CURSOR);
-	sync_single_standard_ur_transform(GRAPHIC_HUE_SLIDER);
-	sync_single_standard_ur_transform(GRAPHIC_HUE_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(GRAPHIC_HUE_WHEEL);
-	sync_single_standard_ur_transform(GRAPHIC_HUE_WHEEL_CURSOR);
-	sync_single_standard_ur_transform(GRAPHIC_VALUE_SLIDER);
-	sync_single_standard_ur_transform(GRAPHIC_VALUE_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(RGB_R_SLIDER);
-	sync_single_standard_ur_transform(RGB_R_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(RGB_G_SLIDER);
-	sync_single_standard_ur_transform(RGB_G_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(RGB_B_SLIDER);
-	sync_single_standard_ur_transform(RGB_B_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSV_H_SLIDER);
-	sync_single_standard_ur_transform(HSV_H_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSV_S_SLIDER);
-	sync_single_standard_ur_transform(HSV_S_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSV_V_SLIDER);
-	sync_single_standard_ur_transform(HSV_V_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSL_H_SLIDER);
-	sync_single_standard_ur_transform(HSL_H_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSL_S_SLIDER);
-	sync_single_standard_ur_transform(HSL_S_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSL_L_SLIDER);
-	sync_single_standard_ur_transform(HSL_L_SLIDER_CURSOR);
+	for (size_t sur : STANDARD_URS)
+		sync_single_standard_ur_transform(sur);
 	float sc = scale1d();
 	if (cached_scale1d != sc)
 	{

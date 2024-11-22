@@ -167,6 +167,7 @@ public:
 	enum : size_t
 	{
 		// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
+		PREVIEW_BKG,					// quad
 		PREVIEW_PRI,					// quad
 		PREVIEW_ALT,					// quad
 		ALPHA_SLIDER,					// quad

@@ -214,7 +214,9 @@ void Gridlines::set_visible(bool visible, const Canvas& canvas)
 }
 
 constexpr GLuint CHECKERBOARD_TSLOT = 0;
-constexpr GLuint CANVAS_SPRITE_TSLOT = 1;
+constexpr GLuint CURSOR_ERASER_TSLOT = 1;
+constexpr GLuint CURSOR_SELECT_TSLOT = 2;
+constexpr GLuint CANVAS_SPRITE_TSLOT = 3;
 
 Canvas::Canvas(Shader* sprite_shader, Shader* cursor_shader)
 	: Widget(_W_COUNT)
@@ -224,9 +226,13 @@ Canvas::Canvas(Shader* sprite_shader, Shader* cursor_shader)
 	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 	assign_widget(this, CURSOR_PENCIL, std::make_shared<W_UnitRenderable>(cursor_shader));
-	UnitRenderable& cursor_pencil = ur_wget(*this, CURSOR_PENCIL);
-	cursor_pencil.set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec()));
-	cursor_pencil.send_buffer();
+	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec())).send_buffer();
+	assign_widget(this, CURSOR_PEN, std::make_shared<W_UnitRenderable>(cursor_shader));
+	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec())).send_buffer();
+	assign_widget(this, CURSOR_ERASER, std::make_shared<FlatSprite>(sprite_shader));
+	fs_wget(*this, CURSOR_ERASER).set_texture_slot(CURSOR_ERASER_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("eraser.png"));
+	assign_widget(this, CURSOR_SELECT, std::make_shared<FlatSprite>(sprite_shader));
+	fs_wget(*this, CURSOR_SELECT).set_texture_slot(CURSOR_SELECT_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("select.png"));
 }
 
 void Canvas::draw(bool show_cursor)
@@ -245,6 +251,12 @@ void Canvas::draw(bool show_cursor)
 		case BrushesPanel::BrushTip::PEN:
 			ur_wget(*this, CURSOR_PEN).draw();
 			break;
+		case BrushesPanel::BrushTip::ERASER:
+			fs_wget(*this, CURSOR_ERASER).draw(CURSOR_ERASER_TSLOT);
+			break;
+		case BrushesPanel::BrushTip::SELECT:
+			fs_wget(*this, CURSOR_SELECT).draw(CURSOR_SELECT_TSLOT);
+			break;
 		}
 	}
 }
@@ -252,6 +264,9 @@ void Canvas::draw(bool show_cursor)
 void Canvas::sync_cursor_with_widget()
 {
 	sync_ur(CURSOR_PENCIL);
+	sync_ur(CURSOR_PEN);
+	fs_wget(*this, CURSOR_ERASER).update_transform().ur->send_buffer();
+	fs_wget(*this, CURSOR_SELECT).update_transform().ur->send_buffer();
 }
 
 void Canvas::sync_ur(size_t subw)
@@ -382,13 +397,16 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 void Canvas::hover_pixel_at(Position pos)
 {
 	wp_at(CURSOR_PENCIL).transform.position = pos;
+	wp_at(CURSOR_PEN).transform.position = pos;
+	wp_at(CURSOR_ERASER).transform.position = pos;
+	wp_at(CURSOR_SELECT).transform.position = pos;
 	sync_cursor_with_widget();
 }
 
 void Canvas::set_hover_color(RGBA color)
 {
-	// TODO CURSOR_PEN with 1.0 alpha channel
 	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(color.as_vec())).send_buffer();
+	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(color.rgb, 1.0f).as_vec())).send_buffer();
 }
 
 Easel::Easel()
