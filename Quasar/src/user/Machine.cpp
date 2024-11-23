@@ -50,11 +50,11 @@ namespace Data
 
 static PanelGroup* panels = nullptr;
 
-Easel* MachineImpl::easel() const { return dynamic_cast<Easel*>(panels->panels[0].get()); }
-PalettePanel* MachineImpl::palette() const { return dynamic_cast<PalettePanel*>(panels->panels[1].get()); }
-BrushesPanel* MachineImpl::brushes() const { return dynamic_cast<BrushesPanel*>(panels->panels[2].get()); }
-ScenePanel* MachineImpl::scene() const { return dynamic_cast<ScenePanel*>(panels->panels[3].get()); }
-MenuPanel* MachineImpl::menu() const { return dynamic_cast<MenuPanel*>(panels->panels[4].get()); }
+Easel* MachineImpl::easel() const { return 0 < panels->panels.size() ? dynamic_cast<Easel*>(panels->panels[0].get()) : nullptr; }
+PalettePanel* MachineImpl::palette() const { return 1 < panels->panels.size() ? dynamic_cast<PalettePanel*>(panels->panels[1].get()) : nullptr; }
+BrushesPanel* MachineImpl::brushes() const { return 2 < panels->panels.size() ? dynamic_cast<BrushesPanel*>(panels->panels[2].get()) : nullptr; }
+ScenePanel* MachineImpl::scene() const { return 3 < panels->panels.size() ? dynamic_cast<ScenePanel*>(panels->panels[3].get()) : nullptr; }
+MenuPanel* MachineImpl::menu() const { return 4 < panels->panels.size() ? dynamic_cast<MenuPanel*>(panels->panels[4].get()) : nullptr; }
 
 static Easel* easel() { return Machine.easel(); }
 static PalettePanel* palette() { return Machine.palette(); }

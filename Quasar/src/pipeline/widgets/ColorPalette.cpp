@@ -303,7 +303,7 @@ void ColorSubpalette::draw_selectors()
 
 void ColorSubpalette::sync_hover_selector()
 {
-	// TODO create utility for this somewhere, since this wp calculation for setting vertices is done everywhere. new file? WidgetUtility.h
+	// LATER create utility for this somewhere, since this wp calculation for setting vertices is done everywhere. new file? WidgetUtility.h
 	ur_wget(*this, HOVER_SELECTOR)
 		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.bottom() }))
 		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.bottom() }))

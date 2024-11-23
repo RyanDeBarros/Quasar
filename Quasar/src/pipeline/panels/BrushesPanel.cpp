@@ -6,6 +6,7 @@
 #include "../render/Uniforms.h"
 #include "variety/GLutility.h"
 #include "user/Machine.h"
+#include "Easel.h"
 
 // ---------- LAYOUT ----------
 
@@ -285,6 +286,7 @@ void BrushesPanel::select_brush_tool(BrushTool tool)
 		: tool == BrushTool::ELLIPSE_FILL ? BUTTON_TOOL_ELLIPSE_FILL
 		: BUTTON_TOOL_FILL
 	);
+	Machine.easel()->canvas().update_brush_tool();
 }
 
 void BrushesPanel::process()

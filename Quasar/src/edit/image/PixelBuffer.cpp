@@ -165,7 +165,7 @@ void Path::move_iter(PathIterator& pit, long long offset) const
 	}
 }
 
-// TODO make sure that a buffer being copied doesn't surpass the destination's bounds
+// LATER make sure that a buffer being copied doesn't surpass the destination's bounds
 
 void subbuffer_copy(const Subbuffer& dest, const Subbuffer& src, long long dest_offset, long long src_offset, size_t length)
 {

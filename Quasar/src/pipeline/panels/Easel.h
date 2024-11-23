@@ -1,60 +1,31 @@
 #pragma once
 
 #include <array>
+#include <unordered_map>
 
 #include "Panel.h"
 #include "user/Platform.h"
-#include "../render/Shader.h"
+#include "../render/Gridlines.h"
 #include "../widgets/Widget.h"
-#include "edit/color/Color.h"
 #include "edit/image/Image.h"
+#include "variety/History.h"
 
-struct Gridlines
+struct CanvasPixel
 {
-	unsigned short width = 0, height = 0;
-	GLuint vao = 0, vb = 0;
-	Shader shader;
-	GLfloat* varr = nullptr;
-	glm::vec2 line_spacing = { 1.0f, 1.0f };
-	float line_width = 1.0f; // SETTINGS
-	float self_intersection_threshold = 1.0f; // SETTINGS
+	int x, y;
+	PixelRGBA c;
+	bool operator==(const CanvasPixel& cpx) const { return x == cpx.x && y == cpx.y; }
+};
 
-	GLint* arrays_firsts = nullptr;
-	GLsizei* arrays_counts = nullptr;
-
-private:
-	bool _visible = false;
-	mutable bool _nonobstructing = true;
-	mutable bool _send_flat_transform = false;
-	mutable bool _sync_with_image = false;
-
-public:
-	Gridlines();
-	Gridlines(const Gridlines&) = delete;
-	Gridlines(Gridlines&&) noexcept = delete;
-	~Gridlines();
-
-	void resize_grid(Scale scale);
-	void update_scale(Scale scale) const;
-	void draw() const;
-
-	bool visible() const { return _visible; }
-	unsigned short num_cols() const;
-	unsigned short num_rows() const;
-	GLsizei num_quads() const { return num_rows() + num_cols(); }
-	GLsizei num_vertices() const { return num_quads() * 4; }
-
-	void set_color(ColorFrame color) const;
-
-	void send_buffer() const;
-	void send_flat_transform(FlatTransform canvas_transform) const;
-	void sync_with_image(const Buffer& buf, Scale canvas_scale);
-
-	void set_visible(bool visible, const struct Canvas& canvas);
+template<>
+struct std::hash<CanvasPixel>
+{
+	size_t operator()(const CanvasPixel& cpx) const { return std::hash<int>{}(cpx.x) ^ std::hash<int>{}(cpx.y); }
 };
 
 struct Canvas : public Widget
 {
+	friend struct Easel;
 	RGBA checker1, checker2;
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
@@ -98,6 +69,8 @@ public:
 	void sync_checkerboard_texture() const;
 	void set_checkerboard_uv_size(float width, float height) const;
 
+	void update_brush_tool();
+	void hover_pixel_under_cursor(Position world_pos);
 	void hover_pixel_at(Position pos);
 	void set_primary_color(RGBA color);
 	void set_alternate_color(RGBA color);
@@ -107,16 +80,19 @@ public:
 
 private:
 	RGBA primary_color, alternate_color;
-	std::array<Byte, 4> pric_pxs;
-	std::array<Byte, 4> altc_pxs;
-	std::array<Byte, 4> pric_pen_pxs;
-	std::array<Byte, 4> altc_pen_pxs;
+	PixelRGBA pric_pxs;
+	PixelRGBA altc_pxs;
+	PixelRGBA pric_pen_pxs;
+	PixelRGBA altc_pen_pxs;
+	void(Canvas::*brush_under_tool)(int, int);
 
-	void brush();
+	void brush(int x, int y);
+	void brush_start();
 	void brush_submit();
 	void brush_cancel();
 
-	void brush_paint_tool();
+	void brush_camera_tool(int x, int y);
+	void brush_paint_tool(int x, int y);
 
 public:
 	enum : size_t
@@ -129,6 +105,13 @@ public:
 		SPRITE, // LATER SPRITE_START
 		_W_COUNT
 	};
+
+private:
+	struct BrushActionInfo
+	{
+		std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
+		void reset();
+	} binfo;
 };
 
 struct Easel : public Panel
@@ -208,8 +191,6 @@ public:
 
 	Canvas& canvas() { return *widget.get<Canvas>(CANVAS); }
 	const Canvas& canvas() const { return *widget.get<Canvas>(CANVAS); }
-
-	void hover_pixel_under_cursor();
 
 	enum : size_t
 	{

@@ -151,7 +151,7 @@ void Image::update_texture() const
 	}
 }
 
-void Image::update_texture(int x, int y, int w, int h) const
+void Image::update_subtexture(int x, int y, int w, int h) const
 {
 	if (tid)
 	{
@@ -160,7 +160,10 @@ void Image::update_texture(int x, int y, int w, int h) const
 		if (y + h >= buf.height)
 			h = buf.height - y;
 		bind_texture(tid);
-		QUASAR_GL(glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pos(x, y)));
+		for (Dim r = y; r < y + h; ++r)
+		{
+			QUASAR_GL(glTexSubImage2D(GL_TEXTURE_2D, 0, x, r, w, 1, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pos(x, r)));
+		}
 	}
 }
 
@@ -172,12 +175,6 @@ void Image::resend_texture() const
 		QUASAR_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, chpp_alignment(buf.chpp)));
 		QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, chpp_internal_format(buf.chpp), buf.width, buf.height, 0, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
 	}
-}
-
-void Image::send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const
-{
-	bind_texture(tid);
-	QUASAR_GL(glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
 }
 
 bool Image::write_to_file(const FilePath& filepath, ImageFormat format, JPGQuality jpg_quality) const

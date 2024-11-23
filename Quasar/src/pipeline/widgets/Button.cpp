@@ -127,6 +127,8 @@ bool TButton::is_pressed(MouseButton mb) const
 
 bool TButton::is_hovered(Position* local_pos) const
 {
+	if (Machine.main_window->mouse_mode() != MouseMode::VISIBLE && Machine.main_window->mouse_mode() != MouseMode::CAPTURED)
+		return false;
 	Position pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 	if (local_pos)
 		*local_pos = pos;
