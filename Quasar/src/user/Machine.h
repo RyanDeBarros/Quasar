@@ -23,6 +23,20 @@ struct MachineImpl
 
 	ActionHistory history;
 	Window* main_window = nullptr;
+	
+	struct
+	{
+		std::shared_ptr<Cursor> ARROW;
+		std::shared_ptr<Cursor> IBEAM;
+		std::shared_ptr<Cursor> CROSSHAIR;
+		std::shared_ptr<Cursor> HAND;
+		std::shared_ptr<Cursor> RESIZE_EW;
+		std::shared_ptr<Cursor> RESIZE_NS;
+		std::shared_ptr<Cursor> RESIZE_NW_SE;
+		std::shared_ptr<Cursor> RESIZE_NE_SW;
+		std::shared_ptr<Cursor> RESIZE_OMNI;
+		std::shared_ptr<Cursor> CANCEL;
+	} cursors;
 
 	struct
 	{

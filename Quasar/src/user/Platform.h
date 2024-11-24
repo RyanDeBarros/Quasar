@@ -8,20 +8,6 @@
 
 #include "Macros.h"
 
-enum class StandardCursor
-{
-	ARROW = GLFW_ARROW_CURSOR,
-	IBEAM = GLFW_IBEAM_CURSOR,
-	CROSSHAIR = GLFW_CROSSHAIR_CURSOR,
-	HAND = GLFW_POINTING_HAND_CURSOR,
-	RESIZE_EW = GLFW_RESIZE_EW_CURSOR,
-	RESIZE_NS = GLFW_RESIZE_NS_CURSOR,
-	RESIZE_NW_SE = GLFW_RESIZE_NWSE_CURSOR,
-	RESIZE_NE_SW = GLFW_RESIZE_NESW_CURSOR,
-	RESIZE_OMNI = GLFW_RESIZE_ALL_CURSOR,
-	CANCEL = GLFW_NOT_ALLOWED_CURSOR
-};
-
 enum class MouseMode
 {
 	VISIBLE = GLFW_CURSOR_NORMAL,
@@ -282,6 +268,20 @@ struct WindowHandle
 	static const unsigned char OWN_MOUSE_MODE = 0b10;
 };
 
+enum class StandardCursor
+{
+	ARROW = GLFW_ARROW_CURSOR,
+	IBEAM = GLFW_IBEAM_CURSOR,
+	CROSSHAIR = GLFW_CROSSHAIR_CURSOR,
+	HAND = GLFW_POINTING_HAND_CURSOR,
+	RESIZE_EW = GLFW_RESIZE_EW_CURSOR,
+	RESIZE_NS = GLFW_RESIZE_NS_CURSOR,
+	RESIZE_NW_SE = GLFW_RESIZE_NWSE_CURSOR,
+	RESIZE_NE_SW = GLFW_RESIZE_NESW_CURSOR,
+	RESIZE_OMNI = GLFW_RESIZE_ALL_CURSOR,
+	CANCEL = GLFW_NOT_ALLOWED_CURSOR
+};
+
 struct Cursor
 {
 	GLFWcursor* cursor = nullptr;
@@ -362,7 +362,8 @@ struct Window
 
 	bool is_cursor_available(const WindowHandle* owner) const;
 	bool owns_cursor(const WindowHandle* owner) const;
-	void request_cursor(WindowHandle* owner, Cursor&& cursor);
+	void request_cursor(WindowHandle* owner, const std::shared_ptr<Cursor>& cursor);
+	void request_cursor(WindowHandle* owner, std::shared_ptr<Cursor>&& cursor);
 	void release_cursor(WindowHandle* owner);
 	void eject_cursor();
 
@@ -383,8 +384,8 @@ private:
 	KeyHandler window_maximizer;
 	
 	const WindowHandle* cursor_owner = nullptr;
-	Cursor current_cursor;
-	Cursor prev_cursor;
+	std::shared_ptr<Cursor> current_cursor;
+	std::shared_ptr<Cursor> prev_cursor;
 
 	const WindowHandle* mouse_mode_owner = nullptr;
 	MouseMode current_mouse_mode = MouseMode::VISIBLE;

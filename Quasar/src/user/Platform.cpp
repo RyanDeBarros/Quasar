@@ -125,13 +125,13 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 	if (cursor.cursor)
 	{
 		glfwSetCursor(window, cursor.cursor);
-		current_cursor = std::move(cursor);
+		current_cursor = std::make_shared<Cursor>(std::move(cursor));
 	}
 	else
 	{
-		current_cursor = StandardCursor::ARROW;
+		current_cursor = std::make_shared<Cursor>(StandardCursor::ARROW);
 	}
-	prev_cursor = StandardCursor::ARROW;
+	prev_cursor = std::make_shared<Cursor>(StandardCursor::ARROW);
 
 
 	if (enable_gui)
@@ -250,7 +250,24 @@ bool Window::owns_cursor(const WindowHandle* owner) const
 	return owner == cursor_owner;
 }
 
-void Window::request_cursor(WindowHandle* owner, Cursor&& cursor)
+void Window::request_cursor(WindowHandle* owner, const std::shared_ptr<Cursor>& cursor)
+{
+	if (!owner)
+		return;
+	if (!cursor_owner || owner == cursor_owner)
+	{
+		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+		cursor_owner = owner;
+		prev_cursor = std::move(current_cursor);
+		current_cursor = cursor;
+		glfwSetCursor(window, current_cursor->cursor);
+		owner->flags |= WindowHandle::OWN_CURSOR;
+	}
+	else
+		owner->flags &= ~WindowHandle::OWN_CURSOR;
+}
+
+void Window::request_cursor(WindowHandle* owner, std::shared_ptr<Cursor>&& cursor)
 {
 	if (!owner)
 		return;
@@ -260,7 +277,7 @@ void Window::request_cursor(WindowHandle* owner, Cursor&& cursor)
 		cursor_owner = owner;
 		prev_cursor = std::move(current_cursor);
 		current_cursor = std::move(cursor);
-		glfwSetCursor(window, current_cursor.cursor);
+		glfwSetCursor(window, current_cursor->cursor);
 		owner->flags |= WindowHandle::OWN_CURSOR;
 	}
 	else
@@ -274,7 +291,7 @@ void Window::release_cursor(WindowHandle* owner)
 		owner->flags &= ~WindowHandle::OWN_CURSOR;
 		cursor_owner = nullptr;
 		current_cursor = std::move(prev_cursor);
-		glfwSetCursor(window, current_cursor.cursor);
+		glfwSetCursor(window, current_cursor->cursor);
 		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
 	}
 }
@@ -285,7 +302,7 @@ void Window::eject_cursor()
 	{
 		cursor_owner = nullptr;
 		current_cursor = std::move(prev_cursor);
-		glfwSetCursor(window, current_cursor.cursor);
+		glfwSetCursor(window, current_cursor->cursor);
 		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouseCursorChange;
 	}
 }

@@ -166,7 +166,7 @@ void ColorPicker::process()
 		}
 		Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 		if (wp_at(PREVIEW_PRI).contains_point(local_cursor_pos) || wp_at(PREVIEW_ALT).contains_point(local_cursor_pos))
-			Machine.main_window->request_cursor(&wh_preview, StandardCursor::HAND);
+			Machine.main_window->request_cursor(&wh_preview, Machine.cursors.HAND);
 		else
 			Machine.main_window->release_cursor(&wh_preview);
 	}
@@ -1039,7 +1039,7 @@ void ColorPicker::process_mb_down_events()
 
 void ColorPicker::take_over_cursor()
 {
-	Machine.main_window->request_cursor(&wh_interactable, StandardCursor::CROSSHAIR);
+	Machine.main_window->request_cursor(&wh_interactable, Machine.cursors.CROSSHAIR);
 }
 
 void ColorPicker::release_cursor()

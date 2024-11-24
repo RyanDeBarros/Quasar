@@ -636,7 +636,7 @@ void Easel::begin_panning()
 		panning_info.initial_canvas_pos = canvas().self.transform.position;
 		panning_info.initial_cursor_pos = get_app_cursor_pos();
 		panning_info.panning = true;
-		Machine.main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
+		Machine.main_window->request_cursor(&panning_info.wh, Machine.cursors.RESIZE_OMNI);
 	}
 }
 

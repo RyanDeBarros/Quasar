@@ -127,11 +127,40 @@ static void update_panels_to_window_size(int width, int height)
 	scene()->bounds.x2 = width;
 }
 
+static void init_standard_cursors()
+{
+	Machine.cursors.ARROW = std::make_shared<Cursor>(StandardCursor::ARROW);
+	Machine.cursors.IBEAM = std::make_shared<Cursor>(StandardCursor::IBEAM);
+	Machine.cursors.CROSSHAIR = std::make_shared<Cursor>(StandardCursor::CROSSHAIR);
+	Machine.cursors.HAND = std::make_shared<Cursor>(StandardCursor::HAND);
+	Machine.cursors.RESIZE_EW = std::make_shared<Cursor>(StandardCursor::RESIZE_EW);
+	Machine.cursors.RESIZE_NS = std::make_shared<Cursor>(StandardCursor::RESIZE_NS);
+	Machine.cursors.RESIZE_NW_SE = std::make_shared<Cursor>(StandardCursor::RESIZE_NW_SE);
+	Machine.cursors.RESIZE_NE_SW = std::make_shared<Cursor>(StandardCursor::RESIZE_NE_SW);
+	Machine.cursors.RESIZE_OMNI = std::make_shared<Cursor>(StandardCursor::RESIZE_OMNI);
+	Machine.cursors.CANCEL = std::make_shared<Cursor>(StandardCursor::CANCEL);
+}
+
+static void free_standard_cursors()
+{
+	Machine.cursors.ARROW.reset();
+	Machine.cursors.IBEAM.reset();
+	Machine.cursors.CROSSHAIR.reset();
+	Machine.cursors.HAND.reset();
+	Machine.cursors.RESIZE_EW.reset();
+	Machine.cursors.RESIZE_NS.reset();
+	Machine.cursors.RESIZE_NW_SE.reset();
+	Machine.cursors.RESIZE_NE_SW.reset();
+	Machine.cursors.RESIZE_OMNI.reset();
+	Machine.cursors.CANCEL.reset();
+}
+
 MachineImpl::MachineImpl()
 	: history(4'000'000) // SETTINGS and test that it works. currently it is 4MB, which is small to medium sized.
 	// Possible levels could be: Lightweight (1-2MB) | Moderate (4-8MB) | Intense (16+MB). Due to underestimations of action sizes, always be on low end of history pool sizes.
 	// Inevitably, the history's actual memory usage will be estimated, whether below or above the actual amount.
 {
+	tinyfd_verbose = true; // LATER tinyfd seems buggy occasionally.
 }
 
 bool MachineImpl::create_main_window()
@@ -142,6 +171,7 @@ bool MachineImpl::create_main_window()
 		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
+		init_standard_cursors();
 		return true;
 	}
 	return false;
@@ -259,6 +289,7 @@ void MachineImpl::destroy()
 	Fonts::invalidate_common_fonts();
 	history.clear_history();
 	invalidate_handlers();
+	free_standard_cursors();
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
 }
 

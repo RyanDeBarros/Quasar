@@ -157,7 +157,7 @@ StandardTButton::StandardTButton(const StandardTButtonArgs& args)
 		if (is_hoverable())
 		{
 			send_state(ButtonGState::HOVERED);
-			Machine.main_window->request_cursor(&wh, StandardCursor::HAND);
+			Machine.main_window->request_cursor(&wh, Machine.cursors.HAND);
 			if (!(wh.flags & WindowHandle::OWN_CURSOR))
 				hovering = false;
 		}
@@ -240,7 +240,7 @@ ToggleTButton::ToggleTButton(const ToggleTButtonArgs& args)
 		if (is_hoverable())
 		{
 			send_state(ButtonGState::HOVERED);
-			Machine.main_window->request_cursor(&wh, StandardCursor::HAND);
+			Machine.main_window->request_cursor(&wh, Machine.cursors.HAND);
 			if (!(wh.flags & WindowHandle::OWN_CURSOR))
 				hovering = false;
 		}
