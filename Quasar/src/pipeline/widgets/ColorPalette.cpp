@@ -1208,7 +1208,7 @@ void ColorPalette::render_imgui()
 			if (ImGui::IsItemDeactivated())
 			{
 				renaming_subpalette = false;
-				if (!Machine.main_window->is_key_pressed(Key::ESCAPE))
+				if (!MainWindow->is_key_pressed(Key::ESCAPE))
 				{
 					if (current_subpalette().subscheme->name != rename_buf)
 					{
@@ -1239,7 +1239,7 @@ void ColorPalette::connect_input_handlers()
 			current_subpalette().remove_square_under_cursor(false, true); // false for first parameter because of clean_extra_buffer_space() on next line 
 			current_subpalette().clean_extra_buffer_space();
 		}
-		else if (mb.action == IAction::RELEASE && !Machine.main_window->is_key_pressed(Key::SPACE))
+		else if (mb.action == IAction::RELEASE && !MainWindow->is_key_pressed(Key::SPACE))
 		{
 			// select primary/alternate color
 			if (mb.button == MouseButton::LEFT)
@@ -1261,7 +1261,7 @@ void ColorPalette::connect_input_handlers()
 				}
 			}
 		}
-		else if (mb.action == IAction::PRESS && (mb.button == MouseButton::MIDDLE || (mb.button == MouseButton::LEFT && Machine.main_window->is_key_pressed(Key::SPACE))))
+		else if (mb.action == IAction::PRESS && (mb.button == MouseButton::MIDDLE || (mb.button == MouseButton::LEFT && MainWindow->is_key_pressed(Key::SPACE))))
 		{
 			// move color without selecting
 			current_subpalette().begin_moving_color_under_cursor(!(mb.mods & Mods::ALT));
@@ -1321,7 +1321,7 @@ void ColorPalette::connect_input_handlers()
 	scroll_handler.callback = [this](const ScrollEvent& s) {
 		if (!imgui_combo_open && !renaming_subpalette)
 		{
-			if (Machine.main_window->is_alt_pressed())
+			if (MainWindow->is_alt_pressed())
 			{
 				s.consumed = true;
 				cycle_backlog -= s.yoff;
@@ -1380,14 +1380,14 @@ void ColorPalette::initialize_widget()
 	sba.on_select = fconv_on_action([this]() {
 		if ((*reflection.use_primary)())
 		{
-			bool adjacent = !Machine.main_window->is_shift_pressed();
-			bool update_primary = Machine.main_window->is_ctrl_pressed();
+			bool adjacent = !MainWindow->is_shift_pressed();
+			bool update_primary = MainWindow->is_ctrl_pressed();
 			current_subpalette().new_color_from_primary((*reflection.get_picker_pri_rgba)(), adjacent, update_primary, true);
 		}
 		else if ((*reflection.use_alternate)())
 		{
-			bool adjacent = !Machine.main_window->is_shift_pressed();
-			bool update_alternate = Machine.main_window->is_ctrl_pressed();
+			bool adjacent = !MainWindow->is_shift_pressed();
+			bool update_alternate = MainWindow->is_ctrl_pressed();
 			current_subpalette().new_color_from_alternate((*reflection.get_picker_alt_rgba)(), adjacent, update_alternate, true);
 		}
 		});
@@ -1479,7 +1479,7 @@ void ColorPalette::sync_widget_with_vp()
 
 	gui_transform.scale = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
 	gui_transform.position = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, 0.5f }), *vp);
-	gui_transform.position.y = Machine.main_window->height() - gui_transform.position.y;
+	gui_transform.position.y = MainWindow->height() - gui_transform.position.y;
 }
 
 void ColorPalette::set_grid_metrics(int col, int row, bool sync)

@@ -141,6 +141,8 @@ struct Easel : public Panel
 	Easel(const Easel&) = delete;
 	Easel(Easel&&) noexcept = delete;
 
+	virtual void initialize() override;
+
 private:
 	void initialize_widget();
 	void connect_input_handlers();

@@ -166,9 +166,9 @@ void ColorPicker::process()
 		}
 		Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 		if (wp_at(PREVIEW_PRI).contains_point(local_cursor_pos) || wp_at(PREVIEW_ALT).contains_point(local_cursor_pos))
-			Machine.main_window->request_cursor(&wh_preview, Machine.cursors.HAND);
+			MainWindow->request_cursor(&wh_preview, Machine.cursors.HAND);
 		else
-			Machine.main_window->release_cursor(&wh_preview);
+			MainWindow->release_cursor(&wh_preview);
 	}
 	else
 	{
@@ -182,7 +182,7 @@ void ColorPicker::process()
 			b_t_wget(*this, BUTTON_QUAD).unhover();
 			b_t_wget(*this, BUTTON_WHEEL).unhover();
 		}
-		Machine.main_window->release_cursor(&wh_preview);
+		MainWindow->release_cursor(&wh_preview);
 	}
 }
 
@@ -987,7 +987,7 @@ void ColorPicker::connect_input_handlers()
 			k.consumed = true;
 			escape_to_close_popup = true;
 		}
-		else if (k.action == IAction::PRESS && k.key == Key::X && Machine.main_window->is_key_pressed(Key::SPACE))
+		else if (k.action == IAction::PRESS && k.key == Key::X && MainWindow->is_key_pressed(Key::SPACE))
 		{
 			k.consumed = true;
 			swap_picker_colors();
@@ -997,7 +997,7 @@ void ColorPicker::connect_input_handlers()
 
 void ColorPicker::process_mb_down_events()
 {
-	if (!Machine.main_window->is_mouse_button_pressed(MouseButton::LEFT))
+	if (!MainWindow->is_mouse_button_pressed(MouseButton::LEFT))
 		return;
 
 	Position local_cursor_pos = self.transform.get_relative_pos(Machine.palette_cursor_world_pos());
@@ -1039,14 +1039,14 @@ void ColorPicker::process_mb_down_events()
 
 void ColorPicker::take_over_cursor()
 {
-	Machine.main_window->request_cursor(&wh_interactable, Machine.cursors.CROSSHAIR);
+	MainWindow->request_cursor(&wh_interactable, Machine.cursors.CROSSHAIR);
 }
 
 void ColorPicker::release_cursor()
 {
 	if (current_widget_control >= 0)
 	{
-		Machine.main_window->release_cursor(&wh_interactable);
+		MainWindow->release_cursor(&wh_interactable);
 		current_widget_control = -1;
 		set_picker_color_from_gfx();
 		if (editing_color == EditingColor::PRIMARY)
@@ -1486,7 +1486,7 @@ void ColorPicker::sync_widget_with_vp()
 
 	gui_transform.scale = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
 	gui_transform.position = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, 0.5f }), *vp);
-	gui_transform.position.y = roundf(Machine.main_window->height() - gui_transform.position.y);
+	gui_transform.position.y = roundf(MainWindow->height() - gui_transform.position.y);
 }
 
 void ColorPicker::sync_single_standard_ur_transform(size_t control, bool send_buffer) const

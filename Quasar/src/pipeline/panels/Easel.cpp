@@ -131,9 +131,9 @@ void Canvas::draw()
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
 	minor_gridlines.draw();
 	major_gridlines.draw();
-	if (cursor_in_canvas && !pipette_ready && Machine.brushes()->get_brush_tool() != BrushesPanel::BrushTool::CAMERA)
+	if (cursor_in_canvas && !pipette_ready && MBrushes->get_brush_tool() != BrushesPanel::BrushTool::CAMERA)
 	{
-		switch (Machine.brushes()->get_brush_tip())
+		switch (MBrushes->get_brush_tip())
 		{
 		case BrushesPanel::BrushTip::PENCIL:
 			ur_wget(*this, CURSOR_PENCIL).draw();
@@ -302,9 +302,7 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 
 void Canvas::update_brush_tool()
 {
-	if (!Machine.brushes())
-		return;
-	switch (Machine.brushes()->get_brush_tool())
+	switch (MBrushes->get_brush_tool())
 	{
 	case BrushesPanel::BrushTool::CAMERA:
 		brush_under_tool = &Canvas::brush_camera_tool;
@@ -333,16 +331,16 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 			brush_pos = pos;
 			hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
 		}
-		if (Machine.main_window->is_alt_pressed())
+		if (MainWindow->is_alt_pressed())
 		{
-			Machine.main_window->release_cursor(&dot_cursor_wh);
-			Machine.main_window->request_cursor(&pipette_cursor_wh, Machine.cursors.CROSSHAIR);
+			MainWindow->release_cursor(&dot_cursor_wh);
+			MainWindow->request_cursor(&pipette_cursor_wh, Machine.cursors.CROSSHAIR);
 			pipette_ready = true;
 		}
 		else
 		{
-			Machine.main_window->release_cursor(&pipette_cursor_wh);
-			Machine.main_window->request_cursor(&dot_cursor_wh, dot_cursor);
+			MainWindow->release_cursor(&pipette_cursor_wh);
+			MainWindow->request_cursor(&dot_cursor_wh, dot_cursor);
 			pipette_ready = false;
 		}
 	}
@@ -356,9 +354,9 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 
 void Canvas::unhover()
 {
-	// TODO separate global pointer variable for Machine.main_window. Same for Easel, Palette, etc.
-	Machine.main_window->release_cursor(&dot_cursor_wh);
-	Machine.main_window->release_cursor(&pipette_cursor_wh);
+	// TODO separate global pointer variable for MainWindow. Same for Easel, Palette, etc.
+	MainWindow->release_cursor(&dot_cursor_wh);
+	MainWindow->release_cursor(&pipette_cursor_wh);
 	pipette_ready = false;
 }
 
@@ -375,7 +373,7 @@ void Canvas::hover_pixel_at(Position pos)
 
 RGBA Canvas::color_under_cursor()
 {
-	Position local_pos = local_of(Machine.easel()->to_world_coordinates(Machine.cursor_screen_pos()));
+	Position local_pos = local_of(MEasel->to_world_coordinates(Machine.cursor_screen_pos()));
 	Buffer& buf = image()->buf;
 	Position buf_cursor_pos = local_pos + 0.5f * Position(buf.width, buf.height);
 	IPosition pos(buf_cursor_pos);
@@ -410,14 +408,14 @@ void Canvas::set_alternate_color(RGBA color)
 
 void Canvas::cursor_press(MouseButton button)
 {
-	if (Machine.main_window->is_alt_pressed())
+	if (MainWindow->is_alt_pressed())
 	{
 		if (cursor_in_canvas)
 		{
 			if (button == MouseButton::LEFT)
-				Machine.palette()->set_pri_color(color_under_cursor());
+				MPalette->set_pri_color(color_under_cursor());
 			else if (button == MouseButton::RIGHT)
-				Machine.palette()->set_alt_color(color_under_cursor());
+				MPalette->set_alt_color(color_under_cursor());
 		}
 	}
 	else
@@ -465,7 +463,7 @@ void Canvas::brush_submit()
 {
 	if (brushing)
 	{
-		switch (Machine.brushes()->get_brush_tool())
+		switch (MBrushes->get_brush_tool())
 		{
 		case BrushesPanel::BrushTool::PAINT:
 			if (image() && !binfo.painted_colors.empty())
@@ -492,7 +490,7 @@ void Canvas::brush_paint_tool(int x, int y)
 {
 	Buffer image_shifted_buf = image()->buf;
 	image_shifted_buf.pixels += image_shifted_buf.byte_offset(x, y);
-	switch (Machine.brushes()->get_brush_tip())
+	switch (MBrushes->get_brush_tip())
 	{
 	case BrushesPanel::BrushTip::PENCIL:
 	{
@@ -565,8 +563,12 @@ void Canvas::BrushActionInfo::reset()
 Easel::Easel()
 	: color_square_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
 {
-	initialize_widget();
 	connect_input_handlers();
+}
+
+void Easel::initialize()
+{
+	initialize_widget();
 }
 
 void Easel::initialize_widget()
@@ -604,7 +606,7 @@ void Easel::connect_input_handlers()
 			if (mb.action == IAction::PRESS && cursor_in_clipping())
 			{
 				mb.consumed = true;
-				if (Machine.main_window->is_key_pressed(Key::SPACE))
+				if (MainWindow->is_key_pressed(Key::SPACE))
 					begin_panning();
 				else
 					canvas().cursor_press(mb.button);
@@ -730,7 +732,7 @@ void Easel::begin_panning()
 		panning_info.initial_canvas_pos = canvas().self.transform.position;
 		panning_info.initial_cursor_pos = get_app_cursor_pos();
 		panning_info.panning = true;
-		Machine.main_window->request_cursor(&panning_info.wh, Machine.cursors.RESIZE_OMNI);
+		MainWindow->request_cursor(&panning_info.wh, Machine.cursors.RESIZE_OMNI);
 	}
 }
 
@@ -739,8 +741,8 @@ void Easel::end_panning()
 	if (panning_info.panning)
 	{
 		panning_info.panning = false;
-		Machine.main_window->release_cursor(&panning_info.wh);
-		Machine.main_window->release_mouse_mode(&panning_info.wh);
+		MainWindow->release_cursor(&panning_info.wh);
+		MainWindow->release_mouse_mode(&panning_info.wh);
 	}
 }
 
@@ -751,8 +753,8 @@ void Easel::cancel_panning()
 		panning_info.panning = false;
 		canvas().self.transform.position = panning_info.initial_canvas_pos;
 		sync_canvas_transform();
-		Machine.main_window->release_cursor(&panning_info.wh);
-		Machine.main_window->release_mouse_mode(&panning_info.wh);
+		MainWindow->release_cursor(&panning_info.wh);
+		MainWindow->release_mouse_mode(&panning_info.wh);
 	}
 }
 
@@ -762,7 +764,7 @@ void Easel::update_panning()
 	{
 		Position pan_delta = get_app_cursor_pos() - panning_info.initial_cursor_pos;
 		Position pos = pan_delta + panning_info.initial_canvas_pos;
-		if (Machine.main_window->is_shift_pressed())
+		if (MainWindow->is_shift_pressed())
 		{
 			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
 				pos.x = panning_info.initial_canvas_pos.x;
@@ -775,8 +777,8 @@ void Easel::update_panning()
 			sync_canvas_transform();
 		}
 
-		if (!Machine.main_window->owns_mouse_mode(&panning_info.wh) && !cursor_in_clipping())
-			Machine.main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
+		if (!MainWindow->owns_mouse_mode(&panning_info.wh) && !cursor_in_clipping())
+			MainWindow->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
 		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
 		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
 	}
@@ -785,10 +787,10 @@ void Easel::update_panning()
 void Easel::zoom_by(float zoom)
 {
 	Position cursor_world;
-	if (!Machine.main_window->is_ctrl_pressed())
+	if (!MainWindow->is_ctrl_pressed())
 		cursor_world = to_world_coordinates(Machine.cursor_screen_pos());
 
-	float factor = Machine.main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
+	float factor = MainWindow->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
 	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, zoom), zoom_info.in_min, zoom_info.in_max);
 	float zoom_change = new_zoom / zoom_info.zoom;
 	canvas().self.transform.scale *= zoom_change;

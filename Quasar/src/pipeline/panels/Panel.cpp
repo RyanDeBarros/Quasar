@@ -96,7 +96,7 @@ void PanelGroup::render()
 
 void PanelGroup::set_projection()
 {
-	projection = glm::ortho<float>(0.0f, Machine.main_window->width() * Machine.inv_app_scale().x, 0.0f, Machine.main_window->height() * Machine.inv_app_scale().y);
+	projection = glm::ortho<float>(0.0f, MainWindow->width() * Machine.inv_app_scale().x, 0.0f, MainWindow->height() * Machine.inv_app_scale().y);
 	for (auto& panel : panels)
 		panel->send_view();
 }

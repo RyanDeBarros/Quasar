@@ -53,6 +53,8 @@ public:
 	BrushesPanel(const BrushesPanel&) = delete;
 	BrushesPanel(BrushesPanel&&) noexcept = delete;
 
+	virtual void initialize() override;
+
 private:
 	void initialize_widget();
 	void connect_input_handlers();

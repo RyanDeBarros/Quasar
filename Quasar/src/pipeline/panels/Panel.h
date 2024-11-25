@@ -19,6 +19,7 @@ struct Panel
 	Panel(Panel&&) noexcept = delete;
 	virtual ~Panel() = default;
 
+	virtual void initialize() {}
 	virtual void draw() = 0;
 	void render();
 	glm::mat3 vp_matrix() const;

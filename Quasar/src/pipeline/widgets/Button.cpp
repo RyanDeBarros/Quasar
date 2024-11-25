@@ -127,7 +127,7 @@ bool TButton::is_pressed(MouseButton mb) const
 
 bool TButton::is_hovered(Position* local_pos) const
 {
-	if (Machine.main_window->mouse_mode() != MouseMode::VISIBLE && Machine.main_window->mouse_mode() != MouseMode::CAPTURED)
+	if (MainWindow->mouse_mode() != MouseMode::VISIBLE && MainWindow->mouse_mode() != MouseMode::CAPTURED)
 		return false;
 	Position pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 	if (local_pos)
@@ -157,7 +157,7 @@ StandardTButton::StandardTButton(const StandardTButtonArgs& args)
 		if (is_hoverable())
 		{
 			send_state(ButtonGState::HOVERED);
-			Machine.main_window->request_cursor(&wh, Machine.cursors.HAND);
+			MainWindow->request_cursor(&wh, Machine.cursors.HAND);
 			if (!(wh.flags & WindowHandle::OWN_CURSOR))
 				hovering = false;
 		}
@@ -166,13 +166,13 @@ StandardTButton::StandardTButton(const StandardTButtonArgs& args)
 		};
 	on_hover_exit = [this]() {
 		send_state(ButtonGState::NORMAL);
-		Machine.main_window->release_cursor(&wh);
+		MainWindow->release_cursor(&wh);
 		};
 	on_press = [this](const MouseButtonEvent& mb, Position pos) {
 		if (is_selectable(mb, pos))
 		{
 			send_state(ButtonGState::PRESSED);
-			Machine.main_window->release_cursor(&wh);
+			MainWindow->release_cursor(&wh);
 		}
 		};
 	on_release = [this](const MouseButtonEvent& mb, Position pos) {
@@ -240,7 +240,7 @@ ToggleTButton::ToggleTButton(const ToggleTButtonArgs& args)
 		if (is_hoverable())
 		{
 			send_state(ButtonGState::HOVERED);
-			Machine.main_window->request_cursor(&wh, Machine.cursors.HAND);
+			MainWindow->request_cursor(&wh, Machine.cursors.HAND);
 			if (!(wh.flags & WindowHandle::OWN_CURSOR))
 				hovering = false;
 		}
@@ -252,13 +252,13 @@ ToggleTButton::ToggleTButton(const ToggleTButtonArgs& args)
 			send_state(ButtonGState::PRESSED);
 		else
 			send_state(ButtonGState::NORMAL);
-		Machine.main_window->release_cursor(&wh);
+		MainWindow->release_cursor(&wh);
 		};
 	on_press = [this](const MouseButtonEvent& mb, Position pos) {
 		if ((selected && is_deselectable(mb, pos)) || (!selected && is_selectable(mb, pos)))
 		{
 			send_state(ButtonGState::PRESSED);
-			Machine.main_window->release_cursor(&wh);
+			MainWindow->release_cursor(&wh);
 		}
 		};
 	on_release = [this](const MouseButtonEvent& mb, Position pos) {

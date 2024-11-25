@@ -70,6 +70,16 @@ static void create_panels()
 	panels->panels.push_back(std::make_unique<BrushesPanel>());
 	panels->panels.push_back(std::make_unique<ScenePanel>());
 	panels->panels.push_back(std::make_unique<MenuPanel>());
+	MEasel = Machine.easel();
+	MPalette = Machine.palette();
+	MBrushes = Machine.brushes();
+	MScene = Machine.scene();
+	MMenu = Machine.menu();
+	MEasel->initialize();
+	MPalette->initialize();
+	MBrushes->initialize();
+	MScene->initialize();
+	MMenu->initialize();
 }
 
 static void init_panels_layout()
@@ -168,6 +178,7 @@ bool MachineImpl::create_main_window()
 	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height);
 	if (main_window)
 	{
+		MainWindow = main_window;
 		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
@@ -184,7 +195,7 @@ static void init_handlers()
 	Data::Input::global_key_handler = new KeyHandler();
 	Data::Input::path_drop_handler = new PathDropHandler();
 
-	Window& window = *Machine.main_window;
+	Window& window = *MainWindow;
 	window.root_window_size.add_child(Data::Input::resize_handler);
 	window.root_display_scale.add_child(Data::Input::rescale_handler);
 	window.root_mouse_button.add_child(&brushes()->mb_handler);
@@ -205,7 +216,7 @@ static void init_handlers()
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
 		// LATER while resizing, just color window (block content) until resizing is done, for smoother transitioning.
 		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
-		Machine.main_window->swap_buffers();
+		MainWindow->swap_buffers();
 		Machine.on_render();
 		};
 	Data::Input::rescale_handler->callback = [](const DisplayScaleEvent& ds) {
@@ -222,13 +233,13 @@ static void init_handlers()
 			if (filepath.has_any_extension(image_formats, num_image_formats))
 			{
 				pd.consumed = true;
-				Machine.main_window->focus();
+				MainWindow->focus();
 				Machine.import_file(filepath);
 			}
 			else if (filepath.has_any_extension(quasar_formats, num_quasar_formats))
 			{
 				pd.consumed = true;
-				Machine.main_window->focus();
+				MainWindow->focus();
 				Machine.open_file(filepath);
 			}
 			// LATER note no error popup otherwise?
@@ -291,6 +302,12 @@ void MachineImpl::destroy()
 	invalidate_handlers();
 	free_standard_cursors();
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
+	MainWindow = nullptr;
+	MEasel = nullptr;
+	MPalette = nullptr;
+	MBrushes = nullptr;
+	MScene = nullptr;
+	MMenu = nullptr;
 }
 
 bool MachineImpl::should_exit() const
@@ -310,9 +327,9 @@ void MachineImpl::on_render()
 
 static void process_undo()
 {
-	if (Machine.main_window->is_key_pressed(Key::Z) && Machine.main_window->is_ctrl_pressed())
+	if (MainWindow->is_key_pressed(Key::Z) && MainWindow->is_ctrl_pressed())
 	{
-		if (!Machine.main_window->is_shift_pressed())
+		if (!MainWindow->is_shift_pressed())
 		{
 			Data::History::held_time += Data::delta_time;
 			if (Data::History::on_starting_interval)
@@ -341,9 +358,9 @@ static void process_undo()
 
 static void process_redo()
 {
-	if (Machine.main_window->is_key_pressed(Key::Z) && Machine.main_window->is_ctrl_pressed())
+	if (MainWindow->is_key_pressed(Key::Z) && MainWindow->is_ctrl_pressed())
 	{
-		if (Machine.main_window->is_shift_pressed())
+		if (MainWindow->is_shift_pressed())
 		{
 			Data::History::held_time += Data::delta_time;
 			if (Data::History::on_starting_interval)

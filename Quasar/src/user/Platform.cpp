@@ -420,9 +420,9 @@ void Window::set_size_limits(int minwidth, int minheight, int maxwidth, int maxh
 
 WindowHandle::~WindowHandle()
 {
-	if (Machine.main_window)
+	if (MainWindow)
 	{
-		Machine.main_window->release_cursor(this);
-		Machine.main_window->release_mouse_mode(this);
+		MainWindow->release_cursor(this);
+		MainWindow->release_mouse_mode(this);
 	}
 }

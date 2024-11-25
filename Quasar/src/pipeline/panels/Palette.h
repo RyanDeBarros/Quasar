@@ -30,6 +30,7 @@ struct PalettePanel : public Panel
 	PalettePanel(const PalettePanel&) = delete;
 	PalettePanel(PalettePanel&&) noexcept = delete;
 
+	virtual void initialize() override;
 	virtual void _send_view() override;
 	virtual void draw() override;
 	void process();

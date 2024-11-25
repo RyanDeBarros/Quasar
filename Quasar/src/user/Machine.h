@@ -163,3 +163,9 @@ struct MachineImpl
 };
 
 inline MachineImpl Machine;
+inline Window* MainWindow = nullptr;
+inline struct Easel* MEasel = nullptr;
+inline struct PalettePanel* MPalette = nullptr;
+inline struct BrushesPanel* MBrushes = nullptr;
+inline struct ScenePanel* MScene = nullptr;
+inline struct MenuPanel* MMenu = nullptr;

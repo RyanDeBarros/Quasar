@@ -44,8 +44,12 @@ PalettePanel::PalettePanel()
 	use_primary = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::PRIMARY; };
 	use_alternate = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::ALTERNATE; };
 	swap_picker_colors = [this]() { color_picker(this).swap_picker_colors(); };
-	emit_modified_primary = [this](RGBA rgba) {	Machine.easel()->canvas().set_primary_color(rgba); };
-	emit_modified_alternate = [this](RGBA rgba) { Machine.easel()->canvas().set_alternate_color(rgba); };
+	emit_modified_primary = [this](RGBA rgba) {	MEasel->canvas().set_primary_color(rgba); };
+	emit_modified_alternate = [this](RGBA rgba) { MEasel->canvas().set_alternate_color(rgba); };
+}
+
+void PalettePanel::initialize()
+{
 	initialize_widget();
 
 	// ##########################################################
@@ -67,9 +71,9 @@ PalettePanel::PalettePanel()
 
 	color_palette(this).import_color_scheme(std::make_shared<ColorScheme>(std::vector<std::shared_ptr<ColorSubscheme>>{
 		std::make_shared<ColorSubscheme>("test#0", std::move(colors0)),
-		std::make_shared<ColorSubscheme>("test#1", std::move(colors1)),
-		std::make_shared<ColorSubscheme>("test#2", std::move(colors2))
-		}), false); // LATER this would be true when importing a new scheme, but false for default color scheme upon opening application/new file
+			std::make_shared<ColorSubscheme>("test#1", std::move(colors1)),
+			std::make_shared<ColorSubscheme>("test#2", std::move(colors2))
+	}), false); // LATER this would be true when importing a new scheme, but false for default color scheme upon opening application/new file
 	// ##########################################################
 }
 
@@ -100,9 +104,9 @@ Scale PalettePanel::minimum_screen_display() const
 
 void PalettePanel::new_color()
 {
-	bool adjacent = !Machine.main_window->is_shift_pressed();
-	bool update_selector = Machine.main_window->is_ctrl_pressed();
-	if (Machine.main_window->is_alt_pressed())
+	bool adjacent = !MainWindow->is_shift_pressed();
+	bool update_selector = MainWindow->is_ctrl_pressed();
+	if (MainWindow->is_alt_pressed())
 		color_palette(this).current_subpalette().new_color_from_alternate(color_picker(this).get_alt_color().rgba(), adjacent, update_selector, true);
 	else
 		color_palette(this).current_subpalette().new_color_from_primary(color_picker(this).get_pri_color().rgba(), adjacent, update_selector, true);
@@ -110,7 +114,7 @@ void PalettePanel::new_color()
 
 void PalettePanel::overwrite_color()
 {
-	if (Machine.main_window->is_alt_pressed())
+	if (MainWindow->is_alt_pressed())
 		color_palette(this).subpalette_overwrite_alternate(true);
 	else
 		color_palette(this).subpalette_overwrite_primary(true);
@@ -119,7 +123,7 @@ void PalettePanel::overwrite_color()
 void PalettePanel::delete_color()
 {
 	ColorSubpalette& subpalette = color_palette(this).current_subpalette();
-	if (Machine.main_window->is_alt_pressed())
+	if (MainWindow->is_alt_pressed())
 		subpalette.remove_square_under_index(subpalette.alternate_index, true, true);
 	else
 		subpalette.remove_square_under_index(subpalette.primary_index, true, true);

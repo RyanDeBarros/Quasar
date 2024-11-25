@@ -35,7 +35,7 @@ int main()
 	Machine.recent_image_files = {"1.png", "2.gif", "3.jpg"};
 
 	// NOTE only one window, so no need to call bind_gui() at each frame.
-	Machine.main_window->bind_gui();
+	MainWindow->bind_gui();
 	for (;;)
 	{
 		glfwPollEvents();

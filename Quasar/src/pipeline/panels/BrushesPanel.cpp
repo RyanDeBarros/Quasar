@@ -26,8 +26,12 @@ BrushesPanel::BrushesPanel()
 	: bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")), widget(_W_COUNT)
 {
-	initialize_widget();
 	connect_input_handlers();
+}
+
+void BrushesPanel::initialize()
+{
+	initialize_widget();
 }
 
 void BrushesPanel::initialize_widget()
@@ -286,7 +290,7 @@ void BrushesPanel::select_brush_tool(BrushTool tool)
 		: tool == BrushTool::ELLIPSE_FILL ? BUTTON_TOOL_ELLIPSE_FILL
 		: BUTTON_TOOL_FILL
 	);
-	Machine.easel()->canvas().update_brush_tool();
+	MEasel->canvas().update_brush_tool();
 }
 
 void BrushesPanel::process()
