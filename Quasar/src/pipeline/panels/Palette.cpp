@@ -140,6 +140,16 @@ void PalettePanel::delete_subpalette()
 	color_palette(this).delete_current_subpalette(true);
 }
 
+void PalettePanel::set_pri_color(RGBA color)
+{
+	color_picker(this).set_pri_color(color, false);
+}
+
+void PalettePanel::set_alt_color(RGBA color)
+{
+	color_picker(this).set_alt_color(color, false);
+}
+
 void PalettePanel::initialize_widget()
 {
 	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));

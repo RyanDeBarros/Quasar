@@ -5,6 +5,7 @@
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 #include "BrushesPanel.h"
+#include "Palette.h"
 #include "../render/Uniforms.h"
 #include "../render/FlatSprite.h"
 
@@ -68,21 +69,60 @@ constexpr GLuint CURSOR_ERASER_TSLOT = 1;
 constexpr GLuint CURSOR_SELECT_TSLOT = 2;
 constexpr GLuint CANVAS_SPRITE_TSLOT = 3;
 
-Canvas::Canvas(Shader* sprite_shader, Shader* cursor_shader)
-	: Widget(_W_COUNT), brush_under_tool(&Canvas::brush_camera_tool)
+Canvas::Canvas(Shader* cursor_shader)
+	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
+	Widget(_W_COUNT), brush_under_tool(&Canvas::brush_camera_tool)
 {
-	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(sprite_shader));
+	initialize_widget(cursor_shader);
+	initialize_dot_cursor();
+}
+
+Canvas::~Canvas()
+{
+	delete[] dot_cursor_buf.pixels;
+}
+
+void Canvas::initialize_widget(Shader* cursor_shader)
+{
+	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
-	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(sprite_shader));
+	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 	assign_widget(this, CURSOR_PENCIL, std::make_shared<W_UnitRenderable>(cursor_shader));
 	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec())).send_buffer();
 	assign_widget(this, CURSOR_PEN, std::make_shared<W_UnitRenderable>(cursor_shader));
 	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec())).send_buffer();
-	assign_widget(this, CURSOR_ERASER, std::make_shared<FlatSprite>(sprite_shader));
+	assign_widget(this, CURSOR_ERASER, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, CURSOR_ERASER).set_texture_slot(CURSOR_ERASER_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("eraser.png"));
-	assign_widget(this, CURSOR_SELECT, std::make_shared<FlatSprite>(sprite_shader));
+	assign_widget(this, CURSOR_SELECT, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, CURSOR_SELECT).set_texture_slot(CURSOR_SELECT_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("select.png"));
+}
+
+void Canvas::initialize_dot_cursor()
+{
+	dot_cursor_buf.width = 10;
+	dot_cursor_buf.height = 10;
+	dot_cursor_buf.chpp = 4;
+	dot_cursor_buf.pxnew();
+	static const unsigned char dot_array[10*10] = {
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
+		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
+		0,   0,   1,   1,   0,   0,   1,   1,   0,   0,
+		0,   0,   1,   1,   0,   0,   1,   1,   0,   0,
+		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
+		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+	};
+	for (size_t i = 0; i < dot_cursor_buf.area(); ++i)
+	{
+		for (size_t j = 0; j < dot_cursor_buf.chpp; ++j)
+			dot_cursor_buf.pixels[i * dot_cursor_buf.chpp + j] = 255 * dot_array[i];
+	}
+	// TODO utility function that retrieves cursor from buffer
+	dot_cursor = std::make_shared<Cursor>(dot_cursor_buf.pixels, dot_cursor_buf.width, dot_cursor_buf.height, dot_cursor_buf.width / 2, dot_cursor_buf.height / 2);
 }
 
 void Canvas::draw()
@@ -91,7 +131,7 @@ void Canvas::draw()
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
 	minor_gridlines.draw();
 	major_gridlines.draw();
-	if (cursor_in_canvas && Machine.brushes()->get_brush_tool() != BrushesPanel::BrushTool::CAMERA)
+	if (cursor_in_canvas && !pipette_ready && Machine.brushes()->get_brush_tool() != BrushesPanel::BrushTool::CAMERA)
 	{
 		switch (Machine.brushes()->get_brush_tip())
 		{
@@ -109,6 +149,12 @@ void Canvas::draw()
 			break;
 		}
 	}
+}
+
+void Canvas::send_vp(const glm::mat3& vp)
+{
+	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
+	sync_cursor_with_widget();
 }
 
 void Canvas::sync_cursor_with_widget()
@@ -276,6 +322,7 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 	Position buf_cursor_pos = local_cursor_pos + 0.5f * Position(buf.width, buf.height);
 	if (in_diagonal_rect(buf_cursor_pos, {}, { buf.width, buf.height }))
 	{
+		cursor_in_canvas = true;
 		IPosition pos(buf_cursor_pos);
 		if (pos != brush_pos)
 		{
@@ -286,13 +333,33 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 			brush_pos = pos;
 			hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
 		}
-		cursor_in_canvas = true;
+		if (Machine.main_window->is_alt_pressed())
+		{
+			Machine.main_window->release_cursor(&dot_cursor_wh);
+			Machine.main_window->request_cursor(&pipette_cursor_wh, Machine.cursors.CROSSHAIR);
+			pipette_ready = true;
+		}
+		else
+		{
+			Machine.main_window->release_cursor(&pipette_cursor_wh);
+			Machine.main_window->request_cursor(&dot_cursor_wh, dot_cursor);
+			pipette_ready = false;
+		}
 	}
 	else
 	{
-		brush_pos = { -1, -1 };
 		cursor_in_canvas = false;
+		brush_pos = { -1, -1 };
+		unhover();
 	}
+}
+
+void Canvas::unhover()
+{
+	// TODO separate global pointer variable for Machine.main_window. Same for Easel, Palette, etc.
+	Machine.main_window->release_cursor(&dot_cursor_wh);
+	Machine.main_window->release_cursor(&pipette_cursor_wh);
+	pipette_ready = false;
 }
 
 void Canvas::hover_pixel_at(Position pos)
@@ -304,6 +371,19 @@ void Canvas::hover_pixel_at(Position pos)
 	sync_cursor_with_widget();
 	if (cursor_state != CursorState::UP)
 		brush(brush_pos.x, brush_pos.y);
+}
+
+RGBA Canvas::color_under_cursor()
+{
+	Position local_pos = local_of(Machine.easel()->to_world_coordinates(Machine.cursor_screen_pos()));
+	Buffer& buf = image()->buf;
+	Position buf_cursor_pos = local_pos + 0.5f * Position(buf.width, buf.height);
+	IPosition pos(buf_cursor_pos);
+	Byte* pixel = buf.pos(pos.x, pos.y);
+	PixelRGBA px{ 255, 255, 255, 255 };
+	for (CHPP i = 0; i < buf.chpp; ++i)
+		px.at(i) = pixel[i];
+	return px.to_rgba();
 }
 
 void Canvas::set_primary_color(RGBA color)
@@ -330,12 +410,25 @@ void Canvas::set_alternate_color(RGBA color)
 
 void Canvas::cursor_press(MouseButton button)
 {
-	if (button == MouseButton::LEFT)
-		cursor_state = CursorState::DOWN_PRIMARY;
-	else if (button == MouseButton::RIGHT)
-		cursor_state = CursorState::DOWN_ALTERNATE;
-	if (cursor_in_canvas)
-		brush(brush_pos.x, brush_pos.y);
+	if (Machine.main_window->is_alt_pressed())
+	{
+		if (cursor_in_canvas)
+		{
+			if (button == MouseButton::LEFT)
+				Machine.palette()->set_pri_color(color_under_cursor());
+			else if (button == MouseButton::RIGHT)
+				Machine.palette()->set_alt_color(color_under_cursor());
+		}
+	}
+	else
+	{
+		if (button == MouseButton::LEFT)
+			cursor_state = CursorState::DOWN_PRIMARY;
+		else if (button == MouseButton::RIGHT)
+			cursor_state = CursorState::DOWN_ALTERNATE;
+		if (cursor_in_canvas)
+			brush(brush_pos.x, brush_pos.y);
+	}
 }
 
 void Canvas::cursor_release()
@@ -470,8 +563,7 @@ void Canvas::BrushActionInfo::reset()
 }
 
 Easel::Easel()
-	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
-	color_square_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
+	: color_square_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
 {
 	initialize_widget();
 	connect_input_handlers();
@@ -482,7 +574,7 @@ void Easel::initialize_widget()
 	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&color_square_shader));
 	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(HSV(0.5f, 0.15f, 0.15f).to_rgb(), 0.5f).as_vec())).send_buffer();
 
-	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&sprite_shader, &color_square_shader));
+	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&color_square_shader));
 	Canvas& cnvs = canvas();
 	cnvs.create_checkerboard_image();
 	cnvs.set_image(nullptr);
@@ -559,7 +651,7 @@ void Easel::draw()
 void Easel::_send_view()
 {
 	vp = vp_matrix();
-	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
+	canvas().send_vp(vp);
 	Uniforms::send_matrix3(color_square_shader, "u_VP", vp);
 	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", vp);
 	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", vp);
@@ -572,6 +664,8 @@ void Easel::process()
 	update_panning();
 	if (cursor_in_clipping())
 		canvas().hover_pixel_under_cursor(Machine.cursor_world_pos(glm::inverse(vp)));
+	else
+		canvas().unhover();
 }
 
 void Easel::sync_widget()

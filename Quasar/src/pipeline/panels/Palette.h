@@ -43,6 +43,9 @@ struct PalettePanel : public Panel
 	void rename_subpalette();
 	void delete_subpalette();
 
+	void set_pri_color(RGBA color);
+	void set_alt_color(RGBA color);
+
 private:
 	void initialize_widget();
 	void sync_widget();

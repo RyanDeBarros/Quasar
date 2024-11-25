@@ -26,6 +26,7 @@ struct std::hash<CanvasPixel>
 struct Canvas : public Widget
 {
 	friend struct Easel;
+	Shader sprite_shader;
 	RGBA checker1, checker2;
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
@@ -41,17 +42,27 @@ struct Canvas : public Widget
 	IPosition brush_pos = { -1, -1 };
 	bool brushing = false;
 
+	Buffer dot_cursor_buf;
+	std::shared_ptr<Cursor> dot_cursor;
+	WindowHandle dot_cursor_wh, pipette_cursor_wh;
+	bool pipette_ready = false;
+
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
 public:
 	glm::ivec2 get_checker_size() const { return { roundf(1.0f / checker_size_inv.x), roundf(1.0f / checker_size_inv.y) }; }
 	void set_checker_size(glm::ivec2 checker_size);
 
-	Canvas(Shader* sprite_shader, Shader* cursor_shader);
+	Canvas(Shader* cursor_shader);
 	Canvas(const Canvas&) = delete;
 	Canvas(Canvas&&) noexcept = delete;
+	~Canvas();
+
+	void initialize_widget(Shader* cursor_shader);
+	void initialize_dot_cursor();
 
 	virtual void draw() override;
+	void send_vp(const glm::mat3& vp);
 	void sync_cursor_with_widget();
 	void sync_ur(size_t subw);
 
@@ -71,7 +82,9 @@ public:
 
 	void update_brush_tool();
 	void hover_pixel_under_cursor(Position world_pos);
+	void unhover();
 	void hover_pixel_at(Position pos);
+	RGBA color_under_cursor();
 	void set_primary_color(RGBA color);
 	void set_alternate_color(RGBA color);
 	void cursor_press(MouseButton button);
@@ -80,10 +93,10 @@ public:
 
 private:
 	RGBA primary_color, alternate_color;
-	PixelRGBA pric_pxs;
-	PixelRGBA altc_pxs;
-	PixelRGBA pric_pen_pxs;
-	PixelRGBA altc_pen_pxs;
+	PixelRGBA pric_pxs = {};
+	PixelRGBA altc_pxs = {};
+	PixelRGBA pric_pen_pxs = {};
+	PixelRGBA altc_pen_pxs = {};
 	void(Canvas::*brush_under_tool)(int, int);
 
 	void brush(int x, int y);
@@ -116,7 +129,7 @@ private:
 
 struct Easel : public Panel
 {
-	Shader color_square_shader, sprite_shader;
+	Shader color_square_shader;
 	Widget widget;
 	glm::mat3 vp;
 
