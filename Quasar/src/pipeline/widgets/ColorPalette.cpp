@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.inl>
 #include <imgui/imgui_internal.h>
 
+#include "ImplUtility.h"
 #include "../render/Uniforms.h"
 #include "RoundRect.h"
 #include "user/Machine.h"
@@ -229,14 +230,9 @@ ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_re
 	assign_widget(this, SQUARES, std::make_shared<W_IndexedRenderable>(color_square_shader));
 	
 	assign_widget(this, HOVER_SELECTOR, std::make_shared<W_UnitRenderable>(outline_rect_shader));
-	ur_wget(*this, HOVER_SELECTOR)
-		.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()))
-		.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }))
-		.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }))
-		.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }))
-		.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }))
-		.send_buffer();
-
+	ur_wget(*this, HOVER_SELECTOR).set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
+	Utils::set_uv_attributes(ur_wget(*this, HOVER_SELECTOR), 0, 1, 0, 1, 0, 2);
+	
 	assign_widget(this, PRIMARY_SELECTOR_B, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
 	ur_wget(*this, PRIMARY_SELECTOR_B).set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec())).send_buffer();
 
@@ -303,13 +299,7 @@ void ColorSubpalette::draw_selectors()
 
 void ColorSubpalette::sync_hover_selector()
 {
-	// LATER create utility for this somewhere, since this wp calculation for setting vertices is done everywhere. new file? WidgetUtility.h
-	ur_wget(*this, HOVER_SELECTOR)
-		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.bottom() }))
-		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.bottom() }))
-		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.top() }))
-		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.top() }))
-		.send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(*this, HOVER_SELECTOR), hover_wp);
 }
 
 const float tri_first_offset = 3;
@@ -365,8 +355,8 @@ void ColorSubpalette::resync_alternate_selector()
 void ColorSubpalette::sync_with_palette()
 {
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	size_t num_colors = subscheme->colors.size();
-	for (size_t i = 0; i < num_colors; ++i)
+	int num_colors = (int)subscheme->colors.size();
+	for (int i = 0; i < num_colors; ++i)
 		setup_color_buffer(i, squares);
 	squares.send_vertex_buffer();
 
@@ -374,21 +364,13 @@ void ColorSubpalette::sync_with_palette()
 	resync_alternate_selector();
 }
 
-void ColorSubpalette::setup_color_buffer(size_t i, IndexedRenderable& squares) const
+void ColorSubpalette::setup_color_buffer(int i, IndexedRenderable& squares) const
 {
-	WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
-	glm::vec4 color = subscheme->colors[i].as_vec();
-	squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-	squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-	squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-	squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(color));
-	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(color));
-	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(color));
-	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(color));
+	Utils::set_vertex_pos_attributes(squares, square_wp(i).relative_to(parent->self.transform), i * 4, 0, false);
+	Utils::set_four_attributes(squares, glm::value_ptr(subscheme->colors[i].as_vec()), i * 4, 1, false);
 }
 
-void ColorSubpalette::setup_color_buffer(size_t i)
+void ColorSubpalette::setup_color_buffer(int i)
 {
 	setup_color_buffer(i, ir_wget(*this, SQUARES));
 }
@@ -682,46 +664,22 @@ void ColorSubpalette::send_inserted_color(RGBA color, int index, bool adjacent)
 	
 	if (adjacent)
 	{
-		size_t num_colors = subscheme->colors.size();
-		for (size_t i = index + 1; i < num_colors; ++i)
-		{
-			WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
-			squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-			squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-			squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-			squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-		}
+		int num_colors = (int)subscheme->colors.size();
+		for (int i = index + 1; i < num_colors; ++i)
+			Utils::set_vertex_pos_attributes(squares, square_wp((int)i).relative_to(parent->self.transform), i * 4, 0, false);
 	}
 	
 	squares.send_both_buffers_resized();
 }
 
-void ColorSubpalette::send_color(size_t i, RGBA color)
+void ColorSubpalette::send_color(int i, RGBA color)
 {
-	glm::vec4 rgba = color.as_vec();
-	ir_wget(*this, SQUARES)
-		.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba))
-		.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba))
-		.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba))
-		.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba))
-		.send_single_vertex(i * 4 + 0)
-		.send_single_vertex(i * 4 + 1)
-		.send_single_vertex(i * 4 + 2)
-		.send_single_vertex(i * 4 + 3);
+	Utils::set_four_attributes(ir_wget(*this, SQUARES), glm::value_ptr(color.as_vec()), i * 4, 1);
 }
 
-void ColorSubpalette::send_color(size_t i)
+void ColorSubpalette::send_color(int i)
 {
-	glm::vec4 rgba = subscheme->colors[i].as_vec();
-	ir_wget(*this, SQUARES)
-		.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba))
-		.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba))
-		.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba))
-		.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba))
-		.send_single_vertex(i * 4 + 0)
-		.send_single_vertex(i * 4 + 1)
-		.send_single_vertex(i * 4 + 2)
-		.send_single_vertex(i * 4 + 3);
+	Utils::set_four_attributes(ir_wget(*this, SQUARES), glm::value_ptr(subscheme->colors[i].as_vec()), i * 4, 1);
 }
 
 void ColorSubpalette::remove_square_under_cursor(bool send_vb, bool create_action)
@@ -741,8 +699,8 @@ void ColorSubpalette::remove_square_under_index(int index, bool send_vb, bool cr
 	subscheme->remove(index);
 
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	size_t num_colors = subscheme->colors.size();
-	for (size_t i = index; i < num_colors; ++i)
+	int num_colors = (int)subscheme->colors.size();
+	for (int i = index; i < num_colors; ++i)
 		setup_color_buffer(i, squares);
 
 	if (send_vb)
@@ -795,13 +753,7 @@ void ColorSubpalette::insert_color_at(int index, int to_primary_index, int to_al
 
 	size_t num_colors = subscheme->colors.size();
 	for (int i = index + 1; i < num_colors; ++i)
-	{
-		WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
-		squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-		squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-		squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-		squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-	}
+		Utils::set_vertex_pos_attributes(squares, square_wp((int)i).relative_to(parent->self.transform), i * 4, 0, false);
 
 	squares.send_both_buffers_resized();
 	
@@ -824,8 +776,8 @@ void ColorSubpalette::remove_color_at(int index, int to_primary_index, int to_al
 	subscheme->remove(index);
 
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	size_t num_colors = subscheme->colors.size();
-	for (size_t i = index; i < num_colors; ++i)
+	int num_colors = (int)subscheme->colors.size();
+	for (int i = index; i < num_colors; ++i)
 		setup_color_buffer(i, squares);
 
 	if (send_vb)
@@ -1462,17 +1414,9 @@ void ColorPalette::sync_widget_with_vp()
 	FlatTransform global = self.transform;
 	global.scale *= Scale(_col_count * SQUARE_SEP, _row_count * SQUARE_SEP);
 
-	ur_wget(*this, BLACK_GRID)
-		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }))
-		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }))
-		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }))
-		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }))
-		.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0, 0 }))
-		.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1, 0 }))
-		.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0, 1 }))
-		.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1, 1 }))
-		.send_buffer();
-
+	Utils::set_uv_attributes(ur_wget(*this, BLACK_GRID), 0, 1, 0, 1, 0, 1, false);
+	Utils::set_vertex_pos_attributes(ur_wget(*this, BLACK_GRID), global);
+	
 	// LATER is this necessary, or should only current subpalette be selected, and when selecting a new subpalette, sync it then.
 	for (size_t i = 0; i < num_subpalettes(); ++i)
 		get_subpalette(i).sync_with_palette();

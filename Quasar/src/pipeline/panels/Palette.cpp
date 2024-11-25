@@ -2,6 +2,7 @@
 
 #include <glm/gtc/type_ptr.inl>
 
+#include "ImplUtility.h"
 #include "user/Machine.h"
 #include "variety/GLutility.h"
 #include "Easel.h"
@@ -170,13 +171,7 @@ void PalettePanel::initialize_widget()
 void PalettePanel::sync_widget()
 {
 	widget.wp_at(BACKGROUND).transform.scale = get_app_size();
-	WidgetPlacement wp = widget.wp_at(BACKGROUND).relative_to(widget.self.transform);
-	ur_wget(widget, BACKGROUND)
-		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
-		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
-		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
-		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
-		.send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(widget, BACKGROUND), widget.wp_at(BACKGROUND).relative_to(widget.self.transform));
 
 	float view_height = to_view_size({ 0, bounds.clip().screen_h }).y;
 	const float free_space_y = view_height - 3 * padding;

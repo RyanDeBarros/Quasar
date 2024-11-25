@@ -34,19 +34,20 @@ namespace UTF
 		String& operator=(const String&) = default;
 		String& operator=(String&&) noexcept = default;
 
-		class Iterator
+		struct Iterator
 		{
+		private:
+			friend class UTF::String;
 			const String& string;
 			size_t i;
 
-			friend class UTF::String;
+		public:
 			Iterator(const String& string, size_t i) : string(string), i(i) {}
 			Iterator(const Iterator&) = default;
 			Iterator(Iterator&&) noexcept = default;
 			Iterator& operator=(const Iterator&) = default;
 			Iterator& operator=(Iterator&&) noexcept = default;
 
-		public:
 			int codepoint() const;
 			Iterator& operator++() { i += num_bytes(); return *this; }
 			Iterator operator++(int) { Iterator iter(string, i); i += num_bytes(); return iter; }

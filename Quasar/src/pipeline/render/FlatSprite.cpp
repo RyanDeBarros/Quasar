@@ -2,6 +2,7 @@
 
 #include <glm/gtc/type_ptr.inl>
 
+#include "ImplUtility.h"
 #include "variety/GLutility.h"
 
 constexpr size_t SHADER_POS_TEXTURE = 0;
@@ -29,21 +30,13 @@ void FlatSprite::draw(GLuint texture_slot)
 
 const FlatSprite& FlatSprite::update_transform() const
 {
-	glm::mat3 m = global_matrix();
-	ur->set_attribute_single_vertex(0, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_left(m),  wp_bottom(m) }))
-		.set_attribute_single_vertex(1, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_right(m), wp_bottom(m) }))
-		.set_attribute_single_vertex(2, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_left(m),  wp_top(m) }))
-		.set_attribute_single_vertex(3, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_right(m), wp_top(m) }));
+	Utils::set_vertex_pos_attributes(*ur, global_matrix(), 0, SHADER_POS_VERT_POS, false);
 	return *this;
 }
 
 FlatSprite& FlatSprite::update_transform()
 {
-	glm::mat3 m = global_matrix();
-	ur->set_attribute_single_vertex(0, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_left(m),  wp_bottom(m) }))
-		.set_attribute_single_vertex(1, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_right(m), wp_bottom(m) }))
-		.set_attribute_single_vertex(2, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_left(m),  wp_top(m) }))
-		.set_attribute_single_vertex(3, SHADER_POS_VERT_POS, glm::value_ptr(glm::vec2{ wp_right(m), wp_top(m) }));
+	Utils::set_vertex_pos_attributes(*ur, global_matrix(), 0, SHADER_POS_VERT_POS, false);
 	return *this;
 }
 
@@ -99,18 +92,12 @@ FlatSprite& FlatSprite::set_modulation(ColorFrame color)
 
 const FlatSprite& FlatSprite::set_uvs(const Bounds& bounds) const
 {
-	ur->set_attribute_single_vertex(0, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y1 }))
-		.set_attribute_single_vertex(1, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y1 }))
-		.set_attribute_single_vertex(2, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y2 }))
-		.set_attribute_single_vertex(3, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y2 }));
+	Utils::set_uv_attributes(*ur, bounds, 0, SHADER_POS_UV, false);
 	return *this;
 }
 
 FlatSprite& FlatSprite::set_uvs(const Bounds& bounds)
 {
-	ur->set_attribute_single_vertex(0, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y1 }))
-		.set_attribute_single_vertex(1, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y1 }))
-		.set_attribute_single_vertex(2, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x1, bounds.y2 }))
-		.set_attribute_single_vertex(3, SHADER_POS_UV, glm::value_ptr(glm::vec2{ bounds.x2, bounds.y2 }));
+	Utils::set_uv_attributes(*ur, bounds, 0, SHADER_POS_UV, false);
 	return *this;
 }

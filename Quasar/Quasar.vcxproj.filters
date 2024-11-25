@@ -150,6 +150,9 @@
     <ClCompile Include="src\pipeline\render\Gridlines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\ImplUtility.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\variety\IO.h">
@@ -1173,6 +1176,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\pipeline\render\Gridlines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ImplUtility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

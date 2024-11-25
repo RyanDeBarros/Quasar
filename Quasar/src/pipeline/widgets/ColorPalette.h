@@ -31,8 +31,8 @@ struct ColorSubpalette : public Widget
 	void sync_alternate_selector();
 	void resync_alternate_selector();
 	void sync_with_palette();
-	void setup_color_buffer(size_t i, IndexedRenderable& squares) const;
-	void setup_color_buffer(size_t i);
+	void setup_color_buffer(int i, IndexedRenderable& squares) const;
+	void setup_color_buffer(int i);
 	void process();
 	void unprocess();
 	bool check_primary();
@@ -65,8 +65,8 @@ private:
 	void insert_color_setup(RGBA color, int index);
 	void send_inserted_color(RGBA color, int index, bool adjacent);
 public:
-	void send_color(size_t i, RGBA color);
-	void send_color(size_t i);
+	void send_color(int i, RGBA color);
+	void send_color(int i);
 	void remove_square_under_cursor(bool send_vb, bool create_action);
 	void remove_square_under_index(int index, bool send_vb, bool create_action);
 	void clean_extra_buffer_space();

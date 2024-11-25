@@ -350,6 +350,19 @@ void IndexedRenderable::push_back_quads(size_t num_quads)
 	}
 }
 
+const IndexedRenderable& IndexedRenderable::set_attribute(size_t attrib, const float* v) const
+{
+	unsigned short attrib_len = shader->attributes[attrib];
+	GLfloat* buf = const_cast<GLfloat*>(varr.data()) + shader->attribute_offsets[attrib];
+	auto num_vertices = varr.size() / shader->stride;
+	for (size_t i = 0; i < num_vertices; ++i)
+	{
+		memcpy(buf, v, attrib_len * sizeof(GLfloat));
+		buf += shader->stride;
+	}
+	return *this;
+}
+
 IndexedRenderable& IndexedRenderable::set_attribute(size_t attrib, const float* v)
 {
 	unsigned short attrib_len = shader->attributes[attrib];
@@ -360,6 +373,13 @@ IndexedRenderable& IndexedRenderable::set_attribute(size_t attrib, const float* 
 		memcpy(buf, v, attrib_len * sizeof(GLfloat));
 		buf += shader->stride;
 	}
+	return *this;
+}
+
+const IndexedRenderable& IndexedRenderable::set_attribute_single_vertex(size_t vertex, size_t attrib, const float* v) const
+{
+	unsigned short attrib_len = shader->attributes[attrib];
+	memcpy(const_cast<GLfloat*>(varr.data()) + shader->attribute_offsets[attrib] + vertex * shader->stride, v, attrib_len * sizeof(GLfloat));
 	return *this;
 }
 

@@ -2,6 +2,7 @@
 
 #include <glm/gtc/type_ptr.inl>
 
+#include "ImplUtility.h"
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 #include "BrushesPanel.h"
@@ -121,8 +122,7 @@ void Canvas::initialize_dot_cursor()
 		for (size_t j = 0; j < dot_cursor_buf.chpp; ++j)
 			dot_cursor_buf.pixels[i * dot_cursor_buf.chpp + j] = 255 * dot_array[i];
 	}
-	// TODO utility function that retrieves cursor from buffer
-	dot_cursor = std::make_shared<Cursor>(dot_cursor_buf.pixels, dot_cursor_buf.width, dot_cursor_buf.height, dot_cursor_buf.width / 2, dot_cursor_buf.height / 2);
+	dot_cursor = std::move(Utils::cursor_from_buffer(dot_cursor_buf));
 }
 
 void Canvas::draw()
@@ -167,13 +167,7 @@ void Canvas::sync_cursor_with_widget()
 
 void Canvas::sync_ur(size_t subw)
 {
-	WidgetPlacement wp = wp_at(subw).relative_to(self.transform);
-	ur_wget(*this, subw)
-		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
-		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
-		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
-		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
-		.send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(*this, subw), wp_at(subw).relative_to(self.transform));
 }
 
 const Image* Canvas::image() const
@@ -354,7 +348,6 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 
 void Canvas::unhover()
 {
-	// TODO separate global pointer variable for MainWindow. Same for Easel, Palette, etc.
 	MainWindow->release_cursor(&dot_cursor_wh);
 	MainWindow->release_cursor(&pipette_cursor_wh);
 	pipette_ready = false;
@@ -679,13 +672,7 @@ void Easel::sync_widget()
 
 void Easel::sync_ur(size_t subw)
 {
-	WidgetPlacement wp = widget.wp_at(subw).relative_to(widget.self.transform);
-	ur_wget(widget, subw)
-		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
-		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
-		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
-		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
-		.send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(widget, subw), widget.wp_at(subw).relative_to(widget.self.transform));
 }
 
 void Easel::sync_canvas_transform()

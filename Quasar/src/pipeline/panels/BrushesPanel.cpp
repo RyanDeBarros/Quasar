@@ -2,6 +2,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#include <ImplUtility.h>
 #include "edit/color/Color.h"
 #include "../render/Uniforms.h"
 #include "variety/GLutility.h"
@@ -259,13 +260,7 @@ void BrushesPanel::sync_widget()
 
 void BrushesPanel::sync_ur(size_t subw)
 {
-	WidgetPlacement wp = widget.wp_at(subw).relative_to(widget.self.transform);
-	ur_wget(widget, subw)
-		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
-		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
-		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
-		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }))
-		.send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(widget, subw), widget.wp_at(subw).relative_to(widget.self.transform));
 }
 
 void BrushesPanel::select_brush_tip(BrushTip tip)

@@ -86,7 +86,9 @@ struct IndexedRenderable
 	void push_back_quads(size_t num_quads, GLuint starting_vertex);
 	void remove_from_varr(size_t pos);
 	void remove_from_iarr(size_t pos);
+	const IndexedRenderable& set_attribute(size_t attrib, const float* v) const;
 	IndexedRenderable& set_attribute(size_t attrib, const float* v);
+	const IndexedRenderable& set_attribute_single_vertex(size_t vertex, size_t attrib, const float* v) const;
 	IndexedRenderable& set_attribute_single_vertex(size_t vertex, size_t attrib, const float* v);
 	const IndexedRenderable& get_attribute(size_t vertex, size_t attrib, float* v) const;
 	IndexedRenderable& get_attribute(size_t vertex, size_t attrib, float* v);

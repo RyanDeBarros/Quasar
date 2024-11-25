@@ -147,7 +147,6 @@ private:
 	float slider_normal_x(size_t control, size_t cursor) const;
 	float slider_normal_y(size_t control, size_t cursor) const;
 
-	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
 	void sync_widget_with_vp();

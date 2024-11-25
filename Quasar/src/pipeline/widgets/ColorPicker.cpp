@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.inl>
 #include <imgui/imgui_internal.h>
 
+#include "ImplUtility.h"
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 #include "../render/Uniforms.h"
@@ -1418,23 +1419,9 @@ float ColorPicker::slider_normal_y(size_t control, size_t cursor) const
 	return wp_at(control).normalize_y(wp_at(cursor).transform.position.y);
 }
 
-void ColorPicker::setup_vertex_positions(size_t control) const
-{
-	WidgetPlacement wp = wp_at(control).relative_to(self.transform);
-	ur_wget(*this, control)
-		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }))
-		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }))
-		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }))
-		.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-}
-
 void ColorPicker::setup_rect_uvs(size_t control) const
 {
-	ur_wget(*this, control)
-		.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0.0f, 0.0f }))
-		.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1.0f, 0.0f }))
-		.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0.0f, 1.0f }))
-		.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1.0f, 1.0f }));
+	Utils::set_uv_attributes(ur_wget(*this, control), 0, 1, 0, 1, 0, 1, false);
 }
 
 void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const
@@ -1491,9 +1478,7 @@ void ColorPicker::sync_widget_with_vp()
 
 void ColorPicker::sync_single_standard_ur_transform(size_t control, bool send_buffer) const
 {
-	setup_vertex_positions(control);
-	if (send_buffer)
-		ur_wget(*this, control).send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(*this, control), wp_at(control).relative_to(self.transform), 0, 0, send_buffer);
 }
 
 void ColorPicker::send_cpwc_buffer(size_t control) const

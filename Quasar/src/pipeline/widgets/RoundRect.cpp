@@ -2,6 +2,8 @@
 
 #include <glm/gtc/type_ptr.inl>
 
+#include "ImplUtility.h"
+
 RoundRect::RoundRect(Shader* round_rect_shader)
 	: W_UnitRenderable(round_rect_shader)
 {
@@ -15,16 +17,8 @@ void RoundRect::draw()
 const RoundRect& RoundRect::update_transform() const
 {
 	auto gm = global_matrix();
-	float left = wp_left(gm);
-	float right = wp_right(gm);
-	float bottom = wp_bottom(gm);
-	float top = wp_top(gm);
-	ur->set_attribute_single_vertex(0, VERTEX_POS, glm::value_ptr(glm::vec2{ left, bottom }));
-	ur->set_attribute_single_vertex(1, VERTEX_POS, glm::value_ptr(glm::vec2{ right, bottom }));
-	ur->set_attribute_single_vertex(2, VERTEX_POS, glm::value_ptr(glm::vec2{ left, top }));
-	ur->set_attribute_single_vertex(3, VERTEX_POS, glm::value_ptr(glm::vec2{ right, top }));
-	ur->set_attribute(BOTTOM_LEFT, glm::value_ptr(glm::vec2{ left, bottom }));
-	ur->set_attribute(RECT_SIZE, glm::value_ptr(glm::vec2{ right - left, top - bottom }));
+	Utils::set_vertex_pos_attributes(*ur, gm, 0, VERTEX_POS, false);
+	Utils::set_rect_dimension_attributes(*ur, gm, BOTTOM_LEFT, RECT_SIZE, false);
 	return *this;
 }
 
