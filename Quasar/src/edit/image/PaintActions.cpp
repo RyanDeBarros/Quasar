@@ -6,6 +6,27 @@ void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c)
 		buf.pos(x, y)[i] = c[i];
 }
 
+DiscreteLineInterpolator::DiscreteLineInterpolator(IPosition start, IPosition finish)
+	: start(start), finish(finish), delta(finish - start), length(std::max(std::abs(delta.x), std::abs(delta.y)) + 1) {}
+
+void DiscreteLineInterpolator::at(int i, int& x, int& y) const
+{
+	float fraction = length == 1 ? 0 : (float)i / (length - 1);
+	x = start.x + glm::sign(delta.x) * roundi_down_on_half(std::abs(delta.x) * fraction);
+	y = start.y + glm::sign(delta.y) * roundi_down_on_half(std::abs(delta.y) * fraction);
+}
+
+DiscreteRectFillInterpolator::DiscreteRectFillInterpolator(IPosition start, IPosition finish)
+	: start(start), finish(finish), delta(finish - start), length((std::abs(delta.x) + 1) * (std::abs(delta.y) + 1)) {}
+
+void DiscreteRectFillInterpolator::at(int i, int& x, int& y) const
+{
+	int xi = i % (1 + std::abs(delta.x));
+	int yi = i / (1 + std::abs(delta.x));
+	x = start.x + glm::sign(delta.x) * xi;
+	y = start.y + glm::sign(delta.y) * yi;
+}
+
 PaintToolAction::PaintToolAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
 	: image(image), bbox(bbox), painted_colors(std::move(painted_colors))
 {
@@ -62,17 +83,17 @@ void PaintToolAction::backward()
 	}
 }
 
-LineToolAction::LineToolAction(const std::shared_ptr<Image>& image, PixelRGBA color, IPosition start, IPosition finish, std::unordered_map<IPosition, PixelRGBA>&& painted_colors)
+OneColorPenAction::OneColorPenAction(const std::shared_ptr<Image>& image, PixelRGBA color, IPosition start, IPosition finish, std::unordered_map<IPosition, PixelRGBA>&& painted_colors)
 	: image(image), color(color), painted_colors(std::move(painted_colors))
 {
-	weight = sizeof(LineToolAction) + this->painted_colors.size() * (sizeof(IPosition) + sizeof(PixelRGBA));
+	weight = sizeof(OneColorPenAction) + this->painted_colors.size() * (sizeof(IPosition) + sizeof(PixelRGBA));
 	bbox.x1 = std::min(start.x, finish.x);
 	bbox.x2 = std::max(start.x, finish.x);
 	bbox.y1 = std::min(start.y, finish.y);
 	bbox.y2 = std::max(start.y, finish.y);
 }
 
-void LineToolAction::forward()
+void OneColorPenAction::forward()
 {
 	if (painted_colors.empty())
 		return;
@@ -85,7 +106,7 @@ void LineToolAction::forward()
 	}
 }
 
-void LineToolAction::backward()
+void OneColorPenAction::backward()
 {
 	if (painted_colors.empty())
 		return;
@@ -98,17 +119,17 @@ void LineToolAction::backward()
 	}
 }
 
-LineBlendToolAction::LineBlendToolAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
+OneColorPencilAction::OneColorPencilAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
 	: image(image), painted_colors(painted_colors)
 {
-	weight = sizeof(LineBlendToolAction) + this->painted_colors.size() * (sizeof(CanvasPixel) + sizeof(PixelRGBA));
+	weight = sizeof(OneColorPencilAction) + this->painted_colors.size() * (sizeof(CanvasPixel) + sizeof(PixelRGBA));
 	bbox.x1 = std::min(start.x, finish.x);
 	bbox.x2 = std::max(start.x, finish.x);
 	bbox.y1 = std::min(start.y, finish.y);
 	bbox.y2 = std::max(start.y, finish.y);
 }
 
-void LineBlendToolAction::forward()
+void OneColorPencilAction::forward()
 {
 	if (painted_colors.empty())
 		return;
@@ -121,7 +142,7 @@ void LineBlendToolAction::forward()
 	}
 }
 
-void LineBlendToolAction::backward()
+void OneColorPencilAction::backward()
 {
 	if (painted_colors.empty())
 		return;

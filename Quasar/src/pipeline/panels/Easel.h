@@ -103,6 +103,7 @@ private:
 	void brush_camera_tool(int x, int y);
 	void brush_paint_tool(int x, int y);
 	void brush_line_tool(int x, int y);
+	void brush_rect_fill_tool(int x, int y);
 
 public:
 	enum : size_t

@@ -249,17 +249,3 @@ constexpr float mean2d1d(float a, float b)
 {
 	return (a + b + std::max(a, b)) / 3.0f;
 }
-
-struct DiscreteLineInterpolator
-{
-	IPosition start;
-	IPosition finish;
-	IPosition delta;
-	unsigned int length;
-
-	DiscreteLineInterpolator(IPosition start, IPosition finish);
-
-	IPosition at(int i) const;
-	void at(int i, IPosition& pos) const;
-	void at(int i, int& x, int& y) const;
-};
