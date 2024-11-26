@@ -10,67 +10,6 @@
 #include "../render/Uniforms.h"
 #include "../render/FlatSprite.h"
 
-struct PaintToolAction : public ActionBase
-{
-	std::weak_ptr<Image> image;
-	std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
-	PaintToolAction(const std::shared_ptr<Image>& image, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
-		: image(image), painted_colors(std::move(painted_colors))
-	{
-		weight = sizeof(PaintToolAction) + this->painted_colors.size() * (sizeof(CanvasPixel) + sizeof(PixelRGBA));
-	}
-	virtual void forward() override
-	{
-		if (painted_colors.empty())
-			return;
-		if (auto img = image.lock())
-		{
-			Buffer& buf = img->buf;
-			int x1 = INT_MAX, y1 = INT_MAX, x2 = INT_MIN, y2 = INT_MIN;
-			for (auto iter = painted_colors.begin(); iter != painted_colors.end(); ++iter)
-			{
-				int x = iter->first.x, y = iter->first.y;
-				if (x < x1)
-					x1 = x;
-				if (x > x2)
-					x2 = x;
-				if (y < y1)
-					y1 = y;
-				if (y > y2)
-					y2 = y;
-				for (CHPP i = 0; i < buf.chpp; ++i)
-					buf.pos(x, y)[i] = iter->second[i];
-			}
-			img->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
-		}
-	}
-	virtual void backward() override
-	{
-		if (painted_colors.empty())
-			return;
-		if (auto img = image.lock())
-		{
-			Buffer& buf = img->buf;
-			int x1 = INT_MAX, y1 = INT_MAX, x2 = INT_MIN, y2 = INT_MIN;
-			for (auto iter = painted_colors.begin(); iter != painted_colors.end(); ++iter)
-			{
-				int x = iter->first.x, y = iter->first.y;
-				if (x < x1)
-					x1 = x;
-				if (x > x2)
-					x2 = x;
-				if (y < y1)
-					y1 = y;
-				if (y > y2)
-					y2 = y;
-				for (CHPP i = 0; i < buf.chpp; ++i)
-					buf.pos(x, y)[i] = iter->first.c[i];
-			}
-			img->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
-		}
-	}
-};
-
 constexpr GLuint CHECKERBOARD_TSLOT = 0;
 constexpr GLuint CURSOR_ERASER_TSLOT = 1;
 constexpr GLuint CURSOR_SELECT_TSLOT = 2;
@@ -379,17 +318,40 @@ Position Canvas::pixel_position(IPosition pos)
 	return Position(pos) - 0.5f * Position(image->buf.width, image->buf.height) + Position{ 0.5f, 0.5f };
 }
 
-RGBA Canvas::color_under_cursor()
+Position Canvas::pixel_position(int x, int y)
+{
+	return Position(x, y) - 0.5f * Position(image->buf.width, image->buf.height) + Position{ 0.5f, 0.5f };
+}
+
+RGBA Canvas::applied_color() const
+{
+	return cursor_state == CursorState::DOWN_PRIMARY ? primary_color : alternate_color;
+}
+
+RGBA Canvas::color_under_cursor() const
 {
 	Position local_pos = local_of(MEasel->to_world_coordinates(Machine.cursor_screen_pos()));
-	Buffer& buf = image->buf;
-	Position buf_cursor_pos = local_pos + 0.5f * Position(buf.width, buf.height);
+	Position buf_cursor_pos = local_pos + 0.5f * Position(image->buf.width, image->buf.height);
 	IPosition pos(buf_cursor_pos);
-	Byte* pixel = buf.pos(pos.x, pos.y);
+	Byte* pixel = image->buf.pos(pos.x, pos.y);
 	PixelRGBA px{ 255, 255, 255, 255 };
-	for (CHPP i = 0; i < buf.chpp; ++i)
+	for (CHPP i = 0; i < image->buf.chpp; ++i)
 		px.at(i) = pixel[i];
 	return px.to_rgba();
+}
+
+PixelRGBA Canvas::pixel_color_at(IPosition pos) const
+{
+	return pixel_color_at(pos.x, pos.y);
+}
+
+PixelRGBA Canvas::pixel_color_at(int x, int y) const
+{
+	Byte* pixel = image->buf.pos(x, y);
+	PixelRGBA px{ 255, 255, 255, 255 };
+	for (CHPP i = 0; i < image->buf.chpp; ++i)
+		px.at(i) = pixel[i];
+	return px;
 }
 
 void Canvas::set_cursor_color(RGBA color)
@@ -491,7 +453,24 @@ void Canvas::brush_submit()
 				Machine.history.push(std::make_shared<PaintToolAction>(image, std::move(binfo.painted_colors)));
 			break;
 		case BrushTool::LINE:
-			// TODO
+			if (image && !binfo.preview_positions.empty())
+			{
+				switch (MBrushes->get_brush_tip())
+				{
+				case BrushTip::PENCIL:
+					Machine.history.execute(std::make_shared<LineBlendToolAction>(image, binfo.starting_pos, brush_pos, std::move(binfo.painted_colors)));
+					break;
+				case BrushTip::PEN:
+					Machine.history.execute(std::make_shared<LineToolAction>(image, applied_color().get_pixel_rgba(), binfo.starting_pos, brush_pos, std::move(binfo.preview_positions)));
+					break;
+				case BrushTip::ERASER:
+					Machine.history.execute(std::make_shared<LineToolAction>(image, PixelRGBA{ 0, 0, 0, 0 }, binfo.starting_pos, brush_pos, std::move(binfo.preview_positions)));
+					break;
+				case BrushTip::SELECT:
+					// LATER
+					break;
+				}
+			}
 			break;
 		}
 		brushing = false;
@@ -538,7 +517,7 @@ void Canvas::brush_paint_tool(int x, int y)
 		CanvasPixel initial_px{ x, y };
 		PixelRGBA final_c{ 0, 0, 0, 0 };
 		PixelRGBA color = cursor_state == CursorState::DOWN_PRIMARY ? pric_pxs : altc_pxs;
-		float applied_alpha = cursor_state == CursorState::DOWN_PRIMARY ? primary_color.alpha : alternate_color.alpha;
+		float applied_alpha = applied_color().alpha;
 		for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
 		{
 			initial_px.c.at(i) = image_shifted_buf.pixels[i];
@@ -598,17 +577,49 @@ void Canvas::brush_paint_tool(int x, int y)
 
 void Canvas::brush_line_tool(int x, int y)
 {
-	binfo.preview_positions.clear();
-	DiscreteLineInterpolator dli(binfo.starting_pos, { x, y });
-	for (unsigned int i = 0; i < dli.length; ++i)
-		binfo.preview_positions.insert(dli.at(i));
+	switch (MBrushes->get_brush_tip())
+	{
+	case BrushTip::PENCIL:
+	{
+		binfo.painted_colors.clear();
+		binfo.preview_positions.clear();
+		DiscreteLineInterpolator dli(binfo.starting_pos, { x, y });
+		CanvasPixel cpx;
+		for (unsigned int i = 0; i < dli.length; ++i)
+		{
+			dli.at(i, cpx.x, cpx.y);
+			PixelRGBA old_color = pixel_color_at(cpx.x, cpx.y);
+			cpx.c = applied_color().get_pixel_rgba();
+			cpx.c.blend_over(old_color);
+			binfo.painted_colors[cpx] = old_color;
+			binfo.preview_positions[{ cpx.x, cpx.y }] = pixel_color_at(cpx.x, cpx.y);
+		}
+		break;
+	}
+	case BrushTip::PEN:
+	case BrushTip::ERASER:
+	{
+		binfo.preview_positions.clear();
+		DiscreteLineInterpolator dli(binfo.starting_pos, { x, y });
+		IPosition pos;
+		for (unsigned int i = 0; i < dli.length; ++i)
+		{
+			dli.at(i, pos);
+			binfo.preview_positions[pos] = pixel_color_at(pos);
+		}
+		break;
+	}
+	case BrushTip::SELECT:
+		// LATER
+		break;
+	}
 }
 
 void Canvas::draw_preview()
 {
-	for (const auto& pos : binfo.preview_positions)
+	for (const auto& iter : binfo.preview_positions)
 	{
-		hover_pixel_at(pixel_position(pos));
+		hover_pixel_at(pixel_position(iter.first));
 		set_cursor_color(cursor_state == CursorState::DOWN_PRIMARY ? primary_color : alternate_color);
 		draw_cursor();
 	}

@@ -1,28 +1,14 @@
 #pragma once
 
 #include <array>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "Panel.h"
 #include "user/Platform.h"
 #include "../render/Gridlines.h"
 #include "../widgets/Widget.h"
 #include "edit/image/Image.h"
+#include "edit/image/PaintActions.h"
 #include "variety/History.h"
-
-struct CanvasPixel
-{
-	int x, y;
-	PixelRGBA c;
-	bool operator==(const CanvasPixel& cpx) const { return x == cpx.x && y == cpx.y; }
-};
-
-template<>
-struct std::hash<CanvasPixel>
-{
-	size_t operator()(const CanvasPixel& cpx) const { return std::hash<int>{}(cpx.x) ^ std::hash<int>{}(cpx.y); }
-};
 
 struct Canvas : public Widget
 {
@@ -90,7 +76,11 @@ public:
 	void unhover();
 	void hover_pixel_at(Position pos);
 	Position pixel_position(IPosition pos);
-	RGBA color_under_cursor();
+	Position pixel_position(int x, int y);
+	RGBA applied_color() const;
+	RGBA color_under_cursor() const;
+	PixelRGBA pixel_color_at(IPosition pos) const;
+	PixelRGBA pixel_color_at(int x, int y) const;
 	void set_cursor_color(RGBA color);
 	void set_primary_color(RGBA color);
 	void set_alternate_color(RGBA color);
@@ -134,7 +124,7 @@ private:
 		IPosition starting_pos = { -1, -1 };
 		bool show_preview = false;
 		std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
-		std::unordered_set<IPosition> preview_positions;
+		std::unordered_map<IPosition, PixelRGBA> preview_positions;
 		void reset();
 	} binfo;
 

@@ -166,6 +166,7 @@
   <ItemGroup>
     <ClCompile Include="src\edit\color\Color.cpp" />
     <ClCompile Include="src\edit\image\Image.cpp" />
+    <ClCompile Include="src\edit\image\PaintActions.cpp" />
     <ClCompile Include="src\edit\image\PixelBuffer.cpp" />
     <ClCompile Include="src\edit\image\PixelBufferPaths.cpp" />
     <ClCompile Include="src\ImplUtility.cpp" />
@@ -213,6 +214,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\edit\color\Color.h" />
+    <ClInclude Include="src\edit\image\PaintActions.h" />
     <ClInclude Include="src\edit\image\PixelBuffer.h" />
     <ClInclude Include="src\edit\image\PixelBufferPaths.h" />
     <ClInclude Include="src\ImplUtility.h" />

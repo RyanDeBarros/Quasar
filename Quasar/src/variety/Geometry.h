@@ -261,4 +261,5 @@ struct DiscreteLineInterpolator
 
 	IPosition at(int i) const;
 	void at(int i, IPosition& pos) const;
+	void at(int i, int& x, int& y) const;
 };
