@@ -289,7 +289,7 @@ void MachineImpl::init_renderer()
 	
 	Data::update_time();
 
-	import_file(FileSystem::workspace_path("ex/flag.png"));
+	import_file(FileSystem::workspace_path("ex/einstein.png"));
 	easel()->image_edit_perf_mode = true;
 }
 

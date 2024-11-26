@@ -318,9 +318,16 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 		IPosition pos(buf_cursor_pos);
 		if (pos != brush_pos)
 		{
-			if (brushing)
+			if (brushing && brush_pos != IPosition{ -1, -1 })
 			{
-				// TODO line interpolate from pos to brush_pos if they are not touching (orthogonally or diagonally). call brush() for each intermediate point
+				// fill in intermediate connecting points
+				DiscreteLineInterpolator dli(brush_pos, pos);
+				IPosition intermediate;
+				for (unsigned int i = 1; i < dli.length - 1; ++i)
+				{
+					dli.at(i, intermediate);
+					brush(intermediate.x, intermediate.y);
+				}
 			}
 			brush_pos = pos;
 			hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
