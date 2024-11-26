@@ -355,11 +355,7 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 		}
 	}
 	else
-	{
-		cursor_in_canvas = false;
-		brush_pos = { -1, -1 };
 		unhover();
-	}
 }
 
 void Canvas::unhover()
@@ -367,6 +363,8 @@ void Canvas::unhover()
 	MainWindow->release_cursor(&dot_cursor_wh);
 	MainWindow->release_cursor(&pipette_cursor_wh);
 	pipette_ready = false;
+	cursor_in_canvas = false;
+	brush_pos = { -1, -1 };
 }
 
 void Canvas::hover_pixel_at(Position pos)

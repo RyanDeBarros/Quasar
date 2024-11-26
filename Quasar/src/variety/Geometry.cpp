@@ -1,5 +1,7 @@
 #include "Geometry.h"
 
+#include "Utils.h"
+
 Logger& operator<<(Logger& log, const Position& pos)
 {
     return log << "P(" << pos.x << ", " << pos.y << ")";
@@ -34,6 +36,6 @@ void DiscreteLineInterpolator::at(int i, IPosition& pos) const
 {
     pos = start;
     float fraction = length == 1 ? 0 : (float)i / (length - 1);
-    pos.x += int(delta.x * fraction);
-    pos.y += int(delta.y * fraction);
+    pos.x += (std::signbit(delta.x) ? -1 : 1) * roundi_down_on_half(std::abs(delta.x) * fraction);
+    pos.y += (std::signbit(delta.y) ? -1 : 1) * roundi_down_on_half(std::abs(delta.y) * fraction);
 }
