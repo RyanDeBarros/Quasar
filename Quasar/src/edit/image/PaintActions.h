@@ -4,7 +4,7 @@
 #include "Image.h"
 #include "../color/Color.h"
 
-// TODO utility to get color from buffer pos
+extern void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c);
 
 struct CanvasPixel
 {
@@ -22,8 +22,9 @@ struct std::hash<CanvasPixel>
 struct PaintToolAction : public ActionBase
 {
 	std::weak_ptr<Image> image;
+	IntBounds bbox;
 	std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
-	PaintToolAction(const std::shared_ptr<Image>& image, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors);
+	PaintToolAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors);
 	virtual void forward() override;
 	virtual void backward() override;
 };
@@ -32,7 +33,7 @@ struct LineToolAction : public ActionBase
 {
 	std::weak_ptr<Image> image;
 	PixelRGBA color;
-	int x1, x2, y1, y2;
+	IntBounds bbox;
 	std::unordered_map<IPosition, PixelRGBA> painted_colors;
 	LineToolAction(const std::shared_ptr<Image>& image, PixelRGBA color, IPosition start, IPosition finish, std::unordered_map<IPosition, PixelRGBA>&& painted_colors);
 	virtual void forward() override;
@@ -42,7 +43,7 @@ struct LineToolAction : public ActionBase
 struct LineBlendToolAction : public ActionBase
 {
 	std::weak_ptr<Image> image;
-	int x1, x2, y1, y2;
+	IntBounds bbox;
 	std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
 	LineBlendToolAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors);
 	virtual void forward() override;

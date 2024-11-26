@@ -30,8 +30,6 @@ public:
 		DOWN_PRIMARY,
 		DOWN_ALTERNATE
 	} cursor_state = CursorState::UP;
-	IPosition brush_pos = { -1, -1 };
-	bool brushing = false;
 
 	Buffer dot_cursor_buf;
 	std::shared_ptr<Cursor> dot_cursor;
@@ -121,7 +119,10 @@ public:
 private:
 	struct BrushActionInfo
 	{
+		bool brushing = false;
 		IPosition starting_pos = { -1, -1 };
+		IPosition brush_pos = { -1, -1 };
+		IntBounds brushing_bbox = { -1, -1, -1, -1 };
 		bool show_preview = false;
 		std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
 		std::unordered_map<IPosition, PixelRGBA> preview_positions;

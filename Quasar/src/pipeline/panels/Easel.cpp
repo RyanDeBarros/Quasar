@@ -269,11 +269,11 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 	{
 		cursor_in_canvas = true;
 		IPosition pos(buf_cursor_pos);
-		if (pos != brush_pos)
+		if (pos != binfo.brush_pos)
 		{
-			if (brushing && brush_pos != IPosition{ -1, -1 })
+			if (binfo.brushing && binfo.brush_pos != IPosition{ -1, -1 })
 				brush_move_to(pos);
-			brush_pos = pos;
+			binfo.brush_pos = pos;
 			hover_pixel_at(pixel_position(pos));
 			if (cursor_state != CursorState::UP)
 				brush(pos.x, pos.y);
@@ -301,7 +301,7 @@ void Canvas::unhover()
 	MainWindow->release_cursor(&pipette_cursor_wh);
 	pipette_ready = false;
 	cursor_in_canvas = false;
-	brush_pos = { -1, -1 };
+	binfo.brush_pos = { -1, -1 };
 }
 
 void Canvas::hover_pixel_at(Position pos)
@@ -400,7 +400,7 @@ void Canvas::cursor_press(MouseButton button)
 		else if (button == MouseButton::RIGHT)
 			cursor_state = CursorState::DOWN_ALTERNATE;
 		if (cursor_in_canvas)
-			brush(brush_pos.x, brush_pos.y);
+			brush(binfo.brush_pos.x, binfo.brush_pos.y);
 	}
 }
 
@@ -425,14 +425,14 @@ bool Canvas::cursor_cancel()
 
 void Canvas::brush(int x, int y)
 {
-	if (!brushing)
+	if (!binfo.brushing)
 		brush_start(x, y);
 	(this->*brush_under_tool)(x, y);
 }
 
 void Canvas::brush_start(int x, int y)
 {
-	brushing = true;
+	binfo.brushing = true;
 	binfo.reset();
 	binfo.starting_pos = { x, y };
 
@@ -444,13 +444,13 @@ void Canvas::brush_start(int x, int y)
 
 void Canvas::brush_submit()
 {
-	if (brushing)
+	if (binfo.brushing)
 	{
 		switch (MBrushes->get_brush_tool())
 		{
 		case BrushTool::PAINT:
 			if (image && !binfo.painted_colors.empty())
-				Machine.history.push(std::make_shared<PaintToolAction>(image, std::move(binfo.painted_colors)));
+				Machine.history.push(std::make_shared<PaintToolAction>(image, binfo.brushing_bbox, std::move(binfo.painted_colors)));
 			break;
 		case BrushTool::LINE:
 			if (image && !binfo.preview_positions.empty())
@@ -458,13 +458,13 @@ void Canvas::brush_submit()
 				switch (MBrushes->get_brush_tip())
 				{
 				case BrushTip::PENCIL:
-					Machine.history.execute(std::make_shared<LineBlendToolAction>(image, binfo.starting_pos, brush_pos, std::move(binfo.painted_colors)));
+					Machine.history.execute(std::make_shared<LineBlendToolAction>(image, binfo.starting_pos, binfo.brush_pos, std::move(binfo.painted_colors)));
 					break;
 				case BrushTip::PEN:
-					Machine.history.execute(std::make_shared<LineToolAction>(image, applied_color().get_pixel_rgba(), binfo.starting_pos, brush_pos, std::move(binfo.preview_positions)));
+					Machine.history.execute(std::make_shared<LineToolAction>(image, applied_color().get_pixel_rgba(), binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
 					break;
 				case BrushTip::ERASER:
-					Machine.history.execute(std::make_shared<LineToolAction>(image, PixelRGBA{ 0, 0, 0, 0 }, binfo.starting_pos, brush_pos, std::move(binfo.preview_positions)));
+					Machine.history.execute(std::make_shared<LineToolAction>(image, PixelRGBA{ 0, 0, 0, 0 }, binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
 					break;
 				case BrushTip::SELECT:
 					// LATER
@@ -473,14 +473,14 @@ void Canvas::brush_submit()
 			}
 			break;
 		}
-		brushing = false;
+		binfo.brushing = false;
 		binfo.reset();
 	}
 }
 
 void Canvas::brush_cancel()
 {
-	brushing = false;
+	binfo.brushing = false;
 	binfo.reset();
 }
 
@@ -489,7 +489,7 @@ void Canvas::brush_move_to(IPosition pos)
 	switch (MBrushes->get_brush_tool())
 	{
 	case BrushTool::PAINT:
-		DiscreteLineInterpolator dli(brush_pos, pos);
+		DiscreteLineInterpolator dli(binfo.brush_pos, pos);
 		IPosition intermediate;
 		for (unsigned int i = 1; i < dli.length - 1; ++i)
 		{
@@ -510,6 +510,14 @@ void Canvas::brush_paint_tool(int x, int y)
 {
 	Buffer image_shifted_buf = image->buf;
 	image_shifted_buf.pixels += image_shifted_buf.byte_offset(x, y);
+	if (x < binfo.brushing_bbox.x1)
+		binfo.brushing_bbox.x1 = x;
+	if (x > binfo.brushing_bbox.x2)
+		binfo.brushing_bbox.x2 = x;
+	if (y < binfo.brushing_bbox.y1)
+		binfo.brushing_bbox.y1 = y;
+	if (y > binfo.brushing_bbox.y2)
+		binfo.brushing_bbox.y2 = y;
 	switch (MBrushes->get_brush_tip())
 	{
 	case BrushTip::PENCIL:
@@ -623,11 +631,16 @@ void Canvas::draw_preview()
 		set_cursor_color(cursor_state == CursorState::DOWN_PRIMARY ? primary_color : alternate_color);
 		draw_cursor();
 	}
-	hover_pixel_at(pixel_position(brush_pos));
+	hover_pixel_at(pixel_position(binfo.brush_pos));
 }
 
 void Canvas::BrushActionInfo::reset()
 {
+	brushing_bbox.x1 = INT_MAX;
+	brushing_bbox.x2 = INT_MIN;
+	brushing_bbox.y1 = INT_MAX;
+	brushing_bbox.y2 = INT_MIN;
+	brush_pos = { -1, -1 };
 	starting_pos = { -1, -1 };
 	show_preview = false;
 	painted_colors.clear();
