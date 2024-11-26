@@ -2,6 +2,7 @@
 
 #include <array>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Panel.h"
 #include "user/Platform.h"
@@ -62,6 +63,7 @@ public:
 	void initialize_dot_cursor();
 
 	virtual void draw() override;
+	void draw_cursor();
 	void send_vp(const glm::mat3& vp);
 	void sync_cursor_with_widget();
 	void sync_ur(size_t subw);
@@ -81,10 +83,13 @@ public:
 	void set_checkerboard_uv_size(float width, float height) const;
 
 	void update_brush_tool();
+	void update_brush_tip();
 	void hover_pixel_under_cursor(Position world_pos);
 	void unhover();
 	void hover_pixel_at(Position pos);
+	Position pixel_position(IPosition pos);
 	RGBA color_under_cursor();
+	void set_cursor_color(RGBA color);
 	void set_primary_color(RGBA color);
 	void set_alternate_color(RGBA color);
 	void cursor_press(MouseButton button);
@@ -100,12 +105,14 @@ private:
 	void(Canvas::*brush_under_tool)(int, int);
 
 	void brush(int x, int y);
-	void brush_start();
+	void brush_start(int x, int y);
 	void brush_submit();
 	void brush_cancel();
+	void brush_move_to(IPosition pos);
 
 	void brush_camera_tool(int x, int y);
 	void brush_paint_tool(int x, int y);
+	void brush_line_tool(int x, int y);
 
 public:
 	enum : size_t
@@ -122,9 +129,14 @@ public:
 private:
 	struct BrushActionInfo
 	{
+		IPosition starting_pos = { -1, -1 };
+		bool show_preview = false;
 		std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
+		std::unordered_set<IPosition> preview_positions;
 		void reset();
 	} binfo;
+
+	void draw_preview();
 };
 
 struct Easel : public Panel

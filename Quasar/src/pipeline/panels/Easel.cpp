@@ -87,8 +87,6 @@ void Canvas::initialize_widget(Shader* cursor_shader)
 {
 	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
-	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(&sprite_shader));
-	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 	assign_widget(this, CURSOR_PENCIL, std::make_shared<W_UnitRenderable>(cursor_shader));
 	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec())).send_buffer();
 	assign_widget(this, CURSOR_PEN, std::make_shared<W_UnitRenderable>(cursor_shader));
@@ -97,6 +95,8 @@ void Canvas::initialize_widget(Shader* cursor_shader)
 	fs_wget(*this, CURSOR_ERASER).set_texture_slot(CURSOR_ERASER_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("eraser.png"));
 	assign_widget(this, CURSOR_SELECT, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, CURSOR_SELECT).set_texture_slot(CURSOR_SELECT_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("select.png"));
+	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(&sprite_shader));
+	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 }
 
 void Canvas::initialize_dot_cursor()
@@ -106,21 +106,22 @@ void Canvas::initialize_dot_cursor()
 	dot_cursor_buf.chpp = 4;
 	dot_cursor_buf.pxnew();
 	static const unsigned char dot_array[10*10] = {
-		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		1,   1,   0,   0,   0,   0,   0,   0,   1,   1,
+		1,   1,   0,   0,   0,   0,   0,   0,   1,   1,
 		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
 		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
 		0,   0,   1,   1,   0,   0,   1,   1,   0,   0,
 		0,   0,   1,   1,   0,   0,   1,   1,   0,   0,
 		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
 		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
-		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		1,   1,   0,   0,   0,   0,   0,   0,   1,   1,
+		1,   1,   0,   0,   0,   0,   0,   0,   1,   1,
 	};
 	for (size_t i = 0; i < dot_cursor_buf.area(); ++i)
 	{
-		for (size_t j = 0; j < dot_cursor_buf.chpp; ++j)
+		for (size_t j = 0; j < dot_cursor_buf.chpp - 1; ++j)
 			dot_cursor_buf.pixels[i * dot_cursor_buf.chpp + j] = 255 * dot_array[i];
+		dot_cursor_buf.pixels[(i + 1) * dot_cursor_buf.chpp - 1] = 255;
 	}
 	dot_cursor = std::move(Utils::cursor_from_buffer(dot_cursor_buf));
 }
@@ -129,22 +130,30 @@ void Canvas::draw()
 {
 	fs_wget(*this, CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
+	if (binfo.show_preview)
+		draw_preview();
 	minor_gridlines.draw();
 	major_gridlines.draw();
-	if (cursor_in_canvas && !pipette_ready && MBrushes->get_brush_tool() != BrushesPanel::BrushTool::CAMERA)
+	if (cursor_in_canvas)
+		draw_cursor();
+}
+
+void Canvas::draw_cursor()
+{
+	if (!pipette_ready && MBrushes->get_brush_tool() != BrushTool::CAMERA)
 	{
 		switch (MBrushes->get_brush_tip())
 		{
-		case BrushesPanel::BrushTip::PENCIL:
+		case BrushTip::PENCIL:
 			ur_wget(*this, CURSOR_PENCIL).draw();
 			break;
-		case BrushesPanel::BrushTip::PEN:
+		case BrushTip::PEN:
 			ur_wget(*this, CURSOR_PEN).draw();
 			break;
-		case BrushesPanel::BrushTip::ERASER:
+		case BrushTip::ERASER:
 			fs_wget(*this, CURSOR_ERASER).draw(CURSOR_ERASER_TSLOT);
 			break;
-		case BrushesPanel::BrushTip::SELECT:
+		case BrushTip::SELECT:
 			fs_wget(*this, CURSOR_SELECT).draw(CURSOR_SELECT_TSLOT);
 			break;
 		}
@@ -221,8 +230,8 @@ void Canvas::sync_gridlines_with_image()
 
 void Canvas::sync_transform()
 {
-	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
+	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
 	sync_cursor_with_widget();
 }
 
@@ -298,13 +307,20 @@ void Canvas::update_brush_tool()
 {
 	switch (MBrushes->get_brush_tool())
 	{
-	case BrushesPanel::BrushTool::CAMERA:
+	case BrushTool::CAMERA:
 		brush_under_tool = &Canvas::brush_camera_tool;
 		break;
-	case BrushesPanel::BrushTool::PAINT:
+	case BrushTool::PAINT:
 		brush_under_tool = &Canvas::brush_paint_tool;
 		break;
+	case BrushTool::LINE:
+		brush_under_tool = &Canvas::brush_line_tool;
+		break;
 	}
+}
+
+void Canvas::update_brush_tip()
+{
 }
 
 void Canvas::hover_pixel_under_cursor(Position world_pos)
@@ -319,18 +335,11 @@ void Canvas::hover_pixel_under_cursor(Position world_pos)
 		if (pos != brush_pos)
 		{
 			if (brushing && brush_pos != IPosition{ -1, -1 })
-			{
-				// fill in intermediate connecting points
-				DiscreteLineInterpolator dli(brush_pos, pos);
-				IPosition intermediate;
-				for (unsigned int i = 1; i < dli.length - 1; ++i)
-				{
-					dli.at(i, intermediate);
-					brush(intermediate.x, intermediate.y);
-				}
-			}
+				brush_move_to(pos);
 			brush_pos = pos;
-			hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
+			hover_pixel_at(pixel_position(pos));
+			if (cursor_state != CursorState::UP)
+				brush(pos.x, pos.y);
 		}
 		if (MainWindow->is_alt_pressed())
 		{
@@ -367,8 +376,12 @@ void Canvas::hover_pixel_at(Position pos)
 	wp_at(CURSOR_ERASER).transform.position = pos;
 	wp_at(CURSOR_SELECT).transform.position = pos;
 	sync_cursor_with_widget();
-	if (cursor_state != CursorState::UP)
-		brush(brush_pos.x, brush_pos.y);
+}
+
+Position Canvas::pixel_position(IPosition pos)
+{
+	// TODO make image() a shared_ptr data member
+	return Position(pos) - 0.5f * Position(image()->buf.width, image()->buf.height) + Position{ 0.5f, 0.5f };
 }
 
 RGBA Canvas::color_under_cursor()
@@ -384,10 +397,15 @@ RGBA Canvas::color_under_cursor()
 	return px.to_rgba();
 }
 
-void Canvas::set_primary_color(RGBA color)
+void Canvas::set_cursor_color(RGBA color)
 {
 	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(color.as_vec())).send_buffer();
 	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(color.rgb, 1.0f).as_vec())).send_buffer();
+}
+
+void Canvas::set_primary_color(RGBA color)
+{
+	set_cursor_color(color);
 	primary_color = color;
 	pric_pen_pxs.r = pric_pxs.r = color.get_pixel_r();
 	pric_pen_pxs.g = pric_pxs.g = color.get_pixel_g();
@@ -433,6 +451,7 @@ void Canvas::cursor_release()
 {
 	cursor_state = CursorState::UP;
 	brush_submit();
+	set_cursor_color(primary_color);
 }
 
 bool Canvas::cursor_cancel()
@@ -441,6 +460,7 @@ bool Canvas::cursor_cancel()
 	{
 		cursor_state = CursorState::UP;
 		brush_cancel();
+		set_cursor_color(primary_color);
 		return true;
 	}
 	return false;
@@ -449,14 +469,20 @@ bool Canvas::cursor_cancel()
 void Canvas::brush(int x, int y)
 {
 	if (!brushing)
-		brush_start();
+		brush_start(x, y);
 	(this->*brush_under_tool)(x, y);
 }
 
-void Canvas::brush_start()
+void Canvas::brush_start(int x, int y)
 {
 	brushing = true;
 	binfo.reset();
+	binfo.starting_pos = { x, y };
+
+	if (MBrushes->get_brush_tool() == BrushTool::LINE)
+	{
+		binfo.show_preview = true;
+	}
 }
 
 void Canvas::brush_submit()
@@ -465,12 +491,16 @@ void Canvas::brush_submit()
 	{
 		switch (MBrushes->get_brush_tool())
 		{
-		case BrushesPanel::BrushTool::PAINT:
+		case BrushTool::PAINT:
 			if (image() && !binfo.painted_colors.empty())
 				Machine.history.push(std::make_shared<PaintToolAction>(image(), std::move(binfo.painted_colors)));
 			break;
+		case BrushTool::LINE:
+			// TODO
+			break;
 		}
 		brushing = false;
+		binfo.reset();
 	}
 }
 
@@ -478,6 +508,22 @@ void Canvas::brush_cancel()
 {
 	brushing = false;
 	binfo.reset();
+}
+
+void Canvas::brush_move_to(IPosition pos)
+{
+	switch (MBrushes->get_brush_tool())
+	{
+	case BrushTool::PAINT:
+		DiscreteLineInterpolator dli(brush_pos, pos);
+		IPosition intermediate;
+		for (unsigned int i = 1; i < dli.length - 1; ++i)
+		{
+			dli.at(i, intermediate);
+			brush(intermediate.x, intermediate.y);
+		}
+		break;
+	}
 }
 
 void Canvas::brush_camera_tool(int x, int y)
@@ -492,7 +538,7 @@ void Canvas::brush_paint_tool(int x, int y)
 	image_shifted_buf.pixels += image_shifted_buf.byte_offset(x, y);
 	switch (MBrushes->get_brush_tip())
 	{
-	case BrushesPanel::BrushTip::PENCIL:
+	case BrushTip::PENCIL:
 	{
 		CanvasPixel initial_px{ x, y };
 		PixelRGBA final_c{ 0, 0, 0, 0 };
@@ -515,7 +561,7 @@ void Canvas::brush_paint_tool(int x, int y)
 			iter->second = final_c;
 		break;
 	}
-	case BrushesPanel::BrushTip::PEN:
+	case BrushTip::PEN:
 	{
 		CanvasPixel initial_px{ x, y };
 		PixelRGBA color = cursor_state == CursorState::DOWN_PRIMARY ? pric_pen_pxs : altc_pen_pxs;
@@ -532,7 +578,7 @@ void Canvas::brush_paint_tool(int x, int y)
 			iter->second = color;
 		break;
 	}
-	case BrushesPanel::BrushTip::ERASER:
+	case BrushTip::ERASER:
 	{
 		CanvasPixel initial_px{ x, y };
 		PixelRGBA final_c{ 0, 0, 0, 0 };
@@ -549,15 +595,37 @@ void Canvas::brush_paint_tool(int x, int y)
 			iter->second = final_c;
 		break;
 	}
-	case BrushesPanel::BrushTip::SELECT:
+	case BrushTip::SELECT:
 		// LATER
 		break;
 	}
 }
 
+void Canvas::brush_line_tool(int x, int y)
+{
+	binfo.preview_positions.clear();
+	DiscreteLineInterpolator dli(binfo.starting_pos, { x, y });
+	for (unsigned int i = 0; i < dli.length; ++i)
+		binfo.preview_positions.insert(dli.at(i));
+}
+
+void Canvas::draw_preview()
+{
+	for (const auto& pos : binfo.preview_positions)
+	{
+		hover_pixel_at(pixel_position(pos));
+		set_cursor_color(cursor_state == CursorState::DOWN_PRIMARY ? primary_color : alternate_color);
+		draw_cursor();
+	}
+	hover_pixel_at(pixel_position(brush_pos));
+}
+
 void Canvas::BrushActionInfo::reset()
 {
+	starting_pos = { -1, -1 };
+	show_preview = false;
 	painted_colors.clear();
+	preview_positions.clear();
 }
 
 Easel::Easel()

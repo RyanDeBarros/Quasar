@@ -66,6 +66,12 @@ struct IPosition : glm::ivec2
 	IPosition(glm::vec2 v) : glm::ivec2((int)v.x, (int)v.y) {}
 };
 
+template<>
+struct std::hash<IPosition>
+{
+	size_t operator()(const IPosition& pos) const { return std::hash<int>{}(pos.x) ^ std::hash<int>{}(pos.y); }
+};
+
 struct Rotation
 {
 	float _v;

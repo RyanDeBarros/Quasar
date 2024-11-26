@@ -5,28 +5,28 @@
 #include "../widgets/Widget.h"
 #include "../widgets/Button.h"
 
+enum class BrushTip
+{
+	PENCIL,
+	PEN,
+	ERASER,
+	SELECT
+};
+
+enum class BrushTool
+{
+	CAMERA,
+	PAINT,
+	LINE,
+	FILL,
+	RECT_OUTLINE,
+	RECT_FILL,
+	ELLIPSE_OUTLINE,
+	ELLIPSE_FILL,
+};
+
 struct BrushesPanel : public Panel
 {
-	enum class BrushTip
-	{
-		PENCIL,
-		PEN,
-		ERASER,
-		SELECT
-	};
-
-	enum class BrushTool
-	{
-		CAMERA,
-		PAINT,
-		LINE,
-		FILL,
-		RECT_OUTLINE,
-		RECT_FILL,
-		ELLIPSE_OUTLINE,
-		ELLIPSE_FILL,
-	};
-
 private:
 	BrushTip brush_tip = BrushTip::PENCIL;
 	BrushTool brush_tool = BrushTool::CAMERA;

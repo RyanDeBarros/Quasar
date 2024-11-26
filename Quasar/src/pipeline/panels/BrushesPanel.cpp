@@ -271,6 +271,7 @@ void BrushesPanel::select_brush_tip(BrushTip tip)
 		: tip == BrushTip::ERASER ? BUTTON_TIP_ERASER
 		: BUTTON_TIP_SELECT
 	);
+	MEasel->canvas().update_brush_tip();
 }
 
 void BrushesPanel::select_brush_tool(BrushTool tool)
