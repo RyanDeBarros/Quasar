@@ -12,9 +12,9 @@
 
 struct PaintToolAction : public ActionBase
 {
-	Image* image;
+	std::weak_ptr<Image> image;
 	std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
-	PaintToolAction(Image* image, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
+	PaintToolAction(const std::shared_ptr<Image>& image, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
 		: image(image), painted_colors(std::move(painted_colors))
 	{
 		weight = sizeof(PaintToolAction) + this->painted_colors.size() * (sizeof(CanvasPixel) + sizeof(PixelRGBA));
@@ -23,45 +23,51 @@ struct PaintToolAction : public ActionBase
 	{
 		if (painted_colors.empty())
 			return;
-		Buffer& buf = image->buf;
-		int x1 = INT_MAX, y1 = INT_MAX, x2 = INT_MIN, y2 = INT_MIN;
-		for (auto iter = painted_colors.begin(); iter != painted_colors.end(); ++iter)
+		if (auto img = image.lock())
 		{
-			int x = iter->first.x, y = iter->first.y;
-			if (x < x1)
-				x1 = x;
-			if (x > x2)
-				x2 = x;
-			if (y < y1)
-				y1 = y;
-			if (y > y2)
-				y2 = y;
-			for (CHPP i = 0; i < buf.chpp; ++i)
-				buf.pos(x, y)[i] = iter->second[i];
+			Buffer& buf = img->buf;
+			int x1 = INT_MAX, y1 = INT_MAX, x2 = INT_MIN, y2 = INT_MIN;
+			for (auto iter = painted_colors.begin(); iter != painted_colors.end(); ++iter)
+			{
+				int x = iter->first.x, y = iter->first.y;
+				if (x < x1)
+					x1 = x;
+				if (x > x2)
+					x2 = x;
+				if (y < y1)
+					y1 = y;
+				if (y > y2)
+					y2 = y;
+				for (CHPP i = 0; i < buf.chpp; ++i)
+					buf.pos(x, y)[i] = iter->second[i];
+			}
+			img->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 		}
-		image->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 	}
 	virtual void backward() override
 	{
 		if (painted_colors.empty())
 			return;
-		Buffer& buf = image->buf;
-		int x1 = INT_MAX, y1 = INT_MAX, x2 = INT_MIN, y2 = INT_MIN;
-		for (auto iter = painted_colors.begin(); iter != painted_colors.end(); ++iter)
+		if (auto img = image.lock())
 		{
-			int x = iter->first.x, y = iter->first.y;
-			if (x < x1)
-				x1 = x;
-			if (x > x2)
-				x2 = x;
-			if (y < y1)
-				y1 = y;
-			if (y > y2)
-				y2 = y;
-			for (CHPP i = 0; i < buf.chpp; ++i)
-				buf.pos(x, y)[i] = iter->first.c[i];
+			Buffer& buf = img->buf;
+			int x1 = INT_MAX, y1 = INT_MAX, x2 = INT_MIN, y2 = INT_MIN;
+			for (auto iter = painted_colors.begin(); iter != painted_colors.end(); ++iter)
+			{
+				int x = iter->first.x, y = iter->first.y;
+				if (x < x1)
+					x1 = x;
+				if (x > x2)
+					x2 = x;
+				if (y < y1)
+					y1 = y;
+				if (y > y2)
+					y2 = y;
+				for (CHPP i = 0; i < buf.chpp; ++i)
+					buf.pos(x, y)[i] = iter->first.c[i];
+			}
+			img->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 		}
-		image->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 	}
 };
 
@@ -179,25 +185,17 @@ void Canvas::sync_ur(size_t subw)
 	Utils::set_vertex_pos_attributes(ur_wget(*this, subw), wp_at(subw).relative_to(self.transform));
 }
 
-const Image* Canvas::image() const
-{
-	return fs_wget(*this, SPRITE).image.get();
-}
-
-Image* Canvas::image()
-{
-	return fs_wget(*this, SPRITE).image.get();
-}
-
 void Canvas::set_image(const std::shared_ptr<Image>& img)
 {
 	fs_wget(*this, SPRITE).image = img;
+	image = img;
 	sync_gfx_with_image();
 }
 
 void Canvas::set_image(std::shared_ptr<Image>&& img)
 {
-	fs_wget(*this, SPRITE).image = std::move(img);
+	fs_wget(*this, SPRITE).image = img;
+	image = std::move(img);
 	sync_gfx_with_image();
 }
 
@@ -326,7 +324,7 @@ void Canvas::update_brush_tip()
 void Canvas::hover_pixel_under_cursor(Position world_pos)
 {
 	Position local_cursor_pos = local_of(world_pos);
-	Buffer& buf = image()->buf;
+	Buffer& buf = image->buf;
 	Position buf_cursor_pos = local_cursor_pos + 0.5f * Position(buf.width, buf.height);
 	if (in_diagonal_rect(buf_cursor_pos, {}, { buf.width, buf.height }))
 	{
@@ -378,14 +376,13 @@ void Canvas::hover_pixel_at(Position pos)
 
 Position Canvas::pixel_position(IPosition pos)
 {
-	// TODO make image() a shared_ptr data member
-	return Position(pos) - 0.5f * Position(image()->buf.width, image()->buf.height) + Position{ 0.5f, 0.5f };
+	return Position(pos) - 0.5f * Position(image->buf.width, image->buf.height) + Position{ 0.5f, 0.5f };
 }
 
 RGBA Canvas::color_under_cursor()
 {
 	Position local_pos = local_of(MEasel->to_world_coordinates(Machine.cursor_screen_pos()));
-	Buffer& buf = image()->buf;
+	Buffer& buf = image->buf;
 	Position buf_cursor_pos = local_pos + 0.5f * Position(buf.width, buf.height);
 	IPosition pos(buf_cursor_pos);
 	Byte* pixel = buf.pos(pos.x, pos.y);
@@ -490,8 +487,8 @@ void Canvas::brush_submit()
 		switch (MBrushes->get_brush_tool())
 		{
 		case BrushTool::PAINT:
-			if (image() && !binfo.painted_colors.empty())
-				Machine.history.push(std::make_shared<PaintToolAction>(image(), std::move(binfo.painted_colors)));
+			if (image && !binfo.painted_colors.empty())
+				Machine.history.push(std::make_shared<PaintToolAction>(image, std::move(binfo.painted_colors)));
 			break;
 		case BrushTool::LINE:
 			// TODO
@@ -532,7 +529,7 @@ void Canvas::brush_camera_tool(int x, int y)
 // LATER here and elsewhere, add support for CHPP < 4
 void Canvas::brush_paint_tool(int x, int y)
 {
-	Buffer image_shifted_buf = image()->buf;
+	Buffer image_shifted_buf = image->buf;
 	image_shifted_buf.pixels += image_shifted_buf.byte_offset(x, y);
 	switch (MBrushes->get_brush_tip())
 	{
@@ -551,7 +548,7 @@ void Canvas::brush_paint_tool(int x, int y)
 				image_shifted_buf.pixels[i] = std::clamp(roundi(applied_alpha * 255 + image_shifted_buf.pixels[i] * (1 - applied_alpha)), 0, 255);
 			final_c.at(i) = image_shifted_buf.pixels[i];
 		}
-		image()->update_subtexture(x, y, 1, 1);
+		image->update_subtexture(x, y, 1, 1);
 		auto iter = binfo.painted_colors.find(initial_px);
 		if (iter == binfo.painted_colors.end())
 			binfo.painted_colors.emplace(initial_px, final_c);
@@ -568,7 +565,7 @@ void Canvas::brush_paint_tool(int x, int y)
 			initial_px.c.at(i) = image_shifted_buf.pixels[i];
 			image_shifted_buf.pixels[i] = color[i];
 		}
-		image()->update_subtexture(x, y, 1, 1);
+		image->update_subtexture(x, y, 1, 1);
 		auto iter = binfo.painted_colors.find(initial_px);
 		if (iter == binfo.painted_colors.end())
 			binfo.painted_colors.emplace(initial_px, color);
@@ -585,7 +582,7 @@ void Canvas::brush_paint_tool(int x, int y)
 			initial_px.c.at(i) = image_shifted_buf.pixels[i];
 			image_shifted_buf.pixels[i] = 0;
 		}
-		image()->update_subtexture(x, y, 1, 1);
+		image->update_subtexture(x, y, 1, 1);
 		auto iter = binfo.painted_colors.find(initial_px);
 		if (iter == binfo.painted_colors.end())
 			binfo.painted_colors.emplace(initial_px, final_c);
@@ -757,12 +754,12 @@ void Easel::sync_canvas_transform()
 
 const Image* Easel::canvas_image() const
 {
-	return canvas().image();
+	return canvas().image.get();
 }
 
 Image* Easel::canvas_image()
 {
-	return canvas().image();
+	return canvas().image.get();
 }
 
 bool Easel::minor_gridlines_are_visible() const
@@ -772,7 +769,7 @@ bool Easel::minor_gridlines_are_visible() const
 
 void Easel::set_minor_gridlines_visibility(bool visible)
 {
-	canvas().minor_gridlines.set_visible(visible, canvas().self.transform, canvas().image()->buf.width, canvas().image()->buf.height);
+	canvas().minor_gridlines.set_visible(visible, canvas().self.transform, canvas().image->buf.width, canvas().image->buf.height);
 }
 
 bool Easel::major_gridlines_are_visible() const
@@ -782,7 +779,7 @@ bool Easel::major_gridlines_are_visible() const
 
 void Easel::set_major_gridlines_visibility(bool visible)
 {
-	canvas().major_gridlines.set_visible(visible, canvas().self.transform, canvas().image()->buf.width, canvas().image()->buf.height);
+	canvas().major_gridlines.set_visible(visible, canvas().self.transform, canvas().image->buf.width, canvas().image->buf.height);
 }
 
 void Easel::begin_panning()

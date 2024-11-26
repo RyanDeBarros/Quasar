@@ -32,6 +32,10 @@ struct Canvas : public Widget
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
 
+private:
+	std::shared_ptr<Image> image;
+
+public:
 	bool visible = false;
 	bool cursor_in_canvas = false;
 	enum class CursorState
@@ -68,8 +72,6 @@ public:
 	void sync_cursor_with_widget();
 	void sync_ur(size_t subw);
 
-	const Image* image() const;
-	Image* image();
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
 	void sync_checkerboard_with_image();
