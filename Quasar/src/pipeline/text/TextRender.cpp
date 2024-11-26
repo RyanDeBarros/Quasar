@@ -2,6 +2,7 @@
 
 #include <glm/gtc/type_ptr.inl>
 
+#include "ImplUtility.h"
 #include "variety/GLutility.h"
 #include "../render/Uniforms.h"
 
@@ -187,28 +188,10 @@ void TextRender::add_glyph_to_ir(const Font::Glyph& glyph, int x, int y, size_t 
 	// This would have to be dependent on font scaling somehow though. Since offsets are only relevant for small font scales.
 	// Even do horizontal offset that doesn't require an adjacent character. Some special unicode characters are weirdly aligned.
 	FlatTransform local{ { float(x), float(y - glyph.ch_y0) }, { float(glyph.width), -float(glyph.height) } };
-	float left = local.position.x;
-	float right = local.position.x + local.scale.x;
-	float bottom = local.position.y;
-	float top = local.position.y + local.scale.y;
-
-	ir->set_attribute_single_vertex(quad_index * 4 + 0, 0, glm::value_ptr(glm::vec2{ left, bottom }));
-	ir->set_attribute_single_vertex(quad_index * 4 + 1, 0, glm::value_ptr(glm::vec2{ right, bottom }));
-	ir->set_attribute_single_vertex(quad_index * 4 + 2, 0, glm::value_ptr(glm::vec2{ right, top }));
-	ir->set_attribute_single_vertex(quad_index * 4 + 3, 0, glm::value_ptr(glm::vec2{ left, top }));
-
-	float tex_slot = compute_batch(glyph);
-	ir->set_attribute_single_vertex(quad_index * 4 + 0, 1, &tex_slot);
-	ir->set_attribute_single_vertex(quad_index * 4 + 1, 1, &tex_slot);
-	ir->set_attribute_single_vertex(quad_index * 4 + 2, 1, &tex_slot);
-	ir->set_attribute_single_vertex(quad_index * 4 + 3, 1, &tex_slot);
-
-	auto uvs = font->uvs(glyph);
-	ir->set_attribute_single_vertex(quad_index * 4 + 0, 2, glm::value_ptr(glm::vec2{ uvs.x1, uvs.y1 }));
-	ir->set_attribute_single_vertex(quad_index * 4 + 1, 2, glm::value_ptr(glm::vec2{ uvs.x2, uvs.y1 }));
-	ir->set_attribute_single_vertex(quad_index * 4 + 2, 2, glm::value_ptr(glm::vec2{ uvs.x2, uvs.y2 }));
-	ir->set_attribute_single_vertex(quad_index * 4 + 3, 2, glm::value_ptr(glm::vec2{ uvs.x1, uvs.y2 }));
-
+	unsigned short vertex_offset = (unsigned short)quad_index * 4;
+	Utils::set_vertex_pos_attributes(*ir, WidgetPlacement{ local, {} }, vertex_offset, 0, false);
+	Utils::set_four_attributes(*ir, compute_batch(glyph), vertex_offset, 1, false);
+	Utils::set_uv_attributes(*ir, font->uvs(glyph), vertex_offset, 2, false);
 	current_batch.index_count += 6;
 }
 

@@ -38,3 +38,27 @@ inline int ceil_divide(int x, int y)
 {
 	return (int)ceilf(float(x) / y);
 }
+
+template<typename Only>
+Only max(Only first, Only second)
+{
+	return std::max(first, second);
+}
+
+template<typename First, typename... Rest>
+First max(First first, Rest... rest)
+{
+	return std::max(first, max(rest...));
+}
+
+template<typename Only>
+Only min(Only first, Only second)
+{
+	return std::min(first, second);
+}
+
+template<typename First, typename... Rest>
+First min(First first, Rest... rest)
+{
+	return std::min(first, min(rest...));
+}

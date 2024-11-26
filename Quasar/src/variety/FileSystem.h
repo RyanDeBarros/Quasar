@@ -83,6 +83,11 @@ struct FileSystem
 		return relative.is_relative() ? resources_root / "fonts/" / relative : relative;
 	}
 
+	static FilePath texture_path(const FilePath& relative)
+	{
+		return relative.is_relative() ? resources_root / "textures/" / relative : relative;
+	}
+
 	static FilePath workspace_path(const FilePath& relative)
 	{
 		return relative.is_relative() ? workspace_root / relative : relative;

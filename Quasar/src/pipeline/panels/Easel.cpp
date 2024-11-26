@@ -2,226 +2,235 @@
 
 #include <glm/gtc/type_ptr.inl>
 
+#include "ImplUtility.h"
 #include "variety/GLutility.h"
 #include "user/Machine.h"
+#include "BrushesPanel.h"
+#include "Palette.h"
 #include "../render/Uniforms.h"
 #include "../render/FlatSprite.h"
 
-Gridlines::Gridlines()
-	: shader(FileSystem::shader_path("gridlines.vert"), FileSystem::shader_path("gridlines.frag"))
+struct PaintToolAction : public ActionBase
 {
-	initialize_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
-}
-
-Gridlines::~Gridlines()
-{
-	delete_vao_buffers(vao, vb);
-	delete[] varr;
-	delete[] arrays_firsts;
-	delete[] arrays_counts;
-}
-
-void Gridlines::resize_grid(Scale scale)
-{
-	delete[] varr;
-	varr = new GLfloat[num_vertices() * shader.stride];
-	update_scale(scale);
-#pragma warning(push)
-#pragma warning(disable : 6386)
-	delete[] arrays_firsts;
-	delete[] arrays_counts;
-	arrays_firsts = new GLint[num_quads()];
-	arrays_counts = new GLsizei[num_quads()];
-	for (unsigned short i = 0; i < num_quads(); ++i)
+	Image* image;
+	std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
+	PaintToolAction(Image* image, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
+		: image(image), painted_colors(std::move(painted_colors))
 	{
-		arrays_firsts[i] = 4 * i;
-		arrays_counts[i] = 4;
+		weight = sizeof(PaintToolAction) + this->painted_colors.size() * (sizeof(CanvasPixel) + sizeof(PixelRGBA));
 	}
-#pragma warning(pop)
-}
-
-void Gridlines::update_scale(Scale scale) const
-{
-	if (!varr) return;
-	GLfloat* setter = varr;
-
-#pragma warning(push)
-#pragma warning(disable : 6386)
-	float lwx = 0.5f * line_width;
-	if (scale.x > 1.0f)
-		lwx /= scale.x;
-	float lwy = 0.5f * line_width;
-	if (scale.y > 1.0f)
-		lwy /= scale.y;
-	if (2.0f * lwx >= scale.x * line_spacing.x - self_intersection_threshold || 2.0f * lwy >= scale.y * line_spacing.y - self_intersection_threshold)
+	virtual void forward() override
 	{
-		_nonobstructing = false;
-		return;
+		if (painted_colors.empty())
+			return;
+		Buffer& buf = image->buf;
+		int x1 = INT_MAX, y1 = INT_MAX, x2 = INT_MIN, y2 = INT_MIN;
+		for (auto iter = painted_colors.begin(); iter != painted_colors.end(); ++iter)
+		{
+			int x = iter->first.x, y = iter->first.y;
+			if (x < x1)
+				x1 = x;
+			if (x > x2)
+				x2 = x;
+			if (y < y1)
+				y1 = y;
+			if (y > y2)
+				y2 = y;
+			for (CHPP i = 0; i < buf.chpp; ++i)
+				buf.pos(x, y)[i] = iter->second[i];
+		}
+		image->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 	}
-	_nonobstructing = true;
-
-	float x1 = -width * 0.5f - lwx;
-	float y1 = -height * 0.5f - lwy;
-	float x2 = -width * 0.5f + lwx;
-	float y2 = height * 0.5f + lwy;
-
-	for (unsigned short i = 0; i < num_cols() - 1; ++i)
+	virtual void backward() override
 	{
-		float delta = i * line_spacing.x;
-		setter[0] = x1 + delta;
-		setter[1] = y1;
-		setter += shader.stride;
-		setter[0] = x2 + delta;
-		setter[1] = y1;
-		setter += shader.stride;
-		setter[0] = x1 + delta;
-		setter[1] = y2;
-		setter += shader.stride;
-		setter[0] = x2 + delta;
-		setter[1] = y2;
-		setter += shader.stride;
+		if (painted_colors.empty())
+			return;
+		Buffer& buf = image->buf;
+		int x1 = INT_MAX, y1 = INT_MAX, x2 = INT_MIN, y2 = INT_MIN;
+		for (auto iter = painted_colors.begin(); iter != painted_colors.end(); ++iter)
+		{
+			int x = iter->first.x, y = iter->first.y;
+			if (x < x1)
+				x1 = x;
+			if (x > x2)
+				x2 = x;
+			if (y < y1)
+				y1 = y;
+			if (y > y2)
+				y2 = y;
+			for (CHPP i = 0; i < buf.chpp; ++i)
+				buf.pos(x, y)[i] = iter->first.c[i];
+		}
+		image->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 	}
-
-	x1 = width * 0.5f - lwx;
-	x2 = width * 0.5f + lwx;
-	setter[0] = x1;
-	setter[1] = y1;
-	setter += shader.stride;
-	setter[0] = x2;
-	setter[1] = y1;
-	setter += shader.stride;
-	setter[0] = x1;
-	setter[1] = y2;
-	setter += shader.stride;
-	setter[0] = x2;
-	setter[1] = y2;
-	setter += shader.stride;
-
-	x1 = -width * 0.5f - lwx;
-	y1 = -height * 0.5f - lwy;
-	x2 = width * 0.5f + lwx;
-	y2 = -height * 0.5f + lwy;
-	for (unsigned short i = 0; i < num_rows() - 1; ++i)
-	{
-		float delta = i * line_spacing.y;
-		setter[0] = x1;
-		setter[1] = y1 + delta;
-		setter += shader.stride;
-		setter[0] = x1;
-		setter[1] = y2 + delta;
-		setter += shader.stride;
-		setter[0] = x2;
-		setter[1] = y1 + delta;
-		setter += shader.stride;
-		setter[0] = x2;
-		setter[1] = y2 + delta;
-		setter += shader.stride;
-	}
-
-	y1 = height * 0.5f - lwy;
-	y2 = height * 0.5f + lwy;
-	setter[0] = x1;
-	setter[1] = y1;
-	setter += shader.stride;
-	setter[0] = x1;
-	setter[1] = y2;
-	setter += shader.stride;
-	setter[0] = x2;
-	setter[1] = y1;
-	setter += shader.stride;
-	setter[0] = x2;
-	setter[1] = y2;
-	setter += shader.stride;
-#pragma warning(pop)
-}
-
-void Gridlines::draw() const
-{
-	if (_visible && _nonobstructing)
-	{
-		bind_shader(shader);
-		bind_vao_buffers(vao, vb);
-		QUASAR_GL(glMultiDrawArrays(GL_TRIANGLE_STRIP, arrays_firsts, arrays_counts, num_quads()));
-	}
-}
-
-unsigned short Gridlines::num_cols() const
-{
-	return unsigned short(std::ceil(width / line_spacing.x)) + 1;
-}
-
-unsigned short Gridlines::num_rows() const
-{
-	return unsigned short(std::ceil(height / line_spacing.y)) + 1;
-}
-
-void Gridlines::set_color(ColorFrame color) const
-{
-	Uniforms::send_4(shader, "u_Color", color.rgba().as_vec(), 0, true);
-}
-
-void Gridlines::send_buffer() const
-{
-	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glBufferData(GL_ARRAY_BUFFER, num_vertices() * shader.stride * sizeof(GLfloat), varr, GL_DYNAMIC_DRAW));
-	unbind_vao_buffers();
-}
-
-void Gridlines::send_flat_transform(FlatTransform canvas_transform) const
-{
-	if (_visible)
-	{
-		Uniforms::send_4(shader, "u_FlatTransform", canvas_transform.packed());
-		update_scale(canvas_transform.scale);
-		send_buffer();
-		_send_flat_transform = false;
-	}
-	else
-		_send_flat_transform = true;
-}
-
-void Gridlines::sync_with_image(const Buffer& buf, Scale canvas_scale)
-{
-	if (_visible)
-	{
-		width = buf.width;
-		height = buf.height;
-		resize_grid(canvas_scale);
-		send_buffer();
-		_sync_with_image = false;
-	}
-	else
-		_sync_with_image = true;
-}
-
-void Gridlines::set_visible(bool visible, const Canvas& canvas)
-{
-	if (!_visible && visible)
-	{
-		_visible = true;
-		if (_send_flat_transform)
-			send_flat_transform(canvas.self.transform);
-		if (_sync_with_image)
-			sync_with_image(fs_wget(canvas, Canvas::SPRITE).image->buf, canvas.self.transform.scale);
-	}
-	else if (_visible && !visible)
-	{
-		_visible = false;
-		_send_flat_transform = false;
-		_sync_with_image = false;
-	}
-}
+};
 
 constexpr GLuint CHECKERBOARD_TSLOT = 0;
-constexpr GLuint CANVAS_SPRITE_TSLOT = 1;
+constexpr GLuint CURSOR_ERASER_TSLOT = 1;
+constexpr GLuint CURSOR_SELECT_TSLOT = 2;
+constexpr GLuint CANVAS_SPRITE_TSLOT = 3;
 
-Canvas::Canvas(Shader* sprite_shader)
-	: Widget(_W_COUNT)
+Canvas::Canvas(Shader* cursor_shader)
+	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
+	Widget(_W_COUNT), brush_under_tool(&Canvas::brush_camera_tool)
 {
-	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(sprite_shader));
+	initialize_widget(cursor_shader);
+	initialize_dot_cursor();
+}
+
+Canvas::~Canvas()
+{
+	delete[] dot_cursor_buf.pixels;
+}
+
+void Canvas::initialize_widget(Shader* cursor_shader)
+{
+	assign_widget(this, CHECKERBOARD, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, CHECKERBOARD).set_texture_slot(CHECKERBOARD_TSLOT);
-	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(sprite_shader));
+	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
+	assign_widget(this, CURSOR_PENCIL, std::make_shared<W_UnitRenderable>(cursor_shader));
+	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec())).send_buffer();
+	assign_widget(this, CURSOR_PEN, std::make_shared<W_UnitRenderable>(cursor_shader));
+	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(1.0f, 1.0f, 1.0f, 1.0f).as_vec())).send_buffer();
+	assign_widget(this, CURSOR_ERASER, std::make_shared<FlatSprite>(&sprite_shader));
+	fs_wget(*this, CURSOR_ERASER).set_texture_slot(CURSOR_ERASER_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("eraser.png"));
+	assign_widget(this, CURSOR_SELECT, std::make_shared<FlatSprite>(&sprite_shader));
+	fs_wget(*this, CURSOR_SELECT).set_texture_slot(CURSOR_SELECT_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("select.png"));
+}
+
+void Canvas::initialize_dot_cursor()
+{
+	dot_cursor_buf.width = 10;
+	dot_cursor_buf.height = 10;
+	dot_cursor_buf.chpp = 4;
+	dot_cursor_buf.pxnew();
+	static const unsigned char dot_array[10*10] = {
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
+		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
+		0,   0,   1,   1,   0,   0,   1,   1,   0,   0,
+		0,   0,   1,   1,   0,   0,   1,   1,   0,   0,
+		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
+		0,   0,   1,   1,   1,   1,   1,   1,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+		0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+	};
+	for (size_t i = 0; i < dot_cursor_buf.area(); ++i)
+	{
+		for (size_t j = 0; j < dot_cursor_buf.chpp; ++j)
+			dot_cursor_buf.pixels[i * dot_cursor_buf.chpp + j] = 255 * dot_array[i];
+	}
+	dot_cursor = std::move(Utils::cursor_from_buffer(dot_cursor_buf));
+}
+
+void Canvas::draw()
+{
+	fs_wget(*this, CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
+	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
+	minor_gridlines.draw();
+	major_gridlines.draw();
+	if (cursor_in_canvas && !pipette_ready && MBrushes->get_brush_tool() != BrushesPanel::BrushTool::CAMERA)
+	{
+		switch (MBrushes->get_brush_tip())
+		{
+		case BrushesPanel::BrushTip::PENCIL:
+			ur_wget(*this, CURSOR_PENCIL).draw();
+			break;
+		case BrushesPanel::BrushTip::PEN:
+			ur_wget(*this, CURSOR_PEN).draw();
+			break;
+		case BrushesPanel::BrushTip::ERASER:
+			fs_wget(*this, CURSOR_ERASER).draw(CURSOR_ERASER_TSLOT);
+			break;
+		case BrushesPanel::BrushTip::SELECT:
+			fs_wget(*this, CURSOR_SELECT).draw(CURSOR_SELECT_TSLOT);
+			break;
+		}
+	}
+}
+
+void Canvas::send_vp(const glm::mat3& vp)
+{
+	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
+	sync_cursor_with_widget();
+}
+
+void Canvas::sync_cursor_with_widget()
+{
+	sync_ur(CURSOR_PENCIL);
+	sync_ur(CURSOR_PEN);
+	fs_wget(*this, CURSOR_ERASER).update_transform().ur->send_buffer();
+	fs_wget(*this, CURSOR_SELECT).update_transform().ur->send_buffer();
+}
+
+void Canvas::sync_ur(size_t subw)
+{
+	Utils::set_vertex_pos_attributes(ur_wget(*this, subw), wp_at(subw).relative_to(self.transform));
+}
+
+const Image* Canvas::image() const
+{
+	return fs_wget(*this, SPRITE).image.get();
+}
+
+Image* Canvas::image()
+{
+	return fs_wget(*this, SPRITE).image.get();
+}
+
+void Canvas::set_image(const std::shared_ptr<Image>& img)
+{
+	fs_wget(*this, SPRITE).image = img;
+	sync_gfx_with_image();
+}
+
+void Canvas::set_image(std::shared_ptr<Image>&& img)
+{
+	fs_wget(*this, SPRITE).image = std::move(img);
+	sync_gfx_with_image();
+}
+
+void Canvas::sync_checkerboard_with_image()
+{
+	FlatSprite& sprite = fs_wget(*this, SPRITE);
+	if (sprite.image)
+	{
+		const Buffer& buf = sprite.image->buf;
+		sprite.self.transform.scale = { buf.width, buf.height };
+		sprite.update_transform();
+		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
+		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
+		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
+	}
+	else
+		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
+}
+
+void Canvas::sync_gridlines_with_image()
+{
+	Image* img = fs_wget(*this, SPRITE).image.get();
+	if (img)
+	{
+		visible = true;
+		minor_gridlines.sync_with_image(img->buf.width, img->buf.height, self.transform.scale);
+		major_gridlines.sync_with_image(img->buf.width, img->buf.height, self.transform.scale);
+	}
+}
+
+void Canvas::sync_transform()
+{
+	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
+	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
+	sync_cursor_with_widget();
+}
+
+void Canvas::sync_gfx_with_image()
+{
+	sync_checkerboard_with_image();
+	sync_gridlines_with_image();
+	sync_transform();
 }
 
 void Canvas::create_checkerboard_image()
@@ -285,73 +294,289 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 	major_gridlines.line_spacing = checker_size;
 }
 
-void Canvas::set_image(const std::shared_ptr<Image>& img)
+void Canvas::update_brush_tool()
 {
-	fs_wget(*this, SPRITE).image = img;
-	sync_gfx_with_image();
-}
-
-void Canvas::set_image(std::shared_ptr<Image>&& img)
-{
-	fs_wget(*this, SPRITE).image = std::move(img);
-	sync_gfx_with_image();
-}
-
-void Canvas::sync_checkerboard_with_image()
-{
-	FlatSprite& sprite = fs_wget(*this, SPRITE);
-	if (sprite.image)
+	switch (MBrushes->get_brush_tool())
 	{
-		const Buffer& buf = sprite.image->buf;
-		sprite.self.transform.scale = { buf.width, buf.height };
-		sprite.update_transform();
-		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
-		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
-		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
+	case BrushesPanel::BrushTool::CAMERA:
+		brush_under_tool = &Canvas::brush_camera_tool;
+		break;
+	case BrushesPanel::BrushTool::PAINT:
+		brush_under_tool = &Canvas::brush_paint_tool;
+		break;
+	}
+}
+
+void Canvas::hover_pixel_under_cursor(Position world_pos)
+{
+	Position local_cursor_pos = local_of(world_pos);
+	Buffer& buf = image()->buf;
+	Position buf_cursor_pos = local_cursor_pos + 0.5f * Position(buf.width, buf.height);
+	if (in_diagonal_rect(buf_cursor_pos, {}, { buf.width, buf.height }))
+	{
+		cursor_in_canvas = true;
+		IPosition pos(buf_cursor_pos);
+		if (pos != brush_pos)
+		{
+			if (brushing && brush_pos != IPosition{ -1, -1 })
+			{
+				// fill in intermediate connecting points
+				DiscreteLineInterpolator dli(brush_pos, pos);
+				IPosition intermediate;
+				for (unsigned int i = 1; i < dli.length - 1; ++i)
+				{
+					dli.at(i, intermediate);
+					brush(intermediate.x, intermediate.y);
+				}
+			}
+			brush_pos = pos;
+			hover_pixel_at(Position(pos) - 0.5f * Position(buf.width, buf.height) + Position{ 0.5f, 0.5f });
+		}
+		if (MainWindow->is_alt_pressed())
+		{
+			MainWindow->release_cursor(&dot_cursor_wh);
+			MainWindow->request_cursor(&pipette_cursor_wh, Machine.cursors.CROSSHAIR);
+			pipette_ready = true;
+		}
+		else
+		{
+			MainWindow->release_cursor(&pipette_cursor_wh);
+			MainWindow->request_cursor(&dot_cursor_wh, dot_cursor);
+			pipette_ready = false;
+		}
 	}
 	else
-		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
-}
-
-void Canvas::sync_gridlines_with_image()
-{
-	Image* img = fs_wget(*this, SPRITE).image.get();
-	if (img)
 	{
-		visible = true;
-		minor_gridlines.sync_with_image(img->buf, self.transform.scale);
-		major_gridlines.sync_with_image(img->buf, self.transform.scale);
+		cursor_in_canvas = false;
+		brush_pos = { -1, -1 };
+		unhover();
 	}
 }
 
-void Canvas::sync_transform()
+void Canvas::unhover()
 {
-	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
-	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
+	MainWindow->release_cursor(&dot_cursor_wh);
+	MainWindow->release_cursor(&pipette_cursor_wh);
+	pipette_ready = false;
 }
 
-void Canvas::sync_gfx_with_image()
+void Canvas::hover_pixel_at(Position pos)
 {
-	sync_checkerboard_with_image();
-	sync_gridlines_with_image();
-	sync_transform();
+	wp_at(CURSOR_PENCIL).transform.position = pos;
+	wp_at(CURSOR_PEN).transform.position = pos;
+	wp_at(CURSOR_ERASER).transform.position = pos;
+	wp_at(CURSOR_SELECT).transform.position = pos;
+	sync_cursor_with_widget();
+	if (cursor_state != CursorState::UP)
+		brush(brush_pos.x, brush_pos.y);
+}
+
+RGBA Canvas::color_under_cursor()
+{
+	Position local_pos = local_of(MEasel->to_world_coordinates(Machine.cursor_screen_pos()));
+	Buffer& buf = image()->buf;
+	Position buf_cursor_pos = local_pos + 0.5f * Position(buf.width, buf.height);
+	IPosition pos(buf_cursor_pos);
+	Byte* pixel = buf.pos(pos.x, pos.y);
+	PixelRGBA px{ 255, 255, 255, 255 };
+	for (CHPP i = 0; i < buf.chpp; ++i)
+		px.at(i) = pixel[i];
+	return px.to_rgba();
+}
+
+void Canvas::set_primary_color(RGBA color)
+{
+	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(color.as_vec())).send_buffer();
+	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(color.rgb, 1.0f).as_vec())).send_buffer();
+	primary_color = color;
+	pric_pen_pxs.r = pric_pxs.r = color.get_pixel_r();
+	pric_pen_pxs.g = pric_pxs.g = color.get_pixel_g();
+	pric_pen_pxs.b = pric_pxs.b = color.get_pixel_b();
+	pric_pxs.a = color.get_pixel_a();
+	pric_pen_pxs.a = 255;
+}
+
+void Canvas::set_alternate_color(RGBA color)
+{
+	alternate_color = color;
+	altc_pen_pxs.r = altc_pxs.r = color.get_pixel_r();
+	altc_pen_pxs.g = altc_pxs.g = color.get_pixel_g();
+	altc_pen_pxs.b = altc_pxs.b = color.get_pixel_b();
+	altc_pxs.a = color.get_pixel_a();
+	altc_pen_pxs.a = 255;
+}
+
+void Canvas::cursor_press(MouseButton button)
+{
+	if (MainWindow->is_alt_pressed())
+	{
+		if (cursor_in_canvas)
+		{
+			if (button == MouseButton::LEFT)
+				MPalette->set_pri_color(color_under_cursor());
+			else if (button == MouseButton::RIGHT)
+				MPalette->set_alt_color(color_under_cursor());
+		}
+	}
+	else
+	{
+		if (button == MouseButton::LEFT)
+			cursor_state = CursorState::DOWN_PRIMARY;
+		else if (button == MouseButton::RIGHT)
+			cursor_state = CursorState::DOWN_ALTERNATE;
+		if (cursor_in_canvas)
+			brush(brush_pos.x, brush_pos.y);
+	}
+}
+
+void Canvas::cursor_release()
+{
+	cursor_state = CursorState::UP;
+	brush_submit();
+}
+
+bool Canvas::cursor_cancel()
+{
+	if (cursor_state != CursorState::UP)
+	{
+		cursor_state = CursorState::UP;
+		brush_cancel();
+		return true;
+	}
+	return false;
+}
+
+void Canvas::brush(int x, int y)
+{
+	if (!brushing)
+		brush_start();
+	(this->*brush_under_tool)(x, y);
+}
+
+void Canvas::brush_start()
+{
+	brushing = true;
+	binfo.reset();
+}
+
+void Canvas::brush_submit()
+{
+	if (brushing)
+	{
+		switch (MBrushes->get_brush_tool())
+		{
+		case BrushesPanel::BrushTool::PAINT:
+			if (image() && !binfo.painted_colors.empty())
+				Machine.history.push(std::make_shared<PaintToolAction>(image(), std::move(binfo.painted_colors)));
+			break;
+		}
+		brushing = false;
+	}
+}
+
+void Canvas::brush_cancel()
+{
+	brushing = false;
+	binfo.reset();
+}
+
+void Canvas::brush_camera_tool(int x, int y)
+{
+	// nothing
+}
+
+// LATER here and elsewhere, add support for CHPP < 4
+void Canvas::brush_paint_tool(int x, int y)
+{
+	Buffer image_shifted_buf = image()->buf;
+	image_shifted_buf.pixels += image_shifted_buf.byte_offset(x, y);
+	switch (MBrushes->get_brush_tip())
+	{
+	case BrushesPanel::BrushTip::PENCIL:
+	{
+		CanvasPixel initial_px{ x, y };
+		PixelRGBA final_c{ 0, 0, 0, 0 };
+		PixelRGBA color = cursor_state == CursorState::DOWN_PRIMARY ? pric_pxs : altc_pxs;
+		float applied_alpha = cursor_state == CursorState::DOWN_PRIMARY ? primary_color.alpha : alternate_color.alpha;
+		for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
+		{
+			initial_px.c.at(i) = image_shifted_buf.pixels[i];
+			if (i < 3)
+				image_shifted_buf.pixels[i] = std::clamp(roundi(color[i] * applied_alpha + image_shifted_buf.pixels[i] * (1 - applied_alpha)), 0, 255);
+			else
+				image_shifted_buf.pixels[i] = std::clamp(roundi(applied_alpha * 255 + image_shifted_buf.pixels[i] * (1 - applied_alpha)), 0, 255);
+			final_c.at(i) = image_shifted_buf.pixels[i];
+		}
+		image()->update_subtexture(x, y, 1, 1);
+		auto iter = binfo.painted_colors.find(initial_px);
+		if (iter == binfo.painted_colors.end())
+			binfo.painted_colors.emplace(initial_px, final_c);
+		else
+			iter->second = final_c;
+		break;
+	}
+	case BrushesPanel::BrushTip::PEN:
+	{
+		CanvasPixel initial_px{ x, y };
+		PixelRGBA color = cursor_state == CursorState::DOWN_PRIMARY ? pric_pen_pxs : altc_pen_pxs;
+		for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
+		{
+			initial_px.c.at(i) = image_shifted_buf.pixels[i];
+			image_shifted_buf.pixels[i] = color[i];
+		}
+		image()->update_subtexture(x, y, 1, 1);
+		auto iter = binfo.painted_colors.find(initial_px);
+		if (iter == binfo.painted_colors.end())
+			binfo.painted_colors.emplace(initial_px, color);
+		else
+			iter->second = color;
+		break;
+	}
+	case BrushesPanel::BrushTip::ERASER:
+	{
+		CanvasPixel initial_px{ x, y };
+		PixelRGBA final_c{ 0, 0, 0, 0 };
+		for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
+		{
+			initial_px.c.at(i) = image_shifted_buf.pixels[i];
+			image_shifted_buf.pixels[i] = 0;
+		}
+		image()->update_subtexture(x, y, 1, 1);
+		auto iter = binfo.painted_colors.find(initial_px);
+		if (iter == binfo.painted_colors.end())
+			binfo.painted_colors.emplace(initial_px, final_c);
+		else
+			iter->second = final_c;
+		break;
+	}
+	case BrushesPanel::BrushTip::SELECT:
+		// LATER
+		break;
+	}
+}
+
+void Canvas::BrushActionInfo::reset()
+{
+	painted_colors.clear();
 }
 
 Easel::Easel()
-	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
-	bkg_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
+	: color_square_shader(FileSystem::shader_path("color_square.vert"), FileSystem::shader_path("color_square.frag")), widget(_W_COUNT)
+{
+	connect_input_handlers();
+}
+
+void Easel::initialize()
 {
 	initialize_widget();
-	connect_input_handlers();
 }
 
 void Easel::initialize_widget()
 {
-	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
-	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(HSV(0.5f, 0.15f, 0.15f).to_rgb(), 0.5f).as_vec()));
-	ur_wget(widget, BACKGROUND).send_buffer();
+	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&color_square_shader));
+	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(HSV(0.5f, 0.15f, 0.15f).to_rgb(), 0.5f).as_vec())).send_buffer();
 
-	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&sprite_shader));
+	assign_widget(&widget, CANVAS, std::make_shared<Canvas>(&color_square_shader));
 	Canvas& cnvs = canvas();
 	cnvs.create_checkerboard_image();
 	cnvs.set_image(nullptr);
@@ -378,14 +603,35 @@ void Easel::connect_input_handlers()
 		}
 		else if (mb.button == MouseButton::LEFT)
 		{
-			if (mb.action == IAction::PRESS && Machine.main_window->is_key_pressed(Key::SPACE) && cursor_in_clipping())
+			if (mb.action == IAction::PRESS && cursor_in_clipping())
 			{
 				mb.consumed = true;
-				begin_panning();
+				if (MainWindow->is_key_pressed(Key::SPACE))
+					begin_panning();
+				else
+					canvas().cursor_press(mb.button);
 			}
 			else if (mb.action == IAction::RELEASE)
+			{
 				end_panning();
+				canvas().cursor_release();
+			}
 		}
+		else if (mb.button == MouseButton::RIGHT)
+		{
+			if (mb.action == IAction::PRESS)
+			{
+				mb.consumed = true;
+				canvas().cursor_press(mb.button);
+			}
+			else if (mb.action == IAction::RELEASE)
+				canvas().cursor_release();
+		}
+		};
+	// LATER add handler for when mouse is already pressed, and then space is pressed to pan.
+	key_handler.callback = [this](const KeyEvent& k) {
+		if (k.action == IAction::PRESS && k.key == Key::ESCAPE && canvas().cursor_cancel())
+			k.consumed = true;
 		};
 	scroll_handler.callback = [this](const ScrollEvent& s) {
 		if (!panning_info.panning && cursor_in_clipping())
@@ -401,35 +647,39 @@ void Easel::draw()
 	ur_wget(widget, BACKGROUND).draw();
 	Canvas& cnvs = canvas();
 	if (cnvs.visible)
-	{
-		fs_wget(cnvs, Canvas::CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
-		fs_wget(cnvs, Canvas::SPRITE).draw(CANVAS_SPRITE_TSLOT);
-		cnvs.minor_gridlines.draw();
-		cnvs.major_gridlines.draw();
-	}
+		cnvs.draw();
 }
 
 void Easel::_send_view()
 {
-	glm::mat3 cameraVP = vp_matrix();
-	Uniforms::send_matrix3(sprite_shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(bkg_shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", cameraVP);
-	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", cameraVP);
+	vp = vp_matrix();
+	canvas().send_vp(vp);
+	Uniforms::send_matrix3(color_square_shader, "u_VP", vp);
+	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", vp);
+	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", vp);
 	unbind_shader();
 	sync_widget();
+}
+
+void Easel::process()
+{
+	update_panning();
+	if (cursor_in_clipping())
+		canvas().hover_pixel_under_cursor(Machine.cursor_world_pos(glm::inverse(vp)));
+	else
+		canvas().unhover();
 }
 
 void Easel::sync_widget()
 {
 	widget.wp_at(BACKGROUND).transform.scale = get_app_size();
-	WidgetPlacement wp = widget.wp_at(BACKGROUND).relative_to(widget.self.transform);
-	UnitRenderable& bkg = ur_wget(widget, BACKGROUND);
-	bkg.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	bkg.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-	bkg.send_buffer();
+	sync_ur(BACKGROUND);
+	canvas().sync_cursor_with_widget();
+}
+
+void Easel::sync_ur(size_t subw)
+{
+	Utils::set_vertex_pos_attributes(ur_wget(widget, subw), widget.wp_at(subw).relative_to(widget.self.transform));
 }
 
 void Easel::sync_canvas_transform()
@@ -439,9 +689,14 @@ void Easel::sync_canvas_transform()
 	canvas().major_gridlines.send_flat_transform(canvas().self.transform);
 }
 
-Image* Easel::canvas_image() const
+const Image* Easel::canvas_image() const
 {
-	return fs_wget(canvas(), Canvas::SPRITE).image.get();
+	return canvas().image();
+}
+
+Image* Easel::canvas_image()
+{
+	return canvas().image();
 }
 
 bool Easel::minor_gridlines_are_visible() const
@@ -451,7 +706,7 @@ bool Easel::minor_gridlines_are_visible() const
 
 void Easel::set_minor_gridlines_visibility(bool visible)
 {
-	canvas().minor_gridlines.set_visible(visible, canvas());
+	canvas().minor_gridlines.set_visible(visible, canvas().self.transform, canvas().image()->buf.width, canvas().image()->buf.height);
 }
 
 bool Easel::major_gridlines_are_visible() const
@@ -461,7 +716,7 @@ bool Easel::major_gridlines_are_visible() const
 
 void Easel::set_major_gridlines_visibility(bool visible)
 {
-	canvas().major_gridlines.set_visible(visible, canvas());
+	canvas().major_gridlines.set_visible(visible, canvas().self.transform, canvas().image()->buf.width, canvas().image()->buf.height);
 }
 
 void Easel::begin_panning()
@@ -471,7 +726,7 @@ void Easel::begin_panning()
 		panning_info.initial_canvas_pos = canvas().self.transform.position;
 		panning_info.initial_cursor_pos = get_app_cursor_pos();
 		panning_info.panning = true;
-		Machine.main_window->request_cursor(&panning_info.wh, StandardCursor::RESIZE_OMNI);
+		MainWindow->request_cursor(&panning_info.wh, Machine.cursors.RESIZE_OMNI);
 	}
 }
 
@@ -480,8 +735,8 @@ void Easel::end_panning()
 	if (panning_info.panning)
 	{
 		panning_info.panning = false;
-		Machine.main_window->release_cursor(&panning_info.wh);
-		Machine.main_window->release_mouse_mode(&panning_info.wh);
+		MainWindow->release_cursor(&panning_info.wh);
+		MainWindow->release_mouse_mode(&panning_info.wh);
 	}
 }
 
@@ -492,8 +747,8 @@ void Easel::cancel_panning()
 		panning_info.panning = false;
 		canvas().self.transform.position = panning_info.initial_canvas_pos;
 		sync_canvas_transform();
-		Machine.main_window->release_cursor(&panning_info.wh);
-		Machine.main_window->release_mouse_mode(&panning_info.wh);
+		MainWindow->release_cursor(&panning_info.wh);
+		MainWindow->release_mouse_mode(&panning_info.wh);
 	}
 }
 
@@ -503,7 +758,7 @@ void Easel::update_panning()
 	{
 		Position pan_delta = get_app_cursor_pos() - panning_info.initial_cursor_pos;
 		Position pos = pan_delta + panning_info.initial_canvas_pos;
-		if (Machine.main_window->is_shift_pressed())
+		if (MainWindow->is_shift_pressed())
 		{
 			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
 				pos.x = panning_info.initial_canvas_pos.x;
@@ -516,8 +771,8 @@ void Easel::update_panning()
 			sync_canvas_transform();
 		}
 
-		if (!Machine.main_window->owns_mouse_mode(&panning_info.wh) && !cursor_in_clipping())
-			Machine.main_window->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
+		if (!MainWindow->owns_mouse_mode(&panning_info.wh) && !cursor_in_clipping())
+			MainWindow->request_mouse_mode(&panning_info.wh, MouseMode::VIRTUAL);
 		// LATER weirdly, virtual mouse is actually slower to move than visible mouse, so when virtual, scale deltas accordingly.
 		// put factor in settings, and possibly even allow 2 speeds, with holding ALT or something.
 	}
@@ -526,10 +781,10 @@ void Easel::update_panning()
 void Easel::zoom_by(float zoom)
 {
 	Position cursor_world;
-	if (!Machine.main_window->is_ctrl_pressed())
+	if (!MainWindow->is_ctrl_pressed())
 		cursor_world = to_world_coordinates(Machine.cursor_screen_pos());
 
-	float factor = Machine.main_window->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
+	float factor = MainWindow->is_shift_pressed() ? zoom_info.factor_shift : zoom_info.factor;
 	float new_zoom = std::clamp(zoom_info.zoom * glm::pow(factor, zoom), zoom_info.in_min, zoom_info.in_max);
 	float zoom_change = new_zoom / zoom_info.zoom;
 	canvas().self.transform.scale *= zoom_change;

@@ -19,6 +19,7 @@ struct Panel
 	Panel(Panel&&) noexcept = delete;
 	virtual ~Panel() = default;
 
+	virtual void initialize() {}
 	virtual void draw() = 0;
 	void render();
 	glm::mat3 vp_matrix() const;
@@ -35,6 +36,9 @@ struct Panel
 	Position to_view_coordinates(Position screen_coordinates) const;
 	Position to_world_coordinates(Position screen_coordinates) const;
 	Position to_screen_coordinates(Position world_coordinates) const;
+	Scale to_view_size(Scale screen_size) const;
+	Scale to_world_size(Scale screen_size) const;
+	Scale to_screen_size(Scale world_size) const;
 
 	virtual Scale minimum_screen_display() const { return {}; }
 };

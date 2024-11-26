@@ -4,6 +4,7 @@
 
 struct ScenePanel : public Panel
 {
-	void draw() override;
-	void _send_view() override;
+	virtual void draw() override;
+	virtual void _send_view() override;
+	virtual Scale minimum_screen_display() const override;
 };

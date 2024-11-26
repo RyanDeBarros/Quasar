@@ -232,6 +232,7 @@ constexpr HSV HSL::to_hsv() const
 }
 
 struct RGBA;
+struct PixelRGBA;
 struct HSVA;
 struct HSLA;
 
@@ -257,6 +258,8 @@ struct RGBA
 	constexpr void set_pixel_g(int g) { rgb.set_pixel_g(g); }
 	constexpr void set_pixel_b(int b) { rgb.set_pixel_b(b); }
 	constexpr void set_pixel_a(int a) { alpha = std::clamp(a, 0, 255) * inv255; }
+	constexpr PixelRGBA get_pixel_rgba() const;
+	constexpr void set_pixel_rgba(PixelRGBA px_rgba);
 
 	constexpr HSVA to_hsva() const;
 	constexpr HSLA to_hsla() const;
@@ -267,6 +270,36 @@ struct RGBA
 
 inline const RGBA RGBA::WHITE = RGBA(1.0f, 1.0f, 1.0f, 1.0f);
 inline const RGBA RGBA::BLACK = RGBA(0.0f, 0.0f, 0.0f, 1.0f);
+
+struct PixelRGBA
+{
+	unsigned char r, g, b, a;
+	constexpr RGBA to_rgba() const { return RGBA(r, g, b, a); }
+	constexpr unsigned char operator[](int i) const { return i == 0 ? r : i == 1 ? g : i == 2 ? b : a; }
+	const unsigned char& at(int i) const { return i == 0 ? r : i == 1 ? g : i == 2 ? b : a; }
+	unsigned char& at(int i) { return i == 0 ? r : i == 1 ? g : i == 2 ? b : a; }
+	bool operator==(const PixelRGBA&) const = default;
+};
+
+template<>
+struct std::hash<PixelRGBA>
+{
+	size_t operator()(const PixelRGBA& p) const { return std::hash<unsigned char>{}(p.r) ^ std::hash<unsigned char>{}(p.g)
+		^ std::hash<unsigned char>{}(p.b) ^ std::hash<unsigned char>{}(p.a); }
+};
+
+constexpr PixelRGBA RGBA::get_pixel_rgba() const
+{
+	return { (unsigned char)rgb.get_pixel_r(), (unsigned char)rgb.get_pixel_g(), (unsigned char)rgb.get_pixel_b(), (unsigned char)get_pixel_a() };
+}
+
+constexpr void RGBA::set_pixel_rgba(PixelRGBA px_rgba)
+{
+	rgb.set_pixel_r(px_rgba.r);
+	rgb.set_pixel_g(px_rgba.g);
+	rgb.set_pixel_b(px_rgba.b);
+	set_pixel_a(px_rgba.a);
+}
 
 struct HSVA
 {

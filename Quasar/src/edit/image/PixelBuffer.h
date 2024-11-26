@@ -22,6 +22,11 @@ struct Buffer
 	Dim bytes() const { return width * chpp * height; }
 	Dim area() const { return width * height; }
 
+	Dim index_offset(Dim x, Dim y) const { return x + y * width; }
+	Dim byte_offset(Dim x, Dim y) const { return index_offset(x, y) * chpp; }
+	Byte* pos(Dim x, Dim y) const { return pixels + byte_offset(x, y); }
+	void coordinates_of(Dim i, Dim& x, Dim& y) const { x = i % width; y = i / height; }
+
 	void pxnew() { pixels = new Byte[bytes()]; }
 
 	void flip_horizontally() const;
@@ -79,6 +84,8 @@ extern void subbuffer_copy(const Subbuffer& dest, const Subbuffer& src, long lon
 extern void subbuffer_copy(const Buffer& dest, const Subbuffer& src, long long dest_offset = 0, long long src_offset = 0, size_t length = -1);
 extern void subbuffer_copy(const Subbuffer& dest, const Buffer& src, long long dest_offset = 0, long long src_offset = 0, size_t length = -1);
 extern void subbuffer_copy(const Buffer& dest, const Buffer& src, long long dest_offset = 0, long long src_offset = 0, size_t length = -1);
+
+extern void subbuffer_copy_unbalanced(const Buffer& dest, const Buffer& src, long long dest_offset = 0, long long src_offset = 0, size_t length = -1);
 
 extern void iterate_path(const Path& path, const std::function<void(PathIterator&)>& func);
 extern void reverse_iterate_path(const Path& path, const std::function<void(PathIterator&)>& func);

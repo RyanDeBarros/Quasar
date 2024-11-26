@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "variety/GLutility.h"
+#include "variety/Geometry.h"
 #include "PixelBufferPaths.h"
 
 inline static GLenum chpp_format(CHPP chpp)
@@ -61,7 +62,6 @@ inline static void delete_texture(Image& image)
 
 Image::Image(const FilePath& filepath, bool _gen_texture)
 {
-	stbi_set_flip_vertically_on_load(true);
 	// LATER handle gif file from memory
 	buf.pixels = stbi_load(filepath.c_str(), &buf.width, &buf.height, &buf.chpp, 0);
 	if (buf.pixels && _gen_texture)
@@ -151,6 +151,22 @@ void Image::update_texture() const
 	}
 }
 
+void Image::update_subtexture(int x, int y, int w, int h) const
+{
+	if (tid)
+	{
+		if (x + w >= buf.width)
+			w = buf.width - x;
+		if (y + h >= buf.height)
+			h = buf.height - y;
+		bind_texture(tid);
+		for (Dim r = y; r < y + h; ++r)
+		{
+			QUASAR_GL(glTexSubImage2D(GL_TEXTURE_2D, 0, x, r, w, 1, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pos(x, r)));
+		}
+	}
+}
+
 void Image::resend_texture() const
 {
 	if (tid)
@@ -159,12 +175,6 @@ void Image::resend_texture() const
 		QUASAR_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, chpp_alignment(buf.chpp)));
 		QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, chpp_internal_format(buf.chpp), buf.width, buf.height, 0, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
 	}
-}
-
-void Image::send_subtexture(GLint x, GLint y, GLsizei w, GLsizei h) const
-{
-	bind_texture(tid);
-	QUASAR_GL(glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, w, h, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
 }
 
 bool Image::write_to_file(const FilePath& filepath, ImageFormat format, JPGQuality jpg_quality) const

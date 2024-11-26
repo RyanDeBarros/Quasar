@@ -1,6 +1,6 @@
 # Quasar User Manual
 
-Note on notation: ROW# refers to a # key on a keyboard's number row, whereas PAD# refers to a # key on a keyboard's numpad.
+Note on notation: ROW# refers to a # key on a keyboard's number row, whereas PAD# refers to a # key on a keyboard's numpad. LMB, RMB, and MMB refer to the left mouse button, right mouse button, and middle mouse button.
 
 Key bindings in Quasar exist in a *control scheme*. Key bindings in the global control scheme (like CTRL+S to save) work in any specific control scheme. Some keys perform different actions depending on which control scheme is currently set.
 The control scheme can be set from the dropdown in the main menu bar, or by the following global key bindings:
@@ -53,7 +53,7 @@ Pressing ROW0 will reset the camera to the default pan and zoom.
 
 * Maximize with ALT+ENTER.
 * Fullscreen with F11.
-* Exit maximize/fullscreen state with the same combo, or with ESCAPE.
+* Exit maximize/fullscreen state with the same combo.
 
 ## Palette panel
 
@@ -79,3 +79,33 @@ If in PALETTE control scheme:
 * CTRL+N creates a new subpalette.
 * CTRL+R renames the current subpalette.
 * CTRL+D deletes the current subpalette.
+
+## Brushes panel
+
+### Brush tips
+
+There are four brush tips to choose from: PENCIL, PEN, ERASER, and SELECT. When painting, PENCIL will blend the applied color with the existing underlying pixel color. PEN will replace the existing pixel, ERASE will ignore the selected color altogether and remove the underlying pixel. SELECT will add the pixel to the current canvas selection. The following key bindings are useful:
+
+* ROW1: Select the PENCIL tool.
+* ROW2: Select the PEN tool.
+* ROW3: Select the ERASER tool.
+* ROW4: Select the SELECT tool. Note that CTRL+A in any mode will select the entire canvas of pixels.
+
+### Brush tools
+
+There are several brush tools to choose from, which determine how pixels are interacted with in canvas, based on mouse input:
+
+* Camera (key shortcut: Z) - Neutral mode that doesn't interact with the canvas aside from navigation.
+* Paint (key shortcut: P) - Freehand draw on canvas.
+* Line (key shortcut: L) - Click and drag to draw a controlled line.
+* Fill (key shortcut: F) - Fill all connected (same color) pixels.
+* Rect Outline (key shortcut: R) - Click and drag to draw a rectangle border.
+* Rect Fill (key shortcut: SHIFT+R) - Click and drag to draw a filled-in rectangle.
+* Ellipse Outline (key shortcut: E) - Click and drag to draw a ellipse border.
+* Ellipse Fill (key shortcut: SHIFT+E) - Click and drag to draw a filled-in ellipse.
+
+## Easel
+
+### Canvas specifics
+
+Press LMB to paint the primary color selection and RMB to paint the alternate color selection, if using a painting mode. If holding ALT, this action will instead set the respective color selection in the color picker.

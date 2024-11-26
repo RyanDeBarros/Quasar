@@ -23,13 +23,17 @@ struct PalettePanel : public Panel
 	std::function<bool()> use_primary;
 	std::function<bool()> use_alternate;
 	std::function<void()> swap_picker_colors;
+	std::function<void(RGBA)> emit_modified_primary;
+	std::function<void(RGBA)> emit_modified_alternate;
 
 	PalettePanel();
 	PalettePanel(const PalettePanel&) = delete;
 	PalettePanel(PalettePanel&&) noexcept = delete;
 
+	virtual void initialize() override;
 	virtual void _send_view() override;
 	virtual void draw() override;
+	void process();
 	void render_widget();
 	virtual Scale minimum_screen_display() const override;
 
@@ -39,6 +43,9 @@ struct PalettePanel : public Panel
 	void new_subpalette();
 	void rename_subpalette();
 	void delete_subpalette();
+
+	void set_pri_color(RGBA color);
+	void set_alt_color(RGBA color);
 
 private:
 	void initialize_widget();

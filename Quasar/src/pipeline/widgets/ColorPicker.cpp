@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.inl>
 #include <imgui/imgui_internal.h>
 
+#include "ImplUtility.h"
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 #include "../render/Uniforms.h"
@@ -79,7 +80,7 @@ void ColorPicker::send_gradient_color_uniform(const Shader& shader, GradientInde
 }
 
 // LATER maybe input handler connections should be made by parent, not child, so that there's no need to pass them in constructor.
-ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler)
+ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, const Reflection& reflection)
 	: quad_shader(FileSystem::shader_path("gradients/quad.vert"), FileSystem::shader_path("gradients/quad.frag.tmpl"),
 		{ {"$MAX_GRADIENT_COLORS", std::to_string((int)GradientIndex::_MAX_GRADIENT_COLORS) } }),
 	linear_hue_shader(FileSystem::shader_path("gradients/linear_hue.vert"), FileSystem::shader_path("gradients/linear_hue.frag")),
@@ -87,15 +88,15 @@ ColorPicker::ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, K
 	linear_lightness_shader(FileSystem::shader_path("gradients/linear_lightness.vert"), FileSystem::shader_path("gradients/linear_lightness.frag")),
 	circle_cursor_shader(FileSystem::shader_path("circle_cursor.vert"), FileSystem::shader_path("circle_cursor.frag")),
 	round_rect_shader(FileSystem::shader_path("round_rect.vert"), FileSystem::shader_path("round_rect.frag")),
-	Widget(_W_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), vp(vp)
+	Widget(_W_COUNT), parent_mb_handler(parent_mb_handler), parent_key_handler(parent_key_handler), vp(vp), reflection(reflection)
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::BLACK, ColorFrame(HSV(0.0f, 0.0f, 0.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::WHITE, ColorFrame(HSV(0.0f, 0.0f, 1.0f)));
 	send_gradient_color_uniform(quad_shader, GradientIndex::TRANSPARENT, ColorFrame(0));
 	initialize_widget();
 	connect_input_handlers();
-	set_pri_color(ColorFrame(), false);
-	set_alt_color(ColorFrame(), false);
+	//set_pri_color(ColorFrame(), false);
+	//set_alt_color(ColorFrame(), false);
 }
 
 void ColorPicker::draw()
@@ -144,16 +145,9 @@ void ColorPicker::draw()
 		break;
 	}
 	cp_render_gui_front();
-	if (editing_color == EditingColor::PRIMARY)
-	{
-		ur_wget(*this, PREVIEW_ALT).draw();
-		ur_wget(*this, PREVIEW_PRI).draw();
-	}
-	else if (editing_color == EditingColor::ALTERNATE)
-	{
-		ur_wget(*this, PREVIEW_PRI).draw();
-		ur_wget(*this, PREVIEW_ALT).draw();
-	}
+	ur_wget(*this, PREVIEW_BKG).draw();
+	ur_wget(*this, PREVIEW_ALT).draw();
+	ur_wget(*this, PREVIEW_PRI).draw();
 }
 
 void ColorPicker::process()
@@ -173,9 +167,9 @@ void ColorPicker::process()
 		}
 		Position local_cursor_pos = local_of(Machine.cursor_world_pos(glm::inverse(*vp)));
 		if (wp_at(PREVIEW_PRI).contains_point(local_cursor_pos) || wp_at(PREVIEW_ALT).contains_point(local_cursor_pos))
-			Machine.main_window->request_cursor(&wh_preview, StandardCursor::HAND);
+			MainWindow->request_cursor(&wh_preview, Machine.cursors.HAND);
 		else
-			Machine.main_window->release_cursor(&wh_preview);
+			MainWindow->release_cursor(&wh_preview);
 	}
 	else
 	{
@@ -189,7 +183,7 @@ void ColorPicker::process()
 			b_t_wget(*this, BUTTON_QUAD).unhover();
 			b_t_wget(*this, BUTTON_WHEEL).unhover();
 		}
-		Machine.main_window->release_cursor(&wh_preview);
+		MainWindow->release_cursor(&wh_preview);
 	}
 }
 
@@ -706,6 +700,16 @@ void ColorPicker::initialize_widget()
 
 	// ---------- PREVIEW ----------
 	
+	assign_widget(this, PREVIEW_BKG, std::make_shared<W_UnitRenderable>(&quad_shader));
+	setup_rect_uvs(PREVIEW_BKG);
+	setup_gradient(PREVIEW_BKG, (GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK,
+		(GLint)GradientIndex::BLACK, (GLint)GradientIndex::BLACK);
+	wp_at(PREVIEW_BKG).transform.position.x = preview_x;
+	wp_at(PREVIEW_BKG).transform.position.y = preview_y;
+	wp_at(PREVIEW_BKG).transform.scale = { 2 * (preview_w - preview_overlap_offset), preview_h };
+	wp_at(PREVIEW_BKG).pivot.x = 0.5f;
+	wp_at(PREVIEW_BKG).pivot.y = 1;
+	
 	assign_widget(this, PREVIEW_PRI, std::make_shared<W_UnitRenderable>(&quad_shader));
 	setup_rect_uvs(PREVIEW_PRI);
 	setup_gradient(PREVIEW_PRI, (GLint)GradientIndex::PREVIEW_PRI, (GLint)GradientIndex::PREVIEW_PRI,
@@ -797,7 +801,7 @@ void ColorPicker::initialize_widget()
 	sba.is_hoverable = [this]() { return current_widget_control == -1; };
 	assign_widget(this, BUTTON_SWITCH_TXTFLD_MODE, std::make_shared<StandardTButton>(sba));
 	StandardTButton& b_txtfld = sb_t_wget(*this, BUTTON_SWITCH_TXTFLD_MODE);
-	b_txtfld.on_select = fconv_st_on_action([this, &b_txtfld]() {
+	b_txtfld.on_select = fconv_on_action([this, &b_txtfld]() {
 		if (txtfld_mode == TextFieldMode::NUMBER)
 		{
 			txtfld_mode = TextFieldMode::PERCENT;
@@ -817,21 +821,21 @@ void ColorPicker::initialize_widget()
 	tba.transform = { { button_left_x, button_top_y_2 }, { button_rgb_hex_code_w, button_h } };
 	auto tb = std::make_shared<ToggleTButton>(tba);
 	tb->is_hoverable = [this]() { return state & State::SLIDER_RGB && current_widget_control == -1; };
-	tb->on_select = fconv_tt_on_action([this]() { showing_hex_popup = true; });
-	tb->on_deselect = fconv_tt_on_action([this]() { showing_hex_popup = false; });
+	tb->on_select = fconv_on_action([this]() { showing_hex_popup = true; });
+	tb->on_deselect = fconv_on_action([this]() { showing_hex_popup = false; });
 	assign_widget(this, BUTTON_RGB_HEX_CODE, tb);
 
 	tba.is_hoverable = [this]() { return current_widget_control == -1; };
 	tba.text = "QUAD";
 	tba.transform.scale = { button_quad_w, button_h };
 	tba.is_hoverable = [this]() { return state & (State::GRAPHIC_QUAD | State::GRAPHIC_WHEEL) && current_widget_control == -1; };
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::GRAPHIC_QUAD); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::GRAPHIC_QUAD); });
 	assign_widget(this, BUTTON_QUAD, std::make_shared<ToggleTButton>(tba));
 	
 	tba.text = "WHEEL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.transform.scale.x = button_wheel_w;
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::GRAPHIC_WHEEL); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::GRAPHIC_WHEEL); });
 	assign_widget(this, BUTTON_WHEEL, std::make_shared<ToggleTButton>(tba));
 
 	sub_tab_bar.init({
@@ -843,23 +847,23 @@ void ColorPicker::initialize_widget()
 	tba.transform.position = { button_left_x, button_top_y_1 };
 	tba.transform.scale.x = button_graphic_w;
 	tba.is_hoverable = [this]() { return current_widget_control == -1; };
-	tba.on_select = fconv_tt_on_action([this]() { set_state(last_graphic_state); });
+	tba.on_select = fconv_on_action([this]() { set_state(last_graphic_state); });
 	assign_widget(this, BUTTON_GRAPHIC, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "RGB";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
 	tba.transform.scale.x = button_rgb_w;
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_RGB); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::SLIDER_RGB); });
 	assign_widget(this, BUTTON_RGB_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "HSV";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_HSV); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::SLIDER_HSV); });
 	assign_widget(this, BUTTON_HSV_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	tba.text = "HSL";
 	tba.transform.position.x += tba.transform.scale.x + button_sep_x;
-	tba.on_select = fconv_tt_on_action([this]() { set_state(State::SLIDER_HSL); });
+	tba.on_select = fconv_on_action([this]() { set_state(State::SLIDER_HSL); });
 	assign_widget(this, BUTTON_HSL_SLIDER, std::make_shared<ToggleTButton>(tba));
 
 	main_tab_bar.init({
@@ -984,7 +988,7 @@ void ColorPicker::connect_input_handlers()
 			k.consumed = true;
 			escape_to_close_popup = true;
 		}
-		else if (k.action == IAction::PRESS && k.key == Key::X && Machine.main_window->is_key_pressed(Key::SPACE))
+		else if (k.action == IAction::PRESS && k.key == Key::X && MainWindow->is_key_pressed(Key::SPACE))
 		{
 			k.consumed = true;
 			swap_picker_colors();
@@ -994,7 +998,7 @@ void ColorPicker::connect_input_handlers()
 
 void ColorPicker::process_mb_down_events()
 {
-	if (!Machine.main_window->is_mouse_button_pressed(MouseButton::LEFT))
+	if (!MainWindow->is_mouse_button_pressed(MouseButton::LEFT))
 		return;
 
 	Position local_cursor_pos = self.transform.get_relative_pos(Machine.palette_cursor_world_pos());
@@ -1036,14 +1040,14 @@ void ColorPicker::process_mb_down_events()
 
 void ColorPicker::take_over_cursor()
 {
-	Machine.main_window->request_cursor(&wh_interactable, StandardCursor::CROSSHAIR);
+	MainWindow->request_cursor(&wh_interactable, Machine.cursors.CROSSHAIR);
 }
 
 void ColorPicker::release_cursor()
 {
 	if (current_widget_control >= 0)
 	{
-		Machine.main_window->release_cursor(&wh_interactable);
+		MainWindow->release_cursor(&wh_interactable);
 		current_widget_control = -1;
 		set_picker_color_from_gfx();
 		if (editing_color == EditingColor::PRIMARY)
@@ -1055,10 +1059,16 @@ void ColorPicker::release_cursor()
 
 void ColorPicker::sync_preview_color_with_picker()
 {
-	if (editing_color == EditingColor::PRIMARY)
+	if (editing_color == EditingColor::PRIMARY && pri_color != picker_color)
+	{
 		pri_color = picker_color;
-	else if (editing_color == EditingColor::ALTERNATE)
+		(*reflection.emit_modified_primary)(pri_color.rgba());
+	}
+	else if (editing_color == EditingColor::ALTERNATE && alt_color != picker_color)
+	{
 		alt_color = picker_color;
+		(*reflection.emit_modified_alternate)(alt_color.rgba());
+	}
 }
 
 void ColorPicker::set_picker_color_from_gfx()
@@ -1180,6 +1190,7 @@ void ColorPicker::set_pri_color(ColorFrame color, bool toggle_on)
 	}
 	else
 		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
+	(*reflection.emit_modified_primary)(pri_color.rgba());
 }
 
 void ColorPicker::set_alt_color(ColorFrame color, bool toggle_on)
@@ -1194,6 +1205,7 @@ void ColorPicker::set_alt_color(ColorFrame color, bool toggle_on)
 	}
 	else
 		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_ALT, alt_color);
+	(*reflection.emit_modified_alternate)(alt_color.rgba());
 }
 
 void ColorPicker::swap_picker_colors()
@@ -1210,6 +1222,8 @@ void ColorPicker::swap_picker_colors()
 		send_gradient_color_uniform(quad_shader, GradientIndex::PREVIEW_PRI, pri_color);
 	}
 	set_gfx_from_picker_color();
+	(*reflection.emit_modified_primary)(pri_color.rgba());
+	(*reflection.emit_modified_alternate)(alt_color.rgba());
 }
 
 void ColorPicker::set_size(Scale size, bool sync)
@@ -1343,13 +1357,13 @@ void ColorPicker::update_display_colors()
 
 void ColorPicker::orient_progress_slider(size_t control, Cardinal i) const
 {
-	const UnitRenderable& renderable = ur_wget(*this, control);
 	float zero = 0.0f;
 	float one = 1.0f;
-	renderable.set_attribute_single_vertex(0, 1, i == Cardinal::DOWN || i == Cardinal::LEFT ? &one : &zero);
-	renderable.set_attribute_single_vertex(1, 1, i == Cardinal::RIGHT || i == Cardinal::DOWN ? &one : &zero);
-	renderable.set_attribute_single_vertex(2, 1, i == Cardinal::UP || i == Cardinal::LEFT ? &one : &zero);
-	renderable.set_attribute_single_vertex(3, 1, i == Cardinal::RIGHT || i == Cardinal::UP ? &one : &zero);
+	ur_wget(*this, control)
+		.set_attribute_single_vertex(0, 1, i == Cardinal::DOWN || i == Cardinal::LEFT ? &one : &zero)
+		.set_attribute_single_vertex(1, 1, i == Cardinal::RIGHT || i == Cardinal::DOWN ? &one : &zero)
+		.set_attribute_single_vertex(2, 1, i == Cardinal::UP || i == Cardinal::LEFT ? &one : &zero)
+		.set_attribute_single_vertex(3, 1, i == Cardinal::RIGHT || i == Cardinal::UP ? &one : &zero);
 }
 
 void ColorPicker::send_graphic_quad_hue_to_uniform(float hue) const
@@ -1405,23 +1419,9 @@ float ColorPicker::slider_normal_y(size_t control, size_t cursor) const
 	return wp_at(control).normalize_y(wp_at(cursor).transform.position.y);
 }
 
-void ColorPicker::setup_vertex_positions(size_t control) const
-{
-	const UnitRenderable& ur = ur_wget(*this, control);
-	WidgetPlacement wp = wp_at(control).relative_to(self.transform);
-	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-}
-
 void ColorPicker::setup_rect_uvs(size_t control) const
 {
-	const UnitRenderable& ur = ur_wget(*this, control);
-	ur.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0.0f, 0.0f }));
-	ur.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1.0f, 0.0f }));
-	ur.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0.0f, 1.0f }));
-	ur.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1.0f, 1.0f }));
+	Utils::set_uv_attributes(ur_wget(*this, control), 0, 1, 0, 1, 0, 1, false);
 }
 
 void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const
@@ -1429,38 +1429,28 @@ void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, G
 	ur_wget(*this, control).set_attribute(2, glm::value_ptr(glm::vec4{ g1, g2, g3, g4 }));
 }
 
+static const size_t STANDARD_URS[]{
+	ColorPicker::PREVIEW_BKG, ColorPicker::PREVIEW_PRI, ColorPicker::PREVIEW_ALT,
+	ColorPicker::ALPHA_SLIDER, ColorPicker::ALPHA_SLIDER_CURSOR,
+	ColorPicker::GRAPHIC_QUAD, ColorPicker::GRAPHIC_QUAD_CURSOR,
+	ColorPicker::GRAPHIC_HUE_SLIDER, ColorPicker::GRAPHIC_HUE_SLIDER_CURSOR,
+	ColorPicker::GRAPHIC_HUE_WHEEL, ColorPicker::GRAPHIC_HUE_WHEEL_CURSOR,
+	ColorPicker::GRAPHIC_VALUE_SLIDER, ColorPicker::GRAPHIC_VALUE_SLIDER_CURSOR,
+	ColorPicker::RGB_R_SLIDER, ColorPicker::RGB_R_SLIDER_CURSOR,
+	ColorPicker::RGB_G_SLIDER, ColorPicker::RGB_G_SLIDER_CURSOR,
+	ColorPicker::RGB_B_SLIDER, ColorPicker::RGB_B_SLIDER_CURSOR,
+	ColorPicker::HSV_H_SLIDER, ColorPicker::HSV_H_SLIDER_CURSOR,
+	ColorPicker::HSV_S_SLIDER, ColorPicker::HSV_S_SLIDER_CURSOR,
+	ColorPicker::HSV_V_SLIDER, ColorPicker::HSV_V_SLIDER_CURSOR,
+	ColorPicker::HSL_H_SLIDER, ColorPicker::HSL_H_SLIDER_CURSOR,
+	ColorPicker::HSL_S_SLIDER, ColorPicker::HSL_S_SLIDER_CURSOR,
+	ColorPicker::HSL_L_SLIDER, ColorPicker::HSL_L_SLIDER_CURSOR
+};
+
 void ColorPicker::sync_widget_with_vp()
 {
-	sync_single_standard_ur_transform(PREVIEW_PRI);
-	sync_single_standard_ur_transform(PREVIEW_ALT);
-	sync_single_standard_ur_transform(ALPHA_SLIDER);
-	sync_single_standard_ur_transform(ALPHA_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(GRAPHIC_QUAD);
-	sync_single_standard_ur_transform(GRAPHIC_QUAD_CURSOR);
-	sync_single_standard_ur_transform(GRAPHIC_HUE_SLIDER);
-	sync_single_standard_ur_transform(GRAPHIC_HUE_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(GRAPHIC_HUE_WHEEL);
-	sync_single_standard_ur_transform(GRAPHIC_HUE_WHEEL_CURSOR);
-	sync_single_standard_ur_transform(GRAPHIC_VALUE_SLIDER);
-	sync_single_standard_ur_transform(GRAPHIC_VALUE_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(RGB_R_SLIDER);
-	sync_single_standard_ur_transform(RGB_R_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(RGB_G_SLIDER);
-	sync_single_standard_ur_transform(RGB_G_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(RGB_B_SLIDER);
-	sync_single_standard_ur_transform(RGB_B_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSV_H_SLIDER);
-	sync_single_standard_ur_transform(HSV_H_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSV_S_SLIDER);
-	sync_single_standard_ur_transform(HSV_S_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSV_V_SLIDER);
-	sync_single_standard_ur_transform(HSV_V_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSL_H_SLIDER);
-	sync_single_standard_ur_transform(HSL_H_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSL_S_SLIDER);
-	sync_single_standard_ur_transform(HSL_S_SLIDER_CURSOR);
-	sync_single_standard_ur_transform(HSL_L_SLIDER);
-	sync_single_standard_ur_transform(HSL_L_SLIDER_CURSOR);
+	for (size_t sur : STANDARD_URS)
+		sync_single_standard_ur_transform(sur);
 	float sc = scale1d();
 	if (cached_scale1d != sc)
 	{
@@ -1483,14 +1473,12 @@ void ColorPicker::sync_widget_with_vp()
 
 	gui_transform.scale = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
 	gui_transform.position = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, 0.5f }), *vp);
-	gui_transform.position.y = Machine.main_window->height() - gui_transform.position.y;
+	gui_transform.position.y = roundf(MainWindow->height() - gui_transform.position.y);
 }
 
 void ColorPicker::sync_single_standard_ur_transform(size_t control, bool send_buffer) const
 {
-	setup_vertex_positions(control);
-	if (send_buffer)
-		ur_wget(*this, control).send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(*this, control), wp_at(control).relative_to(self.transform), 0, 0, send_buffer);
 }
 
 void ColorPicker::send_cpwc_buffer(size_t control) const

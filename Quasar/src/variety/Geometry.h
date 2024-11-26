@@ -15,11 +15,13 @@ constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
 
 struct Position : glm::vec2
 {
-	Position(float x = 0.0f, float y = 0.0f) : glm::vec2(x, y) {}
+	Position(float p = 0.0f) : glm::vec2(p) {}
+	Position(float x, float y) : glm::vec2(x, y) {}
 	Position(int x, int y) : glm::vec2(x, y) {}
 	Position(int x, float y) : glm::vec2(x, y) {}
 	Position(float x, int y) : glm::vec2(x, y) {}
 	Position(const glm::vec2& vec) : glm::vec2(vec) {}
+	Position(const glm::ivec2& vec) : glm::vec2(vec.x, vec.y) {}
 
 	Position operator+(Position r) const { return { x + r.x, y + r.y }; }
 	Position& operator+=(Position r) { x += r.x; y += r.y; ; return *this; }
@@ -56,6 +58,14 @@ inline bool in_diagonal_rect(Position pos, Position bl, Position tr)
 	return on_interval(pos.x, bl.x, tr.x) && on_interval(pos.y, bl.y, tr.y);
 }
 
+struct IPosition : glm::ivec2
+{
+	IPosition(int p = 0) : glm::ivec2(p) {}
+	IPosition(int x, int y) : glm::ivec2(x, y) {}
+	IPosition(glm::ivec2 v) : glm::ivec2(v) {}
+	IPosition(glm::vec2 v) : glm::ivec2((int)v.x, (int)v.y) {}
+};
+
 struct Rotation
 {
 	float _v;
@@ -75,6 +85,7 @@ struct Scale : glm::vec2
 	Scale(int x, float y) : glm::vec2(x, y) {}
 	Scale(float x, int y) : glm::vec2(x, y) {}
 	Scale(const glm::vec2& vec) : glm::vec2(vec) {}
+	Scale(const glm::ivec2& vec) : glm::vec2(vec.x, vec.y) {}
 
 	Scale reciprocal() const { return { x ? 1.0f / x : 0.0f, y ? 1.0f / y : 0.0f }; }
 
@@ -175,6 +186,7 @@ struct FlatTransform
 };
 
 extern Logger& operator<<(Logger&, const Position&);
+extern Logger& operator<<(Logger&, const IPosition&);
 extern Logger& operator<<(Logger&, const Scale&);
 extern Logger& operator<<(Logger&, const FlatTransform&);
 
@@ -231,3 +243,16 @@ constexpr float mean2d1d(float a, float b)
 {
 	return (a + b + std::max(a, b)) / 3.0f;
 }
+
+struct DiscreteLineInterpolator
+{
+	IPosition start;
+	IPosition finish;
+	IPosition delta;
+	unsigned int length;
+
+	DiscreteLineInterpolator(IPosition start, IPosition finish);
+
+	IPosition at(int i) const;
+	void at(int i, IPosition& pos) const;
+};

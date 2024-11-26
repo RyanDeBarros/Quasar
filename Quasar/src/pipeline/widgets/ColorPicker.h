@@ -34,6 +34,15 @@ public:
 	Shader quad_shader, linear_hue_shader, hue_wheel_w_shader, linear_lightness_shader, circle_cursor_shader, round_rect_shader;
 	glm::mat3* vp;
 
+	struct Reflection
+	{
+		std::function<void(RGBA)>* emit_modified_primary;
+		std::function<void(RGBA)>* emit_modified_alternate;
+
+		Reflection(std::function<void(RGBA)>* emit_modified_primary, std::function<void(RGBA)>* emit_modified_alternate)
+			: emit_modified_primary(emit_modified_primary), emit_modified_alternate(emit_modified_alternate) {}
+	} reflection;
+
 private:
 	FlatTransform gui_transform;
 	State last_graphic_state = State::GRAPHIC_QUAD;
@@ -77,7 +86,7 @@ private:
 	ColorFrame alt_color = RGBA::WHITE;
 	
 public:
-	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler);
+	ColorPicker(glm::mat3* vp, MouseButtonHandler& parent_mb_handler, KeyHandler& parent_key_handler, const Reflection& reflection);
 	ColorPicker(const ColorPicker&) = delete;
 	ColorPicker(ColorPicker&&) noexcept = delete;
 	
@@ -138,7 +147,6 @@ private:
 	float slider_normal_x(size_t control, size_t cursor) const;
 	float slider_normal_y(size_t control, size_t cursor) const;
 
-	void setup_vertex_positions(size_t control) const;
 	void setup_rect_uvs(size_t control) const;
 	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
 	void sync_widget_with_vp();
@@ -158,6 +166,7 @@ public:
 	enum : size_t
 	{
 		// LATER ? use one CURSORS UMR, and implement visibility for subshapes in UMR.
+		PREVIEW_BKG,					// quad
 		PREVIEW_PRI,					// quad
 		PREVIEW_ALT,					// quad
 		ALPHA_SLIDER,					// quad

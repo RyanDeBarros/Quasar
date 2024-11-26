@@ -50,11 +50,17 @@ namespace Data
 
 static PanelGroup* panels = nullptr;
 
-static Easel* easel() { return dynamic_cast<Easel*>(panels->panels[0].get()); }
-static PalettePanel* palette() { return dynamic_cast<PalettePanel*>(panels->panels[1].get()); }
-static BrushesPanel* brushes() { return dynamic_cast<BrushesPanel*>(panels->panels[2].get()); }
-static ScenePanel* scene() { return dynamic_cast<ScenePanel*>(panels->panels[3].get()); }
-static MenuPanel* menu() { return dynamic_cast<MenuPanel*>(panels->panels[4].get()); }
+Easel* MachineImpl::easel() const { return 0 < panels->panels.size() ? dynamic_cast<Easel*>(panels->panels[0].get()) : nullptr; }
+PalettePanel* MachineImpl::palette() const { return 1 < panels->panels.size() ? dynamic_cast<PalettePanel*>(panels->panels[1].get()) : nullptr; }
+BrushesPanel* MachineImpl::brushes() const { return 2 < panels->panels.size() ? dynamic_cast<BrushesPanel*>(panels->panels[2].get()) : nullptr; }
+ScenePanel* MachineImpl::scene() const { return 3 < panels->panels.size() ? dynamic_cast<ScenePanel*>(panels->panels[3].get()) : nullptr; }
+MenuPanel* MachineImpl::menu() const { return 4 < panels->panels.size() ? dynamic_cast<MenuPanel*>(panels->panels[4].get()) : nullptr; }
+
+static Easel* easel() { return Machine.easel(); }
+static PalettePanel* palette() { return Machine.palette(); }
+static BrushesPanel* brushes() { return Machine.brushes(); }
+static ScenePanel* scene() { return Machine.scene(); }
+static MenuPanel* menu() { return Machine.menu(); }
 
 static void create_panels()
 {
@@ -64,6 +70,16 @@ static void create_panels()
 	panels->panels.push_back(std::make_unique<BrushesPanel>());
 	panels->panels.push_back(std::make_unique<ScenePanel>());
 	panels->panels.push_back(std::make_unique<MenuPanel>());
+	MEasel = Machine.easel();
+	MPalette = Machine.palette();
+	MBrushes = Machine.brushes();
+	MScene = Machine.scene();
+	MMenu = Machine.menu();
+	MEasel->initialize();
+	MPalette->initialize();
+	MBrushes->initialize();
+	MScene->initialize();
+	MMenu->initialize();
 }
 
 static void init_panels_layout()
@@ -121,11 +137,40 @@ static void update_panels_to_window_size(int width, int height)
 	scene()->bounds.x2 = width;
 }
 
+static void init_standard_cursors()
+{
+	Machine.cursors.ARROW = std::make_shared<Cursor>(StandardCursor::ARROW);
+	Machine.cursors.IBEAM = std::make_shared<Cursor>(StandardCursor::IBEAM);
+	Machine.cursors.CROSSHAIR = std::make_shared<Cursor>(StandardCursor::CROSSHAIR);
+	Machine.cursors.HAND = std::make_shared<Cursor>(StandardCursor::HAND);
+	Machine.cursors.RESIZE_EW = std::make_shared<Cursor>(StandardCursor::RESIZE_EW);
+	Machine.cursors.RESIZE_NS = std::make_shared<Cursor>(StandardCursor::RESIZE_NS);
+	Machine.cursors.RESIZE_NW_SE = std::make_shared<Cursor>(StandardCursor::RESIZE_NW_SE);
+	Machine.cursors.RESIZE_NE_SW = std::make_shared<Cursor>(StandardCursor::RESIZE_NE_SW);
+	Machine.cursors.RESIZE_OMNI = std::make_shared<Cursor>(StandardCursor::RESIZE_OMNI);
+	Machine.cursors.CANCEL = std::make_shared<Cursor>(StandardCursor::CANCEL);
+}
+
+static void free_standard_cursors()
+{
+	Machine.cursors.ARROW.reset();
+	Machine.cursors.IBEAM.reset();
+	Machine.cursors.CROSSHAIR.reset();
+	Machine.cursors.HAND.reset();
+	Machine.cursors.RESIZE_EW.reset();
+	Machine.cursors.RESIZE_NS.reset();
+	Machine.cursors.RESIZE_NW_SE.reset();
+	Machine.cursors.RESIZE_NE_SW.reset();
+	Machine.cursors.RESIZE_OMNI.reset();
+	Machine.cursors.CANCEL.reset();
+}
+
 MachineImpl::MachineImpl()
 	: history(4'000'000) // SETTINGS and test that it works. currently it is 4MB, which is small to medium sized.
 	// Possible levels could be: Lightweight (1-2MB) | Moderate (4-8MB) | Intense (16+MB). Due to underestimations of action sizes, always be on low end of history pool sizes.
 	// Inevitably, the history's actual memory usage will be estimated, whether below or above the actual amount.
 {
+	tinyfd_verbose = true; // LATER tinyfd seems buggy occasionally.
 }
 
 bool MachineImpl::create_main_window()
@@ -133,9 +178,11 @@ bool MachineImpl::create_main_window()
 	main_window = new Window("Quasar", window_layout_info.initial_width, window_layout_info.initial_height);
 	if (main_window)
 	{
+		MainWindow = main_window;
 		query_gl_constants();
 		update_raw_mouse_motion();
 		update_vsync();
+		init_standard_cursors();
 		return true;
 	}
 	return false;
@@ -148,12 +195,15 @@ static void init_handlers()
 	Data::Input::global_key_handler = new KeyHandler();
 	Data::Input::path_drop_handler = new PathDropHandler();
 
-	Window& window = *Machine.main_window;
+	Window& window = *MainWindow;
 	window.root_window_size.add_child(Data::Input::resize_handler);
 	window.root_display_scale.add_child(Data::Input::rescale_handler);
+	window.root_mouse_button.add_child(&brushes()->mb_handler);
 	window.root_mouse_button.add_child(&palette()->mb_handler);
 	window.root_mouse_button.add_child(&easel()->mb_handler);
 	window.root_key.add_child(&menu()->key_handler);
+	window.root_key.add_child(&easel()->key_handler);
+	window.root_key.add_child(&brushes()->key_handler);
 	window.root_key.add_child(&palette()->key_handler);
 	window.root_scroll.add_child(&palette()->scroll_handler);
 	window.root_scroll.add_child(&easel()->scroll_handler);
@@ -166,7 +216,7 @@ static void init_handlers()
 		QUASAR_GL(glViewport(0, 0, ws.width, ws.height));
 		// LATER while resizing, just color window (block content) until resizing is done, for smoother transitioning.
 		QUASAR_GL(glClear(GL_COLOR_BUFFER_BIT));
-		Machine.main_window->swap_buffers();
+		MainWindow->swap_buffers();
 		Machine.on_render();
 		};
 	Data::Input::rescale_handler->callback = [](const DisplayScaleEvent& ds) {
@@ -183,13 +233,13 @@ static void init_handlers()
 			if (filepath.has_any_extension(image_formats, num_image_formats))
 			{
 				pd.consumed = true;
-				Machine.main_window->focus();
+				MainWindow->focus();
 				Machine.import_file(filepath);
 			}
 			else if (filepath.has_any_extension(quasar_formats, num_quasar_formats))
 			{
 				pd.consumed = true;
-				Machine.main_window->focus();
+				MainWindow->focus();
 				Machine.open_file(filepath);
 			}
 			// LATER note no error popup otherwise?
@@ -229,14 +279,17 @@ void MachineImpl::init_renderer()
 
 	set_app_scale(main_window->display_scale());
 
-	main_window->set_size_limits(window_layout_info.initial_brush_panel_width + window_layout_info.initial_brush_panel_width,
-		//window_layout_info.initial_menu_panel_height + window_layout_info.initial_scene_panel_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
-		//window_layout_info.initial_height, GLFW_DONT_CARE, GLFW_DONT_CARE); // LATER add status bar at bottom of window. also, add min/max limits to individual panels, and add up here.
-		window_layout_info.menu_panel_height + window_layout_info.scene_panel_height + (int)palette()->minimum_screen_display().y, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	float min_width = max(brushes()->minimum_screen_display().x + palette()->minimum_screen_display().x,
+		menu()->minimum_screen_display().x, scene()->minimum_screen_display().x);
+	float min_height = menu()->minimum_screen_display().y + scene()->minimum_screen_display().y
+		+ max(brushes()->minimum_screen_display().y, palette()->minimum_screen_display().y);
+	min_width = std::max(min_width, (float)window_layout_info.brushes_panel_width + window_layout_info.palette_panel_width);
+	min_height = std::max(min_height, (float)window_layout_info.menu_panel_height + window_layout_info.scene_panel_height);
+	main_window->set_size_limits((int)min_width, (int)min_height, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	
 	Data::update_time();
 
-	import_file(FileSystem::workspace_path("ex/flag.png"));
+	import_file(FileSystem::workspace_path("ex/einstein.png"));
 	easel()->image_edit_perf_mode = true;
 }
 
@@ -247,7 +300,14 @@ void MachineImpl::destroy()
 	Fonts::invalidate_common_fonts();
 	history.clear_history();
 	invalidate_handlers();
+	free_standard_cursors();
 	QUASAR_INVALIDATE_PTR(main_window); // invalidate window last
+	MainWindow = nullptr;
+	MEasel = nullptr;
+	MPalette = nullptr;
+	MBrushes = nullptr;
+	MScene = nullptr;
+	MMenu = nullptr;
 }
 
 bool MachineImpl::should_exit() const
@@ -267,9 +327,9 @@ void MachineImpl::on_render()
 
 static void process_undo()
 {
-	if (Machine.main_window->is_key_pressed(Key::Z) && Machine.main_window->is_ctrl_pressed())
+	if (MainWindow->is_key_pressed(Key::Z) && MainWindow->is_ctrl_pressed())
 	{
-		if (!Machine.main_window->is_shift_pressed())
+		if (!MainWindow->is_shift_pressed())
 		{
 			Data::History::held_time += Data::delta_time;
 			if (Data::History::on_starting_interval)
@@ -298,9 +358,9 @@ static void process_undo()
 
 static void process_redo()
 {
-	if (Machine.main_window->is_key_pressed(Key::Z) && Machine.main_window->is_ctrl_pressed())
+	if (MainWindow->is_key_pressed(Key::Z) && MainWindow->is_ctrl_pressed())
 	{
-		if (Machine.main_window->is_shift_pressed())
+		if (MainWindow->is_shift_pressed())
 		{
 			Data::History::held_time += Data::delta_time;
 			if (Data::History::on_starting_interval)
@@ -330,7 +390,9 @@ static void process_redo()
 void MachineImpl::process()
 {
 	Data::update_time();
-	easel()->update_panning();
+	palette()->process();
+	brushes()->process();
+	easel()->process();
 	if (Data::History::held_undo)
 		process_undo();
 	else if (Data::History::held_redo)
@@ -445,6 +507,18 @@ Position MachineImpl::to_screen_coordinates(Position world_coordinates, const gl
 		(1.0f + clip_space_pos.x) * 0.5f * main_window->width(),
 		(1.0f + clip_space_pos.y) * 0.5f * main_window->height()
 	};
+}
+
+Scale MachineImpl::to_world_size(Scale screen_size, const glm::mat3& vp) const
+{
+	glm::mat2 vpsz = { { vp[0][0], vp[0][1] }, { vp[1][0], vp[1][1] } };
+	return 2.0f * glm::inverse(vpsz) * (screen_size / Scale(main_window->size()));
+}
+
+Scale MachineImpl::to_screen_size(Scale world_size, const glm::mat3& vp) const
+{
+	glm::mat2 vpsz = { { vp[0][0], vp[0][1] }, { vp[1][0], vp[1][1] } };
+	return 0.5f * Scale(main_window->size()) * (vpsz * world_size);
 }
 
 Position MachineImpl::cursor_screen_pos() const

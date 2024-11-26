@@ -161,6 +161,13 @@ void MenuPanel::draw()
 	}
 }
 
+Scale MenuPanel::minimum_screen_display() const
+{
+	return { 0, Machine.window_layout_info.menu_panel_height };
+	// LATER min x is 0. This will cut off ImGui from right side, so right align elements in menu that are rightmost. That way, they won't get cut off.
+	// In fact, check if there is room before beginning a new menu.
+}
+
 void MenuPanel::main_menu_setup()
 {
 	if (_close_menu)

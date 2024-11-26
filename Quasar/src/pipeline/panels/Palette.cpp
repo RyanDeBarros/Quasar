@@ -2,8 +2,10 @@
 
 #include <glm/gtc/type_ptr.inl>
 
+#include "ImplUtility.h"
 #include "user/Machine.h"
 #include "variety/GLutility.h"
+#include "Easel.h"
 #include "../render/Uniforms.h"
 #include "../widgets/ColorPicker.h"
 #include "../widgets/ColorPalette.h"
@@ -43,6 +45,12 @@ PalettePanel::PalettePanel()
 	use_primary = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::PRIMARY; };
 	use_alternate = [this]() { return color_picker(this).get_editing_color() == ColorPicker::EditingColor::ALTERNATE; };
 	swap_picker_colors = [this]() { color_picker(this).swap_picker_colors(); };
+	emit_modified_primary = [this](RGBA rgba) {	MEasel->canvas().set_primary_color(rgba); };
+	emit_modified_alternate = [this](RGBA rgba) { MEasel->canvas().set_alternate_color(rgba); };
+}
+
+void PalettePanel::initialize()
+{
 	initialize_widget();
 
 	// ##########################################################
@@ -64,9 +72,9 @@ PalettePanel::PalettePanel()
 
 	color_palette(this).import_color_scheme(std::make_shared<ColorScheme>(std::vector<std::shared_ptr<ColorSubscheme>>{
 		std::make_shared<ColorSubscheme>("test#0", std::move(colors0)),
-		std::make_shared<ColorSubscheme>("test#1", std::move(colors1)),
-		std::make_shared<ColorSubscheme>("test#2", std::move(colors2))
-		}), false); // LATER this would be true when importing a new scheme, but false for default color scheme upon opening application/new file
+			std::make_shared<ColorSubscheme>("test#1", std::move(colors1)),
+			std::make_shared<ColorSubscheme>("test#2", std::move(colors2))
+	}), false); // LATER this would be true when importing a new scheme, but false for default color scheme upon opening application/new file
 	// ##########################################################
 }
 
@@ -76,24 +84,30 @@ void PalettePanel::draw()
 	render_widget();
 }
 
-void PalettePanel::render_widget()
+void PalettePanel::process()
 {
 	color_picker(this).process();
 	color_palette(this).process();
+}
+
+void PalettePanel::render_widget()
+{
 	color_picker(this).draw();
 	color_palette(this).draw();
 }
 
 Scale PalettePanel::minimum_screen_display() const
 {
-	return to_screen_coordinates(color_picker_scale * color_picker(this).minimum_display() + color_palette_scale * color_palette(this).minimum_display() + Scale{ 2 * padding, 3 * padding }) - to_screen_coordinates({});
+	Scale cpk = color_picker_scale * color_picker(this).minimum_display();
+	Scale cpl = color_palette_scale * color_palette(this).minimum_display();
+	return to_screen_size({ std::max(cpk.x, cpl.x) + 2 * padding, cpk.y + cpl.y + 3 * padding });
 }
 
 void PalettePanel::new_color()
 {
-	bool adjacent = !Machine.main_window->is_shift_pressed();
-	bool update_selector = Machine.main_window->is_ctrl_pressed();
-	if (Machine.main_window->is_alt_pressed())
+	bool adjacent = !MainWindow->is_shift_pressed();
+	bool update_selector = MainWindow->is_ctrl_pressed();
+	if (MainWindow->is_alt_pressed())
 		color_palette(this).current_subpalette().new_color_from_alternate(color_picker(this).get_alt_color().rgba(), adjacent, update_selector, true);
 	else
 		color_palette(this).current_subpalette().new_color_from_primary(color_picker(this).get_pri_color().rgba(), adjacent, update_selector, true);
@@ -101,7 +115,7 @@ void PalettePanel::new_color()
 
 void PalettePanel::overwrite_color()
 {
-	if (Machine.main_window->is_alt_pressed())
+	if (MainWindow->is_alt_pressed())
 		color_palette(this).subpalette_overwrite_alternate(true);
 	else
 		color_palette(this).subpalette_overwrite_primary(true);
@@ -110,7 +124,7 @@ void PalettePanel::overwrite_color()
 void PalettePanel::delete_color()
 {
 	ColorSubpalette& subpalette = color_palette(this).current_subpalette();
-	if (Machine.main_window->is_alt_pressed())
+	if (MainWindow->is_alt_pressed())
 		subpalette.remove_square_under_index(subpalette.alternate_index, true, true);
 	else
 		subpalette.remove_square_under_index(subpalette.primary_index, true, true);
@@ -131,13 +145,22 @@ void PalettePanel::delete_subpalette()
 	color_palette(this).delete_current_subpalette(true);
 }
 
+void PalettePanel::set_pri_color(RGBA color)
+{
+	color_picker(this).set_pri_color(color, false);
+}
+
+void PalettePanel::set_alt_color(RGBA color)
+{
+	color_picker(this).set_alt_color(color, false);
+}
+
 void PalettePanel::initialize_widget()
 {
 	assign_widget(&widget, BACKGROUND, std::make_shared<W_UnitRenderable>(&bkg_shader));
-	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec()));
-	ur_wget(widget, BACKGROUND).send_buffer();
+	ur_wget(widget, BACKGROUND).set_attribute(1, glm::value_ptr(RGBA(0.2f, 0.1f, 0.3f, 0.1f).as_vec())).send_buffer();
 
-	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, mb_handler, key_handler)); // LATER initialize panels early and put mb_handlers as data members of panels?
+	assign_widget(&widget, COLOR_PICKER, std::make_shared<ColorPicker>(&vp, mb_handler, key_handler, ColorPicker::Reflection(&emit_modified_primary, &emit_modified_alternate)));
 	widget.wp_at(COLOR_PICKER).transform.scale = Scale(color_picker_scale);
 
 	assign_widget(&widget, COLOR_PALETTE, std::make_shared<ColorPalette>(&vp, mb_handler, key_handler, scroll_handler,
@@ -148,17 +171,11 @@ void PalettePanel::initialize_widget()
 void PalettePanel::sync_widget()
 {
 	widget.wp_at(BACKGROUND).transform.scale = get_app_size();
-	WidgetPlacement wp = widget.wp_at(BACKGROUND).relative_to(widget.self.transform);
-	UnitRenderable& bkg = ur_wget(widget, BACKGROUND);
-	bkg.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.bottom() }));
-	bkg.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ wp.left(), wp.top() }));
-	bkg.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ wp.right(), wp.top() }));
-	bkg.send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(widget, BACKGROUND), widget.wp_at(BACKGROUND).relative_to(widget.self.transform));
 
-	float view_height = (to_view_coordinates({}) - to_view_coordinates({ 0, bounds.clip().screen_h })).y;
+	float view_height = to_view_size({ 0, bounds.clip().screen_h }).y;
 	const float free_space_y = view_height - 3 * padding;
-	const float color_picker_height = 420; // LATER palette min height is at least 420 + 3 * padding + min color palette height, or else scale Palette view down.
+	const float color_picker_height = 420;
 	const float color_palette_height = free_space_y - color_picker_height * color_picker_scale.y;
 
 	Scale color_picker_size{ 240, color_picker_height };

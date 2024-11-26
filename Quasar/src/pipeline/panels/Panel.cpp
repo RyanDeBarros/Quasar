@@ -6,7 +6,7 @@ void Panel::render()
 {
 	if (visible)
 	{
-		//bounds.clip().scissor(); // TODO uncomment
+		bounds.clip().scissor();
 		draw();
 	}
 }
@@ -67,6 +67,21 @@ Position Panel::to_screen_coordinates(Position world_coordinates) const
 	return Machine.to_screen_coordinates(world_coordinates, vp_matrix());
 }
 
+Scale Panel::to_view_size(Scale screen_size) const
+{
+	return Machine.to_world_size(screen_size, pgroup->projection);
+}
+
+Scale Panel::to_world_size(Scale screen_size) const
+{
+	return Machine.to_world_size(screen_size, vp_matrix());
+}
+
+Scale Panel::to_screen_size(Scale world_size) const
+{
+	return Machine.to_screen_size(world_size, vp_matrix());
+}
+
 void PanelGroup::sync_panels()
 {
 	for (auto& panel : panels)
@@ -81,7 +96,7 @@ void PanelGroup::render()
 
 void PanelGroup::set_projection()
 {
-	projection = glm::ortho<float>(0.0f, Machine.main_window->width() * Machine.inv_app_scale().x, 0.0f, Machine.main_window->height() * Machine.inv_app_scale().y);
+	projection = glm::ortho<float>(0.0f, MainWindow->width() * Machine.inv_app_scale().x, 0.0f, MainWindow->height() * Machine.inv_app_scale().y);
 	for (auto& panel : panels)
 		panel->send_view();
 }

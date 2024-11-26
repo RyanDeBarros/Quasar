@@ -1,3 +1,6 @@
+#include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
+
 #include "user/Machine.h"
 #include "variety/IO.h"
 
@@ -10,6 +13,8 @@ static void glfw_error_callback(int error, const char* description)
 int main()
 {
 	IO.load_quasar_settings();
+	stbi_set_flip_vertically_on_load(true);
+	stbi_flip_vertically_on_write(true);
 	//IO.load_workspace_preferences("D:/Projects/Visual Studio/Quasar/Quasar/ex/workspace1.toml", "workspace1"); // LATER workspace preferences GUI menu option
 	if (glfwInit() != GLFW_TRUE)
 		return -1;
@@ -30,7 +35,7 @@ int main()
 	Machine.recent_image_files = {"1.png", "2.gif", "3.jpg"};
 
 	// NOTE only one window, so no need to call bind_gui() at each frame.
-	Machine.main_window->bind_gui();
+	MainWindow->bind_gui();
 	for (;;)
 	{
 		glfwPollEvents();

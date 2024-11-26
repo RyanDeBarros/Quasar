@@ -15,8 +15,28 @@ struct MachineImpl
 	MachineImpl(MachineImpl&&) noexcept = delete;
 	~MachineImpl() = default;
 
+	struct Easel* easel() const;
+	struct PalettePanel* palette() const;
+	struct BrushesPanel* brushes() const;
+	struct ScenePanel* scene() const;
+	struct MenuPanel* menu() const;
+
 	ActionHistory history;
 	Window* main_window = nullptr;
+	
+	struct
+	{
+		std::shared_ptr<Cursor> ARROW;
+		std::shared_ptr<Cursor> IBEAM;
+		std::shared_ptr<Cursor> CROSSHAIR;
+		std::shared_ptr<Cursor> HAND;
+		std::shared_ptr<Cursor> RESIZE_EW;
+		std::shared_ptr<Cursor> RESIZE_NS;
+		std::shared_ptr<Cursor> RESIZE_NW_SE;
+		std::shared_ptr<Cursor> RESIZE_NE_SW;
+		std::shared_ptr<Cursor> RESIZE_OMNI;
+		std::shared_ptr<Cursor> CANCEL;
+	} cursors;
 
 	struct
 	{
@@ -57,6 +77,8 @@ struct MachineImpl
 
 	Position to_world_coordinates(Position screen_coordinates, const glm::mat3& inverse_vp) const;
 	Position to_screen_coordinates(Position world_coordinates, const glm::mat3& vp) const;
+	Scale to_world_size(Scale screen_size, const glm::mat3& vp) const;
+	Scale to_screen_size(Scale world_size, const glm::mat3& vp) const;
 
 	Position cursor_screen_pos() const;
 	Position cursor_screen_x() const;
@@ -141,3 +163,9 @@ struct MachineImpl
 };
 
 inline MachineImpl Machine;
+inline Window* MainWindow = nullptr;
+inline struct Easel* MEasel = nullptr;
+inline struct PalettePanel* MPalette = nullptr;
+inline struct BrushesPanel* MBrushes = nullptr;
+inline struct ScenePanel* MScene = nullptr;
+inline struct MenuPanel* MMenu = nullptr;

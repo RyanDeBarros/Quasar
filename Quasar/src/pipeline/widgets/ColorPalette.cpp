@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.inl>
 #include <imgui/imgui_internal.h>
 
+#include "ImplUtility.h"
 #include "../render/Uniforms.h"
 #include "RoundRect.h"
 #include "user/Machine.h"
@@ -229,33 +230,20 @@ ColorSubpalette::ColorSubpalette(Shader* color_square_shader, Shader* outline_re
 	assign_widget(this, SQUARES, std::make_shared<W_IndexedRenderable>(color_square_shader));
 	
 	assign_widget(this, HOVER_SELECTOR, std::make_shared<W_UnitRenderable>(outline_rect_shader));
-	UnitRenderable& hur = ur_wget(*this, HOVER_SELECTOR);
-	hur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
-	hur.set_attribute_single_vertex(0, 2, glm::value_ptr(glm::vec2{ 0, 0 }));
-	hur.set_attribute_single_vertex(1, 2, glm::value_ptr(glm::vec2{ 1, 0 }));
-	hur.set_attribute_single_vertex(2, 2, glm::value_ptr(glm::vec2{ 0, 1 }));
-	hur.set_attribute_single_vertex(3, 2, glm::value_ptr(glm::vec2{ 1, 1 }));
-	hur.send_buffer();
-
+	ur_wget(*this, HOVER_SELECTOR).set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
+	Utils::set_uv_attributes(ur_wget(*this, HOVER_SELECTOR), 0, 1, 0, 1, 0, 2);
+	
 	assign_widget(this, PRIMARY_SELECTOR_B, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
-	UnitRenderable& pbur = ur_wget(*this, PRIMARY_SELECTOR_B);
-	pbur.set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec()));
-	pbur.send_buffer();
+	ur_wget(*this, PRIMARY_SELECTOR_B).set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec())).send_buffer();
 
 	assign_widget(this, PRIMARY_SELECTOR_F, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
-	UnitRenderable& pfur = ur_wget(*this, PRIMARY_SELECTOR_F);
-	pfur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
-	pfur.send_buffer();
+	ur_wget(*this, PRIMARY_SELECTOR_F).set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec())).send_buffer();
 
 	assign_widget(this, ALTERNATE_SELECTOR_B, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
-	UnitRenderable& abur = ur_wget(*this, ALTERNATE_SELECTOR_B);
-	abur.set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec()));
-	abur.send_buffer();
+	ur_wget(*this, ALTERNATE_SELECTOR_B).set_attribute(1, glm::value_ptr(RGBA::BLACK.as_vec())).send_buffer();
 
 	assign_widget(this, ALTERNATE_SELECTOR_F, std::make_shared<W_UnitRenderable>(color_square_shader, 3));
-	UnitRenderable& afur = ur_wget(*this, ALTERNATE_SELECTOR_F);
-	afur.set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec()));
-	afur.send_buffer();
+	ur_wget(*this, ALTERNATE_SELECTOR_F).set_attribute(1, glm::value_ptr(RGBA::WHITE.as_vec())).send_buffer();
 }
 
 ColorPalette& ColorSubpalette::palette()
@@ -311,12 +299,7 @@ void ColorSubpalette::draw_selectors()
 
 void ColorSubpalette::sync_hover_selector()
 {
-	const UnitRenderable& ur = ur_wget(*this, HOVER_SELECTOR);
-	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.bottom() }));
-	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.bottom() }));
-	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ hover_wp.left(), hover_wp.top() }));
-	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ hover_wp.right(), hover_wp.top() }));
-	ur.send_buffer();
+	Utils::set_vertex_pos_attributes(ur_wget(*this, HOVER_SELECTOR), hover_wp);
 }
 
 const float tri_first_offset = 3;
@@ -327,17 +310,17 @@ void ColorSubpalette::sync_primary_selector()
 {
 	Scale sc = global_scale();
 
-	const UnitRenderable& ubr = ur_wget(*this, PRIMARY_SELECTOR_B);
-	ubr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() }));
-	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_last_offset * sc.x, primary_wp.top()}));
-	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() - tri_last_offset * sc.y }));
-	ubr.send_buffer();
+	ur_wget(*this, PRIMARY_SELECTOR_B)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_last_offset * sc.x, primary_wp.top()}))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left(), primary_wp.top() - tri_last_offset * sc.y }))
+		.send_buffer();
 
-	const UnitRenderable& ufr = ur_wget(*this, PRIMARY_SELECTOR_F);
-	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }));
-	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_second_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }));
-	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_second_offset * sc.y }));
-	ufr.send_buffer();
+	ur_wget(*this, PRIMARY_SELECTOR_F)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_second_offset * sc.x, primary_wp.top() - tri_first_offset * sc.y }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ primary_wp.left() + tri_first_offset * sc.x, primary_wp.top() - tri_second_offset * sc.y }))
+		.send_buffer();
 }
 
 void ColorSubpalette::resync_primary_selector()
@@ -350,17 +333,17 @@ void ColorSubpalette::sync_alternate_selector()
 {
 	Scale sc = global_scale();
 
-	const UnitRenderable& ubr = ur_wget(*this, ALTERNATE_SELECTOR_B);
-	ubr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() }));
-	ubr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_last_offset * sc.x, alternate_wp.top() }));
-	ubr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() - tri_last_offset * sc.y }));
-	ubr.send_buffer();
+	ur_wget(*this, ALTERNATE_SELECTOR_B)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_last_offset * sc.x, alternate_wp.top() }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right(), alternate_wp.top() - tri_last_offset * sc.y }))
+		.send_buffer();
 
-	const UnitRenderable& ufr = ur_wget(*this, ALTERNATE_SELECTOR_F);
-	ufr.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }));
-	ufr.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_second_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }));
-	ufr.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_second_offset * sc.y }));
-	ufr.send_buffer();
+	ur_wget(*this, ALTERNATE_SELECTOR_F)
+		.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }))
+		.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_second_offset * sc.x, alternate_wp.top() - tri_first_offset * sc.y }))
+		.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ alternate_wp.right() - tri_first_offset * sc.x, alternate_wp.top() - tri_second_offset * sc.y }))
+		.send_buffer();
 }
 
 void ColorSubpalette::resync_alternate_selector()
@@ -372,8 +355,8 @@ void ColorSubpalette::resync_alternate_selector()
 void ColorSubpalette::sync_with_palette()
 {
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	size_t num_colors = subscheme->colors.size();
-	for (size_t i = 0; i < num_colors; ++i)
+	int num_colors = (int)subscheme->colors.size();
+	for (int i = 0; i < num_colors; ++i)
 		setup_color_buffer(i, squares);
 	squares.send_vertex_buffer();
 
@@ -381,21 +364,13 @@ void ColorSubpalette::sync_with_palette()
 	resync_alternate_selector();
 }
 
-void ColorSubpalette::setup_color_buffer(size_t i, IndexedRenderable& squares) const
+void ColorSubpalette::setup_color_buffer(int i, IndexedRenderable& squares) const
 {
-	WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
-	squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-	squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-	squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-	squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-	glm::vec4 color = subscheme->colors[i].as_vec();
-	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(color));
-	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(color));
-	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(color));
-	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(color));
+	Utils::set_vertex_pos_attributes(squares, square_wp(i).relative_to(parent->self.transform), i * 4, 0, false);
+	Utils::set_four_attributes(squares, glm::value_ptr(subscheme->colors[i].as_vec()), i * 4, 1, false);
 }
 
-void ColorSubpalette::setup_color_buffer(size_t i)
+void ColorSubpalette::setup_color_buffer(int i)
 {
 	setup_color_buffer(i, ir_wget(*this, SQUARES));
 }
@@ -689,46 +664,22 @@ void ColorSubpalette::send_inserted_color(RGBA color, int index, bool adjacent)
 	
 	if (adjacent)
 	{
-		size_t num_colors = subscheme->colors.size();
-		for (size_t i = index + 1; i < num_colors; ++i)
-		{
-			WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
-			squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-			squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-			squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-			squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-		}
+		int num_colors = (int)subscheme->colors.size();
+		for (int i = index + 1; i < num_colors; ++i)
+			Utils::set_vertex_pos_attributes(squares, square_wp((int)i).relative_to(parent->self.transform), i * 4, 0, false);
 	}
 	
 	squares.send_both_buffers_resized();
 }
 
-void ColorSubpalette::send_color(size_t i, RGBA color)
+void ColorSubpalette::send_color(int i, RGBA color)
 {
-	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	glm::vec4 rgba = color.as_vec();
-	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba));
-	squares.send_single_vertex(i * 4 + 0);
-	squares.send_single_vertex(i * 4 + 1);
-	squares.send_single_vertex(i * 4 + 2);
-	squares.send_single_vertex(i * 4 + 3);
+	Utils::set_four_attributes(ir_wget(*this, SQUARES), glm::value_ptr(color.as_vec()), i * 4, 1);
 }
 
-void ColorSubpalette::send_color(size_t i)
+void ColorSubpalette::send_color(int i)
 {
-	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	glm::vec4 rgba = subscheme->colors[i].as_vec();
-	squares.set_attribute_single_vertex(i * 4 + 0, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 1, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 2, 1, glm::value_ptr(rgba));
-	squares.set_attribute_single_vertex(i * 4 + 3, 1, glm::value_ptr(rgba));
-	squares.send_single_vertex(i * 4 + 0);
-	squares.send_single_vertex(i * 4 + 1);
-	squares.send_single_vertex(i * 4 + 2);
-	squares.send_single_vertex(i * 4 + 3);
+	Utils::set_four_attributes(ir_wget(*this, SQUARES), glm::value_ptr(subscheme->colors[i].as_vec()), i * 4, 1);
 }
 
 void ColorSubpalette::remove_square_under_cursor(bool send_vb, bool create_action)
@@ -748,8 +699,8 @@ void ColorSubpalette::remove_square_under_index(int index, bool send_vb, bool cr
 	subscheme->remove(index);
 
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	size_t num_colors = subscheme->colors.size();
-	for (size_t i = index; i < num_colors; ++i)
+	int num_colors = (int)subscheme->colors.size();
+	for (int i = index; i < num_colors; ++i)
 		setup_color_buffer(i, squares);
 
 	if (send_vb)
@@ -802,13 +753,7 @@ void ColorSubpalette::insert_color_at(int index, int to_primary_index, int to_al
 
 	size_t num_colors = subscheme->colors.size();
 	for (int i = index + 1; i < num_colors; ++i)
-	{
-		WidgetPlacement global = square_wp((int)i).relative_to(parent->self.transform);
-		squares.set_attribute_single_vertex(i * 4 + 0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-		squares.set_attribute_single_vertex(i * 4 + 1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-		squares.set_attribute_single_vertex(i * 4 + 2, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-		squares.set_attribute_single_vertex(i * 4 + 3, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-	}
+		Utils::set_vertex_pos_attributes(squares, square_wp((int)i).relative_to(parent->self.transform), i * 4, 0, false);
 
 	squares.send_both_buffers_resized();
 	
@@ -831,8 +776,8 @@ void ColorSubpalette::remove_color_at(int index, int to_primary_index, int to_al
 	subscheme->remove(index);
 
 	IndexedRenderable& squares = ir_wget(*this, SQUARES);
-	size_t num_colors = subscheme->colors.size();
-	for (size_t i = index; i < num_colors; ++i)
+	int num_colors = (int)subscheme->colors.size();
+	for (int i = index; i < num_colors; ++i)
 		setup_color_buffer(i, squares);
 
 	if (send_vb)
@@ -1215,7 +1160,7 @@ void ColorPalette::render_imgui()
 			if (ImGui::IsItemDeactivated())
 			{
 				renaming_subpalette = false;
-				if (!Machine.main_window->is_key_pressed(Key::ESCAPE))
+				if (!MainWindow->is_key_pressed(Key::ESCAPE))
 				{
 					if (current_subpalette().subscheme->name != rename_buf)
 					{
@@ -1246,7 +1191,7 @@ void ColorPalette::connect_input_handlers()
 			current_subpalette().remove_square_under_cursor(false, true); // false for first parameter because of clean_extra_buffer_space() on next line 
 			current_subpalette().clean_extra_buffer_space();
 		}
-		else if (mb.action == IAction::RELEASE && !Machine.main_window->is_key_pressed(Key::SPACE))
+		else if (mb.action == IAction::RELEASE && !MainWindow->is_key_pressed(Key::SPACE))
 		{
 			// select primary/alternate color
 			if (mb.button == MouseButton::LEFT)
@@ -1268,7 +1213,7 @@ void ColorPalette::connect_input_handlers()
 				}
 			}
 		}
-		else if (mb.action == IAction::PRESS && (mb.button == MouseButton::MIDDLE || (mb.button == MouseButton::LEFT && Machine.main_window->is_key_pressed(Key::SPACE))))
+		else if (mb.action == IAction::PRESS && (mb.button == MouseButton::MIDDLE || (mb.button == MouseButton::LEFT && MainWindow->is_key_pressed(Key::SPACE))))
 		{
 			// move color without selecting
 			current_subpalette().begin_moving_color_under_cursor(!(mb.mods & Mods::ALT));
@@ -1328,7 +1273,7 @@ void ColorPalette::connect_input_handlers()
 	scroll_handler.callback = [this](const ScrollEvent& s) {
 		if (!imgui_combo_open && !renaming_subpalette)
 		{
-			if (Machine.main_window->is_alt_pressed())
+			if (MainWindow->is_alt_pressed())
 			{
 				s.consumed = true;
 				cycle_backlog -= s.yoff;
@@ -1368,11 +1313,11 @@ void ColorPalette::initialize_widget()
 	sba.pivot = { 0, 1 };
 	sba.transform.scale = { 28, 28 };
 	sba.is_hoverable = [this]() { return !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); };
-	sba.is_selectable = fconv_st_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
+	sba.is_selectable = fconv_check([this](const MouseButtonEvent& m) { return m.button == MouseButton::LEFT && !imgui_combo_open && !renaming_subpalette && !current_subpalette().is_moving_a_color(); });
 	
 	sba.transform.position = { button1_x, absolute_y_off_bkg_top(button_y) };
 	sba.text = "↓";
-	sba.on_select = fconv_st_on_action([this]() {
+	sba.on_select = fconv_on_action([this]() {
 		if ((*reflection.use_primary)())
 			subpalette_overwrite_primary(true);
 		else if ((*reflection.use_alternate)())
@@ -1384,17 +1329,17 @@ void ColorPalette::initialize_widget()
 
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "+";
-	sba.on_select = fconv_st_on_action([this]() {
+	sba.on_select = fconv_on_action([this]() {
 		if ((*reflection.use_primary)())
 		{
-			bool adjacent = !Machine.main_window->is_shift_pressed();
-			bool update_primary = Machine.main_window->is_ctrl_pressed();
+			bool adjacent = !MainWindow->is_shift_pressed();
+			bool update_primary = MainWindow->is_ctrl_pressed();
 			current_subpalette().new_color_from_primary((*reflection.get_picker_pri_rgba)(), adjacent, update_primary, true);
 		}
 		else if ((*reflection.use_alternate)())
 		{
-			bool adjacent = !Machine.main_window->is_shift_pressed();
-			bool update_alternate = Machine.main_window->is_ctrl_pressed();
+			bool adjacent = !MainWindow->is_shift_pressed();
+			bool update_alternate = MainWindow->is_ctrl_pressed();
 			current_subpalette().new_color_from_alternate((*reflection.get_picker_alt_rgba)(), adjacent, update_alternate, true);
 		}
 		});
@@ -1407,17 +1352,17 @@ void ColorPalette::initialize_widget()
 	sba.font_size = 22;
 	sba.transform.position.x = button2_x;
 	sba.text = "N";
-	sba.on_select = fconv_st_on_action([this]() { new_subpalette(true); });
+	sba.on_select = fconv_on_action([this]() { new_subpalette(true); });
 	assign_widget(this, BUTTON_SUBPALETTE_NEW, std::make_shared<StandardTButton>(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "R";
-	sba.on_select = fconv_st_on_action([this]() { rename_subpalette(); });
+	sba.on_select = fconv_on_action([this]() { rename_subpalette(); });
 	assign_widget(this, BUTTON_SUBPALETTE_RENAME, std::make_shared<StandardTButton>(sba));
 	
 	sba.transform.position.x += sba.transform.scale.x;
 	sba.text = "D";
-	sba.on_select = fconv_st_on_action([this]() { delete_current_subpalette(true); });
+	sba.on_select = fconv_on_action([this]() { delete_current_subpalette(true); });
 	assign_widget(this, BUTTON_SUBPALETTE_DELETE, std::make_shared<StandardTButton>(sba));
 }
 
@@ -1466,27 +1411,19 @@ void ColorPalette::sync_widget_with_vp()
 	for (size_t button : BUTTONS)
 		b_t_wget(*this, button).send_vp();
 
-	UnitRenderable& ur = ur_wget(*this, BLACK_GRID);
 	FlatTransform global = self.transform;
 	global.scale *= Scale(_col_count * SQUARE_SEP, _row_count * SQUARE_SEP);
 
-	ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ global.left(), global.bottom() }));
-	ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{ global.right(), global.bottom() }));
-	ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{ global.left(), global.top() }));
-	ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ global.right(), global.top() }));
-	ur.set_attribute_single_vertex(0, 1, glm::value_ptr(glm::vec2{ 0, 0 }));
-	ur.set_attribute_single_vertex(1, 1, glm::value_ptr(glm::vec2{ 1, 0 }));
-	ur.set_attribute_single_vertex(2, 1, glm::value_ptr(glm::vec2{ 0, 1 }));
-	ur.set_attribute_single_vertex(3, 1, glm::value_ptr(glm::vec2{ 1, 1 }));
-	ur.send_buffer();
-
+	Utils::set_uv_attributes(ur_wget(*this, BLACK_GRID), 0, 1, 0, 1, 0, 1, false);
+	Utils::set_vertex_pos_attributes(ur_wget(*this, BLACK_GRID), global);
+	
 	// LATER is this necessary, or should only current subpalette be selected, and when selecting a new subpalette, sync it then.
 	for (size_t i = 0; i < num_subpalettes(); ++i)
 		get_subpalette(i).sync_with_palette();
 
 	gui_transform.scale = wp_at(BACKGROUND).transform.scale * Machine.get_app_scale() * self.transform.scale;
 	gui_transform.position = Machine.to_screen_coordinates(children[BACKGROUND]->global_of({ -0.5f, 0.5f }), *vp);
-	gui_transform.position.y = Machine.main_window->height() - gui_transform.position.y;
+	gui_transform.position.y = MainWindow->height() - gui_transform.position.y;
 }
 
 void ColorPalette::set_grid_metrics(int col, int row, bool sync)
