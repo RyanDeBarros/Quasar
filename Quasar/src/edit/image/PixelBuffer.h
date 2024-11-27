@@ -28,6 +28,7 @@ struct Buffer
 	void coordinates_of(Dim i, Dim& x, Dim& y) const { x = i % width; y = i / height; }
 
 	void pxnew() { pixels = new Byte[bytes()]; }
+	bool same_dimensions_as(const Buffer& buf) const { return width == buf.width && height == buf.height && chpp == buf.chpp; }
 
 	void flip_horizontally() const;
 	void flip_vertically() const;

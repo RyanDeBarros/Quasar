@@ -9,16 +9,19 @@
 #include "Palette.h"
 #include "../render/Uniforms.h"
 #include "../render/FlatSprite.h"
+#include "edit/image/PixelBufferPaths.h"
 
 constexpr GLuint CHECKERBOARD_TSLOT = 0;
 constexpr GLuint CURSOR_ERASER_TSLOT = 1;
 constexpr GLuint CURSOR_SELECT_TSLOT = 2;
-constexpr GLuint CANVAS_SPRITE_TSLOT = 3;
+constexpr GLuint BRUSH_PREVIEW_TSLOT = 3;
+constexpr GLuint CANVAS_SPRITE_TSLOT = 4;
 
 Canvas::Canvas(Shader* cursor_shader)
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
 	Widget(_W_COUNT), brush_under_tool(&Canvas::brush_camera_tool)
 {
+	binfo.preview_image = std::make_shared<Image>();
 	initialize_widget(cursor_shader);
 	initialize_dot_cursor();
 }
@@ -40,6 +43,8 @@ void Canvas::initialize_widget(Shader* cursor_shader)
 	fs_wget(*this, CURSOR_ERASER).set_texture_slot(CURSOR_ERASER_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("eraser.png"));
 	assign_widget(this, CURSOR_SELECT, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, CURSOR_SELECT).set_texture_slot(CURSOR_SELECT_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("select.png"));
+	assign_widget(this, BRUSH_PREVIEW, std::make_shared<FlatSprite>(&sprite_shader));
+	fs_wget(*this, BRUSH_PREVIEW).set_texture_slot(BRUSH_PREVIEW_TSLOT).image = binfo.preview_image;
 	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 }
@@ -76,7 +81,7 @@ void Canvas::draw()
 	fs_wget(*this, CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
 	if (binfo.show_preview)
-		draw_preview();
+		fs_wget(*this, BRUSH_PREVIEW).draw(BRUSH_PREVIEW_TSLOT);
 	minor_gridlines.draw();
 	major_gridlines.draw();
 	if (cursor_in_canvas)
@@ -141,33 +146,51 @@ void Canvas::set_image(std::shared_ptr<Image>&& img)
 void Canvas::sync_checkerboard_with_image()
 {
 	FlatSprite& sprite = fs_wget(*this, SPRITE);
-	if (sprite.image)
+	if (image)
 	{
-		const Buffer& buf = sprite.image->buf;
-		sprite.self.transform.scale = { buf.width, buf.height };
+		const Buffer& buf = image->buf;
+		sprite.self.transform.scale = { buf.width, buf.height }; // TODO put in sync_sprite_with_image()
 		sprite.update_transform();
 		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
 		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
 		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
 	}
 	else
-		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer();
+		fs_wget(*this, CHECKERBOARD).set_modulation(ColorFrame(0)).ur->send_buffer(); // LATER unnecessary because of visible data member?
+}
+
+void Canvas::sync_brush_preview_with_image()
+{
+	if (image)
+	{
+		Buffer& buf = binfo.preview_image->buf;
+		if (!buf.same_dimensions_as(image->buf))
+		{
+			delete[] buf.pixels;
+			buf = image->buf;
+			buf.pxnew();
+		}
+		memset(buf.pixels, 0, buf.bytes());
+		binfo.preview_image->gen_texture();
+		binfo.preview_image->resend_texture();
+		fs_wget(*this, BRUSH_PREVIEW).self.transform.scale = { buf.width, buf.height };
+	}
 }
 
 void Canvas::sync_gridlines_with_image()
 {
-	Image* img = fs_wget(*this, SPRITE).image.get();
-	if (img)
+	if (image)
 	{
 		visible = true;
-		minor_gridlines.sync_with_image(img->buf.width, img->buf.height, self.transform.scale);
-		major_gridlines.sync_with_image(img->buf.width, img->buf.height, self.transform.scale);
+		minor_gridlines.sync_with_image(image->buf.width, image->buf.height, self.transform.scale);
+		major_gridlines.sync_with_image(image->buf.width, image->buf.height, self.transform.scale);
 	}
 }
 
 void Canvas::sync_transform()
 {
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
+	fs_wget(*this, BRUSH_PREVIEW).update_transform().ur->send_buffer();
 	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
 	sync_cursor_with_widget();
 }
@@ -175,6 +198,7 @@ void Canvas::sync_transform()
 void Canvas::sync_gfx_with_image()
 {
 	sync_checkerboard_with_image();
+	sync_brush_preview_with_image();
 	sync_gridlines_with_image();
 	sync_transform();
 }
@@ -255,6 +279,7 @@ void Canvas::update_brush_tool()
 		break;
 	case BrushTool::RECT_FILL:
 		brush_under_tool = &Canvas::brush_rect_fill_tool;
+		binfo.preview_mode = BrushActionInfo::RECT_FILL;
 		break;
 	}
 }
@@ -262,10 +287,6 @@ void Canvas::update_brush_tool()
 void Canvas::update_brush_tip()
 {
 }
-
-// TODO use scale instead of repeated draw for rects in draw_preview().
-// TODO only use set on confirm, otherwise not.
-// TODO use interpolators directly for preview.
 
 // TODO hover even when outside canvas for line/rect ?
 void Canvas::hover_pixel_under_cursor(Position world_pos)
@@ -413,8 +434,8 @@ void Canvas::cursor_press(MouseButton button)
 
 void Canvas::cursor_release()
 {
-	cursor_state = CursorState::UP;
 	brush_submit();
+	cursor_state = CursorState::UP;
 	set_cursor_color(primary_color);
 }
 
@@ -422,8 +443,8 @@ bool Canvas::cursor_cancel()
 {
 	if (cursor_state != CursorState::UP)
 	{
-		cursor_state = CursorState::UP;
 		brush_cancel();
+		cursor_state = CursorState::UP;
 		set_cursor_color(primary_color);
 		return true;
 	}
@@ -599,19 +620,32 @@ void Canvas::brush_line_tool(int x, int y)
 		binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
 		binfo.painted_colors.clear();
 		auto& interp = binfo.interps.line;
+		IPosition pos{};
+		for (unsigned int i = 0; i < interp.length; ++i)
+		{
+			interp.at(i, pos.x, pos.y);
+			buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
+		}
+		// TODO move to interpolator
+		IntBounds bbox = { std::min(interp.start.x, interp.finish.x), std::max(interp.start.x, interp.finish.x), std::min(interp.start.y, interp.finish.y), std::max(interp.start.y, interp.finish.y) };
+		binfo.preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
+
 		interp.start = binfo.starting_pos;
 		interp.finish = { x, y };
 		interp.sync_with_endpoints();
-		IPosition pos;
 		PixelRGBA new_color;
+		PixelRGBA old_color;
 		for (unsigned int i = 0; i < interp.length; ++i)
 		{
 			interp.at(i, pos);
-			PixelRGBA old_color = pixel_color_at(pos);
+			old_color = pixel_color_at(pos);
 			new_color = applied_color().get_pixel_rgba();
+			buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y, new_color);
 			new_color.blend_over(old_color);
 			binfo.painted_colors[pos] = { new_color, old_color };
 		}
+		bbox = { std::min(interp.start.x, interp.finish.x), std::max(interp.start.x, interp.finish.x), std::min(interp.start.y, interp.finish.y), std::max(interp.start.y, interp.finish.y) };
+		binfo.preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
 		break;
 	}
 	case BrushTip::PEN:
@@ -620,15 +654,30 @@ void Canvas::brush_line_tool(int x, int y)
 		binfo.storage_mode = BrushActionInfo::PREVIEW_POSITIONS;
 		binfo.preview_positions.clear();
 		auto& interp = binfo.interps.line;
+		IPosition pos{};
+		for (unsigned int i = 0; i < interp.length; ++i)
+		{
+			interp.at(i, pos.x, pos.y);
+			buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
+		}
+		IntBounds bbox = { std::min(interp.start.x, interp.finish.x), std::max(interp.start.x, interp.finish.x), std::min(interp.start.y, interp.finish.y), std::max(interp.start.y, interp.finish.y) };
+		binfo.preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
+
 		interp.start = binfo.starting_pos;
 		interp.finish = { x, y };
 		interp.sync_with_endpoints();
-		IPosition pos;
+		PixelRGBA new_color;
+		PixelRGBA old_color;
 		for (unsigned int i = 0; i < interp.length; ++i)
 		{
 			interp.at(i, pos);
-			binfo.preview_positions[pos] = pixel_color_at(pos);
+			old_color = pixel_color_at(pos);
+			new_color = applied_color().get_pixel_rgba();
+			buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y, new_color);
+			binfo.preview_positions[pos] = old_color;
 		}
+		bbox = { std::min(interp.start.x, interp.finish.x), std::max(interp.start.x, interp.finish.x), std::min(interp.start.y, interp.finish.y), std::max(interp.start.y, interp.finish.y) };
+		binfo.preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
 		break;
 	}
 	case BrushTip::SELECT:
@@ -644,6 +693,9 @@ void Canvas::brush_start_line_tool()
 
 void Canvas::brush_submit_line_tool()
 {
+	// TODO
+	//if (binfo.brush_pos != IPosition{ -1, -1 })
+		//brush(binfo.brush_pos.x, binfo.brush_pos.y);
 	if (image)
 	{
 		switch (MBrushes->get_brush_tip())
@@ -669,11 +721,8 @@ void Canvas::brush_submit_line_tool()
 
 void Canvas::brush_rect_fill_tool(int x, int y)
 {
-	switch (MBrushes->get_brush_tip())
+	if (MBrushes->get_brush_tip() != BrushTip::SELECT)
 	{
-	case BrushTip::PENCIL:
-	{
-		binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
 		DiscreteRectFillInterpolator new_interp{ binfo.starting_pos, { x, y } };
 		new_interp.sync_with_endpoints();
 		auto& diff = binfo.interp_diffs.rect_fill;
@@ -681,43 +730,52 @@ void Canvas::brush_rect_fill_tool(int x, int y)
 		diff.second = new_interp;
 		diff.sync_with_interpolators();
 		IPosition pos{};
+		// TODO move functors to data members. also rename painted_colors to 2-color storage, and preview_positions to 1-color storage.
+		auto painted_colors_storage_remove = [&pc = binfo.painted_colors](IPosition pos) { pc.erase(pos); };
+		auto preview_positions_storage_remove = [&pp = binfo.preview_positions](IPosition pos) { pp.erase(pos); };
+		std::function<void(IPosition)> storage_remove;
+		if (binfo.storage_mode == BrushActionInfo::PAINTED_COLORS)
+			storage_remove = painted_colors_storage_remove;
+		else if (binfo.storage_mode == BrushActionInfo::PREVIEW_POSITIONS)
+			storage_remove = preview_positions_storage_remove;
+
 		for (unsigned int i = 0; i < diff.remove_length; ++i)
 		{
 			diff.remove_at(i, pos.x, pos.y);
-			binfo.painted_colors.erase(pos);
+			buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
+			storage_remove(pos);
 		}
+
+		auto painted_colors_storage_insert = [&pc = binfo.painted_colors](IPosition pos, PixelRGBA new_color, PixelRGBA old_color) {
+			new_color.blend_over(old_color);
+			pc[pos] = { new_color, old_color };
+			};
+		auto preview_positions_storage_insert = [&pp = binfo.preview_positions](IPosition pos, PixelRGBA new_color, PixelRGBA old_color) {
+			pp[pos] = old_color;
+			};
+		std::function<void(IPosition, PixelRGBA, PixelRGBA)> storage_insert;
+		if (binfo.storage_mode == BrushActionInfo::PAINTED_COLORS)
+			storage_insert = painted_colors_storage_insert;
+		else if (binfo.storage_mode == BrushActionInfo::PREVIEW_POSITIONS)
+			storage_insert = preview_positions_storage_insert;
+
 		for (unsigned int i = 0; i < diff.insert_length; ++i)
 		{
 			diff.insert_at(i, pos.x, pos.y);
 			PixelRGBA old_color = pixel_color_at(pos.x, pos.y);
 			PixelRGBA new_color = applied_color().get_pixel_rgba();
-			new_color.blend_over(old_color);
-			binfo.painted_colors[pos] = { new_color, old_color };
+			buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y, new_color); // TODO use separate preview_erase image with separate buffer, which only alpha will be modified
+			storage_insert(pos, new_color, old_color);
 		}
+		
+		binfo.preview_image->update_subtexture(diff.first_bbox.x1, diff.first_bbox.y1, diff.first_bbox.width_no_abs(), diff.first_bbox.height_no_abs());
+		binfo.preview_image->update_subtexture(diff.second_bbox.x1, diff.second_bbox.y1, diff.second_bbox.width_no_abs(), diff.second_bbox.height_no_abs());
 		binfo.interps.rect_fill = new_interp;
 		binfo.interps.rect_fill.sync_with_endpoints();
-		break;
 	}
-	case BrushTip::PEN:
-	case BrushTip::ERASER:
+	else
 	{
-		binfo.storage_mode = BrushActionInfo::PREVIEW_POSITIONS;
-		binfo.preview_positions.clear();
-		auto& interp = binfo.interps.rect_fill;
-		interp.start = binfo.starting_pos;
-		interp.finish = { x, y };
-		interp.sync_with_endpoints();
-		IPosition pos;
-		for (unsigned int i = 0; i < interp.length; ++i)
-		{
-			interp.at(i, pos);
-			binfo.preview_positions[pos] = pixel_color_at(pos);
-		}
-		break;
-	}
-	case BrushTip::SELECT:
 		// LATER
-		break;
 	}
 }
 
@@ -730,14 +788,27 @@ void Canvas::brush_start_rect_fill_tool()
 	{
 		PixelRGBA old_color = pixel_color_at(binfo.starting_pos.x, binfo.starting_pos.y);
 		PixelRGBA new_color = applied_color().get_pixel_rgba();
+		buffer_set_pixel_color(binfo.preview_image->buf, binfo.starting_pos.x, binfo.starting_pos.y, new_color);
+		binfo.preview_image->update_subtexture(binfo.starting_pos.x, binfo.starting_pos.y, 1, 1);
 		if (MBrushes->get_brush_tip() == BrushTip::PENCIL)
+		{
 			new_color.blend_over(old_color);
-		binfo.painted_colors[binfo.starting_pos] = { new_color, old_color };
+			binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
+		}
+		else if (MBrushes->get_brush_tip() != BrushTip::SELECT)
+			binfo.storage_mode = BrushActionInfo::PREVIEW_POSITIONS;
+		if (binfo.storage_mode == BrushActionInfo::PAINTED_COLORS)
+			binfo.painted_colors[binfo.starting_pos] = { new_color, old_color };
+		else if (binfo.storage_mode == BrushActionInfo::PREVIEW_POSITIONS)
+			binfo.preview_positions[binfo.starting_pos] = new_color;
 	}
 }
 
 void Canvas::brush_submit_rect_fill_tool()
 {
+	// TODO this comment lags:
+	//if (binfo.brush_pos != IPosition{ -1, -1 })
+		//hover_pixel_under_cursor(Machine.easel_cursor_world_pos());
 	if (image)
 	{
 		switch (MBrushes->get_brush_tip())
@@ -761,48 +832,6 @@ void Canvas::brush_submit_rect_fill_tool()
 	}
 }
 
-void Canvas::draw_preview()
-{
-	double secs = glfwGetTime();
-	auto preview_on_position = [this](IPosition pos) {
-		hover_pixel_at(pixel_position(pos));
-		set_cursor_color(cursor_state == CursorState::DOWN_PRIMARY ? primary_color : alternate_color);
-		draw_cursor();
-		};
-	switch (binfo.storage_mode)
-	{
-	case BrushActionInfo::PAINTED_COLORS:
-		for (const auto& iter : binfo.painted_colors)
-			preview_on_position(iter.first);
-		break;
-	case BrushActionInfo::PREVIEW_POSITIONS:
-		for (const auto& iter : binfo.preview_positions)
-			preview_on_position(iter.first);
-		break;
-	}
-	secs = glfwGetTime() - secs;
-	//if (secs > 0.0001)
-		//LOG << secs << LOG.nl;
-
-	//switch (MBrushes->get_brush_tool())
-	//{
-	//case BrushTool::PAINT:
-	//	for (const auto& iter : binfo.painted_colors)
-	//		preview_on_position(iter.first);
-	//	break;
-	//case BrushTool::LINE:
-	//	for (int i = 0; i < binfo.interps.line.length; ++i)
-	//	{
-
-	//	}
-	//	break;
-	//case BrushTool::RECT_FILL:
-	//	break;
-	//}
-
-	hover_pixel_at(pixel_position(binfo.brush_pos));
-}
-
 void Canvas::BrushActionInfo::reset()
 {
 	brushing_bbox.x1 = INT_MAX;
@@ -811,6 +840,31 @@ void Canvas::BrushActionInfo::reset()
 	brushing_bbox.y2 = INT_MIN;
 	brush_pos = { -1, -1 };
 	starting_pos = { -1, -1 };
+	if (show_preview)
+	{
+		switch (preview_mode)
+		{
+		case LINE:
+		{
+			// TODO
+			break;
+		}
+		case RECT_FILL:
+		{
+			IntBounds bbox = interp_diffs.rect_fill.second_bbox;
+			UprightRect upr;
+
+			upr.x0 = bbox.x1;
+			upr.x1 = bbox.x2;
+			upr.y0 = bbox.y1;
+			upr.y1 = bbox.y2;
+
+			iterate_path(upr, [&buf = preview_image->buf](PathIterator& pit) { buffer_set_pixel_alpha(buf, pit.x, pit.y, 0); });
+			preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
+			break;
+		}
+		}
+	}
 	show_preview = false;
 	painted_colors.clear();
 	preview_positions.clear();

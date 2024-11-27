@@ -272,10 +272,15 @@ struct RGBA
 
 constexpr void RGBA::blend_over(RGBA bkg)
 {
-	rgb.r = std::clamp(rgb.r * alpha + bkg.rgb.r * (1.0f - alpha), 0.0f, 1.0f);
-	rgb.g = std::clamp(rgb.g * alpha + bkg.rgb.g * (1.0f - alpha), 0.0f, 1.0f);
-	rgb.b = std::clamp(rgb.b * alpha + bkg.rgb.b * (1.0f - alpha), 0.0f, 1.0f);
-	alpha = std::clamp(alpha + bkg.alpha * (1.0f - alpha), 0.0f, 1.0f);
+	float new_alpha = std::clamp(alpha + bkg.alpha * (1.0f - alpha), 0.0f, 1.0f);
+	if (new_alpha != 0.0f)
+	{
+		float inv_alpha = 1.0f / new_alpha;
+		rgb.r = std::clamp((rgb.r * alpha + bkg.rgb.r * bkg.alpha * (1.0f - alpha)) * inv_alpha, 0.0f, 1.0f);
+		rgb.g = std::clamp((rgb.g * alpha + bkg.rgb.g * bkg.alpha * (1.0f - alpha)) * inv_alpha, 0.0f, 1.0f);
+		rgb.b = std::clamp((rgb.b * alpha + bkg.rgb.b * bkg.alpha * (1.0f - alpha)) * inv_alpha, 0.0f, 1.0f);
+	}
+	alpha = new_alpha;
 }
 
 inline const RGBA RGBA::WHITE = RGBA(1.0f, 1.0f, 1.0f, 1.0f);
@@ -295,11 +300,15 @@ struct PixelRGBA
 
 constexpr void PixelRGBA::blend_over(PixelRGBA bkg)
 {
-	float alpha = a / 255.0f;
-	r = std::clamp(roundi(r * alpha + bkg.r * (1.0f - alpha)), 0, 255);
-	g = std::clamp(roundi(g * alpha + bkg.g * (1.0f - alpha)), 0, 255);
-	b = std::clamp(roundi(b * alpha + bkg.b * (1.0f - alpha)), 0, 255);
-	a = std::clamp(roundi(a + bkg.a * (1.0f - alpha)), 0, 255);
+	float new_alpha = std::clamp((a + bkg.a * (1.0f - a * inv255)) * inv255, 0.0f, 1.0f);
+	if (new_alpha != 0.0f)
+	{
+		float inv_alpha = inv255 / new_alpha;
+		r = std::clamp(roundi((r * a + bkg.r * bkg.a * (1.0f - a * inv255)) * inv_alpha), 0, 255);
+		g = std::clamp(roundi((g * a + bkg.g * bkg.a * (1.0f - a * inv255)) * inv_alpha), 0, 255);
+		b = std::clamp(roundi((b * a + bkg.b * bkg.a * (1.0f - a * inv255)) * inv_alpha), 0, 255);
+	}
+	a = std::clamp(roundi(new_alpha * 255), 0, 255);
 }
 
 template<>

@@ -396,7 +396,7 @@ static void process_redo()
 void MachineImpl::process()
 {
 	Data::update_time();
-	LOG << Data::delta_time << LOG.nl;
+	//LOG << Data::delta_time << LOG.nl;
 	palette()->process();
 	brushes()->process();
 	easel()->process();

@@ -13,7 +13,7 @@
 struct Canvas : public Widget
 {
 	friend struct Easel;
-	Shader sprite_shader;
+	Shader sprite_shader; // LATER have one shader for internal sprites like checkerboard/cursors, and a second for the actual sprites (used for multiple layers/frames).
 	RGBA checker1, checker2;
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
@@ -59,6 +59,7 @@ public:
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
 	void sync_checkerboard_with_image();
+	void sync_brush_preview_with_image();
 	void sync_gridlines_with_image();
 	void sync_transform();
 	void sync_gfx_with_image();
@@ -117,6 +118,7 @@ public:
 		CURSOR_PEN,
 		CURSOR_ERASER,
 		CURSOR_SELECT,
+		BRUSH_PREVIEW,
 		SPRITE, // LATER SPRITE_START
 		_W_COUNT
 	};
@@ -129,6 +131,7 @@ private:
 		IPosition brush_pos = { -1, -1 };
 		IntBounds brushing_bbox = { -1, -1, -1, -1 };
 		bool show_preview = false;
+		std::shared_ptr<Image> preview_image;
 		std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> painted_colors;
 		std::unordered_map<IPosition, PixelRGBA> preview_positions;
 
@@ -136,7 +139,7 @@ private:
 		{
 			PAINTED_COLORS,
 			PREVIEW_POSITIONS
-		} storage_mode;
+		} storage_mode = PAINTED_COLORS;
 
 		struct
 		{
@@ -149,10 +152,14 @@ private:
 			DiscreteRectFillDifference rect_fill = {};
 		} interp_diffs;
 
+		enum
+		{
+			LINE,
+			RECT_FILL,
+		} preview_mode = LINE;
+
 		void reset();
 	} binfo;
-
-	void draw_preview();
 };
 
 struct Easel : public Panel

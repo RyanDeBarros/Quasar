@@ -6,6 +6,11 @@ void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c)
 		buf.pos(x, y)[i] = c[i];
 }
 
+void buffer_set_pixel_alpha(const Buffer& buf, int x, int y, int alpha)
+{
+	buf.pos(x, y)[std::max(buf.chpp - 1, 0)] = alpha;
+}
+
 void DiscreteLineInterpolator::sync_with_endpoints()
 {
 	delta = finish - start;
@@ -204,7 +209,7 @@ void OneColorPenAction::backward()
 }
 
 OneColorPencilAction::OneColorPencilAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors)
-	: image(image), painted_colors(painted_colors)
+	: image(image), painted_colors(std::move(painted_colors))
 {
 	weight = sizeof(OneColorPencilAction) + this->painted_colors.size() * (sizeof(IPosition) + 2 * sizeof(PixelRGBA));
 	bbox.x1 = std::min(start.x, finish.x);
