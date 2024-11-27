@@ -13,6 +13,11 @@ constexpr bool on_interval(float val, float min_inclusive, float max_inclusive)
 	return val >= min_inclusive && val <= max_inclusive;
 }
 
+constexpr bool on_interval(int val, int min_inclusive, int max_inclusive)
+{
+	return val >= min_inclusive && val <= max_inclusive;
+}
+
 struct Position : glm::vec2
 {
 	Position(float p = 0.0f) : glm::vec2(p) {}
@@ -71,6 +76,20 @@ struct std::hash<IPosition>
 {
 	size_t operator()(const IPosition& pos) const { return std::hash<int>{}(pos.x) ^ std::hash<int>{}(pos.y); }
 };
+
+inline bool in_diagonal_rect(IPosition pos, IPosition bl, IPosition tr)
+{
+	return on_interval(pos.x, bl.x, tr.x) && on_interval(pos.y, bl.y, tr.y);
+}
+
+inline bool intersection(int l1, int r1, int l2, int r2, int& l3, int& r3)
+{
+	if (r1 < l2 || r2 < l1)
+		return false;
+	l3 = std::max(l1, l2);
+	r3 = std::min(r1, r2);
+	return true;
+}
 
 struct Rotation
 {
@@ -235,6 +254,12 @@ struct IntBounds
 	{
 		return ClippingRect(x1, y1, std::max(x2 - x1, 0), std::max(y2 - y1, 0));
 	}
+
+	IPosition delta() const { return { x2 - x1, y2 - y1 }; }
+	int width() const { return std::abs(x2 - x1) + 1; }
+	int height() const { return std::abs(y2 - y1) + 1; }
+	int width_no_abs() const { return x2 - x1 + 1; }
+	int height_no_abs() const { return y2 - y1 + 1; }
 };
 
 enum class Cardinal

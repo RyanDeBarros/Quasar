@@ -103,7 +103,11 @@ private:
 	void brush_camera_tool(int x, int y);
 	void brush_paint_tool(int x, int y);
 	void brush_line_tool(int x, int y);
+	void brush_start_line_tool();
+	void brush_submit_line_tool();
 	void brush_rect_fill_tool(int x, int y);
+	void brush_start_rect_fill_tool();
+	void brush_submit_rect_fill_tool();
 
 public:
 	enum : size_t
@@ -125,8 +129,26 @@ private:
 		IPosition brush_pos = { -1, -1 };
 		IntBounds brushing_bbox = { -1, -1, -1, -1 };
 		bool show_preview = false;
-		std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
+		std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> painted_colors;
 		std::unordered_map<IPosition, PixelRGBA> preview_positions;
+
+		enum
+		{
+			PAINTED_COLORS,
+			PREVIEW_POSITIONS
+		} storage_mode;
+
+		struct
+		{
+			DiscreteLineInterpolator line = {};
+			DiscreteRectFillInterpolator rect_fill = {};
+		} interps;
+		
+		struct
+		{
+			DiscreteRectFillDifference rect_fill = {};
+		} interp_diffs;
+
 		void reset();
 	} binfo;
 

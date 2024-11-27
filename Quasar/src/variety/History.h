@@ -48,7 +48,7 @@ private:
 	void add_weight(size_t weight)
 	{
 		current_size += weight;
-		while (current_size > tracking_size)
+		while (current_size > tracking_size && !undo_deque.empty())
 		{
 			current_size -= undo_deque.front()->weight;
 			undo_deque.pop_front();
@@ -67,6 +67,8 @@ public:
 				redo_deque.clear();
 		}
 		undo_deque.push_back(action);
+		if (current_size > tracking_size)
+			clear_history();
 	}
 
 	void push(std::shared_ptr<ActionBase>&& action)
@@ -80,6 +82,8 @@ public:
 				redo_deque.clear();
 		}
 		undo_deque.push_back(std::move(action));
+		if (current_size > tracking_size)
+			clear_history();
 	}
 
 	void execute_no_undo(const std::shared_ptr<ActionBase>& action)
@@ -146,7 +150,7 @@ public:
 
 	void set_pool_size(size_t pool_size)
 	{
-		while (current_size > pool_size)
+		while (current_size > pool_size && !undo_deque.empty())
 		{
 			current_size -= undo_deque.front()->weight;
 			undo_deque.pop_front();

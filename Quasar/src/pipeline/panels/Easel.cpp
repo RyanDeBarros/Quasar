@@ -263,15 +263,20 @@ void Canvas::update_brush_tip()
 {
 }
 
+// TODO use scale instead of repeated draw for rects in draw_preview().
+// TODO only use set on confirm, otherwise not.
+// TODO use interpolators directly for preview.
+
+// TODO hover even when outside canvas for line/rect ?
 void Canvas::hover_pixel_under_cursor(Position world_pos)
 {
 	Position local_cursor_pos = local_of(world_pos);
 	Buffer& buf = image->buf;
 	Position buf_cursor_pos = local_cursor_pos + 0.5f * Position(buf.width, buf.height);
-	if (in_diagonal_rect(buf_cursor_pos, {}, { buf.width, buf.height }))
+	IPosition pos(buf_cursor_pos);
+	if (in_diagonal_rect(pos, {}, { buf.width - 1, buf.height - 1 }))
 	{
 		cursor_in_canvas = true;
-		IPosition pos(buf_cursor_pos);
 		if (pos != binfo.brush_pos)
 		{
 			if (binfo.brushing && binfo.brush_pos != IPosition{ -1, -1 })
@@ -304,7 +309,6 @@ void Canvas::unhover()
 	MainWindow->release_cursor(&pipette_cursor_wh);
 	pipette_ready = false;
 	cursor_in_canvas = false;
-	binfo.brush_pos = { -1, -1 };
 }
 
 void Canvas::hover_pixel_at(Position pos)
@@ -439,9 +443,14 @@ void Canvas::brush_start(int x, int y)
 	binfo.reset();
 	binfo.starting_pos = { x, y };
 
-	if (MBrushes->get_brush_tool() == BrushTool::LINE || MBrushes->get_brush_tool() == BrushTool::RECT_FILL)
+	switch (MBrushes->get_brush_tool())
 	{
-		binfo.show_preview = true;
+	case BrushTool::LINE:
+		brush_start_line_tool();
+		break;
+	case BrushTool::RECT_FILL:
+		brush_start_rect_fill_tool();
+		break;
 	}
 }
 
@@ -456,44 +465,10 @@ void Canvas::brush_submit()
 				Machine.history.push(std::make_shared<PaintToolAction>(image, binfo.brushing_bbox, std::move(binfo.painted_colors)));
 			break;
 		case BrushTool::LINE:
-			if (image && !binfo.preview_positions.empty())
-			{
-				switch (MBrushes->get_brush_tip())
-				{
-				case BrushTip::PENCIL:
-					Machine.history.execute(std::make_shared<OneColorPencilAction>(image, binfo.starting_pos, binfo.brush_pos, std::move(binfo.painted_colors)));
-					break;
-				case BrushTip::PEN:
-					Machine.history.execute(std::make_shared<OneColorPenAction>(image, applied_color().get_pixel_rgba(), binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
-					break;
-				case BrushTip::ERASER:
-					Machine.history.execute(std::make_shared<OneColorPenAction>(image, PixelRGBA{ 0, 0, 0, 0 }, binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
-					break;
-				case BrushTip::SELECT:
-					// LATER
-					break;
-				}
-			}
+			brush_submit_line_tool();
 			break;
 		case BrushTool::RECT_FILL:
-			if (image && !binfo.preview_positions.empty())
-			{
-				switch (MBrushes->get_brush_tip())
-				{
-				case BrushTip::PENCIL:
-					Machine.history.execute(std::make_shared<OneColorPencilAction>(image, binfo.starting_pos, binfo.brush_pos, std::move(binfo.painted_colors)));
-					break;
-				case BrushTip::PEN:
-					Machine.history.execute(std::make_shared<OneColorPenAction>(image, applied_color().get_pixel_rgba(), binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
-					break;
-				case BrushTip::ERASER:
-					Machine.history.execute(std::make_shared<OneColorPenAction>(image, PixelRGBA{ 0, 0, 0, 0 }, binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
-					break;
-				case BrushTip::SELECT:
-					// LATER
-					break;
-				}
-			}
+			brush_submit_rect_fill_tool();
 			break;
 		}
 	}
@@ -512,11 +487,14 @@ void Canvas::brush_move_to(IPosition pos)
 	switch (MBrushes->get_brush_tool())
 	{
 	case BrushTool::PAINT:
-		DiscreteLineInterpolator dli(binfo.brush_pos, pos);
+		auto& interp = binfo.interps.line;
+		interp.start = binfo.brush_pos;
+		interp.finish = pos;
+		interp.sync_with_endpoints();
 		IPosition intermediate;
-		for (unsigned int i = 1; i < dli.length - 1; ++i)
+		for (unsigned int i = 1; i < interp.length - 1; ++i)
 		{
-			dli.at(i, intermediate);
+			interp.at(i, intermediate);
 			brush(intermediate.x, intermediate.y);
 		}
 		break;
@@ -545,13 +523,15 @@ void Canvas::brush_paint_tool(int x, int y)
 	{
 	case BrushTip::PENCIL:
 	{
-		CanvasPixel initial_px{ x, y };
+		binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
+		IPosition pos{ x, y };
+		PixelRGBA initial_c{ 0, 0, 0, 0 };
 		PixelRGBA final_c{ 0, 0, 0, 0 };
 		PixelRGBA color = cursor_state == CursorState::DOWN_PRIMARY ? pric_pxs : altc_pxs;
 		float applied_alpha = applied_color().alpha;
 		for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
 		{
-			initial_px.c.at(i) = image_shifted_buf.pixels[i];
+			initial_c.at(i) = image_shifted_buf.pixels[i];
 			if (i < 3)
 				image_shifted_buf.pixels[i] = std::clamp(roundi(color[i] * applied_alpha + image_shifted_buf.pixels[i] * (1 - applied_alpha)), 0, 255);
 			else
@@ -559,45 +539,49 @@ void Canvas::brush_paint_tool(int x, int y)
 			final_c.at(i) = image_shifted_buf.pixels[i];
 		}
 		image->update_subtexture(x, y, 1, 1);
-		auto iter = binfo.painted_colors.find(initial_px);
+		auto iter = binfo.painted_colors.find(pos);
 		if (iter == binfo.painted_colors.end())
-			binfo.painted_colors.emplace(initial_px, final_c);
+			binfo.painted_colors[pos] = { initial_c, final_c };
 		else
-			iter->second = final_c;
+			iter->second.second = final_c;
 		break;
 	}
 	case BrushTip::PEN:
 	{
-		CanvasPixel initial_px{ x, y };
+		binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
+		IPosition pos{ x, y };
+		PixelRGBA initial_c{ 0, 0, 0, 0 };
 		PixelRGBA color = cursor_state == CursorState::DOWN_PRIMARY ? pric_pen_pxs : altc_pen_pxs;
 		for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
 		{
-			initial_px.c.at(i) = image_shifted_buf.pixels[i];
+			initial_c.at(i) = image_shifted_buf.pixels[i];
 			image_shifted_buf.pixels[i] = color[i];
 		}
 		image->update_subtexture(x, y, 1, 1);
-		auto iter = binfo.painted_colors.find(initial_px);
+		auto iter = binfo.painted_colors.find(pos);
 		if (iter == binfo.painted_colors.end())
-			binfo.painted_colors.emplace(initial_px, color);
+			binfo.painted_colors[pos] = { initial_c, color };
 		else
-			iter->second = color;
+			iter->second.second = color;
 		break;
 	}
 	case BrushTip::ERASER:
 	{
-		CanvasPixel initial_px{ x, y };
+		binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
+		Position pos{ x, y };
+		PixelRGBA initial_c{ 0, 0, 0, 0 };
 		PixelRGBA final_c{ 0, 0, 0, 0 };
 		for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
 		{
-			initial_px.c.at(i) = image_shifted_buf.pixels[i];
+			initial_c.at(i) = image_shifted_buf.pixels[i];
 			image_shifted_buf.pixels[i] = 0;
 		}
 		image->update_subtexture(x, y, 1, 1);
-		auto iter = binfo.painted_colors.find(initial_px);
+		auto iter = binfo.painted_colors.find(pos);
 		if (iter == binfo.painted_colors.end())
-			binfo.painted_colors.emplace(initial_px, final_c);
+			binfo.painted_colors[pos] = { initial_c, final_c };
 		else
-			iter->second = final_c;
+			iter->second.second = final_c;
 		break;
 	}
 	case BrushTip::SELECT:
@@ -612,30 +596,37 @@ void Canvas::brush_line_tool(int x, int y)
 	{
 	case BrushTip::PENCIL:
 	{
+		binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
 		binfo.painted_colors.clear();
-		binfo.preview_positions.clear();
-		DiscreteLineInterpolator dli(binfo.starting_pos, { x, y });
-		CanvasPixel cpx;
-		for (unsigned int i = 0; i < dli.length; ++i)
+		auto& interp = binfo.interps.line;
+		interp.start = binfo.starting_pos;
+		interp.finish = { x, y };
+		interp.sync_with_endpoints();
+		IPosition pos;
+		PixelRGBA new_color;
+		for (unsigned int i = 0; i < interp.length; ++i)
 		{
-			dli.at(i, cpx.x, cpx.y);
-			PixelRGBA old_color = pixel_color_at(cpx.x, cpx.y);
-			cpx.c = applied_color().get_pixel_rgba();
-			cpx.c.blend_over(old_color);
-			binfo.painted_colors[cpx] = old_color;
-			binfo.preview_positions[{ cpx.x, cpx.y }] = pixel_color_at(cpx.x, cpx.y);
+			interp.at(i, pos);
+			PixelRGBA old_color = pixel_color_at(pos);
+			new_color = applied_color().get_pixel_rgba();
+			new_color.blend_over(old_color);
+			binfo.painted_colors[pos] = { new_color, old_color };
 		}
 		break;
 	}
 	case BrushTip::PEN:
 	case BrushTip::ERASER:
 	{
+		binfo.storage_mode = BrushActionInfo::PREVIEW_POSITIONS;
 		binfo.preview_positions.clear();
-		DiscreteLineInterpolator dli(binfo.starting_pos, { x, y });
+		auto& interp = binfo.interps.line;
+		interp.start = binfo.starting_pos;
+		interp.finish = { x, y };
+		interp.sync_with_endpoints();
 		IPosition pos;
-		for (unsigned int i = 0; i < dli.length; ++i)
+		for (unsigned int i = 0; i < interp.length; ++i)
 		{
-			dli.at(i, pos);
+			interp.at(i, pos);
 			binfo.preview_positions[pos] = pixel_color_at(pos);
 		}
 		break;
@@ -643,40 +634,83 @@ void Canvas::brush_line_tool(int x, int y)
 	case BrushTip::SELECT:
 		// LATER
 		break;
+	}
+}
+
+void Canvas::brush_start_line_tool()
+{
+	binfo.show_preview = true;
+}
+
+void Canvas::brush_submit_line_tool()
+{
+	if (image)
+	{
+		switch (MBrushes->get_brush_tip())
+		{
+		case BrushTip::PENCIL:
+			if (!binfo.painted_colors.empty())
+				Machine.history.execute(std::make_shared<OneColorPencilAction>(image, binfo.starting_pos, binfo.brush_pos, std::move(binfo.painted_colors)));
+			break;
+		case BrushTip::PEN:
+			if (!binfo.preview_positions.empty())
+				Machine.history.execute(std::make_shared<OneColorPenAction>(image, applied_color().get_pixel_rgba(), binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
+			break;
+		case BrushTip::ERASER:
+			if (!binfo.preview_positions.empty())
+				Machine.history.execute(std::make_shared<OneColorPenAction>(image, PixelRGBA{ 0, 0, 0, 0 }, binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
+			break;
+		case BrushTip::SELECT:
+			// LATER
+			break;
+		}
 	}
 }
 
 void Canvas::brush_rect_fill_tool(int x, int y)
 {
-	// TODO don't clear and re-insert every call. This lags for decently large rectangles. Instead, check the change in rect fill interpolators to remove and insert the specific changes.
 	switch (MBrushes->get_brush_tip())
 	{
 	case BrushTip::PENCIL:
 	{
-		binfo.painted_colors.clear();
-		binfo.preview_positions.clear();
-		DiscreteRectFillInterpolator drfi(binfo.starting_pos, { x, y });
-		CanvasPixel cpx;
-		for (unsigned int i = 0; i < drfi.length; ++i)
+		binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
+		DiscreteRectFillInterpolator new_interp{ binfo.starting_pos, { x, y } };
+		new_interp.sync_with_endpoints();
+		auto& diff = binfo.interp_diffs.rect_fill;
+		diff.first = binfo.interps.rect_fill;
+		diff.second = new_interp;
+		diff.sync_with_interpolators();
+		IPosition pos{};
+		for (unsigned int i = 0; i < diff.remove_length; ++i)
 		{
-			drfi.at(i, cpx.x, cpx.y);
-			PixelRGBA old_color = pixel_color_at(cpx.x, cpx.y);
-			cpx.c = applied_color().get_pixel_rgba();
-			cpx.c.blend_over(old_color);
-			binfo.painted_colors[cpx] = old_color;
-			binfo.preview_positions[{ cpx.x, cpx.y }] = pixel_color_at(cpx.x, cpx.y);
+			diff.remove_at(i, pos.x, pos.y);
+			binfo.painted_colors.erase(pos);
 		}
+		for (unsigned int i = 0; i < diff.insert_length; ++i)
+		{
+			diff.insert_at(i, pos.x, pos.y);
+			PixelRGBA old_color = pixel_color_at(pos.x, pos.y);
+			PixelRGBA new_color = applied_color().get_pixel_rgba();
+			new_color.blend_over(old_color);
+			binfo.painted_colors[pos] = { new_color, old_color };
+		}
+		binfo.interps.rect_fill = new_interp;
+		binfo.interps.rect_fill.sync_with_endpoints();
 		break;
 	}
 	case BrushTip::PEN:
 	case BrushTip::ERASER:
 	{
+		binfo.storage_mode = BrushActionInfo::PREVIEW_POSITIONS;
 		binfo.preview_positions.clear();
-		DiscreteRectFillInterpolator drfi(binfo.starting_pos, { x, y });
+		auto& interp = binfo.interps.rect_fill;
+		interp.start = binfo.starting_pos;
+		interp.finish = { x, y };
+		interp.sync_with_endpoints();
 		IPosition pos;
-		for (unsigned int i = 0; i < drfi.length; ++i)
+		for (unsigned int i = 0; i < interp.length; ++i)
 		{
-			drfi.at(i, pos);
+			interp.at(i, pos);
 			binfo.preview_positions[pos] = pixel_color_at(pos);
 		}
 		break;
@@ -687,14 +721,85 @@ void Canvas::brush_rect_fill_tool(int x, int y)
 	}
 }
 
+void Canvas::brush_start_rect_fill_tool()
+{
+	binfo.show_preview = true;
+	binfo.interps.rect_fill.start = binfo.interps.rect_fill.finish = binfo.starting_pos;
+	binfo.interps.rect_fill.sync_with_endpoints();
+	if (binfo.starting_pos != IPosition{ -1, -1 })
+	{
+		PixelRGBA old_color = pixel_color_at(binfo.starting_pos.x, binfo.starting_pos.y);
+		PixelRGBA new_color = applied_color().get_pixel_rgba();
+		if (MBrushes->get_brush_tip() == BrushTip::PENCIL)
+			new_color.blend_over(old_color);
+		binfo.painted_colors[binfo.starting_pos] = { new_color, old_color };
+	}
+}
+
+void Canvas::brush_submit_rect_fill_tool()
+{
+	if (image)
+	{
+		switch (MBrushes->get_brush_tip())
+		{
+		case BrushTip::PENCIL:
+			if (!binfo.painted_colors.empty())
+				Machine.history.execute(std::make_shared<OneColorPencilAction>(image, binfo.starting_pos, binfo.brush_pos, std::move(binfo.painted_colors)));
+			break;
+		case BrushTip::PEN:
+			if (!binfo.preview_positions.empty())
+				Machine.history.execute(std::make_shared<OneColorPenAction>(image, applied_color().get_pixel_rgba(), binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
+			break;
+		case BrushTip::ERASER:
+			if (!binfo.preview_positions.empty())
+				Machine.history.execute(std::make_shared<OneColorPenAction>(image, PixelRGBA{ 0, 0, 0, 0 }, binfo.starting_pos, binfo.brush_pos, std::move(binfo.preview_positions)));
+			break;
+		case BrushTip::SELECT:
+			// LATER
+			break;
+		}
+	}
+}
+
 void Canvas::draw_preview()
 {
-	for (const auto& iter : binfo.preview_positions)
-	{
-		hover_pixel_at(pixel_position(iter.first));
+	double secs = glfwGetTime();
+	auto preview_on_position = [this](IPosition pos) {
+		hover_pixel_at(pixel_position(pos));
 		set_cursor_color(cursor_state == CursorState::DOWN_PRIMARY ? primary_color : alternate_color);
 		draw_cursor();
+		};
+	switch (binfo.storage_mode)
+	{
+	case BrushActionInfo::PAINTED_COLORS:
+		for (const auto& iter : binfo.painted_colors)
+			preview_on_position(iter.first);
+		break;
+	case BrushActionInfo::PREVIEW_POSITIONS:
+		for (const auto& iter : binfo.preview_positions)
+			preview_on_position(iter.first);
+		break;
 	}
+	secs = glfwGetTime() - secs;
+	//if (secs > 0.0001)
+		//LOG << secs << LOG.nl;
+
+	//switch (MBrushes->get_brush_tool())
+	//{
+	//case BrushTool::PAINT:
+	//	for (const auto& iter : binfo.painted_colors)
+	//		preview_on_position(iter.first);
+	//	break;
+	//case BrushTool::LINE:
+	//	for (int i = 0; i < binfo.interps.line.length; ++i)
+	//	{
+
+	//	}
+	//	break;
+	//case BrushTool::RECT_FILL:
+	//	break;
+	//}
+
 	hover_pixel_at(pixel_position(binfo.brush_pos));
 }
 

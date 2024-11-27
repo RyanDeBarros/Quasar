@@ -165,9 +165,15 @@ static void free_standard_cursors()
 	Machine.cursors.CANCEL.reset();
 }
 
+static size_t kb_to_bytes(size_t kb) { return 1'000 * kb; }
+static size_t mb_to_bytes(size_t mb) { return 1'000'000 * mb; }
+static size_t gb_to_bytes(size_t gb) { return 1'000'000'000 * gb; }
+
 MachineImpl::MachineImpl()
-	: history(4'000'000) // SETTINGS and test that it works. currently it is 4MB, which is small to medium sized.
-	// Possible levels could be: Lightweight (1-2MB) | Moderate (4-8MB) | Intense (16+MB). Due to underestimations of action sizes, always be on low end of history pool sizes.
+	: history(mb_to_bytes(128)) // SETTINGS
+	// Possible levels could be:
+	// Lightweight (1MB-16MB) -- Balanced (16MB-256MB) -- Moderate (256MB-1GB) -- Intense (1GB-8GB)
+	// Due to underestimations of action sizes, always be on low end of history pool sizes.
 	// Inevitably, the history's actual memory usage will be estimated, whether below or above the actual amount.
 {
 	tinyfd_verbose = true; // LATER tinyfd seems buggy occasionally.
@@ -390,6 +396,7 @@ static void process_redo()
 void MachineImpl::process()
 {
 	Data::update_time();
+	LOG << Data::delta_time << LOG.nl;
 	palette()->process();
 	brushes()->process();
 	easel()->process();

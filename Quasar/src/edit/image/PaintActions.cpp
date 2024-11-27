@@ -6,8 +6,11 @@ void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c)
 		buf.pos(x, y)[i] = c[i];
 }
 
-DiscreteLineInterpolator::DiscreteLineInterpolator(IPosition start, IPosition finish)
-	: start(start), finish(finish), delta(finish - start), length(std::max(std::abs(delta.x), std::abs(delta.y)) + 1) {}
+void DiscreteLineInterpolator::sync_with_endpoints()
+{
+	delta = finish - start;
+	length = std::max(std::abs(delta.x), std::abs(delta.y)) + 1;
+}
 
 void DiscreteLineInterpolator::at(int i, int& x, int& y) const
 {
@@ -16,8 +19,11 @@ void DiscreteLineInterpolator::at(int i, int& x, int& y) const
 	y = start.y + glm::sign(delta.y) * roundi_down_on_half(std::abs(delta.y) * fraction);
 }
 
-DiscreteRectFillInterpolator::DiscreteRectFillInterpolator(IPosition start, IPosition finish)
-	: start(start), finish(finish), delta(finish - start), length((std::abs(delta.x) + 1) * (std::abs(delta.y) + 1)) {}
+void DiscreteRectFillInterpolator::sync_with_endpoints()
+{
+	delta = finish - start;
+	length = (std::abs(delta.x) + 1) * (std::abs(delta.y) + 1);
+}
 
 void DiscreteRectFillInterpolator::at(int i, int& x, int& y) const
 {
@@ -27,10 +33,88 @@ void DiscreteRectFillInterpolator::at(int i, int& x, int& y) const
 	y = start.y + glm::sign(delta.y) * yi;
 }
 
-PaintToolAction::PaintToolAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
+// TODO remove interpolator data members from difference. Likewise, use bounding box for rect interp as well.
+void DiscreteRectFillDifference::sync_with_interpolators()
+{
+	first_bbox = { std::min(first.start.x, first.finish.x), std::max(first.start.x, first.finish.x),
+		std::min(first.start.y, first.finish.y), std::max(first.start.y, first.finish.y) };
+	second_bbox = { std::min(second.start.x, second.finish.x), std::max(second.start.x, second.finish.x),
+		std::min(second.start.y, second.finish.y), std::max(second.start.y, second.finish.y) };
+
+	if (intersection(first_bbox.x1, first_bbox.x2, second_bbox.x1, second_bbox.x2, middle_bbox.x1, middle_bbox.x2)
+			&& intersection(first_bbox.y1, first_bbox.y2, second_bbox.y1, second_bbox.y2, middle_bbox.y1, middle_bbox.y2))
+		common_length = middle_bbox.width_no_abs() * middle_bbox.height_no_abs();
+	else
+		common_length = 0;
+
+	remove_length = first.length - common_length;
+	insert_length = second.length - common_length;
+}
+
+static void interpolate_rect_fill_difference(int i, int& x, int& y, IntBounds with, IntBounds without)
+{
+	int width = with.width_no_abs();
+	int area = width * (without.y1 - with.y1);
+	if (i < area)
+	{
+		x = with.x1 + i % width;
+		y = with.y1 + i / width;
+	}
+	else
+	{
+		i -= area;
+		width = without.x1 - with.x1;
+		area = width * without.height_no_abs();
+		if (i < area)
+		{
+			x = with.x1 + i % (without.x1 - with.x1);
+			y = without.y1 + i / (without.x1 - with.x1);
+		}
+		else
+		{
+			i -= area;
+			width = with.x2 - without.x2;
+			area = width * without.height_no_abs();
+			if (i < area)
+			{
+				x = without.x2 + 1 + i % width;
+				y = without.y1 + i / width;
+			}
+			else
+			{
+				i -= area;
+				width = with.width_no_abs();
+				x = with.x1 + i % width;
+				y = without.y2 + 1 + i / width;
+			}
+		}
+	}
+}
+
+void DiscreteRectFillDifference::remove_at(int i, int& x, int& y) const
+{
+	if (common_length == 0)
+	{
+		first.at(i, x, y);
+		return;
+	}
+	interpolate_rect_fill_difference(i, x, y, first_bbox, middle_bbox);
+}
+
+void DiscreteRectFillDifference::insert_at(int i, int& x, int& y) const
+{
+	if (common_length == 0)
+	{
+		second.at(i, x, y);
+		return;
+	}
+	interpolate_rect_fill_difference(i, x, y, second_bbox, middle_bbox);
+}
+
+PaintToolAction::PaintToolAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors)
 	: image(image), bbox(bbox), painted_colors(std::move(painted_colors))
 {
-	weight = sizeof(PaintToolAction) + this->painted_colors.size() * (sizeof(CanvasPixel) + sizeof(PixelRGBA));
+	weight = sizeof(PaintToolAction) + this->painted_colors.size() * (sizeof(IPosition) + 2 * sizeof(PixelRGBA));
 }
 
 void PaintToolAction::forward()
@@ -52,7 +136,7 @@ void PaintToolAction::forward()
 				y1 = y;
 			if (y > y2)
 				y2 = y;
-			buffer_set_pixel_color(buf, x, y, iter->second);
+			buffer_set_pixel_color(buf, x, y, iter->second.second);
 		}
 		img->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 	}
@@ -77,7 +161,7 @@ void PaintToolAction::backward()
 				y1 = y;
 			if (y > y2)
 				y2 = y;
-			buffer_set_pixel_color(buf, x, y, iter->first.c);
+			buffer_set_pixel_color(buf, x, y, iter->second.first);
 		}
 		img->update_subtexture(x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 	}
@@ -119,10 +203,10 @@ void OneColorPenAction::backward()
 	}
 }
 
-OneColorPencilAction::OneColorPencilAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<CanvasPixel, PixelRGBA>&& painted_colors)
+OneColorPencilAction::OneColorPencilAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors)
 	: image(image), painted_colors(painted_colors)
 {
-	weight = sizeof(OneColorPencilAction) + this->painted_colors.size() * (sizeof(CanvasPixel) + sizeof(PixelRGBA));
+	weight = sizeof(OneColorPencilAction) + this->painted_colors.size() * (sizeof(IPosition) + 2 * sizeof(PixelRGBA));
 	bbox.x1 = std::min(start.x, finish.x);
 	bbox.x2 = std::max(start.x, finish.x);
 	bbox.y1 = std::min(start.y, finish.y);
@@ -137,7 +221,7 @@ void OneColorPencilAction::forward()
 	{
 		Buffer& buf = img->buf;
 		for (const auto& iter : painted_colors)
-			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.first.c);
+			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second.first);
 		img->update_subtexture(bbox.x1, bbox.y1, bbox.x2 - bbox.x1 + 1, bbox.y2 - bbox.y1 + 1);
 	}
 }
@@ -150,7 +234,7 @@ void OneColorPencilAction::backward()
 	{
 		Buffer& buf = img->buf;
 		for (const auto& iter : painted_colors)
-			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second);
+			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second.second);
 		img->update_subtexture(bbox.x1, bbox.y1, bbox.x2 - bbox.x1 + 1, bbox.y2 - bbox.y1 + 1);
 	}
 }
