@@ -172,6 +172,7 @@
     <ClCompile Include="src\ImplUtility.cpp" />
     <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="src\pipeline\panels\BrushesPanel.cpp" />
+    <ClCompile Include="src\pipeline\panels\CanvasBrushImpl.cpp" />
     <ClCompile Include="src\pipeline\panels\Menu.cpp" />
     <ClCompile Include="src\pipeline\panels\ScenePanel.cpp" />
     <ClCompile Include="src\pipeline\render\Gridlines.cpp" />
@@ -222,6 +223,7 @@
     <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\pipeline\panels\BrushesPanel.h" />
     <ClInclude Include="src\pipeline\panels\BrushHeader.h" />
+    <ClInclude Include="src\pipeline\panels\CanvasBrushImpl.h" />
     <ClInclude Include="src\pipeline\panels\Menu.h" />
     <ClInclude Include="src\pipeline\panels\ScenePanel.h" />
     <ClInclude Include="src\pipeline\render\Gridlines.h" />

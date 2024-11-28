@@ -19,10 +19,8 @@ struct Canvas : public Widget
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
 
-private:
 	std::shared_ptr<Image> image;
 
-public:
 	bool visible = false;
 	bool cursor_in_canvas = false;
 	enum class CursorState
@@ -75,29 +73,33 @@ public:
 
 	void update_brush_tool();
 	void update_brush_tip();
-	void hover_pixel_under_cursor(Position world_pos);
+	
+	IPosition brush_pos_under_cursor() const;
+	void hover_pixel_under_cursor();
 	void unhover();
 	void hover_pixel_at(Position pos);
+	
 	Position pixel_position(IPosition pos);
 	Position pixel_position(int x, int y);
 	RGBA applied_color() const;
 	RGBA color_under_cursor() const;
 	PixelRGBA pixel_color_at(IPosition pos) const;
 	PixelRGBA pixel_color_at(int x, int y) const;
+	
 	void set_cursor_color(RGBA color);
 	void set_primary_color(RGBA color);
 	void set_alternate_color(RGBA color);
+
 	void cursor_press(MouseButton button);
 	void cursor_release();
 	bool cursor_cancel();
 
-private:
 	RGBA primary_color, alternate_color;
 	PixelRGBA pric_pxs = {};
 	PixelRGBA altc_pxs = {};
 	PixelRGBA pric_pen_pxs = {};
 	PixelRGBA altc_pen_pxs = {};
-	void(Canvas::*brush_under_tool)(int, int);
+	void(*brush_under_tool_and_tip)(Canvas&, int, int);
 
 	void brush(int x, int y);
 	void brush_start(int x, int y);
@@ -105,16 +107,6 @@ private:
 	void brush_cancel();
 	void brush_move_to(IPosition pos);
 
-	void brush_camera_tool(int x, int y);
-	void brush_paint_tool(int x, int y);
-	void brush_line_tool(int x, int y);
-	void brush_start_line_tool();
-	void brush_submit_line_tool();
-	void brush_rect_fill_tool(int x, int y);
-	void brush_start_rect_fill_tool();
-	void brush_submit_rect_fill_tool();
-
-public:
 	enum : size_t
 	{
 		CHECKERBOARD,
@@ -129,7 +121,6 @@ public:
 		_W_COUNT
 	};
 
-private:
 	struct Brush
 	{
 		bool brushing = false;
