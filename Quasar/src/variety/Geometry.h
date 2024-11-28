@@ -253,13 +253,6 @@ struct Bounds
 	GLfloat y1, y2;
 };
 
-inline Bounds abs_bounds(Position p1, Position p2, Scale mult = {})
-{
-	p1 *= mult;
-	p2 *= mult;
-	return { std::min(p1.x, p2.x), std::max(p1.x, p2.x), std::min(p1.y, p2.y), std::max(p1.y, p2.y) };
-}
-
 struct IntBounds
 {
 	int x1, x2;
@@ -277,13 +270,28 @@ struct IntBounds
 	int height_no_abs() const { return y2 - y1 + 1; }
 };
 
-inline IntBounds abs_bounds(IPosition p1, IPosition p2, int sx = 1, int sy = 1)
+inline IntBounds abs_bounds(IPosition p1, IPosition p2)
+{
+	return { std::min(p1.x, p2.x), std::max(p1.x, p2.x), std::min(p1.y, p2.y), std::max(p1.y, p2.y) };
+}
+
+struct IntRect
+{
+	int x = 0, y = 0, w = 0, h = 0;
+};
+
+inline IntRect abs_rect(IPosition p1, IPosition p2, int sx = 1, int sy = 1)
 {
 	p1.x *= sx;
 	p1.y *= sy;
 	p2.x *= sx;
 	p2.y *= sy;
-	return { std::min(p1.x, p2.x), std::max(p1.x, p2.x), std::min(p1.y, p2.y), std::max(p1.y, p2.y) };
+	IntRect rect;
+	rect.x = std::min(p1.x, p2.x);
+	rect.w = (std::abs(p2.x - p1.x) + 1) + sx;
+	rect.y = std::min(p1.y, p2.y);
+	rect.h = (std::abs(p2.y - p1.y) + 1) + sy;
+	return rect;
 }
 
 enum class Cardinal

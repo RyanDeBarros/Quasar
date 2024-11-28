@@ -3,6 +3,7 @@
 #include <array>
 
 #include "Panel.h"
+#include "BrushHeader.h"
 #include "user/Platform.h"
 #include "../render/Gridlines.h"
 #include "../widgets/Widget.h"
@@ -36,6 +37,8 @@ public:
 	WindowHandle dot_cursor_wh, pipette_cursor_wh;
 	bool pipette_ready = false;
 
+	std::shared_ptr<Image> eraser_cursor_img;
+
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
 public:
@@ -49,6 +52,7 @@ public:
 
 	void initialize_widget(Shader* cursor_shader);
 	void initialize_dot_cursor();
+	void initialize_eraser_cursor_img();
 
 	virtual void draw() override;
 	void draw_cursor();
@@ -126,9 +130,11 @@ public:
 	};
 
 private:
-	struct BrushActionInfo
+	struct Brush
 	{
 		bool brushing = false;
+		BrushTip tip;
+		BrushTool tool;
 		IPosition starting_pos = { -1, -1 };
 		IPosition brush_pos = { -1, -1 };
 		IntBounds brushing_bbox = { -1, -1, -1, -1 };

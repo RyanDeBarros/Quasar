@@ -221,6 +221,7 @@
     <ClInclude Include="src\ImplUtility.h" />
     <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\pipeline\panels\BrushesPanel.h" />
+    <ClInclude Include="src\pipeline\panels\BrushHeader.h" />
     <ClInclude Include="src\pipeline\panels\Menu.h" />
     <ClInclude Include="src\pipeline\panels\ScenePanel.h" />
     <ClInclude Include="src\pipeline\render\Gridlines.h" />

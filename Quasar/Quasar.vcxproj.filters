@@ -1190,6 +1190,9 @@
     <ClInclude Include="src\edit\image\PaintActions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\pipeline\panels\BrushHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="vendor\glm\detail\func_common.inl">

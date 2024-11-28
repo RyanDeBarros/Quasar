@@ -151,6 +151,11 @@ void Image::update_texture() const
 	}
 }
 
+void Image::update_subtexture(IntRect rect) const
+{
+	update_subtexture(rect.x, rect.y, rect.w, rect.h);
+}
+
 void Image::update_subtexture(int x, int y, int w, int h) const
 {
 	if (tid && x >= 0 && y >= 0 && w >= 0 && h >= 0)
