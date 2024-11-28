@@ -71,6 +71,14 @@ struct IPosition : glm::ivec2
 	IPosition(glm::vec2 v) : glm::ivec2((int)v.x, (int)v.y) {}
 };
 
+struct IScale : glm::ivec2
+{
+	IScale(int p = 1) : glm::ivec2(p) {}
+	IScale(int x, int y) : glm::ivec2(x, y) {}
+	IScale(glm::ivec2 v) : glm::ivec2(v) {}
+	IScale(glm::vec2 v) : glm::ivec2((int)v.x, (int)v.y) {}
+};
+
 template<>
 struct std::hash<IPosition>
 {
@@ -245,6 +253,13 @@ struct Bounds
 	GLfloat y1, y2;
 };
 
+inline Bounds abs_bounds(Position p1, Position p2, Scale mult = {})
+{
+	p1 *= mult;
+	p2 *= mult;
+	return { std::min(p1.x, p2.x), std::max(p1.x, p2.x), std::min(p1.y, p2.y), std::max(p1.y, p2.y) };
+}
+
 struct IntBounds
 {
 	int x1, x2;
@@ -261,6 +276,15 @@ struct IntBounds
 	int width_no_abs() const { return x2 - x1 + 1; }
 	int height_no_abs() const { return y2 - y1 + 1; }
 };
+
+inline IntBounds abs_bounds(IPosition p1, IPosition p2, int sx = 1, int sy = 1)
+{
+	p1.x *= sx;
+	p1.y *= sy;
+	p2.x *= sx;
+	p2.y *= sy;
+	return { std::min(p1.x, p2.x), std::max(p1.x, p2.x), std::min(p1.y, p2.y), std::max(p1.y, p2.y) };
+}
 
 enum class Cardinal
 {

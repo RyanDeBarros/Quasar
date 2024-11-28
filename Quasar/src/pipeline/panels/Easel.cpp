@@ -22,6 +22,7 @@ Canvas::Canvas(Shader* cursor_shader)
 	Widget(_W_COUNT), brush_under_tool(&Canvas::brush_camera_tool)
 {
 	binfo.preview_image = std::make_shared<Image>();
+	binfo.eraser_preview_image = std::make_shared<Image>();
 	initialize_widget(cursor_shader);
 	initialize_dot_cursor();
 }
@@ -80,7 +81,7 @@ void Canvas::draw()
 {
 	fs_wget(*this, CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
-	if (binfo.show_preview)
+	//if (binfo.show_preview)
 		fs_wget(*this, BRUSH_PREVIEW).draw(BRUSH_PREVIEW_TSLOT);
 	minor_gridlines.draw();
 	major_gridlines.draw();
@@ -163,17 +164,41 @@ void Canvas::sync_brush_preview_with_image()
 {
 	if (image)
 	{
-		Buffer& buf = binfo.preview_image->buf;
-		if (!buf.same_dimensions_as(image->buf))
+		Buffer& pbuf = binfo.preview_image->buf;
+		if (!pbuf.same_dimensions_as(image->buf))
 		{
-			delete[] buf.pixels;
-			buf = image->buf;
-			buf.pxnew();
+			delete[] pbuf.pixels;
+			pbuf = image->buf;
+			pbuf.pxnew();
 		}
-		memset(buf.pixels, 0, buf.bytes());
+		memset(pbuf.pixels, 0, pbuf.bytes());
 		binfo.preview_image->gen_texture();
 		binfo.preview_image->resend_texture();
-		fs_wget(*this, BRUSH_PREVIEW).self.transform.scale = { buf.width, buf.height };
+
+		static const Dim eraser_arr_w = 2;
+		static const Dim eraser_arr_h = 2;
+		Buffer& ebuf = binfo.eraser_preview_image->buf;
+		if (!ebuf.same_dimensions_as(image->buf))
+		{
+			delete[] ebuf.pixels;
+			ebuf = image->buf;
+			ebuf.width *= eraser_arr_w;
+			ebuf.height *= eraser_arr_h;
+			ebuf.pxnew();
+		}
+		// TODO use the following checkerboard multiple times (maybe even use it for eraser cursor instead?):
+		static const Byte eraser_preview_arr[eraser_arr_w * eraser_arr_h * 4] = {
+			255, 255, 255, 0  , 0  , 0  , 0  , 0  ,
+			0  , 0  , 0  , 0  , 255, 255, 255, 0
+		};
+		for (Dim x = 0; x < image->buf.width; ++x)
+			for (Dim y = 0; y < image->buf.height; ++y)
+				for (Dim h = 0; h < eraser_arr_h; ++h)
+					memcpy(ebuf.pos(eraser_arr_w * x, eraser_arr_h * y + h), eraser_preview_arr + h * eraser_arr_w * 4, eraser_arr_w * 4);
+		binfo.eraser_preview_image->gen_texture();
+		binfo.eraser_preview_image->resend_texture();
+
+		fs_wget(*this, BRUSH_PREVIEW).self.transform.scale = { image->buf.width, image->buf.height };
 	}
 }
 
@@ -276,6 +301,7 @@ void Canvas::update_brush_tool()
 		break;
 	case BrushTool::LINE:
 		brush_under_tool = &Canvas::brush_line_tool;
+		binfo.preview_mode = BrushActionInfo::LINE;
 		break;
 	case BrushTool::RECT_FILL:
 		brush_under_tool = &Canvas::brush_rect_fill_tool;
@@ -286,6 +312,20 @@ void Canvas::update_brush_tool()
 
 void Canvas::update_brush_tip()
 {
+	switch (MBrushes->get_brush_tip())
+	{
+	case BrushTip::PENCIL:
+		fs_wget(*this, BRUSH_PREVIEW).image = binfo.preview_image;
+		break;
+	case BrushTip::PEN:
+		fs_wget(*this, BRUSH_PREVIEW).image = binfo.preview_image;
+		break;
+	case BrushTip::ERASER:
+		fs_wget(*this, BRUSH_PREVIEW).image = binfo.eraser_preview_image;
+		break;
+	case BrushTip::SELECT:
+		break;
+	}
 }
 
 // TODO hover even when outside canvas for line/rect ?
@@ -385,7 +425,7 @@ PixelRGBA Canvas::pixel_color_at(int x, int y) const
 void Canvas::set_cursor_color(RGBA color)
 {
 	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(color.as_vec())).send_buffer();
-	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(color.rgb, 1.0f).as_vec())).send_buffer();
+	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(color.rgb.r * color.alpha, color.rgb.g * color.alpha, color.rgb.b * color.alpha, 1.0f).as_vec())).send_buffer();
 }
 
 void Canvas::set_primary_color(RGBA color)
@@ -611,6 +651,7 @@ void Canvas::brush_paint_tool(int x, int y)
 	}
 }
 
+// TODO seriously simplify this and brush_rect_fill_tool
 void Canvas::brush_line_tool(int x, int y)
 {
 	switch (MBrushes->get_brush_tip())
@@ -627,7 +668,7 @@ void Canvas::brush_line_tool(int x, int y)
 			buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
 		}
 		// TODO move to interpolator
-		IntBounds bbox = { std::min(interp.start.x, interp.finish.x), std::max(interp.start.x, interp.finish.x), std::min(interp.start.y, interp.finish.y), std::max(interp.start.y, interp.finish.y) };
+		IntBounds bbox = abs_bounds(interp.start, interp.finish);
 		binfo.preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
 
 		interp.start = binfo.starting_pos;
@@ -644,12 +685,11 @@ void Canvas::brush_line_tool(int x, int y)
 			new_color.blend_over(old_color);
 			binfo.painted_colors[pos] = { new_color, old_color };
 		}
-		bbox = { std::min(interp.start.x, interp.finish.x), std::max(interp.start.x, interp.finish.x), std::min(interp.start.y, interp.finish.y), std::max(interp.start.y, interp.finish.y) };
+		bbox = abs_bounds(interp.start, interp.finish);
 		binfo.preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
 		break;
 	}
 	case BrushTip::PEN:
-	case BrushTip::ERASER:
 	{
 		binfo.storage_mode = BrushActionInfo::PREVIEW_POSITIONS;
 		binfo.preview_positions.clear();
@@ -660,24 +700,61 @@ void Canvas::brush_line_tool(int x, int y)
 			interp.at(i, pos.x, pos.y);
 			buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
 		}
-		IntBounds bbox = { std::min(interp.start.x, interp.finish.x), std::max(interp.start.x, interp.finish.x), std::min(interp.start.y, interp.finish.y), std::max(interp.start.y, interp.finish.y) };
+		IntBounds bbox = abs_bounds(interp.start, interp.finish);
 		binfo.preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
 
 		interp.start = binfo.starting_pos;
 		interp.finish = { x, y };
 		interp.sync_with_endpoints();
+		RGBA preview_color;
 		PixelRGBA new_color;
 		PixelRGBA old_color;
 		for (unsigned int i = 0; i < interp.length; ++i)
 		{
 			interp.at(i, pos);
 			old_color = pixel_color_at(pos);
-			new_color = applied_color().get_pixel_rgba();
-			buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y, new_color);
+			preview_color = applied_color();
+			new_color = preview_color.get_pixel_rgba();
+			buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y,
+				RGBA(preview_color.rgb.r * preview_color.alpha, preview_color.rgb.g * preview_color.alpha, preview_color.rgb.b * preview_color.alpha, 1.0f).get_pixel_rgba());
 			binfo.preview_positions[pos] = old_color;
 		}
-		bbox = { std::min(interp.start.x, interp.finish.x), std::max(interp.start.x, interp.finish.x), std::min(interp.start.y, interp.finish.y), std::max(interp.start.y, interp.finish.y) };
+		bbox = abs_bounds(interp.start, interp.finish);
 		binfo.preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
+		break;
+	}
+	case BrushTip::ERASER:
+	{
+		binfo.storage_mode = BrushActionInfo::PREVIEW_POSITIONS;
+		binfo.preview_positions.clear();
+		auto& interp = binfo.interps.line;
+		IPosition pos{};
+		for (unsigned int i = 0; i < interp.length; ++i)
+		{
+			interp.at(i, pos);
+			// TODO here and for rect fill, use eraser_arr_w/h instead of 2
+			buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 0, 2, 2);
+		}
+		IntBounds bbox = abs_bounds(interp.start, interp.finish, 2, 2);
+		binfo.eraser_preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
+
+		interp.start = binfo.starting_pos;
+		interp.finish = { x, y };
+		interp.sync_with_endpoints();
+		RGBA preview_color;
+		PixelRGBA new_color;
+		PixelRGBA old_color;
+		for (unsigned int i = 0; i < interp.length; ++i)
+		{
+			interp.at(i, pos);
+			old_color = pixel_color_at(pos);
+			preview_color = applied_color();
+			new_color = preview_color.get_pixel_rgba();
+			buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 255, 2, 2);
+			binfo.preview_positions[pos] = old_color;
+		}
+		bbox = abs_bounds(interp.start, interp.finish, 2, 2);
+		binfo.eraser_preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
 		break;
 	}
 	case BrushTip::SELECT:
@@ -742,7 +819,10 @@ void Canvas::brush_rect_fill_tool(int x, int y)
 		for (unsigned int i = 0; i < diff.remove_length; ++i)
 		{
 			diff.remove_at(i, pos.x, pos.y);
-			buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
+			if (MBrushes->get_brush_tip() & BrushTip::ERASER)
+				buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 0, 2, 2);
+			else
+				buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
 			storage_remove(pos);
 		}
 
@@ -759,17 +839,33 @@ void Canvas::brush_rect_fill_tool(int x, int y)
 		else if (binfo.storage_mode == BrushActionInfo::PREVIEW_POSITIONS)
 			storage_insert = preview_positions_storage_insert;
 
+		RGBA preview_color;
+		PixelRGBA old_color;
+		PixelRGBA new_color;
 		for (unsigned int i = 0; i < diff.insert_length; ++i)
 		{
 			diff.insert_at(i, pos.x, pos.y);
-			PixelRGBA old_color = pixel_color_at(pos.x, pos.y);
-			PixelRGBA new_color = applied_color().get_pixel_rgba();
-			buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y, new_color); // TODO use separate preview_erase image with separate buffer, which only alpha will be modified
+			old_color = pixel_color_at(pos.x, pos.y);
+			preview_color = applied_color();
+			new_color = preview_color.get_pixel_rgba();
+			if (MBrushes->get_brush_tip() & BrushTip::ERASER)
+				buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 255, 2, 2);
+			else
+				buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y,
+					RGBA(preview_color.rgb.r * preview_color.alpha, preview_color.rgb.g * preview_color.alpha, preview_color.rgb.b * preview_color.alpha, 1.0f).get_pixel_rgba());
+
 			storage_insert(pos, new_color, old_color);
 		}
-		
-		binfo.preview_image->update_subtexture(diff.first_bbox.x1, diff.first_bbox.y1, diff.first_bbox.width_no_abs(), diff.first_bbox.height_no_abs());
-		binfo.preview_image->update_subtexture(diff.second_bbox.x1, diff.second_bbox.y1, diff.second_bbox.width_no_abs(), diff.second_bbox.height_no_abs());
+		if (MBrushes->get_brush_tip() & BrushTip::ERASER)
+		{
+			binfo.eraser_preview_image->update_subtexture(diff.first_bbox.x1 * 2, diff.first_bbox.y1 * 2, diff.first_bbox.width_no_abs() * 2, diff.first_bbox.height_no_abs() * 2);
+			binfo.eraser_preview_image->update_subtexture(diff.second_bbox.x1 * 2, diff.second_bbox.y1 * 2, diff.second_bbox.width_no_abs() * 2, diff.second_bbox.height_no_abs() * 2);
+		}
+		else
+		{
+			binfo.preview_image->update_subtexture(diff.first_bbox.x1, diff.first_bbox.y1, diff.first_bbox.width_no_abs(), diff.first_bbox.height_no_abs());
+			binfo.preview_image->update_subtexture(diff.second_bbox.x1, diff.second_bbox.y1, diff.second_bbox.width_no_abs(), diff.second_bbox.height_no_abs());
+		}
 		binfo.interps.rect_fill = new_interp;
 		binfo.interps.rect_fill.sync_with_endpoints();
 	}
@@ -784,18 +880,26 @@ void Canvas::brush_start_rect_fill_tool()
 	binfo.show_preview = true;
 	binfo.interps.rect_fill.start = binfo.interps.rect_fill.finish = binfo.starting_pos;
 	binfo.interps.rect_fill.sync_with_endpoints();
-	if (binfo.starting_pos != IPosition{ -1, -1 })
+	if (binfo.starting_pos != IPosition{ -1, -1 }) // TODO if starting brush, would this really ever fail?
 	{
 		PixelRGBA old_color = pixel_color_at(binfo.starting_pos.x, binfo.starting_pos.y);
 		PixelRGBA new_color = applied_color().get_pixel_rgba();
-		buffer_set_pixel_color(binfo.preview_image->buf, binfo.starting_pos.x, binfo.starting_pos.y, new_color);
-		binfo.preview_image->update_subtexture(binfo.starting_pos.x, binfo.starting_pos.y, 1, 1);
-		if (MBrushes->get_brush_tip() == BrushTip::PENCIL)
+		if (MBrushes->get_brush_tip() & (BrushTip::PENCIL | BrushTip::PEN))
+		{
+			buffer_set_pixel_color(binfo.preview_image->buf, binfo.starting_pos.x, binfo.starting_pos.y, new_color);
+			binfo.preview_image->update_subtexture(binfo.starting_pos.x, binfo.starting_pos.y, 1, 1);
+		}
+		else if (MBrushes->get_brush_tip() & BrushTip::ERASER)
+		{
+			buffer_set_rect_alpha(binfo.eraser_preview_image->buf, binfo.starting_pos.x, binfo.starting_pos.y, 1, 1, 255, 2, 2);
+			binfo.eraser_preview_image->update_subtexture(binfo.starting_pos.x * 2, binfo.starting_pos.y * 2, 2, 2);
+		}
+		if (MBrushes->get_brush_tip() & BrushTip::PENCIL)
 		{
 			new_color.blend_over(old_color);
 			binfo.storage_mode = BrushActionInfo::PAINTED_COLORS;
 		}
-		else if (MBrushes->get_brush_tip() != BrushTip::SELECT)
+		else if (MBrushes->get_brush_tip() & (BrushTip::PEN | BrushTip::ERASER))
 			binfo.storage_mode = BrushActionInfo::PREVIEW_POSITIONS;
 		if (binfo.storage_mode == BrushActionInfo::PAINTED_COLORS)
 			binfo.painted_colors[binfo.starting_pos] = { new_color, old_color };
@@ -846,7 +950,29 @@ void Canvas::BrushActionInfo::reset()
 		{
 		case LINE:
 		{
-			// TODO
+			// TODO brush tool/tip should be data member of BrushActionInfo, possibly renamed BrushInfo
+			if (MBrushes->get_brush_tip() & (BrushTip::PENCIL | BrushTip::PEN))
+			{
+				IPosition pos;
+				for (unsigned int i = 0; i < interps.line.length; ++i)
+				{
+					interps.line.at(i, pos);
+					buffer_set_pixel_alpha(preview_image->buf, pos.x, pos.y, 0);
+				}
+				IntBounds bbox = abs_bounds(interps.line.start, interps.line.finish);
+				preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
+			}
+			else if (MBrushes->get_brush_tip() & BrushTip::ERASER)
+			{
+				IPosition pos;
+				for (unsigned int i = 0; i < interps.line.length; ++i)
+				{
+					interps.line.at(i, pos);
+					buffer_set_rect_alpha(eraser_preview_image->buf, 2 * pos.x, 2 * pos.y, 2, 2, 0);
+				}
+				IntBounds bbox = abs_bounds(interps.line.start, interps.line.finish);
+				eraser_preview_image->update_subtexture(2 * bbox.x1, 2 * bbox.y1, 2 * bbox.width_no_abs(), 2 * bbox.height_no_abs());
+			}
 			break;
 		}
 		case RECT_FILL:
@@ -859,8 +985,16 @@ void Canvas::BrushActionInfo::reset()
 			upr.y0 = bbox.y1;
 			upr.y1 = bbox.y2;
 
-			iterate_path(upr, [&buf = preview_image->buf](PathIterator& pit) { buffer_set_pixel_alpha(buf, pit.x, pit.y, 0); });
-			preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
+			if (MBrushes->get_brush_tip() & (BrushTip::PENCIL | BrushTip::PEN))
+			{
+				iterate_path(upr, [&buf = preview_image->buf](PathIterator& pit) { buffer_set_pixel_alpha(buf, pit.x, pit.y, 0); });
+				preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
+			}
+			else if (MBrushes->get_brush_tip() & BrushTip::ERASER)
+			{
+				iterate_path(upr, [&buf = eraser_preview_image->buf](PathIterator& pit) { buffer_set_rect_alpha(buf, pit.x, pit.y, 1, 1, 0, 2, 2); });
+				eraser_preview_image->update_subtexture(bbox.x1 * 2, bbox.y1 * 2, bbox.width_no_abs() * 2, bbox.height_no_abs() * 2);
+			}
 			break;
 		}
 		}

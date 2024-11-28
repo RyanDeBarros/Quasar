@@ -11,6 +11,17 @@ void buffer_set_pixel_alpha(const Buffer& buf, int x, int y, int alpha)
 	buf.pos(x, y)[std::max(buf.chpp - 1, 0)] = alpha;
 }
 
+void buffer_set_rect_alpha(const Buffer& buf, int x, int y, int w, int h, int alpha, int sx, int sy)
+{
+	x *= sx;
+	y *= sy;
+	w *= sx;
+	h *= sy;
+	for (int i = 0; i < w; ++i)
+		for (int j = 0; j < h; ++j)
+			buffer_set_pixel_alpha(buf, x + i, y + j, alpha);
+}
+
 void DiscreteLineInterpolator::sync_with_endpoints()
 {
 	delta = finish - start;
@@ -41,10 +52,8 @@ void DiscreteRectFillInterpolator::at(int i, int& x, int& y) const
 // TODO remove interpolator data members from difference. Likewise, use bounding box for rect interp as well.
 void DiscreteRectFillDifference::sync_with_interpolators()
 {
-	first_bbox = { std::min(first.start.x, first.finish.x), std::max(first.start.x, first.finish.x),
-		std::min(first.start.y, first.finish.y), std::max(first.start.y, first.finish.y) };
-	second_bbox = { std::min(second.start.x, second.finish.x), std::max(second.start.x, second.finish.x),
-		std::min(second.start.y, second.finish.y), std::max(second.start.y, second.finish.y) };
+	first_bbox = abs_bounds(first.start, first.finish);
+	second_bbox = abs_bounds(second.start, second.finish);
 
 	if (intersection(first_bbox.x1, first_bbox.x2, second_bbox.x1, second_bbox.x2, middle_bbox.x1, middle_bbox.x2)
 			&& intersection(first_bbox.y1, first_bbox.y2, second_bbox.y1, second_bbox.y2, middle_bbox.y1, middle_bbox.y2))
@@ -176,10 +185,7 @@ OneColorPenAction::OneColorPenAction(const std::shared_ptr<Image>& image, PixelR
 	: image(image), color(color), painted_colors(std::move(painted_colors))
 {
 	weight = sizeof(OneColorPenAction) + this->painted_colors.size() * (sizeof(IPosition) + sizeof(PixelRGBA));
-	bbox.x1 = std::min(start.x, finish.x);
-	bbox.x2 = std::max(start.x, finish.x);
-	bbox.y1 = std::min(start.y, finish.y);
-	bbox.y2 = std::max(start.y, finish.y);
+	bbox = abs_bounds(start, finish);
 }
 
 void OneColorPenAction::forward()
@@ -212,10 +218,7 @@ OneColorPencilAction::OneColorPencilAction(const std::shared_ptr<Image>& image, 
 	: image(image), painted_colors(std::move(painted_colors))
 {
 	weight = sizeof(OneColorPencilAction) + this->painted_colors.size() * (sizeof(IPosition) + 2 * sizeof(PixelRGBA));
-	bbox.x1 = std::min(start.x, finish.x);
-	bbox.x2 = std::max(start.x, finish.x);
-	bbox.y1 = std::min(start.y, finish.y);
-	bbox.y2 = std::max(start.y, finish.y);
+	bbox = abs_bounds(start, finish);
 }
 
 void OneColorPencilAction::forward()
