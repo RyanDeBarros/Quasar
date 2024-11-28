@@ -307,45 +307,50 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 	major_gridlines.line_spacing = checker_size;
 }
 
-void Canvas::update_brush_tool()
+void Canvas::update_brush_tool_and_tip()
 {
 	binfo.tool = MBrushes->get_brush_tool();
+	binfo.tip = MBrushes->get_brush_tip();
 	switch (binfo.tool)
 	{
 	case BrushTool::CAMERA:
 		brush_under_tool_and_tip = &CBImpl::Camera::brush;
 		break;
 	case BrushTool::PAINT:
-		brush_under_tool_and_tip = &CBImpl::Paint::brush;
+		if (binfo.tip & BrushTip::PENCIL)
+			brush_under_tool_and_tip = &CBImpl::Paint::brush_pencil;
+		else if (binfo.tip & BrushTip::PEN)
+			brush_under_tool_and_tip = &CBImpl::Paint::brush_pen;
+		else if (binfo.tip & BrushTip::ERASER)
+			brush_under_tool_and_tip = &CBImpl::Paint::brush_eraser;
+		else if (binfo.tip & BrushTip::SELECT)
+			brush_under_tool_and_tip = &CBImpl::Paint::brush_select;
 		break;
 	case BrushTool::LINE:
-		brush_under_tool_and_tip = &CBImpl::Line::brush;
-		binfo.preview_mode = Brush::LINE;
+		if (binfo.tip & BrushTip::PENCIL)
+			brush_under_tool_and_tip = &CBImpl::Line::brush_pencil;
+		else if (binfo.tip & BrushTip::PEN)
+			brush_under_tool_and_tip = &CBImpl::Line::brush_pen;
+		else if (binfo.tip & BrushTip::ERASER)
+			brush_under_tool_and_tip = &CBImpl::Line::brush_eraser;
+		else if (binfo.tip & BrushTip::SELECT)
+			brush_under_tool_and_tip = &CBImpl::Line::brush_select;
 		break;
 	case BrushTool::RECT_FILL:
-		brush_under_tool_and_tip = &CBImpl::RectFill::brush;
-		binfo.preview_mode = Brush::RECT_FILL;
+		if (binfo.tip & BrushTip::PENCIL)
+			brush_under_tool_and_tip = &CBImpl::RectFill::brush_pencil;
+		else if (binfo.tip & BrushTip::PEN)
+			brush_under_tool_and_tip = &CBImpl::RectFill::brush_pen;
+		else if (binfo.tip & BrushTip::ERASER)
+			brush_under_tool_and_tip = &CBImpl::RectFill::brush_eraser;
+		else if (binfo.tip & BrushTip::SELECT)
+			brush_under_tool_and_tip = &CBImpl::RectFill::brush_select;
 		break;
 	}
-}
-
-void Canvas::update_brush_tip()
-{
-	binfo.tip = MBrushes->get_brush_tip();
-	switch (binfo.tip)
-	{
-	case BrushTip::PENCIL:
+	if (binfo.tip & (BrushTip::PENCIL | BrushTip::PEN))
 		fs_wget(*this, BRUSH_PREVIEW).image = binfo.preview_image;
-		break;
-	case BrushTip::PEN:
-		fs_wget(*this, BRUSH_PREVIEW).image = binfo.preview_image;
-		break;
-	case BrushTip::ERASER:
+	else if (binfo.tip & BrushTip::ERASER)
 		fs_wget(*this, BRUSH_PREVIEW).image = binfo.eraser_preview_image;
-		break;
-	case BrushTip::SELECT:
-		break;
-	}
 }
 
 IPosition Canvas::brush_pos_under_cursor() const
@@ -541,7 +546,14 @@ void Canvas::brush_start(int x, int y)
 		CBImpl::Line::start(*this);
 		break;
 	case BrushTool::RECT_FILL:
-		CBImpl::RectFill::start(*this);
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::RectFill::start_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::RectFill::start_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::RectFill::start_eraser(*this);
+		else if (binfo.tip & BrushTip::SELECT)
+			CBImpl::RectFill::start_select(*this);
 		break;
 	}
 }
@@ -553,14 +565,27 @@ void Canvas::brush_submit()
 		switch (binfo.tool)
 		{
 		case BrushTool::PAINT:
-			if (image && !binfo.painted_colors.empty())
-				Machine.history.push(std::make_shared<PaintToolAction>(image, binfo.brushing_bbox, std::move(binfo.painted_colors)));
+			CBImpl::Paint::brush_submit(*this);
 			break;
 		case BrushTool::LINE:
-			CBImpl::Line::submit(*this);
+			if (binfo.tip & BrushTip::PENCIL)
+				CBImpl::Line::submit_pencil(*this);
+			else if (binfo.tip & BrushTip::PEN)
+				CBImpl::Line::submit_pen(*this);
+			else if (binfo.tip & BrushTip::ERASER)
+				CBImpl::Line::submit_eraser(*this);
+			else if (binfo.tip & BrushTip::SELECT)
+				CBImpl::Line::submit_select(*this);
 			break;
 		case BrushTool::RECT_FILL:
-			CBImpl::RectFill::submit(*this);
+			if (binfo.tip & BrushTip::PENCIL)
+				CBImpl::RectFill::submit_pencil(*this);
+			else if (binfo.tip & BrushTip::PEN)
+				CBImpl::RectFill::submit_pen(*this);
+			else if (binfo.tip & BrushTip::ERASER)
+				CBImpl::RectFill::submit_eraser(*this);
+			else if (binfo.tip & BrushTip::SELECT)
+				CBImpl::RectFill::submit_select(*this);
 			break;
 		}
 	}
@@ -603,9 +628,9 @@ void Canvas::Brush::reset()
 	starting_pos = { -1, -1 };
 	if (show_preview)
 	{
-		switch (preview_mode) // TODO instead of preview_mode, use brush tool
+		switch (tool) // TODO create reset functions in CBImpl
 		{
-		case LINE:
+		case BrushTool::LINE:
 		{
 			if (tip & (BrushTip::PENCIL | BrushTip::PEN))
 			{
@@ -629,7 +654,7 @@ void Canvas::Brush::reset()
 			}
 			break;
 		}
-		case RECT_FILL:
+		case BrushTool::RECT_FILL:
 		{
 			IntBounds bbox = interp_diffs.rect_fill.second_bbox;
 			UprightRect upr;
@@ -654,8 +679,8 @@ void Canvas::Brush::reset()
 		}
 	}
 	show_preview = false;
-	painted_colors.clear();
-	preview_positions.clear();
+	storage_1c.clear();
+	storage_2c.clear();
 }
 
 Easel::Easel()

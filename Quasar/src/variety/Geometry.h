@@ -294,6 +294,11 @@ inline IntRect abs_rect(IPosition p1, IPosition p2, int sx = 1, int sy = 1)
 	return rect;
 }
 
+inline IntRect bounds_to_rect(IntBounds bb, int sx = 1, int sy = 1)
+{
+	return { bb.x1 * sx, bb.y1 * sy, bb.width() * sx, bb.height() * sy };
+}
+
 enum class Cardinal
 {
 	RIGHT,

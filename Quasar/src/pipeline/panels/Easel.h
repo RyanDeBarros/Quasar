@@ -71,8 +71,7 @@ public:
 	void sync_checkerboard_texture() const;
 	void set_checkerboard_uv_size(float width, float height) const;
 
-	void update_brush_tool();
-	void update_brush_tip();
+	void update_brush_tool_and_tip();
 	
 	IPosition brush_pos_under_cursor() const;
 	void hover_pixel_under_cursor();
@@ -132,14 +131,8 @@ public:
 		bool show_preview = false;
 		std::shared_ptr<Image> preview_image;
 		std::shared_ptr<Image> eraser_preview_image;
-		std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> painted_colors;
-		std::unordered_map<IPosition, PixelRGBA> preview_positions;
-
-		enum
-		{
-			PAINTED_COLORS,
-			PREVIEW_POSITIONS
-		} storage_mode = PAINTED_COLORS;
+		std::unordered_map<IPosition, PixelRGBA> storage_1c;
+		std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
 
 		struct
 		{
@@ -151,12 +144,6 @@ public:
 		{
 			DiscreteRectFillDifference rect_fill = {};
 		} interp_diffs;
-
-		enum
-		{
-			LINE,
-			RECT_FILL,
-		} preview_mode = LINE;
 
 		void reset();
 	} binfo;

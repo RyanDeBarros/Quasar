@@ -265,6 +265,7 @@ struct RGBA
 	constexpr HSLA to_hsla() const;
 
 	constexpr void blend_over(RGBA bkg);
+	constexpr RGBA no_alpha_equivalent() const { return RGBA(rgb.r * alpha, rgb.g * alpha, rgb.b * alpha, 1.0f); }
 
 	static const RGBA WHITE;
 	static const RGBA BLACK;
