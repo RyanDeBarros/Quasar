@@ -280,6 +280,7 @@ struct IntRect
 	int x = 0, y = 0, w = 0, h = 0;
 
 	bool intersect(IntRect other, IntRect& result) const;
+	IntRect scale(int sx, int sy) const { return { sx * x, sy * y, sx * w, sy * h }; }
 };
 
 inline bool IntRect::intersect(IntRect other, IntRect& result) const

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "variety/History.h"
 #include "Image.h"
 #include "../color/Color.h"
@@ -52,6 +54,8 @@ struct DiscreteRectFillDifference
 	IPosition insert_at(int i) const { IPosition pos; insert_at(i, pos); return pos; }
 	void insert_at(int i, IPosition& pos) const { insert_at(i, pos.x, pos.y); }
 	void insert_at(int i, int& x, int& y) const;
+
+	std::array<IntRect, 8> modified_regions() const;
 };
 
 struct PaintToolAction : public ActionBase

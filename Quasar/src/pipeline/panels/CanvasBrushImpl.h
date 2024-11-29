@@ -5,6 +5,8 @@ struct BrushInfo;
 
 namespace CBImpl
 {
+	extern void brush_move_to(Canvas& canvas, int x, int y);
+
 	namespace Camera
 	{
 		extern void brush(Canvas& canvas, int x, int y);

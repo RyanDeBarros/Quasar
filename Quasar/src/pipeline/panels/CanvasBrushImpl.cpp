@@ -4,6 +4,20 @@
 #include "user/Machine.h"
 #include "edit/image/PixelBufferPaths.h"
 
+void CBImpl::brush_move_to(Canvas& canvas, int x, int y)
+{
+	DiscreteLineInterpolator interp;
+	interp.start = canvas.binfo.image_pos;
+	interp.finish = { x, y };
+	interp.sync_with_endpoints();
+	IPosition intermediate;
+	for (unsigned int i = 1; i < interp.length - 1; ++i)
+	{
+		interp.at(i, intermediate);
+		canvas.brush(intermediate.x, intermediate.y);
+	}
+}
+
 void CBImpl::Camera::brush(Canvas& canvas, int x, int y)
 {
 	// do nothing
@@ -141,9 +155,7 @@ void CBImpl::Line::brush_pencil(Canvas& canvas, int x, int y)
 		new_color.blend_over(old_color);
 		binfo.storage_2c[pos] = {new_color, old_color};
 	}
-	IntRect img_rect;
-	if (abs_rect(interp.start, interp.finish).intersect(IntRect{ 0, 0, canvas.image->buf.width, canvas.image->buf.height }, img_rect))
-		binfo.preview_image->update_subtexture(img_rect);
+	binfo.preview_image->update_subtexture(abs_rect(interp.start, interp.finish));
 }
 
 void CBImpl::Line::brush_pen(Canvas& canvas, int x, int y)
@@ -276,15 +288,6 @@ static void rect_fill_brush_setup_interps(BrushInfo& binfo, int x, int y, Discre
 	diff->sync_with_interpolators();
 }
 
-static void rect_fill_brush_suffix(BrushInfo& binfo, const std::shared_ptr<Image>& image,
-	const DiscreteRectFillInterpolator& new_interp, IntRect first_rect, IntRect second_rect)
-{
-	image->update_subtexture(first_rect);
-	image->update_subtexture(second_rect);
-	binfo.interps.rect_fill = new_interp;
-	binfo.interps.rect_fill.sync_with_endpoints();
-}
-
 static void rect_fill_brush_pen_and_pencil_remove_loop(BrushInfo& binfo, DiscreteRectFillDifference* diff,
 	void(*storage_remove)(BrushInfo& binfo, IPosition pos))
 {
@@ -312,6 +315,16 @@ static void rect_fill_brush_pen_and_pencil_insert_loop(Canvas& canvas, DiscreteR
 	}
 }
 
+static void rect_fill_brush_suffix(BrushInfo& binfo, const std::shared_ptr<Image>& image,
+	const DiscreteRectFillInterpolator& new_interp, const DiscreteRectFillDifference& diff, int sx = 1, int sy = 1)
+{
+	auto rgns = diff.modified_regions();
+	for (IntRect r : rgns)
+		image->update_subtexture(r.scale(sx, sy));
+	binfo.interps.rect_fill = new_interp;
+	binfo.interps.rect_fill.sync_with_endpoints();
+}
+
 void CBImpl::RectFill::brush_pencil(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
@@ -328,7 +341,7 @@ void CBImpl::RectFill::brush_pencil(Canvas& canvas, int x, int y)
 		new_color.blend_over(old_color);
 		binfo.storage_2c[pos] = { new_color, old_color };
 		});
-	rect_fill_brush_suffix(binfo, binfo.preview_image, new_interp, bounds_to_rect(diff->first_bbox), bounds_to_rect(diff->second_bbox));
+	rect_fill_brush_suffix(binfo, binfo.preview_image, new_interp, *diff);
 }
 
 void CBImpl::RectFill::brush_pen(Canvas& canvas, int x, int y)
@@ -345,7 +358,7 @@ void CBImpl::RectFill::brush_pen(Canvas& canvas, int x, int y)
 		buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y, preview_color.no_alpha_equivalent().get_pixel_rgba());
 		binfo.storage_1c[pos] = old_color;
 		});
-	rect_fill_brush_suffix(binfo, binfo.preview_image, new_interp, bounds_to_rect(diff->first_bbox), bounds_to_rect(diff->second_bbox));
+	rect_fill_brush_suffix(binfo, binfo.preview_image, new_interp, *diff);
 }
 
 void CBImpl::RectFill::brush_eraser(Canvas& canvas, int x, int y)
@@ -370,9 +383,7 @@ void CBImpl::RectFill::brush_eraser(Canvas& canvas, int x, int y)
 		buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 255, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
 		binfo.storage_1c[pos] = old_color;
 	}
-	rect_fill_brush_suffix(binfo, binfo.eraser_preview_image, new_interp,
-		bounds_to_rect(diff->first_bbox, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy),
-		bounds_to_rect(diff->second_bbox, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
+	rect_fill_brush_suffix(binfo, binfo.eraser_preview_image, new_interp, *diff, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
 }
 
 void CBImpl::RectFill::brush_select(Canvas& canvas, int x, int y)

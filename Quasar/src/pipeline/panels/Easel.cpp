@@ -607,21 +607,8 @@ void Canvas::brush_cancel()
 
 void Canvas::brush_move_to(IPosition pos)
 {
-	switch (binfo.tool)
-	{
-	case BrushTool::PAINT:
-		auto& interp = binfo.interps.line;
-		interp.start = binfo.image_pos;
-		interp.finish = pos;
-		interp.sync_with_endpoints();
-		IPosition intermediate;
-		for (unsigned int i = 1; i < interp.length - 1; ++i)
-		{
-			interp.at(i, intermediate);
-			brush(intermediate.x, intermediate.y);
-		}
-		break;
-	}
+	if (!(binfo.tool & BrushTool::CAMERA))
+		CBImpl::brush_move_to(*this, pos.x, pos.y);
 }
 
 void BrushInfo::reset()

@@ -49,7 +49,6 @@ void DiscreteRectFillInterpolator::at(int i, int& x, int& y) const
 	y = start.y + glm::sign(delta.y) * yi;
 }
 
-// TODO remove interpolator data members from difference. Likewise, use bounding box for rect interp as well.
 void DiscreteRectFillDifference::sync_with_interpolators()
 {
 	first_bbox = abs_bounds(first.start, first.finish);
@@ -81,8 +80,8 @@ static void interpolate_rect_fill_difference(int i, int& x, int& y, IntBounds wi
 		area = width * without.height_no_abs();
 		if (i < area)
 		{
-			x = with.x1 + i % (without.x1 - with.x1);
-			y = without.y1 + i / (without.x1 - with.x1);
+			x = with.x1 + i % width;
+			y = without.y1 + i / width;
 		}
 		else
 		{
@@ -123,6 +122,37 @@ void DiscreteRectFillDifference::insert_at(int i, int& x, int& y) const
 		return;
 	}
 	interpolate_rect_fill_difference(i, x, y, second_bbox, middle_bbox);
+}
+
+static void rect_fill_modified_regions(IntBounds with, IntBounds without, IntRect& bottom, IntRect& left, IntRect& right, IntRect& top)
+{
+	bottom.x = with.x1;
+	bottom.y = with.y1;
+	bottom.w = with.width_no_abs();
+	bottom.h = without.y1 - with.y1;
+
+	left.x = with.x1;
+	left.y = without.y1;
+	left.w = without.x1 - with.x1;
+	left.h = without.height_no_abs();
+
+	right.x = without.x2 + 1;
+	right.y = without.y1;
+	right.w = with.x2 - without.x2;
+	right.h = without.height_no_abs();
+
+	top.x = with.x1;
+	top.y = without.y2 + 1;
+	top.w = with.width_no_abs();
+	top.h = with.y2 - without.y2;
+}
+
+std::array<IntRect, 8> DiscreteRectFillDifference::modified_regions() const
+{
+	std::array<IntRect, 8> mdfd_rgns;
+	rect_fill_modified_regions(first_bbox, middle_bbox, mdfd_rgns[0], mdfd_rgns[1], mdfd_rgns[2], mdfd_rgns[3]);
+	rect_fill_modified_regions(second_bbox, middle_bbox, mdfd_rgns[4], mdfd_rgns[5], mdfd_rgns[6], mdfd_rgns[7]);
+	return mdfd_rgns;
 }
 
 PaintToolAction::PaintToolAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors)
