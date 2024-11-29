@@ -30,6 +30,7 @@ struct BrushInfo
 	struct
 	{
 		DiscreteLineInterpolator line = {};
+		DiscreteRectOutlineInterpolator rect_outline = {};
 		DiscreteRectFillInterpolator rect_fill = {};
 	} interps;
 

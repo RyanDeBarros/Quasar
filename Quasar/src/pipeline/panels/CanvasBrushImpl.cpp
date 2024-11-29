@@ -11,7 +11,7 @@ void CBImpl::brush_move_to(Canvas& canvas, int x, int y)
 	interp.finish = { x, y };
 	interp.sync_with_endpoints();
 	IPosition intermediate;
-	for (unsigned int i = 1; i < interp.length - 1; ++i)
+	for (unsigned int i = 1; i < interp.length; ++i)
 	{
 		interp.at(i, intermediate);
 		canvas.brush(intermediate.x, intermediate.y);
@@ -54,7 +54,6 @@ static void paint_brush_suffix(Canvas& canvas, int x, int y, PixelRGBA initial_c
 void CBImpl::Paint::brush_pencil(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	Buffer image_shifted_buf = paint_brush_prefix(canvas, x, y);
 	PixelRGBA initial_c{ 0, 0, 0, 0 };
 	PixelRGBA final_c{ 0, 0, 0, 0 };
@@ -75,7 +74,6 @@ void CBImpl::Paint::brush_pencil(Canvas& canvas, int x, int y)
 void CBImpl::Paint::brush_pen(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	Buffer image_shifted_buf = paint_brush_prefix(canvas, x, y);
 	PixelRGBA initial_c{ 0, 0, 0, 0 };
 	PixelRGBA color = canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY ? canvas.pric_pen_pxs : canvas.altc_pen_pxs;
@@ -90,7 +88,6 @@ void CBImpl::Paint::brush_pen(Canvas& canvas, int x, int y)
 void CBImpl::Paint::brush_eraser(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	Buffer image_shifted_buf = paint_brush_prefix(canvas, x, y);
 	PixelRGBA initial_c{ 0, 0, 0, 0 };
 	PixelRGBA final_c{ 0, 0, 0, 0 };
@@ -130,7 +127,6 @@ static void line_brush_remove_pencil_and_pen(Canvas& canvas)
 static DiscreteLineInterpolator& line_brush_setup_interp(BrushInfo& binfo, int x, int y)
 {
 	auto& interp = binfo.interps.line;
-	interp.start = binfo.starting_pos;
 	interp.finish = { x, y };
 	interp.sync_with_endpoints();
 	return interp;
@@ -139,7 +135,6 @@ static DiscreteLineInterpolator& line_brush_setup_interp(BrushInfo& binfo, int x
 void CBImpl::Line::brush_pencil(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	binfo.storage_2c.clear();
 	line_brush_remove_pencil_and_pen(canvas);
 	auto& interp = line_brush_setup_interp(binfo, x, y);
@@ -161,7 +156,6 @@ void CBImpl::Line::brush_pencil(Canvas& canvas, int x, int y)
 void CBImpl::Line::brush_pen(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	binfo.storage_1c.clear();
 	line_brush_remove_pencil_and_pen(canvas);
 	auto& interp = line_brush_setup_interp(binfo, x, y);
@@ -184,7 +178,6 @@ void CBImpl::Line::brush_pen(Canvas& canvas, int x, int y)
 void CBImpl::Line::brush_eraser(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	binfo.storage_1c.clear();
 	auto& interp_remove = binfo.interps.line;
 	IPosition pos{};
@@ -218,7 +211,10 @@ void CBImpl::Line::brush_select(Canvas& canvas, int x, int y)
 
 void CBImpl::Line::start(Canvas& canvas)
 {
-	canvas.binfo.show_preview = true;
+	BrushInfo& binfo = canvas.binfo;
+	binfo.show_preview = true;
+	binfo.interps.line.start = binfo.interps.line.finish = binfo.starting_pos;
+	binfo.interps.line.sync_with_endpoints();
 }
 
 void CBImpl::Line::submit_pencil(Canvas& canvas)
@@ -320,7 +316,7 @@ static void rect_fill_brush_suffix(BrushInfo& binfo, const std::shared_ptr<Image
 {
 	auto rgns = diff.modified_regions();
 	for (IntRect r : rgns)
-		image->update_subtexture(r.scale(sx, sy));
+		image->update_subtexture(r.scaled(sx, sy));
 	binfo.interps.rect_fill = new_interp;
 	binfo.interps.rect_fill.sync_with_endpoints();
 }
@@ -328,7 +324,6 @@ static void rect_fill_brush_suffix(BrushInfo& binfo, const std::shared_ptr<Image
 void CBImpl::RectFill::brush_pencil(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	DiscreteRectFillInterpolator new_interp;
 	DiscreteRectFillDifference* diff;
 	rect_fill_brush_setup_interps(binfo, x, y, new_interp, diff);
@@ -347,7 +342,6 @@ void CBImpl::RectFill::brush_pencil(Canvas& canvas, int x, int y)
 void CBImpl::RectFill::brush_pen(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	DiscreteRectFillInterpolator new_interp;
 	DiscreteRectFillDifference* diff;
 	rect_fill_brush_setup_interps(binfo, x, y, new_interp, diff);
@@ -364,7 +358,6 @@ void CBImpl::RectFill::brush_pen(Canvas& canvas, int x, int y)
 void CBImpl::RectFill::brush_eraser(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.last_brush_pos = { x, y };
 	DiscreteRectFillInterpolator new_interp;
 	DiscreteRectFillDifference* diff;
 	rect_fill_brush_setup_interps(binfo, x, y, new_interp, diff);
@@ -490,4 +483,48 @@ void CBImpl::RectFill::reset_eraser(BrushInfo& binfo)
 		buffer_set_rect_alpha(buf, pit.x, pit.y, 1, 1, 0, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy); });
 	binfo.eraser_preview_image->update_subtexture(bbox.x1 * BrushInfo::eraser_preview_img_sx, bbox.y1 * BrushInfo::eraser_preview_img_sy,
 		bbox.width_no_abs() * BrushInfo::eraser_preview_img_sx, bbox.height_no_abs() * BrushInfo::eraser_preview_img_sy);
+}
+
+void CBImpl::RectOutline::brush_pencil(Canvas& canvas, int x, int y)
+{
+}
+
+void CBImpl::RectOutline::brush_pen(Canvas& canvas, int x, int y)
+{
+}
+
+void CBImpl::RectOutline::brush_eraser(Canvas& canvas, int x, int y)
+{
+}
+
+void CBImpl::RectOutline::brush_select(Canvas& canvas, int x, int y)
+{
+}
+
+void CBImpl::RectOutline::start(Canvas& canvas)
+{
+}
+
+void CBImpl::RectOutline::submit_pencil(Canvas& canvas)
+{
+}
+
+void CBImpl::RectOutline::submit_pen(Canvas& canvas)
+{
+}
+
+void CBImpl::RectOutline::submit_eraser(Canvas& canvas)
+{
+}
+
+void CBImpl::RectOutline::reset_pencil(BrushInfo& binfo)
+{
+}
+
+void CBImpl::RectOutline::reset_pen(BrushInfo& binfo)
+{
+}
+
+void CBImpl::RectOutline::reset_eraser(BrushInfo& binfo)
+{
 }

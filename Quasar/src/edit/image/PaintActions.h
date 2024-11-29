@@ -23,6 +23,19 @@ struct DiscreteLineInterpolator
 	void at(int i, int& x, int& y) const;
 };
 
+struct DiscreteRectOutlineInterpolator
+{
+	IPosition start = {};
+	IPosition finish = {};
+	IPosition delta = {};
+	unsigned int length = 1;
+
+	void sync_with_endpoints();
+	IPosition at(int i) const { IPosition pos; at(i, pos); return pos; }
+	void at(int i, IPosition& pos) const { at(i, pos.x, pos.y); }
+	void at(int i, int& x, int& y) const;
+};
+
 struct DiscreteRectFillInterpolator
 {
 	IPosition start = {};

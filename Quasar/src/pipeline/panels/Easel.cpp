@@ -341,6 +341,16 @@ void Canvas::update_brush_tool_and_tip()
 		else if (binfo.tip & BrushTip::SELECT)
 			brush_under_tool_and_tip = &CBImpl::Line::brush_select;
 		break;
+	case BrushTool::RECT_OUTLINE:
+		if (binfo.tip & BrushTip::PENCIL)
+			brush_under_tool_and_tip = &CBImpl::RectOutline::brush_pencil;
+		else if (binfo.tip & BrushTip::PEN)
+			brush_under_tool_and_tip = &CBImpl::RectOutline::brush_pen;
+		else if (binfo.tip & BrushTip::ERASER)
+			brush_under_tool_and_tip = &CBImpl::RectOutline::brush_eraser;
+		else if (binfo.tip & BrushTip::SELECT)
+			brush_under_tool_and_tip = &CBImpl::RectOutline::brush_select;
+		break;
 	case BrushTool::RECT_FILL:
 		if (binfo.tip & BrushTip::PENCIL)
 			brush_under_tool_and_tip = &CBImpl::RectFill::brush_pencil;
@@ -373,16 +383,15 @@ bool Canvas::brush_pos_in_image_bounds(int x, int y) const
 void Canvas::hover_pixel_under_cursor()
 {
 	IPosition pos = brush_pos_under_cursor();
-	if (in_diagonal_rect(pos, {}, { image->buf.width - 1, image->buf.height - 1 }) || binfo.brushing)
+	if (brush_pos_in_image_bounds(pos.x, pos.y))
 	{
 		cursor_in_canvas = true;
 		if (pos != binfo.image_pos)
 		{
-			if (binfo.brushing && binfo.last_brush_pos != IPosition{ -1, -1 })
-				brush_move_to(pos);
-			hover_pixel_at(pixel_position(pos));
 			if (cursor_state != CursorState::UP)
-				brush(pos.x, pos.y);
+				brush_move_to(pos);
+			binfo.image_pos = pos;
+			hover_pixel_at(pixel_position(binfo.image_pos));
 		}
 		if (MainWindow->is_alt_pressed())
 		{
@@ -398,7 +407,12 @@ void Canvas::hover_pixel_under_cursor()
 		}
 	}
 	else
+	{
+		if (binfo.brushing && pos != binfo.image_pos)
+			brush_move_to(pos);
+		binfo.image_pos = pos;
 		unhover();
+	}
 }
 
 void Canvas::unhover()
@@ -536,7 +550,7 @@ void Canvas::brush(int x, int y)
 {
 	if (brush_pos_in_image_bounds(x, y))
 	{
-		binfo.image_pos = { x, y };
+		binfo.last_brush_pos = { x, y };
 		if (!binfo.brushing)
 			brush_start(x, y);
 		(*brush_under_tool_and_tip)(*this, x, y);
@@ -547,12 +561,15 @@ void Canvas::brush_start(int x, int y)
 {
 	binfo.brushing = true;
 	binfo.reset();
-	binfo.image_pos = { x, y };
+	binfo.last_brush_pos = { x, y };
 	binfo.starting_pos = { x, y };
 	switch (binfo.tool)
 	{
 	case BrushTool::LINE:
 		CBImpl::Line::start(*this);
+		break;
+	case BrushTool::RECT_OUTLINE:
+		CBImpl::RectOutline::start(*this);
 		break;
 	case BrushTool::RECT_FILL:
 		if (binfo.tip & BrushTip::PENCIL)
@@ -582,6 +599,15 @@ void Canvas::brush_submit()
 				CBImpl::Line::submit_pen(*this);
 			else if (binfo.tip & BrushTip::ERASER)
 				CBImpl::Line::submit_eraser(*this);
+			// LATER select
+			break;
+		case BrushTool::RECT_OUTLINE:
+			if (binfo.tip & BrushTip::PENCIL)
+				CBImpl::RectOutline::submit_pencil(*this);
+			else if (binfo.tip & BrushTip::PEN)
+				CBImpl::RectOutline::submit_pen(*this);
+			else if (binfo.tip & BrushTip::ERASER)
+				CBImpl::RectOutline::submit_eraser(*this);
 			// LATER select
 			break;
 		case BrushTool::RECT_FILL:
@@ -617,7 +643,6 @@ void BrushInfo::reset()
 	brushing_bbox.x2 = INT_MIN;
 	brushing_bbox.y1 = INT_MAX;
 	brushing_bbox.y2 = INT_MIN;
-	image_pos = { -1, -1 };
 	last_brush_pos = { -1, -1 };
 	starting_pos = { -1, -1 };
 	if (show_preview)
@@ -630,6 +655,17 @@ void BrushInfo::reset()
 				CBImpl::Line::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
 				CBImpl::Line::reset_eraser(*this);
+			// LATER select
+		}
+		else if (tool & BrushTool::RECT_OUTLINE)
+		{
+			if (tip & BrushTip::PENCIL)
+				CBImpl::RectOutline::reset_pencil(*this);
+			else if (tip & BrushTip::PEN)
+				CBImpl::RectOutline::reset_pen(*this);
+			else if (tip & BrushTip::ERASER)
+				CBImpl::RectOutline::reset_eraser(*this);
+			// LATER select
 		}
 		else if (tool & BrushTool::RECT_FILL)
 		{
@@ -639,6 +675,7 @@ void BrushInfo::reset()
 				CBImpl::RectFill::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
 				CBImpl::RectFill::reset_eraser(*this);
+			// LATER select
 		}
 	}
 	show_preview = false;
