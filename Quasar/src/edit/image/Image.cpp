@@ -158,7 +158,7 @@ void Image::update_subtexture(IntRect rect) const
 
 void Image::update_subtexture(int x, int y, int w, int h) const
 {
-	if (tid && x >= 0 && y >= 0 && w >= 0 && h >= 0)
+	if (tid && on_interval(x, 0, buf.width - 1) && on_interval(y, 0, buf.height - 1) && w >= 0 && h >= 0)
 	{
 		if (x + w >= buf.width)
 			w = buf.width - x;

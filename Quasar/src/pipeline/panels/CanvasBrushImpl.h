@@ -1,6 +1,7 @@
 #pragma once
 
 struct Canvas;
+struct BrushInfo;
 
 namespace CBImpl
 {
@@ -31,7 +32,10 @@ namespace CBImpl
 		extern void submit_pencil(Canvas& canvas);
 		extern void submit_pen(Canvas& canvas);
 		extern void submit_eraser(Canvas& canvas);
-		extern void submit_select(Canvas& canvas);
+
+		extern void reset_pencil(BrushInfo& binfo);
+		extern void reset_pen(BrushInfo& binfo);
+		extern void reset_eraser(BrushInfo& binfo);
 	}
 
 	namespace RectFill
@@ -44,11 +48,13 @@ namespace CBImpl
 		extern void start_pencil(Canvas& canvas);
 		extern void start_pen(Canvas& canvas);
 		extern void start_eraser(Canvas& canvas);
-		extern void start_select(Canvas& canvas);
 		
 		extern void submit_pencil(Canvas& canvas);
 		extern void submit_pen(Canvas& canvas);
 		extern void submit_eraser(Canvas& canvas);
-		extern void submit_select(Canvas& canvas);
+
+		extern void reset_pencil(BrushInfo& binfo);
+		extern void reset_pen(BrushInfo& binfo);
+		extern void reset_eraser(BrushInfo& binfo);
 	}
 }

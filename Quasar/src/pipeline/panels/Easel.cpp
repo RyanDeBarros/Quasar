@@ -10,7 +10,6 @@
 #include "Palette.h"
 #include "../render/Uniforms.h"
 #include "../render/FlatSprite.h"
-#include "edit/image/PixelBufferPaths.h"
 
 constexpr GLuint CHECKERBOARD_TSLOT = 0;
 constexpr GLuint CURSOR_ERASER_TSLOT = 1;
@@ -162,16 +161,22 @@ void Canvas::set_image(std::shared_ptr<Image>&& img)
 	sync_gfx_with_image();
 }
 
-void Canvas::sync_checkerboard_with_image()
+void Canvas::sync_sprite_with_image()
 {
-	FlatSprite& sprite = fs_wget(*this, SPRITE);
 	if (image)
 	{
-		const Buffer& buf = image->buf;
-		sprite.self.transform.scale = { buf.width, buf.height }; // TODO put in sync_sprite_with_image()
+		FlatSprite& sprite = fs_wget(*this, SPRITE);
+		sprite.self.transform.scale = { image->buf.width, image->buf.height };
 		sprite.update_transform();
-		set_checkerboard_uv_size(0.5f * buf.width * checker_size_inv.x, 0.5f * buf.height * checker_size_inv.y);
-		fs_wget(*this, CHECKERBOARD).self.transform.scale = { buf.width, buf.height };
+	}
+}
+
+void Canvas::sync_checkerboard_with_image()
+{
+	if (image)
+	{
+		set_checkerboard_uv_size(0.5f * image->buf.width * checker_size_inv.x, 0.5f * image->buf.height * checker_size_inv.y);
+		fs_wget(*this, CHECKERBOARD).self.transform.scale = { image->buf.width, image->buf.height };
 		fs_wget(*this, CHECKERBOARD).update_transform().set_modulation(ColorFrame()).ur->send_buffer();
 	}
 	else
@@ -193,26 +198,24 @@ void Canvas::sync_brush_preview_with_image()
 		binfo.preview_image->gen_texture();
 		binfo.preview_image->resend_texture();
 
-		static const Dim eraser_arr_w = 2;
-		static const Dim eraser_arr_h = 2;
 		Buffer& ebuf = binfo.eraser_preview_image->buf;
 		if (!ebuf.same_dimensions_as(image->buf))
 		{
 			delete[] ebuf.pixels;
 			ebuf = image->buf;
-			ebuf.width *= eraser_arr_w;
-			ebuf.height *= eraser_arr_h;
+			ebuf.width *= BrushInfo::eraser_preview_img_sx;
+			ebuf.height *= BrushInfo::eraser_preview_img_sy;
 			ebuf.pxnew();
 		}
-		// TODO use the following checkerboard multiple times (maybe even use it for eraser cursor instead?):
-		static const Byte eraser_preview_arr[eraser_arr_w * eraser_arr_h * 4] = {
+		static const Byte eraser_preview_arr[BrushInfo::eraser_preview_img_sx * BrushInfo::eraser_preview_img_sy * 4] = {
 			255, 255, 255, 0  , 0  , 0  , 0  , 0  ,
 			0  , 0  , 0  , 0  , 255, 255, 255, 0
 		};
 		for (Dim x = 0; x < image->buf.width; ++x)
 			for (Dim y = 0; y < image->buf.height; ++y)
-				for (Dim h = 0; h < eraser_arr_h; ++h)
-					memcpy(ebuf.pos(eraser_arr_w * x, eraser_arr_h * y + h), eraser_preview_arr + h * eraser_arr_w * 4, eraser_arr_w * 4);
+				for (Dim h = 0; h < BrushInfo::eraser_preview_img_sy; ++h)
+					memcpy(ebuf.pos(BrushInfo::eraser_preview_img_sx * x, BrushInfo::eraser_preview_img_sy * y + h),
+						eraser_preview_arr + h * BrushInfo::eraser_preview_img_sx * 4, BrushInfo::eraser_preview_img_sx * 4);
 		binfo.eraser_preview_image->gen_texture();
 		binfo.eraser_preview_image->resend_texture();
 
@@ -240,6 +243,7 @@ void Canvas::sync_transform()
 
 void Canvas::sync_gfx_with_image()
 {
+	sync_sprite_with_image();
 	sync_checkerboard_with_image();
 	sync_brush_preview_with_image();
 	sync_gridlines_with_image();
@@ -309,6 +313,7 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 
 void Canvas::update_brush_tool_and_tip()
 {
+	cursor_cancel();
 	binfo.tool = MBrushes->get_brush_tool();
 	binfo.tip = MBrushes->get_brush_tip();
 	switch (binfo.tool)
@@ -360,20 +365,21 @@ IPosition Canvas::brush_pos_under_cursor() const
 	return IPosition(local_pos);
 }
 
-// TODO hover even when outside canvas for line/rect ?
+bool Canvas::brush_pos_in_image_bounds(int x, int y) const
+{
+	return on_interval(x, 0, image->buf.width - 1) && on_interval(y, 0, image->buf.height - 1);
+}
+
 void Canvas::hover_pixel_under_cursor()
 {
 	IPosition pos = brush_pos_under_cursor();
-	if (in_diagonal_rect(pos, {}, { image->buf.width - 1, image->buf.height - 1 }))
+	if (in_diagonal_rect(pos, {}, { image->buf.width - 1, image->buf.height - 1 }) || binfo.brushing)
 	{
 		cursor_in_canvas = true;
-		if (pos != binfo.brush_pos)
+		if (pos != binfo.image_pos)
 		{
-			if (binfo.brushing && binfo.brush_pos != IPosition{ -1, -1 })
-			{
-				if (binfo.brush_pos != IPosition{ -1, -1 })
+			if (binfo.brushing && binfo.last_brush_pos != IPosition{ -1, -1 })
 				brush_move_to(pos);
-			}
 			hover_pixel_at(pixel_position(pos));
 			if (cursor_state != CursorState::UP)
 				brush(pos.x, pos.y);
@@ -528,17 +534,20 @@ bool Canvas::cursor_cancel()
 
 void Canvas::brush(int x, int y)
 {
-	binfo.brush_pos = { x, y };
-	if (!binfo.brushing)
-		brush_start(x, y);
-	(*brush_under_tool_and_tip)(*this, x, y);
+	if (brush_pos_in_image_bounds(x, y))
+	{
+		binfo.image_pos = { x, y };
+		if (!binfo.brushing)
+			brush_start(x, y);
+		(*brush_under_tool_and_tip)(*this, x, y);
+	}
 }
 
 void Canvas::brush_start(int x, int y)
 {
 	binfo.brushing = true;
 	binfo.reset();
-	binfo.brush_pos = { x, y };
+	binfo.image_pos = { x, y };
 	binfo.starting_pos = { x, y };
 	switch (binfo.tool)
 	{
@@ -552,8 +561,7 @@ void Canvas::brush_start(int x, int y)
 			CBImpl::RectFill::start_pen(*this);
 		else if (binfo.tip & BrushTip::ERASER)
 			CBImpl::RectFill::start_eraser(*this);
-		else if (binfo.tip & BrushTip::SELECT)
-			CBImpl::RectFill::start_select(*this);
+		// LATER select
 		break;
 	}
 }
@@ -574,8 +582,7 @@ void Canvas::brush_submit()
 				CBImpl::Line::submit_pen(*this);
 			else if (binfo.tip & BrushTip::ERASER)
 				CBImpl::Line::submit_eraser(*this);
-			else if (binfo.tip & BrushTip::SELECT)
-				CBImpl::Line::submit_select(*this);
+			// LATER select
 			break;
 		case BrushTool::RECT_FILL:
 			if (binfo.tip & BrushTip::PENCIL)
@@ -584,8 +591,7 @@ void Canvas::brush_submit()
 				CBImpl::RectFill::submit_pen(*this);
 			else if (binfo.tip & BrushTip::ERASER)
 				CBImpl::RectFill::submit_eraser(*this);
-			else if (binfo.tip & BrushTip::SELECT)
-				CBImpl::RectFill::submit_select(*this);
+			// LATER select
 			break;
 		}
 	}
@@ -605,7 +611,7 @@ void Canvas::brush_move_to(IPosition pos)
 	{
 	case BrushTool::PAINT:
 		auto& interp = binfo.interps.line;
-		interp.start = binfo.brush_pos;
+		interp.start = binfo.image_pos;
 		interp.finish = pos;
 		interp.sync_with_endpoints();
 		IPosition intermediate;
@@ -618,64 +624,34 @@ void Canvas::brush_move_to(IPosition pos)
 	}
 }
 
-void Canvas::Brush::reset()
+void BrushInfo::reset()
 {
 	brushing_bbox.x1 = INT_MAX;
 	brushing_bbox.x2 = INT_MIN;
 	brushing_bbox.y1 = INT_MAX;
 	brushing_bbox.y2 = INT_MIN;
-	brush_pos = { -1, -1 };
+	image_pos = { -1, -1 };
+	last_brush_pos = { -1, -1 };
 	starting_pos = { -1, -1 };
 	if (show_preview)
 	{
-		switch (tool) // TODO create reset functions in CBImpl
+		if (tool & BrushTool::LINE)
 		{
-		case BrushTool::LINE:
-		{
-			if (tip & (BrushTip::PENCIL | BrushTip::PEN))
-			{
-				IPosition pos;
-				for (unsigned int i = 0; i < interps.line.length; ++i)
-				{
-					interps.line.at(i, pos);
-					buffer_set_pixel_alpha(preview_image->buf, pos.x, pos.y, 0);
-				}
-				preview_image->update_subtexture(abs_rect(interps.line.start, interps.line.finish));
-			}
+			if (tip & BrushTip::PENCIL)
+				CBImpl::Line::reset_pencil(*this);
+			else if (tip & BrushTip::PEN)
+				CBImpl::Line::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
-			{
-				IPosition pos;
-				for (unsigned int i = 0; i < interps.line.length; ++i)
-				{
-					interps.line.at(i, pos);
-					buffer_set_rect_alpha(eraser_preview_image->buf, 2 * pos.x, 2 * pos.y, 2, 2, 0);
-				}
-				eraser_preview_image->update_subtexture(abs_rect(interps.line.start, interps.line.finish, 2, 2));
-			}
-			break;
+				CBImpl::Line::reset_eraser(*this);
 		}
-		case BrushTool::RECT_FILL:
+		else if (tool & BrushTool::RECT_FILL)
 		{
-			IntBounds bbox = interp_diffs.rect_fill.second_bbox;
-			UprightRect upr;
-
-			upr.x0 = bbox.x1;
-			upr.x1 = bbox.x2;
-			upr.y0 = bbox.y1;
-			upr.y1 = bbox.y2;
-
-			if (tip & (BrushTip::PENCIL | BrushTip::PEN))
-			{
-				iterate_path(upr, [&buf = preview_image->buf](PathIterator& pit) { buffer_set_pixel_alpha(buf, pit.x, pit.y, 0); });
-				preview_image->update_subtexture(bbox.x1, bbox.y1, bbox.width_no_abs(), bbox.height_no_abs());
-			}
+			if (tip & BrushTip::PENCIL)
+				CBImpl::RectFill::reset_pencil(*this);
+			else if (tip & BrushTip::PEN)
+				CBImpl::RectFill::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
-			{
-				iterate_path(upr, [&buf = eraser_preview_image->buf](PathIterator& pit) { buffer_set_rect_alpha(buf, pit.x, pit.y, 1, 1, 0, 2, 2); });
-				eraser_preview_image->update_subtexture(bbox.x1 * 2, bbox.y1 * 2, bbox.width_no_abs() * 2, bbox.height_no_abs() * 2);
-			}
-			break;
-		}
+				CBImpl::RectFill::reset_eraser(*this);
 		}
 	}
 	show_preview = false;
@@ -753,8 +729,15 @@ void Easel::connect_input_handlers()
 		};
 	// LATER add handler for when mouse is already pressed, and then space is pressed to pan.
 	key_handler.callback = [this](const KeyEvent& k) {
-		if (k.action == IAction::PRESS && k.key == Key::ESCAPE && canvas().cursor_cancel())
-			k.consumed = true;
+		if (k.action == IAction::PRESS && k.key == Key::ESCAPE)
+		{
+			if (canvas().cursor_cancel())
+				k.consumed = true;
+		}
+		else if (k.action == IAction::PRESS && k.key == Key::Z && (k.mods & Mods::CONTROL))
+		{
+			canvas().cursor_cancel(); // no consume
+		}
 		};
 	scroll_handler.callback = [this](const ScrollEvent& s) {
 		if (!panning_info.panning && cursor_in_clipping())

@@ -278,7 +278,46 @@ inline IntBounds abs_bounds(IPosition p1, IPosition p2)
 struct IntRect
 {
 	int x = 0, y = 0, w = 0, h = 0;
+
+	bool intersect(IntRect other, IntRect& result) const;
 };
+
+inline bool IntRect::intersect(IntRect other, IntRect& result) const
+{
+	if (x >= other.x)
+	{
+		int diff = other.x + other.w - x;
+		if (diff < 0)
+			return false;
+		result.x = x;
+		result.w = std::min(diff, w);
+	}
+	else
+	{
+		int diff = x + w - other.x;
+		if (diff < 0)
+			return false;
+		result.x = other.x;
+		result.w = std::min(diff, other.w);
+	}
+	if (y >= other.y)
+	{
+		int diff = other.y + other.h - y;
+		if (diff < 0)
+			return false;
+		result.y = y;
+		result.h = std::min(diff, h);
+	}
+	else
+	{
+		int diff = y + h - other.y;
+		if (diff < 0)
+			return false;
+		result.y = other.y;
+		result.h = std::min(diff, other.h);
+	}
+	return true;
+}
 
 inline IntRect abs_rect(IPosition p1, IPosition p2, int sx = 1, int sy = 1)
 {

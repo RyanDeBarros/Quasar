@@ -973,7 +973,7 @@ void ColorPicker::connect_input_handlers()
 		{
 			if (current_widget_control >= 0)
 			{
-				mb.consumed = true;
+				//mb.consumed = true;
 				release_cursor();
 			}
 		}

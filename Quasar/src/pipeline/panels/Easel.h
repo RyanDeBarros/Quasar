@@ -11,6 +11,36 @@
 #include "edit/image/PaintActions.h"
 #include "variety/History.h"
 
+struct BrushInfo
+{
+	bool brushing = false;
+	BrushTip tip = BrushTip::PENCIL;
+	BrushTool tool = BrushTool::CAMERA;
+	IPosition starting_pos = { -1, -1 };
+	IPosition last_brush_pos = { -1, -1 };
+	IPosition image_pos = { -1, -1 };
+	IntBounds brushing_bbox = { -1, -1, -1, -1 };
+	bool show_preview = false;
+	std::shared_ptr<Image> preview_image;
+	std::shared_ptr<Image> eraser_preview_image;
+	static const int eraser_preview_img_sx = 2, eraser_preview_img_sy = 2;
+	std::unordered_map<IPosition, PixelRGBA> storage_1c;
+	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
+
+	struct
+	{
+		DiscreteLineInterpolator line = {};
+		DiscreteRectFillInterpolator rect_fill = {};
+	} interps;
+
+	struct
+	{
+		DiscreteRectFillDifference rect_fill = {};
+	} interp_diffs;
+
+	void reset();
+};
+
 struct Canvas : public Widget
 {
 	friend struct Easel;
@@ -60,6 +90,7 @@ public:
 
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
+	void sync_sprite_with_image();
 	void sync_checkerboard_with_image();
 	void sync_brush_preview_with_image();
 	void sync_gridlines_with_image();
@@ -74,6 +105,7 @@ public:
 	void update_brush_tool_and_tip();
 	
 	IPosition brush_pos_under_cursor() const;
+	bool brush_pos_in_image_bounds(int x, int y) const;
 	void hover_pixel_under_cursor();
 	void unhover();
 	void hover_pixel_at(Position pos);
@@ -120,33 +152,7 @@ public:
 		_W_COUNT
 	};
 
-	struct Brush
-	{
-		bool brushing = false;
-		BrushTip tip;
-		BrushTool tool;
-		IPosition starting_pos = { -1, -1 };
-		IPosition brush_pos = { -1, -1 };
-		IntBounds brushing_bbox = { -1, -1, -1, -1 };
-		bool show_preview = false;
-		std::shared_ptr<Image> preview_image;
-		std::shared_ptr<Image> eraser_preview_image;
-		std::unordered_map<IPosition, PixelRGBA> storage_1c;
-		std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
-
-		struct
-		{
-			DiscreteLineInterpolator line = {};
-			DiscreteRectFillInterpolator rect_fill = {};
-		} interps;
-		
-		struct
-		{
-			DiscreteRectFillDifference rect_fill = {};
-		} interp_diffs;
-
-		void reset();
-	} binfo;
+	BrushInfo binfo;
 };
 
 struct Easel : public Panel

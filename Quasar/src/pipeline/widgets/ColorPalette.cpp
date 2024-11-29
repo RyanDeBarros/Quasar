@@ -1199,7 +1199,7 @@ void ColorPalette::connect_input_handlers()
 				int prev_i = current_subpalette().primary_index;
 				if (current_subpalette().check_primary())
 				{
-					mb.consumed = true;
+					//mb.consumed = true;
 					current_subpalette().update_primary_color_in_picker();
 				}
 			}
@@ -1208,7 +1208,7 @@ void ColorPalette::connect_input_handlers()
 				int prev_i = current_subpalette().alternate_index;
 				if (current_subpalette().check_alternate())
 				{
-					mb.consumed = true;
+					//mb.consumed = true;
 					current_subpalette().update_alternate_color_in_picker();
 				}
 			}
