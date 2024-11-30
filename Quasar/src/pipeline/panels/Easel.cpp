@@ -372,7 +372,7 @@ IPosition Canvas::brush_pos_under_cursor() const
 {
 	Position world_pos = MEasel->to_world_coordinates(Machine.cursor_screen_pos());
 	Position local_pos = local_of(world_pos) + 0.5f * Position(image->buf.width, image->buf.height);
-	return IPosition(local_pos);
+	return IPosition(floori(local_pos.x), floori(local_pos.y));
 }
 
 bool Canvas::brush_pos_in_image_bounds(int x, int y) const

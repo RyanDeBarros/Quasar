@@ -34,6 +34,8 @@ struct DiscreteRectOutlineInterpolator
 	IPosition at(int i) const { IPosition pos; at(i, pos); return pos; }
 	void at(int i, IPosition& pos) const { at(i, pos.x, pos.y); }
 	void at(int i, int& x, int& y) const;
+
+	std::array<IntRect, 4> lines() const;
 };
 
 struct DiscreteRectFillInterpolator

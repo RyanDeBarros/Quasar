@@ -35,6 +35,112 @@ void DiscreteLineInterpolator::at(int i, int& x, int& y) const
 	y = start.y + glm::sign(delta.y) * roundi_down_on_half(std::abs(delta.y) * fraction);
 }
 
+void DiscreteRectOutlineInterpolator::sync_with_endpoints()
+{
+	delta = finish - start;
+	int dw = std::abs(delta.x);
+	int dh = std::abs(delta.y);
+	if (dw == 0)
+		length = dh + 1;
+	else if (dh == 0)
+		length = dw + 1;
+	else
+		length = 2 * (dw + dh);
+}
+
+void DiscreteRectOutlineInterpolator::at(int i, int& x, int& y) const
+{
+	int dw = std::abs(delta.x);
+	int dh = std::abs(delta.y);
+	if (dw == 0)
+	{
+		x = start.x;
+		y = start.y + glm::sign(delta.y) * i;
+	}
+	else if (dh == 0)
+	{
+		x = start.x + glm::sign(delta.x) * i;
+		y = start.y;
+	}
+	else
+	{
+		if (i < dw)
+		{
+			x = start.x + glm::sign(delta.x) * i;
+			y = start.y;
+		}
+		else
+		{
+			i -= dw;
+			if (i < dh)
+			{
+				x = finish.x;
+				y = start.y + glm::sign(delta.y) * i;
+			}
+			else
+			{
+				i -= dh;
+				if (i < dh)
+				{
+					x = start.x;
+					y = start.y + glm::sign(delta.y) * (i + 1);
+				}
+				else
+				{
+					x = start.x + glm::sign(delta.x) * (i - dh + 1);
+					y = finish.y;
+				}
+			}
+		}
+	}
+}
+
+std::array<IntRect, 4> DiscreteRectOutlineInterpolator::lines() const
+{
+	std::array<IntRect, 4> lines;
+	int dw = std::abs(delta.x);
+	int dh = std::abs(delta.y);
+	int rx = std::min(start.x, finish.x);
+	int ry = std::min(start.y, finish.y);
+	if (dw == 0)
+	{
+		lines[0].w = 1;
+		lines[0].h = dh + 1;
+		lines[0].x = rx;
+		lines[0].y = ry;
+	}
+	else if (dh == 0)
+	{
+		lines[0].w = dw + 1;
+		lines[0].h = 1;
+		lines[0].x = rx;
+		lines[0].y = ry;
+	}
+	else
+	{
+		lines[0].w = dw;
+		lines[0].h = 1;
+		lines[0].x = rx;
+		lines[0].y = ry;
+
+		lines[1].w = 1;
+		lines[1].h = dh;
+		lines[1].x = rx + dw;
+		lines[1].y = ry;
+
+		lines[2].w = 1;
+		lines[2].h = dh;
+		lines[2].x = rx;
+		lines[2].y = ry + 1;
+
+		lines[3].w = dw;
+		lines[3].h = 1;
+		lines[3].x = rx + 1;
+		lines[3].y = ry + dh;
+	}
+	return lines;
+}
+
 void DiscreteRectFillInterpolator::sync_with_endpoints()
 {
 	delta = finish - start;

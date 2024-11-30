@@ -4,6 +4,29 @@
 #include "user/Machine.h"
 #include "edit/image/PixelBufferPaths.h"
 
+static void standard_submit_pencil(Canvas& canvas)
+{
+	BrushInfo& binfo = canvas.binfo;
+	if (canvas.image && !binfo.storage_2c.empty())
+		Machine.history.execute(std::make_shared<OneColorPencilAction>(canvas.image, binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_2c)));
+}
+
+static void standard_submit_pen(Canvas& canvas)
+{
+	BrushInfo& binfo = canvas.binfo;
+	if (canvas.image && !binfo.storage_1c.empty())
+		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
+			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
+}
+
+static void standard_submit_eraser(Canvas& canvas)
+{
+	BrushInfo& binfo = canvas.binfo;
+	if (canvas.image && !binfo.storage_1c.empty())
+		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 },
+			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
+}
+
 void CBImpl::brush_move_to(Canvas& canvas, int x, int y)
 {
 	DiscreteLineInterpolator interp;
@@ -22,6 +45,9 @@ void CBImpl::Camera::brush(Canvas& canvas, int x, int y)
 {
 	// do nothing
 }
+
+// <<<==================================<<< PAINT >>>==================================>>>
+// TODO Paint should use standard submission techniques specific to pencil, pen, and eraser, in the exact same way as Line, RectFill, RectOutline, etc.
 
 static Buffer paint_brush_prefix(Canvas& canvas, int x, int y)
 {
@@ -110,6 +136,8 @@ void CBImpl::Paint::brush_submit(Canvas& canvas)
 	if (canvas.image && !canvas.binfo.storage_2c.empty())
 		Machine.history.push(std::make_shared<PaintToolAction>(canvas.image, canvas.binfo.brushing_bbox, std::move(canvas.binfo.storage_2c)));
 }
+
+// <<<==================================<<< LINE >>>==================================>>>
 
 static void line_brush_remove_pencil_and_pen(Canvas& canvas)
 {
@@ -213,42 +241,36 @@ void CBImpl::Line::start(Canvas& canvas)
 {
 	BrushInfo& binfo = canvas.binfo;
 	binfo.show_preview = true;
-	binfo.interps.line.start = binfo.interps.line.finish = binfo.starting_pos;
-	binfo.interps.line.sync_with_endpoints();
+	auto& interp = binfo.interps.line;
+	interp.start = interp.finish = binfo.starting_pos;
+	interp.sync_with_endpoints();
 }
 
 void CBImpl::Line::submit_pencil(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	if (canvas.image && !binfo.storage_2c.empty())
-		Machine.history.execute(std::make_shared<OneColorPencilAction>(canvas.image, binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_2c)));
+	standard_submit_pencil(canvas);
 }
 
 void CBImpl::Line::submit_pen(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
-			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
+	standard_submit_pen(canvas);
 }
 
 void CBImpl::Line::submit_eraser(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 },
-			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
+	standard_submit_eraser(canvas);
 }
 
 static void line_reset_pencil_and_pen(BrushInfo& binfo)
 {
+	auto& interp = binfo.interps.line;
 	IPosition pos;
-	for (unsigned int i = 0; i < binfo.interps.line.length; ++i)
+	for (unsigned int i = 0; i < interp.length; ++i)
 	{
-		binfo.interps.line.at(i, pos);
+		interp.at(i, pos);
 		buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
 	}
-	binfo.preview_image->update_subtexture(abs_rect(binfo.interps.line.start, binfo.interps.line.finish));
+	binfo.preview_image->update_subtexture(abs_rect(interp.start, interp.finish));
 }
 
 void CBImpl::Line::reset_pencil(BrushInfo& binfo)
@@ -263,15 +285,191 @@ void CBImpl::Line::reset_pen(BrushInfo& binfo)
 
 void CBImpl::Line::reset_eraser(BrushInfo& binfo)
 {
+	auto& interp = binfo.interps.line;
 	IPosition pos;
-	for (unsigned int i = 0; i < binfo.interps.line.length; ++i)
+	for (unsigned int i = 0; i < interp.length; ++i)
 	{
-		binfo.interps.line.at(i, pos);
+		interp.at(i, pos);
 		buffer_set_rect_alpha(binfo.eraser_preview_image->buf, BrushInfo::eraser_preview_img_sx * pos.x, BrushInfo::eraser_preview_img_sy * pos.y,
 			BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy, 0);
 	}
-	binfo.eraser_preview_image->update_subtexture(abs_rect(binfo.interps.line.start, binfo.interps.line.finish, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
+	binfo.eraser_preview_image->update_subtexture(abs_rect(interp.start, interp.finish, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
 }
+
+// <<<==================================<<< RECT OUTLINE >>>==================================>>>
+
+static void rect_outline_update_subtexture_pen_and_pencil(BrushInfo& binfo)
+{
+	auto rgns = binfo.interps.rect_outline.lines();
+	for (IntRect r : rgns)
+		binfo.preview_image->update_subtexture(r);
+}
+
+static void rect_outline_update_subtexture_eraser(BrushInfo& binfo)
+{
+	auto rgns = binfo.interps.rect_outline.lines();
+	for (IntRect r : rgns)
+		binfo.eraser_preview_image->update_subtexture(r.scaled(BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
+}
+
+static void rect_outline_brush_remove_pencil_and_pen(Canvas& canvas)
+{
+	BrushInfo& binfo = canvas.binfo;
+	auto& interp = binfo.interps.rect_outline;
+	IPosition pos{};
+	for (unsigned int i = 0; i < interp.length; ++i)
+	{
+		interp.at(i, pos.x, pos.y);
+		buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
+	}
+	rect_outline_update_subtexture_pen_and_pencil(binfo);
+}
+
+static DiscreteRectOutlineInterpolator& rect_outline_brush_setup_interp(BrushInfo& binfo, int x, int y)
+{
+	auto& interp = binfo.interps.rect_outline;
+	interp.finish = { x, y };
+	interp.sync_with_endpoints();
+	return interp;
+}
+
+void CBImpl::RectOutline::brush_pencil(Canvas& canvas, int x, int y)
+{
+	BrushInfo& binfo = canvas.binfo;
+	binfo.storage_2c.clear();
+	rect_outline_brush_remove_pencil_and_pen(canvas);
+	auto& interp = rect_outline_brush_setup_interp(binfo, x, y);
+	IPosition pos{};
+	PixelRGBA new_color;
+	PixelRGBA old_color;
+	for (unsigned int i = 0; i < interp.length; ++i)
+	{
+		interp.at(i, pos.x, pos.y);
+		old_color = canvas.pixel_color_at(pos.x, pos.y);
+		new_color = canvas.applied_color().get_pixel_rgba();
+		buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y, new_color);
+		new_color.blend_over(old_color);
+		binfo.storage_2c[pos] = { new_color, old_color };
+	}
+	rect_outline_update_subtexture_pen_and_pencil(binfo);
+}
+
+void CBImpl::RectOutline::brush_pen(Canvas& canvas, int x, int y)
+{
+	BrushInfo& binfo = canvas.binfo;
+	binfo.storage_1c.clear();
+	rect_outline_brush_remove_pencil_and_pen(canvas);
+	auto& interp = rect_outline_brush_setup_interp(binfo, x, y);
+	IPosition pos{};
+	RGBA preview_color;
+	PixelRGBA new_color;
+	PixelRGBA old_color;
+	for (unsigned int i = 0; i < interp.length; ++i)
+	{
+		interp.at(i, pos.x, pos.y);
+		old_color = canvas.pixel_color_at(pos.x, pos.y);
+		preview_color = canvas.applied_color();
+		new_color = preview_color.get_pixel_rgba();
+		buffer_set_pixel_color(binfo.preview_image->buf, pos.x, pos.y, preview_color.no_alpha_equivalent().get_pixel_rgba());
+		binfo.storage_1c[pos] = old_color;
+	}
+	rect_outline_update_subtexture_pen_and_pencil(binfo);
+}
+
+void CBImpl::RectOutline::brush_eraser(Canvas& canvas, int x, int y)
+{
+	BrushInfo& binfo = canvas.binfo;
+	binfo.storage_1c.clear();
+	auto& interp_remove = binfo.interps.rect_outline;
+	IPosition pos{};
+	for (unsigned int i = 0; i < interp_remove.length; ++i)
+	{
+		interp_remove.at(i, pos);
+		buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 0, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
+	}
+	rect_outline_update_subtexture_eraser(binfo);
+
+	auto& interp = rect_outline_brush_setup_interp(binfo, x, y);
+	RGBA preview_color;
+	PixelRGBA new_color;
+	PixelRGBA old_color;
+	for (unsigned int i = 0; i < interp.length; ++i)
+	{
+		interp.at(i, pos);
+		old_color = canvas.pixel_color_at(pos);
+		preview_color = canvas.applied_color();
+		new_color = preview_color.get_pixel_rgba();
+		buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 255, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
+		binfo.storage_1c[pos] = old_color;
+	}
+	rect_outline_update_subtexture_eraser(binfo);
+}
+
+void CBImpl::RectOutline::brush_select(Canvas& canvas, int x, int y)
+{
+	// LATER
+}
+
+void CBImpl::RectOutline::start(Canvas& canvas)
+{
+	BrushInfo& binfo = canvas.binfo;
+	binfo.show_preview = true;
+	auto& interp = binfo.interps.rect_outline;
+	interp.start = interp.finish = binfo.starting_pos;
+	interp.sync_with_endpoints();
+}
+
+void CBImpl::RectOutline::submit_pencil(Canvas& canvas)
+{
+	standard_submit_pencil(canvas);
+}
+
+void CBImpl::RectOutline::submit_pen(Canvas& canvas)
+{
+	standard_submit_pen(canvas);
+}
+
+void CBImpl::RectOutline::submit_eraser(Canvas& canvas)
+{
+	standard_submit_eraser(canvas);
+}
+
+static void rect_outline_reset_pencil_and_pen(BrushInfo& binfo)
+{
+	auto& interp = binfo.interps.rect_outline;
+	IPosition pos;
+	for (unsigned int i = 0; i < interp.length; ++i)
+	{
+		interp.at(i, pos);
+		buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
+	}
+	rect_outline_update_subtexture_pen_and_pencil(binfo);
+}
+
+void CBImpl::RectOutline::reset_pencil(BrushInfo& binfo)
+{
+	rect_outline_reset_pencil_and_pen(binfo);
+}
+
+void CBImpl::RectOutline::reset_pen(BrushInfo& binfo)
+{
+	rect_outline_reset_pencil_and_pen(binfo);
+}
+
+void CBImpl::RectOutline::reset_eraser(BrushInfo& binfo)
+{
+	auto& interp = binfo.interps.rect_outline;
+	IPosition pos;
+	for (unsigned int i = 0; i < interp.length; ++i)
+	{
+		interp.at(i, pos);
+		buffer_set_rect_alpha(binfo.eraser_preview_image->buf, BrushInfo::eraser_preview_img_sx * pos.x, BrushInfo::eraser_preview_img_sy * pos.y,
+			BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy, 0);
+	}
+	rect_outline_update_subtexture_eraser(binfo);
+}
+
+// <<<==================================<<< RECT FILL >>>==================================>>>
 
 static void rect_fill_brush_setup_interps(BrushInfo& binfo, int x, int y, DiscreteRectFillInterpolator& new_interp, DiscreteRectFillDifference*& diff)
 {
@@ -426,25 +624,17 @@ void CBImpl::RectFill::start_eraser(Canvas& canvas)
 
 void CBImpl::RectFill::submit_pencil(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	if (canvas.image && !binfo.storage_2c.empty())
-		Machine.history.execute(std::make_shared<OneColorPencilAction>(canvas.image, binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_2c)));
+	standard_submit_pencil(canvas);
 }
 
 void CBImpl::RectFill::submit_pen(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
-			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
+	standard_submit_pen(canvas);
 }
 
 void CBImpl::RectFill::submit_eraser(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 },
-			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
+	standard_submit_eraser(canvas);
 }
 
 static IntBounds rect_fill_reset_prefix(BrushInfo& binfo, UprightRect* upr)
@@ -483,48 +673,4 @@ void CBImpl::RectFill::reset_eraser(BrushInfo& binfo)
 		buffer_set_rect_alpha(buf, pit.x, pit.y, 1, 1, 0, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy); });
 	binfo.eraser_preview_image->update_subtexture(bbox.x1 * BrushInfo::eraser_preview_img_sx, bbox.y1 * BrushInfo::eraser_preview_img_sy,
 		bbox.width_no_abs() * BrushInfo::eraser_preview_img_sx, bbox.height_no_abs() * BrushInfo::eraser_preview_img_sy);
-}
-
-void CBImpl::RectOutline::brush_pencil(Canvas& canvas, int x, int y)
-{
-}
-
-void CBImpl::RectOutline::brush_pen(Canvas& canvas, int x, int y)
-{
-}
-
-void CBImpl::RectOutline::brush_eraser(Canvas& canvas, int x, int y)
-{
-}
-
-void CBImpl::RectOutline::brush_select(Canvas& canvas, int x, int y)
-{
-}
-
-void CBImpl::RectOutline::start(Canvas& canvas)
-{
-}
-
-void CBImpl::RectOutline::submit_pencil(Canvas& canvas)
-{
-}
-
-void CBImpl::RectOutline::submit_pen(Canvas& canvas)
-{
-}
-
-void CBImpl::RectOutline::submit_eraser(Canvas& canvas)
-{
-}
-
-void CBImpl::RectOutline::reset_pencil(BrushInfo& binfo)
-{
-}
-
-void CBImpl::RectOutline::reset_pen(BrushInfo& binfo)
-{
-}
-
-void CBImpl::RectOutline::reset_eraser(BrushInfo& binfo)
-{
 }
