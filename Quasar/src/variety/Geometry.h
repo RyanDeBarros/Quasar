@@ -67,6 +67,9 @@ struct IPosition : glm::ivec2
 {
 	IPosition(int p = 0) : glm::ivec2(p) {}
 	IPosition(int x, int y) : glm::ivec2(x, y) {}
+	IPosition(float x, float y) : glm::ivec2((int)x, (int)y) {}
+	IPosition(int x, float y) : glm::ivec2(x, (int)y) {}
+	IPosition(float x, int y) : glm::ivec2((int)x, y) {}
 	IPosition(glm::ivec2 v) : glm::ivec2(v) {}
 	IPosition(glm::vec2 v) : glm::ivec2((int)v.x, (int)v.y) {}
 };
@@ -75,6 +78,9 @@ struct IScale : glm::ivec2
 {
 	IScale(int p = 1) : glm::ivec2(p) {}
 	IScale(int x, int y) : glm::ivec2(x, y) {}
+	IScale(float x, float y) : glm::ivec2((int)x, (int)y) {}
+	IScale(int x, float y) : glm::ivec2(x, (int)y) {}
+	IScale(float x, int y) : glm::ivec2((int)x, y) {}
 	IScale(glm::ivec2 v) : glm::ivec2(v) {}
 	IScale(glm::vec2 v) : glm::ivec2((int)v.x, (int)v.y) {}
 };

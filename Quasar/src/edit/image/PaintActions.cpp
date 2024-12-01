@@ -155,19 +155,111 @@ void DiscreteRectFillInterpolator::at(int i, int& x, int& y) const
 	y = start.y + glm::sign(delta.y) * yi;
 }
 
-void DiscreteRectFillDifference::sync_with_interpolators()
+static void midpoint_ellipse_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
 {
-	first_bbox = abs_bounds(first.start, first.finish);
-	second_bbox = abs_bounds(second.start, second.finish);
+	float dx, dy, d1, d2, x, y;
+	x = 0;
+	y = ry;
+
+	// Initial decision parameter of region 1
+	d1 = (ry * ry) - (rx * rx * ry) +
+		(0.25 * rx * rx);
+	dx = 2 * ry * ry * x;
+	dy = 2 * rx * rx * y;
+
+	// For region 1
+	while (dx < dy)
+	{
+		points.push_back(IPosition(cx + qx * x, cy + qy * y));
+
+		if (d1 < 0)
+		{
+			x++;
+			dx = dx + (2 * ry * ry);
+			d1 = d1 + dx + (ry * ry);
+		}
+		else
+		{
+			x++;
+			y--;
+			dx = dx + (2 * ry * ry);
+			dy = dy - (2 * rx * rx);
+			d1 = d1 + dx - dy + (ry * ry);
+		}
+	}
+
+	// Decision parameter of region 2
+	d2 = ((ry * ry) * ((x + 0.5) * (x + 0.5))) +
+		((rx * rx) * ((y - 1) * (y - 1))) -
+		(rx * rx * ry * ry);
+
+	// Plotting points of region 2
+	while (y >= 0)
+	{
+		points.push_back(IPosition(cx + qx * x, cy + qy * y));
+
+		if (d2 > 0)
+		{
+			y--;
+			dy = dy - (2 * rx * rx);
+			d2 = d2 + (rx * rx) - dy;
+		}
+		else
+		{
+			y--;
+			x++;
+			dx = dx + (2 * ry * ry);
+			dy = dy - (2 * rx * rx);
+			d2 = d2 + dx - dy + (rx * rx);
+		}
+	}
+}
+
+void DiscreteEllipseOutlineInterpolator::sync_with_endpoints()
+{
+	points.clear();
+
+	Position center = 0.5f * Position(start + finish);
+	float rx = std::abs(start.x - center.x);
+	float ry = std::abs(start.y - center.y);
+
+	if (rx < 1.0f || ry < 1.0f)
+	{
+		for (float y = -ry; y <= ry; ++y)
+			for (float x = -rx; x <= rx; ++x)
+				points.push_back(IPosition(center.x + x, center.y + y));
+	}
+	else
+	{
+		int coffx = 1 - ((int)center.x == center.x);
+		int coffy = 1 - ((int)center.y == center.y);
+		midpoint_ellipse_algorithm_quadrant(points, (int)center.x + coffx, (int)center.y + coffy, (int)rx, (int)ry,  1,  1);
+		midpoint_ellipse_algorithm_quadrant(points, (int)center.x, (int)center.y + coffy, (int)rx, (int)ry, -1,  1);
+		midpoint_ellipse_algorithm_quadrant(points, (int)center.x, (int)center.y, rx, ry, -1, -1);
+		midpoint_ellipse_algorithm_quadrant(points, (int)center.x + coffx, (int)center.y, (int)rx, (int)ry,  1, -1);
+	}
+	length = (unsigned int)points.size();
+}
+
+void DiscreteEllipseOutlineInterpolator::at(int i, int& x, int& y) const
+{
+	x = points[i].x;
+	y = points[i].y;
+}
+
+void DiscreteRectDifference::sync_with_interpolators()
+{
+	first_bbox = abs_bounds(first->start, first->finish);
+	second_bbox = abs_bounds(second->start, second->finish);
 
 	if (intersection(first_bbox.x1, first_bbox.x2, second_bbox.x1, second_bbox.x2, middle_bbox.x1, middle_bbox.x2)
-			&& intersection(first_bbox.y1, first_bbox.y2, second_bbox.y1, second_bbox.y2, middle_bbox.y1, middle_bbox.y2))
+		&& intersection(first_bbox.y1, first_bbox.y2, second_bbox.y1, second_bbox.y2, middle_bbox.y1, middle_bbox.y2))
 		common_length = middle_bbox.width_no_abs() * middle_bbox.height_no_abs();
 	else
 		common_length = 0;
 
-	remove_length = first.length - common_length;
-	insert_length = second.length - common_length;
+	remove_length = first->length - common_length;
+	insert_length = second->length - common_length;
 }
 
 static void interpolate_rect_fill_difference(int i, int& x, int& y, IntBounds with, IntBounds without)
@@ -210,21 +302,21 @@ static void interpolate_rect_fill_difference(int i, int& x, int& y, IntBounds wi
 	}
 }
 
-void DiscreteRectFillDifference::remove_at(int i, int& x, int& y) const
+void DiscreteRectDifference::remove_at(int i, int& x, int& y) const
 {
 	if (common_length == 0)
 	{
-		first.at(i, x, y);
+		first->at(i, x, y);
 		return;
 	}
 	interpolate_rect_fill_difference(i, x, y, first_bbox, middle_bbox);
 }
 
-void DiscreteRectFillDifference::insert_at(int i, int& x, int& y) const
+void DiscreteRectDifference::insert_at(int i, int& x, int& y) const
 {
 	if (common_length == 0)
 	{
-		second.at(i, x, y);
+		second->at(i, x, y);
 		return;
 	}
 	interpolate_rect_fill_difference(i, x, y, second_bbox, middle_bbox);
@@ -253,7 +345,7 @@ static void rect_fill_modified_regions(IntBounds with, IntBounds without, IntRec
 	top.h = with.y2 - without.y2;
 }
 
-std::array<IntRect, 8> DiscreteRectFillDifference::modified_regions() const
+std::array<IntRect, 8> DiscreteRectDifference::modified_regions() const
 {
 	std::array<IntRect, 8> mdfd_rgns;
 	rect_fill_modified_regions(first_bbox, middle_bbox, mdfd_rgns[0], mdfd_rgns[1], mdfd_rgns[2], mdfd_rgns[3]);

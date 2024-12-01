@@ -109,7 +109,7 @@ void Canvas::draw()
 void Canvas::draw_cursor()
 {
 	if (pipette_ready || binfo.tool & BrushTool::CAMERA
-		|| (binfo.show_preview && binfo.tool & (BrushTool::LINE | BrushTool::FILL | BrushTool::RECT_FILL | BrushTool::RECT_OUTLINE)))
+		|| (binfo.show_preview && binfo.tool & (BrushTool::LINE | BrushTool::FILL | BrushTool::RECT_FILL | BrushTool::RECT_OUTLINE | BrushTool::ELLIPSE_OUTLINE | BrushTool::ELLIPSE_FILL)))
 		return;
 	switch (binfo.tip)
 	{
@@ -313,9 +313,12 @@ void Canvas::set_checker_size(glm::ivec2 checker_size)
 
 void Canvas::update_brush_tool_and_tip()
 {
-	cursor_cancel();
-	binfo.tool = MBrushes->get_brush_tool();
-	binfo.tip = MBrushes->get_brush_tip();
+	auto new_tool = MBrushes->get_brush_tool();
+	auto new_tip = MBrushes->get_brush_tip();
+	if (binfo.tool != new_tool && binfo.tip != new_tip)
+		cursor_cancel();
+	binfo.tool = new_tool;
+	binfo.tip = new_tip;
 	switch (binfo.tool)
 	{
 	case BrushTool::CAMERA:
@@ -360,6 +363,16 @@ void Canvas::update_brush_tool_and_tip()
 			brush_under_tool_and_tip = &CBImpl::RectFill::brush_eraser;
 		else if (binfo.tip & BrushTip::SELECT)
 			brush_under_tool_and_tip = &CBImpl::RectFill::brush_select;
+		break;
+	case BrushTool::ELLIPSE_OUTLINE:
+		if (binfo.tip & BrushTip::PENCIL)
+			brush_under_tool_and_tip = &CBImpl::EllipseOutline::brush_pencil;
+		else if (binfo.tip & BrushTip::PEN)
+			brush_under_tool_and_tip = &CBImpl::EllipseOutline::brush_pen;
+		else if (binfo.tip & BrushTip::ERASER)
+			brush_under_tool_and_tip = &CBImpl::EllipseOutline::brush_eraser;
+		else if (binfo.tip & BrushTip::SELECT)
+			brush_under_tool_and_tip = &CBImpl::EllipseOutline::brush_select;
 		break;
 	}
 	if (binfo.tip & (BrushTip::PENCIL | BrushTip::PEN))
@@ -515,11 +528,18 @@ void Canvas::cursor_press(MouseButton button)
 	}
 	else
 	{
-		if (button == MouseButton::LEFT)
+		bool begin = false;
+		if (button == MouseButton::LEFT && cursor_state != CursorState::DOWN_ALTERNATE)
+		{
 			cursor_state = CursorState::DOWN_PRIMARY;
-		else if (button == MouseButton::RIGHT)
+			begin = true;
+		}
+		else if (button == MouseButton::RIGHT && cursor_state != CursorState::DOWN_PRIMARY)
+		{
 			cursor_state = CursorState::DOWN_ALTERNATE;
-		if (cursor_in_canvas)
+			begin = true;
+		}
+		if (begin && cursor_in_canvas)
 		{
 			IPosition pos = brush_pos_under_cursor();
 			brush(pos.x, pos.y);
@@ -527,11 +547,14 @@ void Canvas::cursor_press(MouseButton button)
 	}
 }
 
-void Canvas::cursor_release()
+void Canvas::cursor_release(MouseButton button)
 {
-	brush_submit();
-	cursor_state = CursorState::UP;
-	set_cursor_color(primary_color);
+	if ((button == MouseButton::LEFT && cursor_state == CursorState::DOWN_PRIMARY) || (button == MouseButton::RIGHT && cursor_state == CursorState::DOWN_ALTERNATE))
+	{
+		brush_submit();
+		cursor_state = CursorState::UP;
+		set_cursor_color(primary_color);
+	}
 }
 
 bool Canvas::cursor_cancel()
@@ -580,6 +603,15 @@ void Canvas::brush_start(int x, int y)
 			CBImpl::RectFill::start_eraser(*this);
 		// LATER select
 		break;
+	case BrushTool::ELLIPSE_OUTLINE:
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::EllipseOutline::start_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::EllipseOutline::start_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::EllipseOutline::start_eraser(*this);
+		// LATER select
+		break;
 	}
 }
 
@@ -619,6 +651,15 @@ void Canvas::brush_submit()
 				CBImpl::RectFill::submit_eraser(*this);
 			// LATER select
 			break;
+		case BrushTool::ELLIPSE_OUTLINE:
+			if (binfo.tip & BrushTip::PENCIL)
+				CBImpl::EllipseOutline::submit_pencil(*this);
+			else if (binfo.tip & BrushTip::PEN)
+				CBImpl::EllipseOutline::submit_pen(*this);
+			else if (binfo.tip & BrushTip::ERASER)
+				CBImpl::EllipseOutline::submit_eraser(*this);
+			// LATER select
+			break;
 		}
 	}
 	binfo.brushing = false;
@@ -639,12 +680,6 @@ void Canvas::brush_move_to(IPosition pos)
 
 void BrushInfo::reset()
 {
-	brushing_bbox.x1 = INT_MAX;
-	brushing_bbox.x2 = INT_MIN;
-	brushing_bbox.y1 = INT_MAX;
-	brushing_bbox.y2 = INT_MIN;
-	last_brush_pos = { -1, -1 };
-	starting_pos = { -1, -1 };
 	if (show_preview)
 	{
 		if (tool & BrushTool::LINE)
@@ -677,7 +712,23 @@ void BrushInfo::reset()
 				CBImpl::RectFill::reset_eraser(*this);
 			// LATER select
 		}
+		else if (tool & BrushTool::ELLIPSE_OUTLINE)
+		{
+			if (tip & BrushTip::PENCIL)
+				CBImpl::EllipseOutline::reset_pencil(*this);
+			else if (tip & BrushTip::PEN)
+				CBImpl::EllipseOutline::reset_pen(*this);
+			else if (tip & BrushTip::ERASER)
+				CBImpl::EllipseOutline::reset_eraser(*this);
+			// LATER select
+		}
 	}
+	brushing_bbox.x1 = INT_MAX;
+	brushing_bbox.x2 = INT_MIN;
+	brushing_bbox.y1 = INT_MAX;
+	brushing_bbox.y2 = INT_MIN;
+	last_brush_pos = { -1, -1 };
+	starting_pos = { -1, -1 };
 	show_preview = false;
 	storage_1c.clear();
 	storage_2c.clear();
@@ -737,7 +788,7 @@ void Easel::connect_input_handlers()
 			else if (mb.action == IAction::RELEASE)
 			{
 				end_panning();
-				canvas().cursor_release();
+				canvas().cursor_release(mb.button);
 			}
 		}
 		else if (mb.button == MouseButton::RIGHT)
@@ -748,7 +799,7 @@ void Easel::connect_input_handlers()
 				canvas().cursor_press(mb.button);
 			}
 			else if (mb.action == IAction::RELEASE)
-				canvas().cursor_release();
+				canvas().cursor_release(mb.button);
 		}
 		};
 	// LATER add handler for when mouse is already pressed, and then space is pressed to pan.

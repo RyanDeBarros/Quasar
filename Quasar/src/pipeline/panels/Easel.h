@@ -32,11 +32,15 @@ struct BrushInfo
 		DiscreteLineInterpolator line = {};
 		DiscreteRectOutlineInterpolator rect_outline = {};
 		DiscreteRectFillInterpolator rect_fill = {};
+		DiscreteRectFillInterpolator temp_rect_fill = {};
+		DiscreteEllipseOutlineInterpolator ellipse_outline = {};
+		DiscreteEllipseOutlineInterpolator temp_ellipse_outline = {};
 	} interps;
 
 	struct
 	{
-		DiscreteRectFillDifference rect_fill = {};
+		DiscreteRectDifference rect_fill = {};
+		DiscreteRectDifference ellipse_outline = {};
 	} interp_diffs;
 
 	void reset();
@@ -123,7 +127,7 @@ public:
 	void set_alternate_color(RGBA color);
 
 	void cursor_press(MouseButton button);
-	void cursor_release();
+	void cursor_release(MouseButton button);
 	bool cursor_cancel();
 
 	RGBA primary_color, alternate_color;

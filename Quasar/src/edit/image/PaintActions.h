@@ -10,51 +10,56 @@ extern void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c)
 extern void buffer_set_pixel_alpha(const Buffer& buf, int x, int y, int alpha);
 extern void buffer_set_rect_alpha(const Buffer& buf, int x, int y, int w, int h, int alpha, int sx = 1, int sy = 1);
 
-struct DiscreteLineInterpolator
+struct DiscreteInterpolator
 {
 	IPosition start = {};
 	IPosition finish = {};
-	IPosition delta = {};
 	unsigned int length = 1;
 
-	void sync_with_endpoints();
-	IPosition at(int i) const { IPosition pos; at(i, pos); return pos; }
-	void at(int i, IPosition& pos) const { at(i, pos.x, pos.y); }
-	void at(int i, int& x, int& y) const;
+	virtual void at(int i, int& x, int& y) const = 0;
 };
 
-struct DiscreteRectOutlineInterpolator
+struct DiscreteLineInterpolator : public DiscreteInterpolator
 {
-	IPosition start = {};
-	IPosition finish = {};
 	IPosition delta = {};
-	unsigned int length = 1;
 
 	void sync_with_endpoints();
-	IPosition at(int i) const { IPosition pos; at(i, pos); return pos; }
-	void at(int i, IPosition& pos) const { at(i, pos.x, pos.y); }
-	void at(int i, int& x, int& y) const;
+	virtual void at(int i, int& x, int& y) const override;
+};
+
+struct DiscreteRectOutlineInterpolator : public DiscreteInterpolator
+{
+	IPosition delta = {};
+
+	void sync_with_endpoints();
+	virtual void at(int i, int& x, int& y) const override;
 
 	std::array<IntRect, 4> lines() const;
 };
 
-struct DiscreteRectFillInterpolator
+struct DiscreteRectFillInterpolator : public DiscreteInterpolator
 {
-	IPosition start = {};
-	IPosition finish = {};
 	IPosition delta = {};
-	unsigned int length = 1;
 
 	void sync_with_endpoints();
-	IPosition at(int i) const { IPosition pos; at(i, pos); return pos; }
-	void at(int i, IPosition& pos) const { at(i, pos.x, pos.y); }
-	void at(int i, int& x, int& y) const;
+	virtual void at(int i, int& x, int& y) const override;
 };
 
-struct DiscreteRectFillDifference
+struct DiscreteEllipseOutlineInterpolator : public DiscreteInterpolator
 {
-	DiscreteRectFillInterpolator first;
-	DiscreteRectFillInterpolator second;
+	IPosition delta = {};
+
+	void sync_with_endpoints();
+	virtual void at(int i, int& x, int& y) const override;
+
+private:
+	std::vector<IPosition> points;
+};
+
+struct DiscreteRectDifference
+{
+	const DiscreteInterpolator* first;
+	const DiscreteInterpolator* second;
 	IntBounds first_bbox;
 	IntBounds second_bbox;
 	IntBounds middle_bbox;
