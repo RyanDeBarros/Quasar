@@ -155,64 +155,108 @@ void DiscreteRectFillInterpolator::at(int i, int& x, int& y) const
 	y = start.y + glm::sign(delta.y) * yi;
 }
 
-static void midpoint_ellipse_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
+static void midpoint_tall_ellipse_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
 {
-	float dx, dy, d1, d2, x, y;
-	x = 0;
-	y = ry;
+	float x = 0;
+	float y = (float)ry;
 
-	// Initial decision parameter of region 1
-	d1 = (ry * ry) - (rx * rx * ry) +
-		(0.25 * rx * rx);
-	dx = 2 * ry * ry * x;
-	dy = 2 * rx * rx * y;
+	float rx2 = float(rx * rx);
+	float ry2 = float(ry * ry);
+	float two_rx2 = 2 * rx2;
+	float two_ry2 = 2 * ry2;
 
-	// For region 1
+	float dx = two_ry2 * x;
+	float dy = two_rx2 * y;
+
+	// Region 1
+	float d1 = ry2 - rx2 * ry + 0.25f * rx2;
 	while (dx < dy)
 	{
 		points.push_back(IPosition(cx + qx * x, cy + qy * y));
-
-		if (d1 < 0)
+		++x;
+		dx += two_ry2;
+		if (d1 >= 0)
 		{
-			x++;
-			dx = dx + (2 * ry * ry);
-			d1 = d1 + dx + (ry * ry);
+			--y;
+			dy -= two_rx2;
+			d1 -= dy;
 		}
-		else
-		{
-			x++;
-			y--;
-			dx = dx + (2 * ry * ry);
-			dy = dy - (2 * rx * rx);
-			d1 = d1 + dx - dy + (ry * ry);
-		}
+		d1 += dx + ry2;
 	}
 
-	// Decision parameter of region 2
-	d2 = ((ry * ry) * ((x + 0.5) * (x + 0.5))) +
-		((rx * rx) * ((y - 1) * (y - 1))) -
-		(rx * rx * ry * ry);
-
-	// Plotting points of region 2
+	// Region 2
+	float nx = x + 0.5f;
+	float ny = y - 1;
+	float d2 = ry2 * nx * nx + rx2 * ny * ny - rx2 * ry2;
 	while (y >= 0)
 	{
 		points.push_back(IPosition(cx + qx * x, cy + qy * y));
-
-		if (d2 > 0)
+		--y;
+		dy -= two_rx2;
+		if (d2 <= 0)
 		{
-			y--;
-			dy = dy - (2 * rx * rx);
-			d2 = d2 + (rx * rx) - dy;
+			++x;
+			dx += two_ry2;
+			d2 += dx;
 		}
-		else
-		{
-			y--;
-			x++;
-			dx = dx + (2 * ry * ry);
-			dy = dy - (2 * rx * rx);
-			d2 = d2 + dx - dy + (rx * rx);
-		}
+		d2 += rx2 - dy;
 	}
+}
+
+static void midpoint_wide_ellipse_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
+{
+	float x = (float)rx;
+	float y = 0;
+
+	float rx2 = float(rx * rx);
+	float ry2 = float(ry * ry);
+	float two_rx2 = 2 * rx2;
+	float two_ry2 = 2 * ry2;
+
+	float dx = two_ry2 * x;
+	float dy = two_rx2 * y;
+
+	// Region 1
+	float d1 = rx2 - ry2 * rx + 0.25f * ry2;
+	while (dy < dx)
+	{
+		points.push_back(IPosition(cx + qx * x, cy + qy * y));
+		++y;
+		dy += two_rx2;
+		if (d1 >= 0)
+		{
+			--x;
+			dx -= two_ry2;
+			d1 -= dx;
+		}
+		d1 += dy + rx2;
+	}
+
+	// Region 2
+	float nx = x - 1;
+	float ny = y + 0.5f;
+	float d2 = rx2 * ny * ny + ry2 * nx * nx - rx2 * ry2;
+	while (x >= 0)
+	{
+		points.push_back(IPosition(cx + qx * x, cy + qy * y));
+		--x;
+		dx -= two_ry2;
+		if (d2 <= 0)
+		{
+			++y;
+			dy += two_rx2;
+			d2 += dy;
+		}
+		d2 += ry2 - dx;
+	}
+}
+
+static void midpoint_ellipse_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
+{
+	if (rx < ry)
+		midpoint_tall_ellipse_algorithm_quadrant(points, cx, cy, rx, ry, qx, qy);
+	else
+		midpoint_wide_ellipse_algorithm_quadrant(points, cx, cy, rx, ry, qx, qy);
 }
 
 void DiscreteEllipseOutlineInterpolator::sync_with_endpoints()
@@ -222,6 +266,8 @@ void DiscreteEllipseOutlineInterpolator::sync_with_endpoints()
 	Position center = 0.5f * Position(start + finish);
 	float rx = std::abs(start.x - center.x);
 	float ry = std::abs(start.y - center.y);
+
+	LOG << center << " " << rx << " " << ry << LOG.nl;
 
 	if (rx < 1.0f || ry < 1.0f)
 	{
@@ -235,7 +281,7 @@ void DiscreteEllipseOutlineInterpolator::sync_with_endpoints()
 		int coffy = 1 - ((int)center.y == center.y);
 		midpoint_ellipse_algorithm_quadrant(points, (int)center.x + coffx, (int)center.y + coffy, (int)rx, (int)ry,  1,  1);
 		midpoint_ellipse_algorithm_quadrant(points, (int)center.x, (int)center.y + coffy, (int)rx, (int)ry, -1,  1);
-		midpoint_ellipse_algorithm_quadrant(points, (int)center.x, (int)center.y, rx, ry, -1, -1);
+		midpoint_ellipse_algorithm_quadrant(points, (int)center.x, (int)center.y, (int)rx, (int)ry, -1, -1);
 		midpoint_ellipse_algorithm_quadrant(points, (int)center.x + coffx, (int)center.y, (int)rx, (int)ry,  1, -1);
 	}
 	length = (unsigned int)points.size();
