@@ -155,7 +155,7 @@ void DiscreteRectFillInterpolator::at(int i, int& x, int& y) const
 	y = start.y + glm::sign(delta.y) * yi;
 }
 
-static void midpoint_tall_ellipse_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
+static void midpoint_tall_ellipse_outline_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
 {
 	float x = 0;
 	float y = (float)ry;
@@ -203,7 +203,7 @@ static void midpoint_tall_ellipse_algorithm_quadrant(std::vector<IPosition>& poi
 	}
 }
 
-static void midpoint_wide_ellipse_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
+static void midpoint_wide_ellipse_outline_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
 {
 	float x = (float)rx;
 	float y = 0;
@@ -251,12 +251,12 @@ static void midpoint_wide_ellipse_algorithm_quadrant(std::vector<IPosition>& poi
 	}
 }
 
-static void midpoint_ellipse_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
+static void midpoint_ellipse_outline_algorithm_quadrant(std::vector<IPosition>& points, int cx, int cy, int rx, int ry, int qx, int qy)
 {
 	if (rx < ry)
-		midpoint_tall_ellipse_algorithm_quadrant(points, cx, cy, rx, ry, qx, qy);
+		midpoint_tall_ellipse_outline_algorithm_quadrant(points, cx, cy, rx, ry, qx, qy);
 	else
-		midpoint_wide_ellipse_algorithm_quadrant(points, cx, cy, rx, ry, qx, qy);
+		midpoint_wide_ellipse_outline_algorithm_quadrant(points, cx, cy, rx, ry, qx, qy);
 }
 
 void DiscreteEllipseOutlineInterpolator::sync_with_endpoints()
@@ -266,8 +266,6 @@ void DiscreteEllipseOutlineInterpolator::sync_with_endpoints()
 	Position center = 0.5f * Position(start + finish);
 	float rx = std::abs(start.x - center.x);
 	float ry = std::abs(start.y - center.y);
-
-	LOG << center << " " << rx << " " << ry << LOG.nl;
 
 	if (rx < 1.0f || ry < 1.0f)
 	{
@@ -279,10 +277,10 @@ void DiscreteEllipseOutlineInterpolator::sync_with_endpoints()
 	{
 		int coffx = 1 - ((int)center.x == center.x);
 		int coffy = 1 - ((int)center.y == center.y);
-		midpoint_ellipse_algorithm_quadrant(points, (int)center.x + coffx, (int)center.y + coffy, (int)rx, (int)ry,  1,  1);
-		midpoint_ellipse_algorithm_quadrant(points, (int)center.x, (int)center.y + coffy, (int)rx, (int)ry, -1,  1);
-		midpoint_ellipse_algorithm_quadrant(points, (int)center.x, (int)center.y, (int)rx, (int)ry, -1, -1);
-		midpoint_ellipse_algorithm_quadrant(points, (int)center.x + coffx, (int)center.y, (int)rx, (int)ry,  1, -1);
+		midpoint_ellipse_outline_algorithm_quadrant(points, (int)center.x + coffx, (int)center.y + coffy, (int)rx, (int)ry,  1,  1);
+		midpoint_ellipse_outline_algorithm_quadrant(points, (int)center.x, (int)center.y + coffy, (int)rx, (int)ry, -1,  1);
+		midpoint_ellipse_outline_algorithm_quadrant(points, (int)center.x, (int)center.y, (int)rx, (int)ry, -1, -1);
+		midpoint_ellipse_outline_algorithm_quadrant(points, (int)center.x + coffx, (int)center.y, (int)rx, (int)ry,  1, -1);
 	}
 	length = (unsigned int)points.size();
 }

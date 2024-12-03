@@ -16,6 +16,7 @@ struct DiscreteInterpolator
 	IPosition finish = {};
 	unsigned int length = 1;
 
+	virtual void sync_with_endpoints() = 0;
 	virtual void at(int i, int& x, int& y) const = 0;
 };
 
@@ -23,7 +24,7 @@ struct DiscreteLineInterpolator : public DiscreteInterpolator
 {
 	IPosition delta = {};
 
-	void sync_with_endpoints();
+	virtual void sync_with_endpoints() override;
 	virtual void at(int i, int& x, int& y) const override;
 };
 
@@ -31,7 +32,7 @@ struct DiscreteRectOutlineInterpolator : public DiscreteInterpolator
 {
 	IPosition delta = {};
 
-	void sync_with_endpoints();
+	virtual void sync_with_endpoints() override;
 	virtual void at(int i, int& x, int& y) const override;
 
 	std::array<IntRect, 4> lines() const;
@@ -41,7 +42,7 @@ struct DiscreteRectFillInterpolator : public DiscreteInterpolator
 {
 	IPosition delta = {};
 
-	void sync_with_endpoints();
+	virtual void sync_with_endpoints() override;
 	virtual void at(int i, int& x, int& y) const override;
 };
 
@@ -49,7 +50,7 @@ struct DiscreteEllipseOutlineInterpolator : public DiscreteInterpolator
 {
 	IPosition delta = {};
 
-	void sync_with_endpoints();
+	virtual void sync_with_endpoints() override;
 	virtual void at(int i, int& x, int& y) const override;
 
 private:
