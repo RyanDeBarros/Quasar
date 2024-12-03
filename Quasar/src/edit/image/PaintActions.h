@@ -90,6 +90,8 @@ struct DiscreteRectDifference
 	std::array<IntRect, 8> modified_regions() const;
 };
 
+// LATER given that paint actions use weak ptrs, make sure that a list of shared_ptrs of past canvas images is kept after changing the canvas image, to keep these actions alive.
+// Or else, clear history upon loading new canvas image.
 struct PaintToolAction : public ActionBase
 {
 	std::weak_ptr<Image> image;

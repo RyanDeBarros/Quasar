@@ -414,7 +414,6 @@ static void midpoint_ellipse_fill_algorithm_quadrant(std::vector<IPosition>& poi
 
 void DiscreteEllipseFillInterpolator::sync_with_endpoints()
 {
-	// TODO
 	points.clear();
 
 	Position center = 0.5f * Position(start + finish);
