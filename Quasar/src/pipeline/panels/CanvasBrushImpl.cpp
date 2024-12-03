@@ -4,7 +4,6 @@
 #include "user/Machine.h"
 
 // LATER CTRL modifiers for LINE, RECT, and ELLIPSE tools. For LINE, this means ensuring 'nice' angles. For RECT and ELLIPSE, this means ensuring perfect squares and circles.
-// TODO diff should not be a data member, but just a utility function?
 
 static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
 {
