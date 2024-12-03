@@ -314,32 +314,33 @@ void CBImpl::Line::reset_eraser(BrushInfo& binfo)
 
 // <<<==================================<<< RECT OUTLINE >>>==================================>>>
 
+static void rect_outline_pencil_and_pen_update_subtexture(BrushInfo& binfo)
+{
+	auto rgns = binfo.interps.rect_outline.lines();
+	for (IntRect r : rgns)
+		binfo.preview_image->update_subtexture(r);
+}
+
+static void rect_outline_eraser_update_subtexture(BrushInfo& binfo)
+{
+	auto rgns = binfo.interps.rect_outline.lines();
+	for (IntRect r : rgns)
+		binfo.eraser_preview_image->update_subtexture(r.scaled(BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
+}
+
 void CBImpl::RectOutline::brush_pencil(Canvas& canvas, int x, int y)
 {
-	standard_outline_brush_pencil(canvas, x, y, canvas.binfo.interps.rect_outline, [](BrushInfo& binfo) {
-		auto rgns = binfo.interps.rect_outline.lines();
-		for (IntRect r : rgns)
-			binfo.preview_image->update_subtexture(r);
-		});
+	standard_outline_brush_pencil(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_pencil_and_pen_update_subtexture);
 }
 
 void CBImpl::RectOutline::brush_pen(Canvas& canvas, int x, int y)
 {
-	standard_outline_brush_pen(canvas, x, y, canvas.binfo.interps.rect_outline, [](BrushInfo& binfo) {
-		auto rgns = binfo.interps.rect_outline.lines();
-		for (IntRect r : rgns)
-			binfo.preview_image->update_subtexture(r);
-		});
+	standard_outline_brush_pen(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_pencil_and_pen_update_subtexture);
 }
 
 void CBImpl::RectOutline::brush_eraser(Canvas& canvas, int x, int y)
 {
-	standard_outline_brush_eraser(canvas, x, y, canvas.binfo.interps.rect_outline, [](BrushInfo& binfo) {
-		// TODO rect_outline_eraser_update_subtexture for here and in reset
-		auto rgns = binfo.interps.rect_outline.lines();
-		for (IntRect r : rgns)
-			binfo.eraser_preview_image->update_subtexture(r.scaled(BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
-		});
+	standard_outline_brush_eraser(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_eraser_update_subtexture);
 }
 
 void CBImpl::RectOutline::brush_select(Canvas& canvas, int x, int y)
@@ -386,9 +387,7 @@ void CBImpl::RectOutline::reset_pencil(BrushInfo& binfo)
 	rect_outline_reset(binfo.interps.rect_outline, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
 		});
-	auto rgns = binfo.interps.rect_outline.lines();
-	for (IntRect r : rgns)
-		binfo.preview_image->update_subtexture(r);
+	rect_outline_pencil_and_pen_update_subtexture(binfo);
 }
 
 void CBImpl::RectOutline::reset_pen(BrushInfo& binfo)
@@ -396,9 +395,7 @@ void CBImpl::RectOutline::reset_pen(BrushInfo& binfo)
 	rect_outline_reset(binfo.interps.rect_outline, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
 		});
-	auto rgns = binfo.interps.rect_outline.lines();
-	for (IntRect r : rgns)
-		binfo.preview_image->update_subtexture(r);
+	rect_outline_pencil_and_pen_update_subtexture(binfo);
 }
 
 void CBImpl::RectOutline::reset_eraser(BrushInfo& binfo)
@@ -407,9 +404,7 @@ void CBImpl::RectOutline::reset_eraser(BrushInfo& binfo)
 		buffer_set_rect_alpha(buf, BrushInfo::eraser_preview_img_sx * pos.x, BrushInfo::eraser_preview_img_sy * pos.y,
 			BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy, 0);
 		});
-	auto rgns = binfo.interps.rect_outline.lines();
-	for (IntRect r : rgns)
-		binfo.eraser_preview_image->update_subtexture(r.scaled(BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
+	rect_outline_eraser_update_subtexture(binfo);
 }
 
 // <<<==================================<<< RECT FILL >>>==================================>>>
@@ -739,6 +734,135 @@ void CBImpl::EllipseOutline::reset_pen(BrushInfo& binfo)
 void CBImpl::EllipseOutline::reset_eraser(BrushInfo& binfo)
 {
 	ellipse_outline_reset(binfo, binfo.eraser_preview_image->buf, [](Buffer& buf, IPosition pos) {
+		buffer_set_rect_alpha(buf, pos.x, pos.y, 1, 1, 0, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
+		});
+	binfo.eraser_preview_image->update_subtexture(bounds_to_rect(binfo.brushing_bbox, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
+}
+
+// <<<==================================<<< ELLIPSE FILL >>>==================================>>>
+
+// TODO use diffs for ellipse fill for better performance
+
+void CBImpl::EllipseFill::brush_pencil(Canvas& canvas, int x, int y)
+{
+	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
+	standard_outline_brush_pencil(canvas, x, y, canvas.binfo.interps.ellipse_fill, [](BrushInfo& binfo) {
+		binfo.preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_fill.start, binfo.interps.ellipse_fill.finish));
+		});
+}
+
+void CBImpl::EllipseFill::brush_pen(Canvas& canvas, int x, int y)
+{
+	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
+	standard_outline_brush_pen(canvas, x, y, canvas.binfo.interps.ellipse_fill, [](BrushInfo& binfo) {
+		binfo.preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_fill.start, binfo.interps.ellipse_fill.finish));
+		});
+}
+
+void CBImpl::EllipseFill::brush_eraser(Canvas& canvas, int x, int y)
+{
+	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
+	standard_outline_brush_eraser(canvas, x, y, canvas.binfo.interps.ellipse_fill, [](BrushInfo& binfo) {
+		binfo.eraser_preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_fill.start, binfo.interps.ellipse_fill.finish,
+			BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
+		});
+}
+
+void CBImpl::EllipseFill::brush_select(Canvas& canvas, int x, int y)
+{
+	// LATER
+}
+
+static void ellipse_fill_start_prefix(BrushInfo& binfo)
+{
+	binfo.show_preview = true;
+	auto& interp = binfo.interps.ellipse_fill;
+	interp.start = interp.finish = binfo.starting_pos;
+	interp.sync_with_endpoints();
+}
+
+void CBImpl::EllipseFill::start_pencil(Canvas& canvas)
+{
+	BrushInfo& binfo = canvas.binfo;
+	ellipse_fill_start_prefix(binfo);
+	PixelRGBA old_color = canvas.pixel_color_at(binfo.starting_pos.x, binfo.starting_pos.y);
+	PixelRGBA new_color = canvas.applied_color().get_pixel_rgba();
+	buffer_set_pixel_color(binfo.preview_image->buf, binfo.starting_pos.x, binfo.starting_pos.y, new_color);
+	binfo.preview_image->update_subtexture(binfo.starting_pos.x, binfo.starting_pos.y, 1, 1);
+	new_color.blend_over(old_color);
+	binfo.storage_2c[binfo.starting_pos] = { new_color, old_color };
+}
+
+void CBImpl::EllipseFill::start_pen(Canvas& canvas)
+{
+	BrushInfo& binfo = canvas.binfo;
+	ellipse_fill_start_prefix(binfo);
+	PixelRGBA new_color = canvas.applied_color().get_pixel_rgba();
+	buffer_set_pixel_color(binfo.preview_image->buf, binfo.starting_pos.x, binfo.starting_pos.y, new_color.to_rgba().no_alpha_equivalent().get_pixel_rgba());
+	binfo.preview_image->update_subtexture(binfo.starting_pos.x, binfo.starting_pos.y, 1, 1);
+	binfo.storage_1c[binfo.starting_pos] = new_color;
+}
+
+void CBImpl::EllipseFill::start_eraser(Canvas& canvas)
+{
+	BrushInfo& binfo = canvas.binfo;
+	ellipse_fill_start_prefix(binfo);
+	PixelRGBA new_color = canvas.applied_color().get_pixel_rgba();
+	buffer_set_rect_alpha(binfo.eraser_preview_image->buf, binfo.starting_pos.x, binfo.starting_pos.y, 1, 1, 255, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
+	binfo.eraser_preview_image->update_subtexture(binfo.starting_pos.x * BrushInfo::eraser_preview_img_sx, binfo.starting_pos.y * BrushInfo::eraser_preview_img_sy,
+		BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
+	binfo.storage_1c[binfo.starting_pos] = new_color;
+}
+
+void CBImpl::EllipseFill::submit_pencil(Canvas& canvas)
+{
+	standard_submit_pencil(canvas);
+}
+
+void CBImpl::EllipseFill::submit_pen(Canvas& canvas)
+{
+	standard_submit_pen(canvas);
+}
+
+void CBImpl::EllipseFill::submit_eraser(Canvas& canvas)
+{
+	standard_submit_eraser(canvas);
+}
+
+static void ellipse_fill_reset(BrushInfo& binfo, Buffer& buf, void(*buffer_remove)(Buffer& buf, IPosition pos))
+{
+	IntBounds bbox = binfo.brushing_bbox;
+	DiscreteEllipseOutlineInterpolator deoi;
+	deoi.start = { bbox.x1, bbox.y1 };
+	deoi.finish = { bbox.x2, bbox.y2 };
+	deoi.sync_with_endpoints();
+	IPosition pos{};
+	for (unsigned int i = 0; i < deoi.length; ++i)
+	{
+		deoi.at(i, pos.x, pos.y);
+		buffer_remove(buf, pos);
+	}
+}
+
+void CBImpl::EllipseFill::reset_pencil(BrushInfo& binfo)
+{
+	ellipse_fill_reset(binfo, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
+		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
+		});
+	binfo.preview_image->update_subtexture(bounds_to_rect(binfo.brushing_bbox));
+}
+
+void CBImpl::EllipseFill::reset_pen(BrushInfo& binfo)
+{
+	ellipse_fill_reset(binfo, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
+		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
+		});
+	binfo.preview_image->update_subtexture(bounds_to_rect(binfo.brushing_bbox));
+}
+
+void CBImpl::EllipseFill::reset_eraser(BrushInfo& binfo)
+{
+	ellipse_fill_reset(binfo, binfo.eraser_preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_rect_alpha(buf, pos.x, pos.y, 1, 1, 0, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
 		});
 	binfo.eraser_preview_image->update_subtexture(bounds_to_rect(binfo.brushing_bbox, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));

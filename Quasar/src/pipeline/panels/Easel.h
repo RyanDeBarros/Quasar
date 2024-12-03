@@ -34,6 +34,7 @@ struct BrushInfo
 		DiscreteRectFillInterpolator rect_fill = {};
 		DiscreteRectFillInterpolator temp_rect_fill = {};
 		DiscreteEllipseOutlineInterpolator ellipse_outline = {};
+		DiscreteEllipseFillInterpolator ellipse_fill = {};
 	} interps;
 
 	struct

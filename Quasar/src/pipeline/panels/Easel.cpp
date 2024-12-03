@@ -374,6 +374,16 @@ void Canvas::update_brush_tool_and_tip()
 		else if (binfo.tip & BrushTip::SELECT)
 			brush_under_tool_and_tip = &CBImpl::EllipseOutline::brush_select;
 		break;
+	case BrushTool::ELLIPSE_FILL:
+		if (binfo.tip & BrushTip::PENCIL)
+			brush_under_tool_and_tip = &CBImpl::EllipseFill::brush_pencil;
+		else if (binfo.tip & BrushTip::PEN)
+			brush_under_tool_and_tip = &CBImpl::EllipseFill::brush_pen;
+		else if (binfo.tip & BrushTip::ERASER)
+			brush_under_tool_and_tip = &CBImpl::EllipseFill::brush_eraser;
+		else if (binfo.tip & BrushTip::SELECT)
+			brush_under_tool_and_tip = &CBImpl::EllipseFill::brush_select;
+		break;
 	}
 	if (binfo.tip & (BrushTip::PENCIL | BrushTip::PEN))
 		fs_wget(*this, BRUSH_PREVIEW).image = binfo.preview_image;
@@ -612,6 +622,15 @@ void Canvas::brush_start(int x, int y)
 			CBImpl::EllipseOutline::start_eraser(*this);
 		// LATER select
 		break;
+	case BrushTool::ELLIPSE_FILL:
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::EllipseFill::start_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::EllipseFill::start_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::EllipseFill::start_eraser(*this);
+		// LATER select
+		break;
 	}
 }
 
@@ -658,6 +677,15 @@ void Canvas::brush_submit()
 				CBImpl::EllipseOutline::submit_pen(*this);
 			else if (binfo.tip & BrushTip::ERASER)
 				CBImpl::EllipseOutline::submit_eraser(*this);
+			// LATER select
+			break;
+		case BrushTool::ELLIPSE_FILL:
+			if (binfo.tip & BrushTip::PENCIL)
+				CBImpl::EllipseFill::submit_pencil(*this);
+			else if (binfo.tip & BrushTip::PEN)
+				CBImpl::EllipseFill::submit_pen(*this);
+			else if (binfo.tip & BrushTip::ERASER)
+				CBImpl::EllipseFill::submit_eraser(*this);
 			// LATER select
 			break;
 		}
@@ -720,6 +748,16 @@ void BrushInfo::reset()
 				CBImpl::EllipseOutline::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
 				CBImpl::EllipseOutline::reset_eraser(*this);
+			// LATER select
+		}
+		else if (tool & BrushTool::ELLIPSE_FILL)
+		{
+			if (tip & BrushTip::PENCIL)
+				CBImpl::EllipseFill::reset_pencil(*this);
+			else if (tip & BrushTip::PEN)
+				CBImpl::EllipseFill::reset_pen(*this);
+			else if (tip & BrushTip::ERASER)
+				CBImpl::EllipseFill::reset_eraser(*this);
 			// LATER select
 		}
 	}
