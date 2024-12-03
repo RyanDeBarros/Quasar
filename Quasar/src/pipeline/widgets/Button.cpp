@@ -34,7 +34,7 @@ void TButton::init(const WidgetPlacement& wp, std::shared_ptr<TextRender>&& txt)
 			{
 				if (is_pressed(m.button))
 				{
-					m.consumed = true;
+					//m.consumed = true;
 					on_release(m, local_cursor_pos);
 				}
 			}

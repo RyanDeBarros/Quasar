@@ -1,35 +1,54 @@
 #pragma once
 
 #include <array>
-#include <unordered_map>
 
 #include "Panel.h"
+#include "BrushHeader.h"
 #include "user/Platform.h"
 #include "../render/Gridlines.h"
 #include "../widgets/Widget.h"
 #include "edit/image/Image.h"
+#include "edit/image/PaintActions.h"
 #include "variety/History.h"
 
-struct CanvasPixel
+struct BrushInfo
 {
-	int x, y;
-	PixelRGBA c;
-	bool operator==(const CanvasPixel& cpx) const { return x == cpx.x && y == cpx.y; }
-};
+	bool brushing = false;
+	BrushTip tip = BrushTip::PENCIL;
+	BrushTool tool = BrushTool::CAMERA;
+	IPosition starting_pos = { -1, -1 };
+	IPosition last_brush_pos = { -1, -1 };
+	IPosition image_pos = { -1, -1 };
+	IntBounds brushing_bbox = { -1, -1, -1, -1 };
+	bool show_preview = false;
+	std::shared_ptr<Image> preview_image;
+	std::shared_ptr<Image> eraser_preview_image;
+	static const int eraser_preview_img_sx = 2, eraser_preview_img_sy = 2;
+	std::unordered_map<IPosition, PixelRGBA> storage_1c;
+	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
 
-template<>
-struct std::hash<CanvasPixel>
-{
-	size_t operator()(const CanvasPixel& cpx) const { return std::hash<int>{}(cpx.x) ^ std::hash<int>{}(cpx.y); }
+	struct
+	{
+		DiscreteLineInterpolator line = {};
+		DiscreteRectOutlineInterpolator rect_outline = {};
+		DiscreteRectFillInterpolator rect_fill = {};
+		DiscreteRectFillInterpolator temp_rect_fill = {};
+		DiscreteEllipseOutlineInterpolator ellipse_outline = {};
+		DiscreteEllipseFillInterpolator ellipse_fill = {};
+	} interps;
+
+	void reset();
 };
 
 struct Canvas : public Widget
 {
 	friend struct Easel;
-	Shader sprite_shader;
+	Shader sprite_shader; // LATER have one shader for internal sprites like checkerboard/cursors/previews, and a second for the actual sprites (used for multiple layers/frames).
 	RGBA checker1, checker2;
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
+
+	std::shared_ptr<Image> image;
 
 	bool visible = false;
 	bool cursor_in_canvas = false;
@@ -39,13 +58,13 @@ struct Canvas : public Widget
 		DOWN_PRIMARY,
 		DOWN_ALTERNATE
 	} cursor_state = CursorState::UP;
-	IPosition brush_pos = { -1, -1 };
-	bool brushing = false;
 
 	Buffer dot_cursor_buf;
 	std::shared_ptr<Cursor> dot_cursor;
 	WindowHandle dot_cursor_wh, pipette_cursor_wh;
 	bool pipette_ready = false;
+
+	std::shared_ptr<Image> eraser_cursor_img;
 
 private:
 	glm::vec2 checker_size_inv = glm::vec2(1.0f / 16.0f);
@@ -60,17 +79,19 @@ public:
 
 	void initialize_widget(Shader* cursor_shader);
 	void initialize_dot_cursor();
+	void initialize_eraser_cursor_img();
 
 	virtual void draw() override;
+	void draw_cursor();
 	void send_vp(const glm::mat3& vp);
 	void sync_cursor_with_widget();
 	void sync_ur(size_t subw);
 
-	const Image* image() const;
-	Image* image();
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
+	void sync_sprite_with_image();
 	void sync_checkerboard_with_image();
+	void sync_brush_preview_with_image();
 	void sync_gridlines_with_image();
 	void sync_transform();
 	void sync_gfx_with_image();
@@ -80,34 +101,42 @@ public:
 	void sync_checkerboard_texture() const;
 	void set_checkerboard_uv_size(float width, float height) const;
 
-	void update_brush_tool();
-	void hover_pixel_under_cursor(Position world_pos);
+	void update_brush_tool_and_tip();
+	
+	IPosition brush_pos_under_cursor() const;
+	bool brush_pos_in_image_bounds(int x, int y) const;
+	void hover_pixel_under_cursor();
 	void unhover();
 	void hover_pixel_at(Position pos);
-	RGBA color_under_cursor();
+	
+	Position pixel_position(IPosition pos);
+	Position pixel_position(int x, int y);
+	RGBA applied_color() const;
+	RGBA color_under_cursor() const;
+	PixelRGBA pixel_color_at(IPosition pos) const;
+	PixelRGBA pixel_color_at(int x, int y) const;
+	
+	void set_cursor_color(RGBA color);
 	void set_primary_color(RGBA color);
 	void set_alternate_color(RGBA color);
+
 	void cursor_press(MouseButton button);
-	void cursor_release();
+	void cursor_release(MouseButton button);
 	bool cursor_cancel();
 
-private:
 	RGBA primary_color, alternate_color;
 	PixelRGBA pric_pxs = {};
 	PixelRGBA altc_pxs = {};
 	PixelRGBA pric_pen_pxs = {};
 	PixelRGBA altc_pen_pxs = {};
-	void(Canvas::*brush_under_tool)(int, int);
+	void(*brush_under_tool_and_tip)(Canvas&, int, int);
 
 	void brush(int x, int y);
-	void brush_start();
+	void brush_start(int x, int y);
 	void brush_submit();
 	void brush_cancel();
+	void brush_move_to(IPosition pos);
 
-	void brush_camera_tool(int x, int y);
-	void brush_paint_tool(int x, int y);
-
-public:
 	enum : size_t
 	{
 		CHECKERBOARD,
@@ -115,16 +144,14 @@ public:
 		CURSOR_PEN,
 		CURSOR_ERASER,
 		CURSOR_SELECT,
+		BRUSH_PREVIEW,
+		ERASER_PREVIEW,
+		SELECT_PREVIEW,
 		SPRITE, // LATER SPRITE_START
 		_W_COUNT
 	};
 
-private:
-	struct BrushActionInfo
-	{
-		std::unordered_map<CanvasPixel, PixelRGBA> painted_colors;
-		void reset();
-	} binfo;
+	BrushInfo binfo;
 };
 
 struct Easel : public Panel

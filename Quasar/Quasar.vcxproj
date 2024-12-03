@@ -166,11 +166,13 @@
   <ItemGroup>
     <ClCompile Include="src\edit\color\Color.cpp" />
     <ClCompile Include="src\edit\image\Image.cpp" />
+    <ClCompile Include="src\edit\image\PaintActions.cpp" />
     <ClCompile Include="src\edit\image\PixelBuffer.cpp" />
     <ClCompile Include="src\edit\image\PixelBufferPaths.cpp" />
     <ClCompile Include="src\ImplUtility.cpp" />
     <ClCompile Include="src\Logger.cpp" />
     <ClCompile Include="src\pipeline\panels\BrushesPanel.cpp" />
+    <ClCompile Include="src\pipeline\panels\CanvasBrushImpl.cpp" />
     <ClCompile Include="src\pipeline\panels\Menu.cpp" />
     <ClCompile Include="src\pipeline\panels\ScenePanel.cpp" />
     <ClCompile Include="src\pipeline\render\Gridlines.cpp" />
@@ -182,6 +184,7 @@
     <ClCompile Include="src\edit\color\ColorScheme.cpp" />
     <ClCompile Include="src\pipeline\widgets\Widget.cpp" />
     <ClCompile Include="src\variety\Geometry.cpp" />
+    <ClCompile Include="src\variety\History.cpp" />
     <ClCompile Include="src\variety\UTF.cpp" />
     <ClCompile Include="src\pipeline\widgets\ColorPicker.cpp" />
     <ClCompile Include="src\pipeline\panels\Palette.cpp" />
@@ -213,11 +216,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\edit\color\Color.h" />
+    <ClInclude Include="src\edit\image\PaintActions.h" />
     <ClInclude Include="src\edit\image\PixelBuffer.h" />
     <ClInclude Include="src\edit\image\PixelBufferPaths.h" />
     <ClInclude Include="src\ImplUtility.h" />
     <ClInclude Include="src\Logger.h" />
     <ClInclude Include="src\pipeline\panels\BrushesPanel.h" />
+    <ClInclude Include="src\pipeline\panels\BrushHeader.h" />
+    <ClInclude Include="src\pipeline\panels\CanvasBrushImpl.h" />
     <ClInclude Include="src\pipeline\panels\Menu.h" />
     <ClInclude Include="src\pipeline\panels\ScenePanel.h" />
     <ClInclude Include="src\pipeline\render\Gridlines.h" />

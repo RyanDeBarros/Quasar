@@ -264,9 +264,25 @@ struct RGBA
 	constexpr HSVA to_hsva() const;
 	constexpr HSLA to_hsla() const;
 
+	constexpr void blend_over(RGBA bkg);
+	constexpr RGBA no_alpha_equivalent() const { return RGBA(rgb.r * alpha, rgb.g * alpha, rgb.b * alpha, 1.0f); }
+
 	static const RGBA WHITE;
 	static const RGBA BLACK;
 };
+
+constexpr void RGBA::blend_over(RGBA bkg)
+{
+	float new_alpha = std::clamp(alpha + bkg.alpha * (1.0f - alpha), 0.0f, 1.0f);
+	if (new_alpha != 0.0f)
+	{
+		float inv_alpha = 1.0f / new_alpha;
+		rgb.r = std::clamp((rgb.r * alpha + bkg.rgb.r * bkg.alpha * (1.0f - alpha)) * inv_alpha, 0.0f, 1.0f);
+		rgb.g = std::clamp((rgb.g * alpha + bkg.rgb.g * bkg.alpha * (1.0f - alpha)) * inv_alpha, 0.0f, 1.0f);
+		rgb.b = std::clamp((rgb.b * alpha + bkg.rgb.b * bkg.alpha * (1.0f - alpha)) * inv_alpha, 0.0f, 1.0f);
+	}
+	alpha = new_alpha;
+}
 
 inline const RGBA RGBA::WHITE = RGBA(1.0f, 1.0f, 1.0f, 1.0f);
 inline const RGBA RGBA::BLACK = RGBA(0.0f, 0.0f, 0.0f, 1.0f);
@@ -279,7 +295,22 @@ struct PixelRGBA
 	const unsigned char& at(int i) const { return i == 0 ? r : i == 1 ? g : i == 2 ? b : a; }
 	unsigned char& at(int i) { return i == 0 ? r : i == 1 ? g : i == 2 ? b : a; }
 	bool operator==(const PixelRGBA&) const = default;
+
+	constexpr void blend_over(PixelRGBA bkg);
 };
+
+constexpr void PixelRGBA::blend_over(PixelRGBA bkg)
+{
+	float new_alpha = std::clamp((a + bkg.a * (1.0f - a * inv255)) * inv255, 0.0f, 1.0f);
+	if (new_alpha != 0.0f)
+	{
+		float inv_alpha = inv255 / new_alpha;
+		r = std::clamp(roundi((r * a + bkg.r * bkg.a * (1.0f - a * inv255)) * inv_alpha), 0, 255);
+		g = std::clamp(roundi((g * a + bkg.g * bkg.a * (1.0f - a * inv255)) * inv_alpha), 0, 255);
+		b = std::clamp(roundi((b * a + bkg.b * bkg.a * (1.0f - a * inv255)) * inv_alpha), 0, 255);
+	}
+	a = std::clamp(roundi(new_alpha * 255), 0, 255);
+}
 
 template<>
 struct std::hash<PixelRGBA>

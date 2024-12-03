@@ -9,6 +9,16 @@ constexpr int roundi(float x)
 	return static_cast<int>(x + 0.5f);
 }
 
+constexpr int roundi_down_on_half(float x)
+{
+	return static_cast<int>(x + 0.5f - FLT_EPSILON);
+}
+
+constexpr int floori(float x)
+{
+	return x >= 0 ? static_cast<int>(x) : static_cast<int>(x) - int(static_cast<int>(x) != x);
+}
+
 constexpr float modulo(float x, float y)
 {
 	return y != 0.0f ? x - y * std::floorf(x / y) : 0.0f;

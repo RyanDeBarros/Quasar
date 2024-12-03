@@ -151,9 +151,14 @@ void Image::update_texture() const
 	}
 }
 
+void Image::update_subtexture(IntRect rect) const
+{
+	update_subtexture(rect.x, rect.y, rect.w, rect.h);
+}
+
 void Image::update_subtexture(int x, int y, int w, int h) const
 {
-	if (tid)
+	if (tid && on_interval(x, 0, buf.width - 1) && on_interval(y, 0, buf.height - 1) && w >= 0 && h >= 0)
 	{
 		if (x + w >= buf.width)
 			w = buf.width - x;
@@ -167,14 +172,15 @@ void Image::update_subtexture(int x, int y, int w, int h) const
 	}
 }
 
-void Image::resend_texture() const
+void Image::resend_texture()
 {
-	if (tid)
+	if (!tid)
 	{
-		bind_texture(tid);
-		QUASAR_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, chpp_alignment(buf.chpp)));
-		QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, chpp_internal_format(buf.chpp), buf.width, buf.height, 0, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
+		QUASAR_GL(glGenTextures(1, &tid));
 	}
+	bind_texture(tid);
+	QUASAR_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, chpp_alignment(buf.chpp)));
+	QUASAR_GL(glTexImage2D(GL_TEXTURE_2D, 0, chpp_internal_format(buf.chpp), buf.width, buf.height, 0, chpp_format(buf.chpp), GL_UNSIGNED_BYTE, buf.pixels));
 }
 
 bool Image::write_to_file(const FilePath& filepath, ImageFormat format, JPGQuality jpg_quality) const

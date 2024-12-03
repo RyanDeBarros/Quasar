@@ -125,8 +125,9 @@ struct Image
 	void gen_texture(const TextureParams& texture_params = {});
 	void update_texture_params(const TextureParams& texture_params = {}) const;
 	void update_texture() const;
+	void update_subtexture(struct IntRect rect) const;
 	void update_subtexture(int x, int y, int w, int h) const;
-	void resend_texture() const;
+	void resend_texture();
 
 	bool write_to_file(const FilePath& filepath, ImageFormat format, JPGQuality jpg_quality = JPGQuality::HIGHEST) const;
 
