@@ -596,42 +596,16 @@ void Canvas::brush_start(int x, int y)
 	binfo.reset();
 	binfo.last_brush_pos = { x, y };
 	binfo.starting_pos = { x, y };
-	switch (binfo.tool)
-	{
-	case BrushTool::LINE:
+	if (binfo.tool & BrushTool::LINE)
 		CBImpl::Line::start(*this);
-		break;
-	case BrushTool::RECT_OUTLINE:
+	else if (binfo.tool & BrushTool::RECT_OUTLINE)
 		CBImpl::RectOutline::start(*this);
-		break;
-	case BrushTool::RECT_FILL:
-		if (binfo.tip & BrushTip::PENCIL)
-			CBImpl::RectFill::start_pencil(*this);
-		else if (binfo.tip & BrushTip::PEN)
-			CBImpl::RectFill::start_pen(*this);
-		else if (binfo.tip & BrushTip::ERASER)
-			CBImpl::RectFill::start_eraser(*this);
-		// LATER select
-		break;
-	case BrushTool::ELLIPSE_OUTLINE:
-		if (binfo.tip & BrushTip::PENCIL)
-			CBImpl::EllipseOutline::start_pencil(*this);
-		else if (binfo.tip & BrushTip::PEN)
-			CBImpl::EllipseOutline::start_pen(*this);
-		else if (binfo.tip & BrushTip::ERASER)
-			CBImpl::EllipseOutline::start_eraser(*this);
-		// LATER select
-		break;
-	case BrushTool::ELLIPSE_FILL:
-		if (binfo.tip & BrushTip::PENCIL)
-			CBImpl::EllipseFill::start_pencil(*this);
-		else if (binfo.tip & BrushTip::PEN)
-			CBImpl::EllipseFill::start_pen(*this);
-		else if (binfo.tip & BrushTip::ERASER)
-			CBImpl::EllipseFill::start_eraser(*this);
-		// LATER select
-		break;
-	}
+	else if (binfo.tool & BrushTool::RECT_FILL)
+		CBImpl::RectFill::start(*this);
+	else if (binfo.tool & BrushTool::ELLIPSE_OUTLINE)
+		CBImpl::EllipseOutline::start(*this);
+	else if (binfo.tool & BrushTool::ELLIPSE_FILL)
+		CBImpl::EllipseFill::start(*this);
 }
 
 void Canvas::brush_submit()

@@ -68,28 +68,6 @@ private:
 	std::vector<IPosition> points;
 };
 
-struct DiscreteRectDifference
-{
-	const DiscreteInterpolator* first;
-	const DiscreteInterpolator* second;
-	IntBounds first_bbox;
-	IntBounds second_bbox;
-	IntBounds middle_bbox;
-	unsigned int common_length;
-	unsigned int remove_length;
-	unsigned int insert_length;
-
-	void sync_with_interpolators();
-	IPosition remove_at(int i) const { IPosition pos; remove_at(i, pos); return pos; }
-	void remove_at(int i, IPosition& pos) const { remove_at(i, pos.x, pos.y); }
-	void remove_at(int i, int& x, int& y) const;
-	IPosition insert_at(int i) const { IPosition pos; insert_at(i, pos); return pos; }
-	void insert_at(int i, IPosition& pos) const { insert_at(i, pos.x, pos.y); }
-	void insert_at(int i, int& x, int& y) const;
-
-	std::array<IntRect, 8> modified_regions() const;
-};
-
 // LATER given that paint actions use weak ptrs, make sure that a list of shared_ptrs of past canvas images is kept after changing the canvas image, to keep these actions alive.
 // Or else, clear history upon loading new canvas image.
 struct PaintToolAction : public ActionBase

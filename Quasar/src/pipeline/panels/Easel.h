@@ -37,11 +37,6 @@ struct BrushInfo
 		DiscreteEllipseFillInterpolator ellipse_fill = {};
 	} interps;
 
-	struct
-	{
-		DiscreteRectDifference rect_fill = {};
-	} interp_diffs;
-
 	void reset();
 };
 

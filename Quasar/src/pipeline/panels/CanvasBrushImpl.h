@@ -64,10 +64,8 @@ namespace CBImpl
 		extern void brush_pen(Canvas& canvas, int x, int y);
 		extern void brush_eraser(Canvas& canvas, int x, int y);
 		extern void brush_select(Canvas& canvas, int x, int y);
-		
-		extern void start_pencil(Canvas& canvas);
-		extern void start_pen(Canvas& canvas);
-		extern void start_eraser(Canvas& canvas);
+
+		extern void start(Canvas& canvas);
 		
 		extern void submit_pencil(Canvas& canvas);
 		extern void submit_pen(Canvas& canvas);
@@ -85,9 +83,7 @@ namespace CBImpl
 		extern void brush_eraser(Canvas& canvas, int x, int y);
 		extern void brush_select(Canvas& canvas, int x, int y);
 
-		extern void start_pencil(Canvas& canvas);
-		extern void start_pen(Canvas& canvas);
-		extern void start_eraser(Canvas& canvas);
+		extern void start(Canvas& canvas);
 
 		extern void submit_pencil(Canvas& canvas);
 		extern void submit_pen(Canvas& canvas);
@@ -105,9 +101,7 @@ namespace CBImpl
 		extern void brush_eraser(Canvas& canvas, int x, int y);
 		extern void brush_select(Canvas& canvas, int x, int y);
 
-		extern void start_pencil(Canvas& canvas);
-		extern void start_pen(Canvas& canvas);
-		extern void start_eraser(Canvas& canvas);
+		extern void start(Canvas& canvas);
 
 		extern void submit_pencil(Canvas& canvas);
 		extern void submit_pen(Canvas& canvas);
