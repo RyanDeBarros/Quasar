@@ -555,13 +555,13 @@ void Canvas::hover_pixel_under_cursor()
 			binfo.image_pos = pos;
 			hover_pixel_at(pixel_position(binfo.image_pos));
 		}
-		if (!using_pipette && MainWindow->is_alt_pressed())
+		if (MainWindow->is_alt_pressed())
 		{
 			MainWindow->release_cursor(&dot_cursor_wh);
 			MainWindow->request_cursor(&pipette_cursor_wh, Machine.cursors.CROSSHAIR);
 			using_pipette = true;
 		}
-		else if (using_pipette)
+		else
 		{
 			MainWindow->release_cursor(&pipette_cursor_wh);
 			MainWindow->request_cursor(&dot_cursor_wh, dot_cursor);

@@ -256,12 +256,15 @@ void Window::request_cursor(WindowHandle* owner, const std::shared_ptr<Cursor>& 
 		return;
 	if (!cursor_owner || owner == cursor_owner)
 	{
-		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-		cursor_owner = owner;
-		prev_cursor = std::move(current_cursor);
-		current_cursor = cursor;
-		glfwSetCursor(window, current_cursor->cursor);
-		owner->flags |= WindowHandle::OWN_CURSOR;
+		if (cursor != current_cursor)
+		{
+			ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+			cursor_owner = owner;
+			prev_cursor = std::move(current_cursor);
+			current_cursor = cursor;
+			glfwSetCursor(window, current_cursor->cursor);
+			owner->flags |= WindowHandle::OWN_CURSOR;
+		}
 	}
 	else
 		owner->flags &= ~WindowHandle::OWN_CURSOR;
@@ -273,12 +276,15 @@ void Window::request_cursor(WindowHandle* owner, std::shared_ptr<Cursor>&& curso
 		return;
 	if (!cursor_owner || owner == cursor_owner)
 	{
-		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-		cursor_owner = owner;
-		prev_cursor = std::move(current_cursor);
-		current_cursor = std::move(cursor);
-		glfwSetCursor(window, current_cursor->cursor);
-		owner->flags |= WindowHandle::OWN_CURSOR;
+		if (cursor != current_cursor)
+		{
+			ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+			cursor_owner = owner;
+			prev_cursor = std::move(current_cursor);
+			current_cursor = std::move(cursor);
+			glfwSetCursor(window, current_cursor->cursor);
+			owner->flags |= WindowHandle::OWN_CURSOR;
+		}
 	}
 	else
 		owner->flags &= ~WindowHandle::OWN_CURSOR;
@@ -323,11 +329,14 @@ void Window::request_mouse_mode(WindowHandle* owner, MouseMode mouse_mode)
 		return;
 	if (!mouse_mode_owner || owner == mouse_mode_owner)
 	{
-		mouse_mode_owner = owner;
-		prev_mouse_mode = current_mouse_mode;
-		current_mouse_mode = mouse_mode;
-		glfwSetInputMode(window, GLFW_CURSOR, int(current_mouse_mode));
-		owner->flags |= WindowHandle::OWN_MOUSE_MODE;
+		if (mouse_mode != current_mouse_mode)
+		{
+			mouse_mode_owner = owner;
+			prev_mouse_mode = current_mouse_mode;
+			current_mouse_mode = mouse_mode;
+			glfwSetInputMode(window, GLFW_CURSOR, int(current_mouse_mode));
+			owner->flags |= WindowHandle::OWN_MOUSE_MODE;
+		}
 	}
 	else
 		owner->flags &= ~WindowHandle::OWN_MOUSE_MODE;
