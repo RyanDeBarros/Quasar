@@ -111,4 +111,12 @@ namespace CBImpl
 		extern void reset_pen(BrushInfo& binfo);
 		extern void reset_eraser(BrushInfo& binfo);
 	}
+
+	namespace BucketFill
+	{
+		extern void brush_pencil(Canvas& canvas, int x, int y);
+		extern void brush_pen(Canvas& canvas, int x, int y);
+		extern void brush_eraser(Canvas& canvas, int x, int y);
+		extern void brush_select(Canvas& canvas, int x, int y);
+	}
 }

@@ -3,7 +3,17 @@
 #include "Easel.h"
 #include "user/Machine.h"
 
-// LATER CTRL modifiers for LINE, RECT, and ELLIPSE tools. For LINE, this means ensuring 'nice' angles. For RECT and ELLIPSE, this means ensuring perfect squares and circles.
+static void update_bbox(IntBounds& bbox, int x, int y)
+{
+	if (x < bbox.x1)
+		bbox.x1 = x;
+	if (x > bbox.x2)
+		bbox.x2 = x;
+	if (y < bbox.y1)
+		bbox.y1 = y;
+	if (y > bbox.y2)
+		bbox.y2 = y;
+}
 
 static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
 {
@@ -126,6 +136,13 @@ static void standard_submit_pencil(Canvas& canvas)
 		Machine.history.execute(std::make_shared<OneColorPencilAction>(canvas.image, binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_2c)));
 }
 
+static void standard_push_pencil(Canvas& canvas, IntBounds bbox)
+{
+	BrushInfo& binfo = canvas.binfo;
+	if (canvas.image && !binfo.storage_2c.empty())
+		Machine.history.push(std::make_shared<OneColorPencilAction>(canvas.image, IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_2c)));
+}
+
 static void standard_submit_filled_pencil(Canvas& canvas, DiscreteInterpolator& interp)
 {
 	BrushInfo& binfo = canvas.binfo;
@@ -156,6 +173,14 @@ static void standard_submit_pen(Canvas& canvas)
 			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
 }
 
+static void standard_push_pen(Canvas& canvas, IntBounds bbox)
+{
+	BrushInfo& binfo = canvas.binfo;
+	if (canvas.image && !binfo.storage_1c.empty())
+		Machine.history.push(std::make_shared<OneColorPenAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
+			IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_1c)));
+}
+
 static void standard_submit_filled_pen(Canvas& canvas, DiscreteInterpolator& interp)
 {
 	BrushInfo& binfo = canvas.binfo;
@@ -181,6 +206,14 @@ static void standard_submit_eraser(Canvas& canvas)
 	if (canvas.image && !binfo.storage_1c.empty())
 		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 },
 			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
+}
+
+static void standard_push_eraser(Canvas& canvas, IntBounds bbox)
+{
+	BrushInfo& binfo = canvas.binfo;
+	if (canvas.image && !binfo.storage_1c.empty())
+		Machine.history.push(std::make_shared<OneColorPenAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 },
+			IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_1c)));
 }
 
 static void standard_submit_filled_eraser(Canvas& canvas, DiscreteInterpolator& interp)
@@ -229,16 +262,7 @@ static Buffer paint_brush_prefix(Canvas& canvas, int x, int y)
 	BrushInfo& binfo = canvas.binfo;
 	Buffer image_shifted_buf = canvas.image->buf;
 	image_shifted_buf.pixels += image_shifted_buf.byte_offset(x, y);
-	
-	if (x < binfo.brushing_bbox.x1)
-		binfo.brushing_bbox.x1 = x;
-	if (x > binfo.brushing_bbox.x2)
-		binfo.brushing_bbox.x2 = x;
-	if (y < binfo.brushing_bbox.y1)
-		binfo.brushing_bbox.y1 = y;
-	if (y > binfo.brushing_bbox.y2)
-		binfo.brushing_bbox.y2 = y;
-
+	update_bbox(binfo.brushing_bbox, x, y);
 	return image_shifted_buf;
 }
 
@@ -258,7 +282,7 @@ void CBImpl::Paint::brush_pencil(Canvas& canvas, int x, int y)
 	Buffer image_shifted_buf = paint_brush_prefix(canvas, x, y);
 	PixelRGBA initial_c{ 0, 0, 0, 0 };
 	PixelRGBA final_c{ 0, 0, 0, 0 };
-	PixelRGBA color = canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY ? canvas.pric_pxs : canvas.altc_pxs;
+	PixelRGBA color = canvas.applied_pencil_rgba();
 	float applied_alpha = canvas.applied_color().alpha;
 	for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
 	{
@@ -277,7 +301,7 @@ void CBImpl::Paint::brush_pen(Canvas& canvas, int x, int y)
 	BrushInfo& binfo = canvas.binfo;
 	Buffer image_shifted_buf = paint_brush_prefix(canvas, x, y);
 	PixelRGBA initial_c{ 0, 0, 0, 0 };
-	PixelRGBA color = canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY ? canvas.pric_pen_pxs : canvas.altc_pen_pxs;
+	PixelRGBA color = canvas.applied_pen_rgba();
 	for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
 	{
 		initial_c.at(i) = image_shifted_buf.pixels[i];
@@ -306,6 +330,7 @@ void CBImpl::Paint::brush_select(Canvas& canvas, int x, int y)
 	// LATER
 }
 
+// LATER use storage_1c for pen and eraser, and separate submit function into one for each brush tip. use standard submit
 void CBImpl::Paint::brush_submit(Canvas& canvas)
 {
 	if (canvas.image && !canvas.binfo.storage_2c.empty())
@@ -795,4 +820,111 @@ void CBImpl::EllipseFill::reset_pen(BrushInfo& binfo)
 void CBImpl::EllipseFill::reset_eraser(BrushInfo& binfo)
 {
 	CBImpl::EllipseOutline::reset_eraser(binfo);
+}
+
+// <<<==================================<<< BUCKET FILL >>>==================================>>>
+
+static void bucket_fill_find_noncontiguous(Canvas& canvas, int x, int y, void(*color_pixel)(Canvas& canvas, int x, int y))
+{
+	const PixelRGBA color = canvas.pixel_color_at(x, y);
+	IntBounds& bbox = canvas.binfo.brushing_bbox;
+	for (int u = 0; u < canvas.image->buf.width; ++u)
+	{
+		for (int v = 0; v < canvas.image->buf.height; ++v)
+		{
+			if (canvas.battr.tolerance.tol(color.to_rgba(), canvas.pixel_color_at(u, v).to_rgba()))
+			{
+				color_pixel(canvas, u, v);
+				update_bbox(bbox, u, v);
+			}
+		}
+	}
+}
+
+static void bucket_fill_find_contiguous(Canvas& canvas, int x, int y, void(*color_pixel)(Canvas& canvas, int x, int y))
+{
+	// LATER use tolerance interval
+	// TODO
+}
+
+static void bucket_fill_reset_bbox(Canvas& canvas)
+{
+	IntBounds& bbox = canvas.binfo.brushing_bbox;
+	bbox.x1 = INT_MAX;
+	bbox.x2 = INT_MIN;
+	bbox.y1 = INT_MAX;
+	bbox.y2 = INT_MIN;
+}
+
+void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
+{
+	canvas.binfo.storage_2c.clear();
+	bucket_fill_reset_bbox(canvas);
+	auto color_pixel = [](Canvas& canvas, int x, int y) {
+		PixelRGBA old_color = canvas.pixel_color_at(x, y);
+		PixelRGBA new_color = canvas.applied_pencil_rgba();
+		new_color.blend_over(old_color);
+		canvas.binfo.storage_2c[{ x, y }] = { new_color, old_color };
+		buffer_set_pixel_color(canvas.image->buf, x, y, new_color);
+		};
+	if (MainWindow->is_shift_pressed())
+		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
+	else
+		bucket_fill_find_contiguous(canvas, x, y, color_pixel);
+	if (canvas.binfo.brushing_bbox.valid())
+	{
+		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+		standard_push_pencil(canvas, canvas.binfo.brushing_bbox);
+	}
+	canvas.binfo.storage_2c.clear();
+	bucket_fill_reset_bbox(canvas);
+	canvas.cursor_enter();
+}
+
+void CBImpl::BucketFill::brush_pen(Canvas& canvas, int x, int y)
+{
+	canvas.binfo.storage_1c.clear();
+	bucket_fill_reset_bbox(canvas);
+	auto color_pixel = [](Canvas& canvas, int x, int y) {
+		canvas.binfo.storage_1c[{ x, y }] = canvas.pixel_color_at(x, y);
+		buffer_set_pixel_color(canvas.image->buf, x, y, canvas.applied_pen_rgba());
+		};
+	if (MainWindow->is_shift_pressed())
+		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
+	else
+		bucket_fill_find_contiguous(canvas, x, y, color_pixel);
+	if (canvas.binfo.brushing_bbox.valid())
+	{
+		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+		standard_push_pen(canvas, canvas.binfo.brushing_bbox);
+	}
+	canvas.binfo.storage_1c.clear();
+	bucket_fill_reset_bbox(canvas);
+	canvas.cursor_enter();
+}
+
+void CBImpl::BucketFill::brush_eraser(Canvas& canvas, int x, int y)
+{
+	canvas.binfo.storage_1c.clear();
+	auto color_pixel = [](Canvas& canvas, int x, int y) {
+		canvas.binfo.storage_1c[{ x, y }] = canvas.pixel_color_at(x, y);
+		buffer_set_pixel_alpha(canvas.image->buf, x, y, 0);
+		};
+	if (MainWindow->is_shift_pressed())
+		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
+	else
+		bucket_fill_find_contiguous(canvas, x, y, color_pixel);
+	if (canvas.binfo.brushing_bbox.valid())
+	{
+		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+		standard_push_eraser(canvas, canvas.binfo.brushing_bbox);
+	}
+	canvas.binfo.storage_1c.clear();
+	bucket_fill_reset_bbox(canvas);
+	canvas.cursor_enter();
+}
+
+void CBImpl::BucketFill::brush_select(Canvas& canvas, int x, int y)
+{
+	// LATER
 }

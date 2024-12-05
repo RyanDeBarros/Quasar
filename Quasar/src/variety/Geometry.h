@@ -274,6 +274,7 @@ struct IntBounds
 	int height() const { return std::abs(y2 - y1) + 1; }
 	int width_no_abs() const { return x2 - x1 + 1; }
 	int height_no_abs() const { return y2 - y1 + 1; }
+	bool valid() const { return x2 >= x1 && y2 >= y1; }
 };
 
 inline IntBounds abs_bounds(IPosition p1, IPosition p2)
