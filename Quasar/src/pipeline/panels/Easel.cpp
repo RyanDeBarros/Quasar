@@ -108,7 +108,7 @@ void Canvas::draw()
 
 void Canvas::draw_cursor()
 {
-	if (pipette_ready || binfo.tool & BrushTool::CAMERA
+	if (binfo.tool & BrushTool::CAMERA
 		|| (binfo.show_preview && binfo.tool & (BrushTool::LINE | BrushTool::FILL | BrushTool::RECT_FILL | BrushTool::RECT_OUTLINE | BrushTool::ELLIPSE_OUTLINE | BrushTool::ELLIPSE_FILL)))
 		return;
 	switch (binfo.tip)
@@ -416,21 +416,22 @@ void Canvas::hover_pixel_under_cursor()
 			binfo.image_pos = pos;
 			hover_pixel_at(pixel_position(binfo.image_pos));
 		}
-		if (MainWindow->is_alt_pressed())
+		if (!using_pipette && MainWindow->is_alt_pressed())
 		{
 			MainWindow->release_cursor(&dot_cursor_wh);
 			MainWindow->request_cursor(&pipette_cursor_wh, Machine.cursors.CROSSHAIR);
-			pipette_ready = true;
+			using_pipette = true;
 		}
-		else
+		else if (using_pipette)
 		{
 			MainWindow->release_cursor(&pipette_cursor_wh);
 			MainWindow->request_cursor(&dot_cursor_wh, dot_cursor);
-			pipette_ready = false;
+			using_pipette = false;
 		}
 	}
 	else
 	{
+		cursor_in_canvas = false;
 		if (binfo.brushing && pos != binfo.image_pos)
 			brush_move_to(pos);
 		binfo.image_pos = pos;
@@ -442,7 +443,6 @@ void Canvas::unhover()
 {
 	MainWindow->release_cursor(&dot_cursor_wh);
 	MainWindow->release_cursor(&pipette_cursor_wh);
-	pipette_ready = false;
 	cursor_in_canvas = false;
 }
 
@@ -526,7 +526,7 @@ void Canvas::set_alternate_color(RGBA color)
 
 void Canvas::cursor_press(MouseButton button)
 {
-	if (MainWindow->is_alt_pressed())
+	if (using_pipette)
 	{
 		if (cursor_in_canvas)
 		{
@@ -583,7 +583,6 @@ void Canvas::brush(int x, int y)
 {
 	if (brush_pos_in_image_bounds(x, y))
 	{
-		binfo.last_brush_pos = { x, y };
 		if (!binfo.brushing)
 			brush_start(x, y);
 		(*brush_under_tool_and_tip)(*this, x, y);
@@ -816,14 +815,17 @@ void Easel::connect_input_handlers()
 		};
 	// LATER add handler for when mouse is already pressed, and then space is pressed to pan.
 	key_handler.callback = [this](const KeyEvent& k) {
-		if (k.action == IAction::PRESS && k.key == Key::ESCAPE)
+		if (k.action == IAction::PRESS)
 		{
-			if (canvas().cursor_cancel())
-				k.consumed = true;
-		}
-		else if (k.action == IAction::PRESS && k.key == Key::Z && (k.mods & Mods::CONTROL))
-		{
-			canvas().cursor_cancel(); // no consume
+			if (k.key == Key::ESCAPE)
+			{
+				if (canvas().cursor_cancel())
+					k.consumed = true;
+			}
+			else if (k.key == Key::Z && (k.mods & Mods::CONTROL))
+			{
+				canvas().cursor_cancel(); // no consume
+			}
 		}
 		};
 	scroll_handler.callback = [this](const ScrollEvent& s) {

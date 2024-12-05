@@ -22,6 +22,7 @@ static void _standard_outline_brush_pencil_looperand_dont_update_storage(Canvas&
 static void standard_outline_brush_pencil(Canvas& canvas, int x, int y, DiscreteInterpolator& interp, void(*update_subtexture)(BrushInfo& binfo), bool update_storage = true)
 {
 	BrushInfo& binfo = canvas.binfo;
+	binfo.last_brush_pos = { x, y };
 	if (update_storage)
 		binfo.storage_2c.clear();
 
@@ -58,6 +59,7 @@ static void _standard_outline_brush_pen_looperand_update_storage(Canvas& canvas,
 static void standard_outline_brush_pen(Canvas& canvas, int x, int y, DiscreteInterpolator& interp, void(*update_subtexture)(BrushInfo& binfo), bool update_storage = true)
 {
 	BrushInfo& binfo = canvas.binfo;
+	binfo.last_brush_pos = { x, y };
 	if (update_storage)
 		binfo.storage_1c.clear();
 
@@ -94,6 +96,7 @@ static void _standard_outline_brush_eraser_looperand_update_storage(Canvas& canv
 static void standard_outline_brush_eraser(Canvas& canvas, int x, int y, DiscreteInterpolator& interp, void(*update_subtexture)(BrushInfo& binfo), bool update_storage = true)
 {
 	BrushInfo& binfo = canvas.binfo;
+	binfo.last_brush_pos = { x, y };
 	if (update_storage)
 		binfo.storage_1c.clear();
 
@@ -311,8 +314,26 @@ void CBImpl::Paint::brush_submit(Canvas& canvas)
 
 // <<<==================================<<< LINE >>>==================================>>>
 
+static void line_alternate_apply(IPosition starting_pos, int& x, int& y)
+{
+	int dx = x - starting_pos.x;
+	if (dx == 0)
+		return;
+	int dy = y - starting_pos.y;
+	if (dy == 0)
+		return;
+	int adx = std::abs(dx);
+	int ady = std::abs(dy);
+	if (adx < ady)
+		y = starting_pos.y + glm::sign(dy) * (adx * int(ady / adx));
+	else
+		x = starting_pos.x + glm::sign(dx) * (ady * int(adx / ady));
+}
+
 void CBImpl::Line::brush_pencil(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		line_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_pencil(canvas, x, y, canvas.binfo.interps.line, [](BrushInfo& binfo) {
 		binfo.preview_image->update_subtexture(abs_rect(binfo.interps.line.start, binfo.interps.line.finish));
 		});
@@ -320,6 +341,8 @@ void CBImpl::Line::brush_pencil(Canvas& canvas, int x, int y)
 
 void CBImpl::Line::brush_pen(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		line_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_pen(canvas, x, y, canvas.binfo.interps.line, [](BrushInfo& binfo) {
 		binfo.preview_image->update_subtexture(abs_rect(binfo.interps.line.start, binfo.interps.line.finish));
 		});
@@ -327,6 +350,8 @@ void CBImpl::Line::brush_pen(Canvas& canvas, int x, int y)
 
 void CBImpl::Line::brush_eraser(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		line_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_eraser(canvas, x, y, canvas.binfo.interps.line, [](BrushInfo& binfo) {
 		binfo.eraser_preview_image->update_subtexture(abs_rect(binfo.interps.line.start, binfo.interps.line.finish,
 			BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
@@ -335,6 +360,8 @@ void CBImpl::Line::brush_eraser(Canvas& canvas, int x, int y)
 
 void CBImpl::Line::brush_select(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		line_alternate_apply(canvas.binfo.starting_pos, x, y);
 	// LATER
 }
 
@@ -400,6 +427,18 @@ void CBImpl::Line::reset_eraser(BrushInfo& binfo)
 
 // <<<==================================<<< RECT OUTLINE >>>==================================>>>
 
+static void rect_alternate_apply(IPosition starting_pos, int& x, int& y)
+{
+	int dx = x - starting_pos.x;
+	int dy = y - starting_pos.y;
+	int adx = std::abs(dx);
+	int ady = std::abs(dy);
+	if (adx < ady)
+		y = starting_pos.y + glm::sign(dy) * adx;
+	else if (adx > ady)
+		x = starting_pos.x + glm::sign(dx) * ady;
+}
+
 static void rect_outline_pencil_and_pen_update_subtexture(BrushInfo& binfo)
 {
 	auto rgns = binfo.interps.rect_outline.lines();
@@ -416,21 +455,29 @@ static void rect_outline_eraser_update_subtexture(BrushInfo& binfo)
 
 void CBImpl::RectOutline::brush_pencil(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_pencil(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_pencil_and_pen_update_subtexture);
 }
 
 void CBImpl::RectOutline::brush_pen(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_pen(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_pencil_and_pen_update_subtexture);
 }
 
 void CBImpl::RectOutline::brush_eraser(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_eraser(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_eraser_update_subtexture);
 }
 
 void CBImpl::RectOutline::brush_select(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
 	// LATER
 }
 
@@ -497,21 +544,29 @@ void CBImpl::RectOutline::reset_eraser(BrushInfo& binfo)
 
 void CBImpl::RectFill::brush_pencil(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_pencil(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_pencil_and_pen_update_subtexture, false);
 }
 
 void CBImpl::RectFill::brush_pen(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_pen(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_pencil_and_pen_update_subtexture, false);
 }
 
 void CBImpl::RectFill::brush_eraser(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
 	standard_outline_brush_eraser(canvas, x, y, canvas.binfo.interps.rect_outline, &rect_outline_eraser_update_subtexture, false);
 }
 
 void CBImpl::RectFill::brush_select(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
 	// LATER
 }
 
@@ -554,8 +609,22 @@ void CBImpl::RectFill::reset_eraser(BrushInfo& binfo)
 
 // LATER for ellipse at the very least, cursor should be able to exit canvas while brushing. This would be in Canvas::brush(), with modifications in start()/submit()
 
+static void ellipse_alternate_apply(IPosition starting_pos, int& x, int& y)
+{
+	int dx = x - starting_pos.x;
+	int dy = y - starting_pos.y;
+	int adx = std::abs(dx);
+	int ady = std::abs(dy);
+	if (adx < ady)
+		y = starting_pos.y + glm::sign(dy) * adx;
+	else if (adx > ady)
+		x = starting_pos.x + glm::sign(dx) * ady;
+}
+
 void CBImpl::EllipseOutline::brush_pencil(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
 	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
 	standard_outline_brush_pencil(canvas, x, y, canvas.binfo.interps.ellipse_outline, [](BrushInfo& binfo) {
 		binfo.preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_outline.start, binfo.interps.ellipse_outline.finish));
@@ -564,6 +633,8 @@ void CBImpl::EllipseOutline::brush_pencil(Canvas& canvas, int x, int y)
 
 void CBImpl::EllipseOutline::brush_pen(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
 	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
 	standard_outline_brush_pen(canvas, x, y, canvas.binfo.interps.ellipse_outline, [](BrushInfo& binfo) {
 		binfo.preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_outline.start, binfo.interps.ellipse_outline.finish));
@@ -572,6 +643,8 @@ void CBImpl::EllipseOutline::brush_pen(Canvas& canvas, int x, int y)
 
 void CBImpl::EllipseOutline::brush_eraser(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
 	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
 	standard_outline_brush_eraser(canvas, x, y, canvas.binfo.interps.ellipse_outline, [](BrushInfo& binfo) {
 		binfo.eraser_preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_outline.start, binfo.interps.ellipse_outline.finish,
@@ -581,6 +654,8 @@ void CBImpl::EllipseOutline::brush_eraser(Canvas& canvas, int x, int y)
 
 void CBImpl::EllipseOutline::brush_select(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
 	// LATER
 }
 
@@ -651,6 +726,8 @@ void CBImpl::EllipseOutline::reset_eraser(BrushInfo& binfo)
 
 void CBImpl::EllipseFill::brush_pencil(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
 	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
 	standard_outline_brush_pencil(canvas, x, y, canvas.binfo.interps.ellipse_outline, [](BrushInfo& binfo) {
 		binfo.preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_outline.start, binfo.interps.ellipse_outline.finish));
@@ -659,6 +736,8 @@ void CBImpl::EllipseFill::brush_pencil(Canvas& canvas, int x, int y)
 
 void CBImpl::EllipseFill::brush_pen(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
 	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
 	standard_outline_brush_pen(canvas, x, y, canvas.binfo.interps.ellipse_outline, [](BrushInfo& binfo) {
 		binfo.preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_outline.start, binfo.interps.ellipse_outline.finish));
@@ -667,6 +746,8 @@ void CBImpl::EllipseFill::brush_pen(Canvas& canvas, int x, int y)
 
 void CBImpl::EllipseFill::brush_eraser(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
 	canvas.binfo.brushing_bbox = abs_bounds(canvas.binfo.starting_pos, { x, y });
 	standard_outline_brush_eraser(canvas, x, y, canvas.binfo.interps.ellipse_outline, [](BrushInfo& binfo) {
 		binfo.eraser_preview_image->update_subtexture(abs_rect(binfo.interps.ellipse_outline.start, binfo.interps.ellipse_outline.finish,
@@ -676,6 +757,8 @@ void CBImpl::EllipseFill::brush_eraser(Canvas& canvas, int x, int y)
 
 void CBImpl::EllipseFill::brush_select(Canvas& canvas, int x, int y)
 {
+	if (MainWindow->is_shift_pressed())
+		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
 	// LATER
 }
 
