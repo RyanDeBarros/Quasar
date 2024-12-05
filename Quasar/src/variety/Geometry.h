@@ -346,7 +346,7 @@ inline IntRect bounds_to_rect(IntBounds bb, int sx = 1, int sy = 1)
 	return { bb.x1 * sx, bb.y1 * sy, bb.width() * sx, bb.height() * sy };
 }
 
-enum class Cardinal
+enum Cardinal
 {
 	RIGHT,
 	UP,

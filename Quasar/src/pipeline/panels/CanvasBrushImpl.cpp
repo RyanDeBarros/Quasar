@@ -1,5 +1,7 @@
 #include "CanvasBrushImpl.h"
 
+#include <stack>
+
 #include "Easel.h"
 #include "user/Machine.h"
 
@@ -826,13 +828,14 @@ void CBImpl::EllipseFill::reset_eraser(BrushInfo& binfo)
 
 static void bucket_fill_find_noncontiguous(Canvas& canvas, int x, int y, void(*color_pixel)(Canvas& canvas, int x, int y))
 {
-	const PixelRGBA color = canvas.pixel_color_at(x, y);
+	const PixelRGBA base_color = canvas.pixel_color_at(x, y);
 	IntBounds& bbox = canvas.binfo.brushing_bbox;
-	for (int u = 0; u < canvas.image->buf.width; ++u)
+	Dim w = canvas.image->buf.width, h = canvas.image->buf.height;
+	for (int u = 0; u < w; ++u)
 	{
-		for (int v = 0; v < canvas.image->buf.height; ++v)
+		for (int v = 0; v < h; ++v)
 		{
-			if (canvas.battr.tolerance.tol(color.to_rgba(), canvas.pixel_color_at(u, v).to_rgba()))
+			if (canvas.battr.tolerance.tol(base_color.to_rgba(), canvas.pixel_color_at(u, v).to_rgba()))
 			{
 				color_pixel(canvas, u, v);
 				update_bbox(bbox, u, v);
@@ -841,10 +844,36 @@ static void bucket_fill_find_noncontiguous(Canvas& canvas, int x, int y, void(*c
 	}
 }
 
-static void bucket_fill_find_contiguous(Canvas& canvas, int x, int y, void(*color_pixel)(Canvas& canvas, int x, int y))
+static void bucket_fill_find_contiguous(Canvas& canvas, int x, int y, void(*color_pixel)(Canvas& canvas, int x, int y), bool(*already_stored)(Canvas& canvas, int x, int y))
 {
-	// LATER use tolerance interval
-	// TODO
+	static auto can_color = [](Canvas& canvas, int x, int y, RGBA base_color, bool(*already_stored)(Canvas& canvas, int x, int y)) {
+		return !already_stored(canvas, x, y) && canvas.battr.tolerance.tol(base_color, canvas.pixel_color_at(x, y).to_rgba());
+		};
+
+	static auto process = [](Canvas& canvas, int x, int y, int came_from, void(*color_pixel)(Canvas& canvas, int x, int y), IntBounds& bbox, std::stack<std::tuple<int, int, Cardinal>>& stack) {
+		color_pixel(canvas, x, y);
+		update_bbox(bbox, x, y);
+		if (came_from != Cardinal::LEFT && x > 0)
+			stack.push({ x - 1, y, Cardinal::RIGHT });
+		if (came_from != Cardinal::RIGHT && x < canvas.image->buf.width - 1)
+			stack.push({ x + 1, y, Cardinal::LEFT });
+		if (came_from != Cardinal::DOWN && y > 0)
+			stack.push({ x, y - 1, Cardinal::UP });
+		if (came_from != Cardinal::UP && y < canvas.image->buf.height - 1)
+			stack.push({ x, y + 1, Cardinal::DOWN });
+		};
+
+	RGBA base_color = canvas.pixel_color_at(x, y).to_rgba();
+	IntBounds& bbox = canvas.binfo.brushing_bbox;
+	std::stack<std::tuple<int, int, Cardinal>> stack;
+	process(canvas, x, y, -1, color_pixel, bbox, stack);
+	while (!stack.empty())
+	{
+		auto [u, v, came_from] = stack.top();
+		stack.pop();
+		if (can_color(canvas, u, v, base_color, already_stored))
+			process(canvas, u, v, came_from, color_pixel, bbox, stack);
+	}
 }
 
 static void bucket_fill_reset_bbox(Canvas& canvas)
@@ -860,17 +889,20 @@ void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
 {
 	canvas.binfo.storage_2c.clear();
 	bucket_fill_reset_bbox(canvas);
-	auto color_pixel = [](Canvas& canvas, int x, int y) {
+	static auto color_pixel = [](Canvas& canvas, int x, int y) {
 		PixelRGBA old_color = canvas.pixel_color_at(x, y);
 		PixelRGBA new_color = canvas.applied_pencil_rgba();
 		new_color.blend_over(old_color);
 		canvas.binfo.storage_2c[{ x, y }] = { new_color, old_color };
 		buffer_set_pixel_color(canvas.image->buf, x, y, new_color);
 		};
+	static auto already_stored = [](Canvas& canvas, int x, int y) {
+		return canvas.binfo.storage_2c.find({ x, y }) != canvas.binfo.storage_2c.end();
+		};
 	if (MainWindow->is_shift_pressed())
 		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
 	else
-		bucket_fill_find_contiguous(canvas, x, y, color_pixel);
+		bucket_fill_find_contiguous(canvas, x, y, color_pixel, already_stored);
 	if (canvas.binfo.brushing_bbox.valid())
 	{
 		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
@@ -885,14 +917,17 @@ void CBImpl::BucketFill::brush_pen(Canvas& canvas, int x, int y)
 {
 	canvas.binfo.storage_1c.clear();
 	bucket_fill_reset_bbox(canvas);
-	auto color_pixel = [](Canvas& canvas, int x, int y) {
+	static auto color_pixel = [](Canvas& canvas, int x, int y) {
 		canvas.binfo.storage_1c[{ x, y }] = canvas.pixel_color_at(x, y);
 		buffer_set_pixel_color(canvas.image->buf, x, y, canvas.applied_pen_rgba());
+		};
+	static auto already_stored = [](Canvas& canvas, int x, int y) {
+		return canvas.binfo.storage_1c.find({ x, y }) != canvas.binfo.storage_1c.end();
 		};
 	if (MainWindow->is_shift_pressed())
 		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
 	else
-		bucket_fill_find_contiguous(canvas, x, y, color_pixel);
+		bucket_fill_find_contiguous(canvas, x, y, color_pixel, already_stored);
 	if (canvas.binfo.brushing_bbox.valid())
 	{
 		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
@@ -906,14 +941,17 @@ void CBImpl::BucketFill::brush_pen(Canvas& canvas, int x, int y)
 void CBImpl::BucketFill::brush_eraser(Canvas& canvas, int x, int y)
 {
 	canvas.binfo.storage_1c.clear();
-	auto color_pixel = [](Canvas& canvas, int x, int y) {
+	static auto color_pixel = [](Canvas& canvas, int x, int y) {
 		canvas.binfo.storage_1c[{ x, y }] = canvas.pixel_color_at(x, y);
 		buffer_set_pixel_alpha(canvas.image->buf, x, y, 0);
+		};
+	static auto already_stored = [](Canvas& canvas, int x, int y) {
+		return canvas.binfo.storage_1c.find({ x, y }) != canvas.binfo.storage_1c.end();
 		};
 	if (MainWindow->is_shift_pressed())
 		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
 	else
-		bucket_fill_find_contiguous(canvas, x, y, color_pixel);
+		bucket_fill_find_contiguous(canvas, x, y, color_pixel, already_stored);
 	if (canvas.binfo.brushing_bbox.valid())
 	{
 		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
