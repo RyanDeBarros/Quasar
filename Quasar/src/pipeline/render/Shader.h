@@ -17,6 +17,8 @@ struct Shader
 
 	Shader(const FilePath& vertex_shader, const FilePath& fragment_shader);
 	Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, const std::unordered_map<std::string, std::string>& template_variables);
+	Shader(const FilePath& vertex_shader, const FilePath& geometry_shader, const FilePath& fragment_shader);
+	Shader(const FilePath& vertex_shader, const FilePath& geometry_shader, const FilePath& fragment_shader, const std::unordered_map<std::string, std::string>& template_variables);
 	Shader(const Shader&);
 	Shader(Shader&&) noexcept;
 	Shader& operator=(const Shader&) = delete;

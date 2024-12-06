@@ -83,6 +83,66 @@ static GLuint load_program(const std::string& vertex_shader, const char* vertex_
 	return shader;
 }
 
+static GLuint load_program(const std::string& vertex_shader, const char* vertex_filepath, const std::string& geometry_shader,
+	const char* geometry_filepath, const std::string& fragment_shader, const char* fragment_filepath)
+{
+	QUASAR_GL(GLuint shader = glCreateProgram());
+	GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader.c_str(), vertex_filepath);
+	GLuint gs = compile_shader(GL_GEOMETRY_SHADER, geometry_shader.c_str(), geometry_filepath);
+	GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader.c_str(), fragment_filepath);
+	if (vs && gs && fs)
+	{
+		QUASAR_GL(glAttachShader(shader, vs));
+		QUASAR_GL(glAttachShader(shader, gs));
+		QUASAR_GL(glAttachShader(shader, fs));
+		QUASAR_GL(glLinkProgram(shader));
+		QUASAR_GL(glValidateProgram(shader));
+
+		QUASAR_GL(glDeleteShader(vs));
+		QUASAR_GL(glDeleteShader(gs));
+		QUASAR_GL(glDeleteShader(fs));
+
+		GLint result;
+		QUASAR_GL(glGetProgramiv(shader, GL_LINK_STATUS, &result));
+		if (result == GL_FALSE)
+		{
+			GLint length;
+			QUASAR_GL(glGetProgramiv(shader, GL_INFO_LOG_LENGTH, &length));
+			if (length)
+			{
+				GLchar* message = new GLchar[length];
+				QUASAR_GL(glGetProgramInfoLog(shader, length, &length, message));
+				LOG << LOG.error << LOG.start << "Shader linkage failed (vertex=\"" << vertex_filepath << "\", fragment=\"" << fragment_filepath << "\"): " << message << LOG.endl;
+				delete[] message;
+			}
+			else
+				LOG << LOG.error << LOG.start << "Shader linkage failed (vertex=\"" << vertex_filepath << "\", fragment=\"" << fragment_filepath << "\"): no program info log provided" << LOG.endl;
+			QUASAR_GL(glDeleteProgram(shader));
+			shader = 0;
+		}
+	}
+	else
+	{
+		if (!vs)
+		{
+			QUASAR_GL(glDeleteShader(vs));
+		}
+		if (!gs)
+		{
+			QUASAR_GL(glDeleteShader(gs));
+		}
+		if (!fs)
+		{
+			QUASAR_GL(glDeleteShader(fs));
+		}
+		QUASAR_GL(glDeleteProgram(shader));
+		shader = 0;
+	}
+	QUASAR_GL(bool valid = glIsProgram(shader));
+	QUASAR_ASSERT(valid);
+	return shader;
+}
+
 Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader)
 {
 	std::string vert;
@@ -104,6 +164,36 @@ Shader::Shader(const FilePath& vertex_shader, const FilePath& fragment_shader, c
 	if (!IO.read_template_file(fragment_shader, frag, template_variables))
 		QUASAR_ASSERT(false);
 	rid = load_program(vert, vertex_shader.c_str(), frag, fragment_shader.c_str());
+	setup();
+}
+
+Shader::Shader(const FilePath& vertex_shader, const FilePath& geometry_shader, const FilePath& fragment_shader)
+{
+	std::string vert;
+	if (!IO.read_file(vertex_shader, vert))
+		QUASAR_ASSERT(false);
+	std::string geom;
+	if (!IO.read_file(geometry_shader, geom))
+		QUASAR_ASSERT(false);
+	std::string frag;
+	if (!IO.read_file(fragment_shader, frag))
+		QUASAR_ASSERT(false);
+	rid = load_program(vert, vertex_shader.c_str(), geom, geometry_shader.c_str(), frag, fragment_shader.c_str());
+	setup();
+}
+
+Shader::Shader(const FilePath& vertex_shader, const FilePath& geometry_shader, const FilePath& fragment_shader, const std::unordered_map<std::string, std::string>& template_variables)
+{
+	std::string vert;
+	if (!IO.read_template_file(vertex_shader, vert, template_variables))
+		QUASAR_ASSERT(false);
+	std::string geom;
+	if (!IO.read_template_file(geometry_shader, geom, template_variables))
+		QUASAR_ASSERT(false);
+	std::string frag;
+	if (!IO.read_template_file(fragment_shader, frag, template_variables))
+		QUASAR_ASSERT(false);
+	rid = load_program(vert, vertex_shader.c_str(), geom, geometry_shader.c_str(), frag, fragment_shader.c_str());
 	setup();
 }
 

@@ -143,6 +143,8 @@ constexpr GLuint CANVAS_SPRITE_TSLOT = 4;
 
 Canvas::Canvas(Shader* cursor_shader)
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
+	selection_shader(FileSystem::shader_path("selection.vert"), FileSystem::shader_path("selection.geom"), FileSystem::shader_path("selection.frag")),
+	selection_ur(&selection_shader),
 	Widget(_W_COUNT), brush_under_tool_and_tip(&CBImpl::Camera::brush), eraser_cursor_img(std::make_shared<Image>())
 {
 	binfo.preview_image = std::make_shared<Image>();
@@ -154,6 +156,16 @@ Canvas::Canvas(Shader* cursor_shader)
 	battr.tolerance.check_s_hsv = true;
 	battr.tolerance.s_hsv1 = 0.0f;
 	battr.tolerance.s_hsv2 = 0.5f;
+
+
+	selection_ur.varr.resize(6 * selection_shader.stride, 0);
+	selection_ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ -100, -100 }));
+	selection_ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{  100, -100 }));
+	selection_ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{  100,  100 }));
+	selection_ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{  100,  100 }));
+	selection_ur.set_attribute_single_vertex(4, 0, glm::value_ptr(glm::vec2{ -100,  100 }));
+	selection_ur.set_attribute_single_vertex(5, 0, glm::value_ptr(glm::vec2{ -100, -100 }));
+	selection_ur.send_buffer_resized();
 }
 
 Canvas::~Canvas()
@@ -233,6 +245,9 @@ void Canvas::draw()
 	major_gridlines.draw();
 	if (cursor_in_canvas)
 		draw_cursor();
+
+	selection_ur.draw_as_points();
+	//selection_ur.draw();
 }
 
 void Canvas::draw_cursor()
@@ -259,7 +274,9 @@ void Canvas::draw_cursor()
 
 void Canvas::send_vp(const glm::mat3& vp)
 {
+	// TODO rename GLSL variables
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
+	Uniforms::send_matrix3(selection_shader, "uVP", vp);
 	sync_cursor_with_widget();
 }
 
@@ -1005,7 +1022,8 @@ void Easel::_send_view()
 	canvas().send_vp(vp);
 	Uniforms::send_matrix3(color_square_shader, "u_VP", vp);
 	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", vp);
-	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", vp);
+	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", vp); // TODO should go in Canvas::send_vp()
+	Uniforms::send_2(canvas().selection_shader, "uScreenSize", MainWindow->size());
 	unbind_shader();
 	sync_widget();
 }
@@ -1017,6 +1035,7 @@ void Easel::process()
 		canvas().hover_pixel_under_cursor();
 	else
 		canvas().unhover();
+	Uniforms::send_1(canvas().selection_shader, "uTime", glfwGetTime());
 }
 
 void Easel::sync_widget()

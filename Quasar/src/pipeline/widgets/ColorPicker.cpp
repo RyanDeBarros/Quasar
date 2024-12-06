@@ -1355,7 +1355,7 @@ void ColorPicker::update_display_colors()
 	}
 }
 
-void ColorPicker::orient_progress_slider(size_t control, Cardinal i) const
+void ColorPicker::orient_progress_slider(size_t control, Cardinal i)
 {
 	float zero = 0.0f;
 	float one = 1.0f;
@@ -1419,12 +1419,12 @@ float ColorPicker::slider_normal_y(size_t control, size_t cursor) const
 	return wp_at(control).normalize_y(wp_at(cursor).transform.position.y);
 }
 
-void ColorPicker::setup_rect_uvs(size_t control) const
+void ColorPicker::setup_rect_uvs(size_t control)
 {
 	Utils::set_uv_attributes(ur_wget(*this, control), 0, 1, 0, 1, 0, 1, false);
 }
 
-void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const
+void ColorPicker::setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4)
 {
 	ur_wget(*this, control).set_attribute(2, glm::value_ptr(glm::vec4{ g1, g2, g3, g4 }));
 }
@@ -1476,7 +1476,7 @@ void ColorPicker::sync_widget_with_vp()
 	gui_transform.position.y = roundf(MainWindow->height() - gui_transform.position.y);
 }
 
-void ColorPicker::sync_single_standard_ur_transform(size_t control, bool send_buffer) const
+void ColorPicker::sync_single_standard_ur_transform(size_t control, bool send_buffer)
 {
 	Utils::set_vertex_pos_attributes(ur_wget(*this, control), wp_at(control).relative_to(self.transform), 0, 0, send_buffer);
 }
@@ -1486,12 +1486,12 @@ void ColorPicker::send_cpwc_buffer(size_t control) const
 	ur_wget(*this, control).send_buffer();
 }
 
-void ColorPicker::set_circle_cursor_thickness(size_t cursor, float thickness) const
+void ColorPicker::set_circle_cursor_thickness(size_t cursor, float thickness)
 {
 	ur_wget(*this, cursor).set_attribute(2, &thickness);
 }
 
-void ColorPicker::set_circle_cursor_value(size_t cursor, float value) const
+void ColorPicker::set_circle_cursor_value(size_t cursor, float value)
 {
 	ur_wget(*this, cursor).set_attribute(3, &value);
 }

@@ -132,7 +132,7 @@ private:
 
 	void update_display_colors();
 
-	void orient_progress_slider(size_t control, Cardinal i) const;
+	void orient_progress_slider(size_t control, Cardinal i);
 	
 	void send_graphic_quad_hue_to_uniform(float hue) const;
 	glm::vec2 get_graphic_quad_sat_and_value() const;
@@ -147,13 +147,13 @@ private:
 	float slider_normal_x(size_t control, size_t cursor) const;
 	float slider_normal_y(size_t control, size_t cursor) const;
 
-	void setup_rect_uvs(size_t control) const;
-	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4) const;
+	void setup_rect_uvs(size_t control);
+	void setup_gradient(size_t control, GLint g1, GLint g2, GLint g3, GLint g4);
 	void sync_widget_with_vp();
-	void sync_single_standard_ur_transform(size_t control, bool send_buffer = true) const;
+	void sync_single_standard_ur_transform(size_t control, bool send_buffer = true);
 	void send_cpwc_buffer(size_t control) const;
-	void set_circle_cursor_thickness(size_t cursor, float thickness) const;
-	void set_circle_cursor_value(size_t cursor, float value) const;
+	void set_circle_cursor_thickness(size_t cursor, float thickness);
+	void set_circle_cursor_value(size_t cursor, float value);
 	float get_circle_cursor_value(size_t cursor) const;
 	void setup_circle_cursor(size_t cursor);
 

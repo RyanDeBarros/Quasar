@@ -8,13 +8,9 @@
 
 struct UnitRenderable
 {
-	GLfloat* varr = nullptr;
+	std::vector<GLfloat> varr;
 	GLuint vao = 0, vb = 0;
 	Shader* shader = nullptr; // LATER std::shared_ptr for shaders?
-private:
-	unsigned short num_vertices;
-public:
-	unsigned short get_num_vertices() const { return num_vertices; }
 
 	UnitRenderable(Shader* shader, unsigned short num_vertices = 4);
 	UnitRenderable(const UnitRenderable&) = delete;
@@ -23,8 +19,6 @@ public:
 	~UnitRenderable();
 
 	void set_shader(Shader* shader);
-	const UnitRenderable& set_attribute(size_t attrib, const float* v) const;
-	const UnitRenderable& set_attribute_single_vertex(unsigned short vertex, size_t attrib, const float* v) const;
 	const UnitRenderable& get_attribute(unsigned short vertex, size_t attrib, float* v) const;
 	UnitRenderable& set_attribute(size_t attrib, const float* v);
 	UnitRenderable& set_attribute_single_vertex(unsigned short vertex, size_t attrib, const float* v);
@@ -34,19 +28,20 @@ public:
 	UnitRenderable& send_single_vertex(unsigned short vertex);
 	void send_buffer_resized() const;
 	void draw(unsigned short num_vertices_to_draw = -1) const;
-	void set_num_vertices(unsigned short num_vertices);
+	void draw_as_points(unsigned short num_vertices_to_draw = -1) const;
+	size_t num_vertices() const { return shader ? varr.size() / shader->stride : 0; }
+	void set_num_vertices(size_t num_vertices);
 };
 
 struct UnitMultiRenderable
 {
-	GLfloat* varr = nullptr;
+	std::vector<GLfloat> varr;
 	GLuint vao = 0, vb = 0;
 	Shader* shader;
-	GLint* first;
-	GLsizei* count;
-	// LATER variable num_units/unit_num_vertices
-	const unsigned short num_units;
-	const unsigned short unit_num_vertices;
+	std::vector<GLint> first;
+	std::vector<GLsizei> count;
+	unsigned short num_units;
+	unsigned short unit_num_vertices;
 
 	UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned short unit_num_vertices = 4);
 	UnitMultiRenderable(const UnitMultiRenderable&) = delete;
@@ -54,14 +49,15 @@ struct UnitMultiRenderable
 	~UnitMultiRenderable();
 
 	void set_shader(Shader* shader);
-	void set_attribute(unsigned short unit, size_t attrib, const float* v) const;
-	void set_attribute_single_vertex(unsigned short unit, unsigned short vertex, size_t attrib, const float* v) const;
+	void set_attribute(unsigned short unit, size_t attrib, const float* v);
+	void set_attribute_single_vertex(unsigned short unit, unsigned short vertex, size_t attrib, const float* v);
 	void get_attribute(unsigned short unit, unsigned short vertex, size_t attrib, float* v) const;
 	void send_buffer() const;
 	void send_single_unit(unsigned short unit) const;
 	void send_single_vertex(unsigned short unit, unsigned short vertex) const;
 	void send_buffer_resized() const;
 	void draw(unsigned short num_units_to_draw = -1) const;
+	void resize();
 };
 
 struct IndexedRenderable
@@ -86,21 +82,13 @@ struct IndexedRenderable
 	void push_back_quads(size_t num_quads, GLuint starting_vertex);
 	void remove_from_varr(size_t pos);
 	void remove_from_iarr(size_t pos);
-	const IndexedRenderable& set_attribute(size_t attrib, const float* v) const;
 	IndexedRenderable& set_attribute(size_t attrib, const float* v);
-	const IndexedRenderable& set_attribute_single_vertex(size_t vertex, size_t attrib, const float* v) const;
 	IndexedRenderable& set_attribute_single_vertex(size_t vertex, size_t attrib, const float* v);
-	const IndexedRenderable& get_attribute(size_t vertex, size_t attrib, float* v) const;
 	IndexedRenderable& get_attribute(size_t vertex, size_t attrib, float* v);
-	const IndexedRenderable& send_vertex_buffer() const;
 	IndexedRenderable& send_vertex_buffer();
-	const IndexedRenderable& send_vertex_buffer_resized() const;
 	IndexedRenderable& send_vertex_buffer_resized();
-	const IndexedRenderable& send_index_buffer() const;
 	IndexedRenderable& send_index_buffer();
-	const IndexedRenderable& send_index_buffer_resized() const;
 	IndexedRenderable& send_index_buffer_resized();
-	const IndexedRenderable& send_single_vertex(size_t vertex) const;
 	IndexedRenderable& send_single_vertex(size_t vertex);
 	void send_both_buffers() const;
 	void send_both_buffers_resized() const;
