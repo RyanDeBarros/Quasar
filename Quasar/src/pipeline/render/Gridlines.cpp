@@ -1,7 +1,7 @@
 #include "Gridlines.h"
 
 #include "Uniforms.h"
-
+// TODO use geometry shader for simplicity
 Gridlines::Gridlines()
 	: shader(FileSystem::shader_path("gridlines.vert"), FileSystem::shader_path("gridlines.frag"))
 {

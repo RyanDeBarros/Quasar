@@ -144,7 +144,6 @@ constexpr GLuint CANVAS_SPRITE_TSLOT = 4;
 Canvas::Canvas(Shader* cursor_shader)
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
 	selection_shader(FileSystem::shader_path("selection.vert"), FileSystem::shader_path("selection.geom"), FileSystem::shader_path("selection.frag")),
-	selection_ur(&selection_shader),
 	Widget(_W_COUNT), brush_under_tool_and_tip(&CBImpl::Camera::brush), eraser_cursor_img(std::make_shared<Image>())
 {
 	binfo.preview_image = std::make_shared<Image>();
@@ -156,16 +155,6 @@ Canvas::Canvas(Shader* cursor_shader)
 	battr.tolerance.check_s_hsv = true;
 	battr.tolerance.s_hsv1 = 0.0f;
 	battr.tolerance.s_hsv2 = 0.5f;
-
-
-	selection_ur.varr.resize(6 * selection_shader.stride, 0);
-	selection_ur.set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ -100, -100 }));
-	selection_ur.set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{  100, -100 }));
-	selection_ur.set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{  100,  100 }));
-	selection_ur.set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{  100,  100 }));
-	selection_ur.set_attribute_single_vertex(4, 0, glm::value_ptr(glm::vec2{ -100,  100 }));
-	selection_ur.set_attribute_single_vertex(5, 0, glm::value_ptr(glm::vec2{ -100, -100 }));
-	selection_ur.send_buffer_resized();
 }
 
 Canvas::~Canvas()
@@ -188,6 +177,18 @@ void Canvas::initialize_widget(Shader* cursor_shader)
 	fs_wget(*this, CURSOR_SELECT).set_texture_slot(CURSOR_SELECT_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("select.png"));
 	assign_widget(this, BRUSH_PREVIEW, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, BRUSH_PREVIEW).set_texture_slot(BRUSH_PREVIEW_TSLOT).image = binfo.preview_image;
+	
+	assign_widget(this, SELECTION, std::make_shared<W_UnitRenderable>(&selection_shader));
+	ur_wget(*this, SELECTION).varr.resize(5 * selection_shader.stride, 0);
+	ur_wget(*this, SELECTION).set_attribute_single_vertex(0, 0, glm::value_ptr(glm::vec2{ -100, -100 }));
+	ur_wget(*this, SELECTION).set_attribute_single_vertex(1, 0, glm::value_ptr(glm::vec2{  100, -100 }));
+	float v = 1;
+	ur_wget(*this, SELECTION).set_attribute_single_vertex(1, 1, &v);
+	ur_wget(*this, SELECTION).set_attribute_single_vertex(2, 0, glm::value_ptr(glm::vec2{  100,  100 }));
+	ur_wget(*this, SELECTION).set_attribute_single_vertex(3, 0, glm::value_ptr(glm::vec2{ -100,  100 }));
+	ur_wget(*this, SELECTION).set_attribute_single_vertex(4, 0, glm::value_ptr(glm::vec2{ -100,  200 }));
+	ur_wget(*this, SELECTION).send_buffer_resized();
+	
 	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 }
@@ -246,8 +247,7 @@ void Canvas::draw()
 	if (cursor_in_canvas)
 		draw_cursor();
 
-	selection_ur.draw_as_points();
-	//selection_ur.draw();
+	ur_wget(*this, SELECTION).draw_as_lines();
 }
 
 void Canvas::draw_cursor()
@@ -383,17 +383,7 @@ void Canvas::sync_transform()
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
 	fs_wget(*this, BRUSH_PREVIEW).update_transform().ur->send_buffer();
 	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
-	//Uniforms::send_matrix3(selection_shader, "uVP", glm::inverse(fs_wget(*this, SPRITE).global_matrix_inverse()));
-	auto wp = wp_at(SPRITE).relative_to(self.transform);
-	//wp.transform.position *= -1;
-	LOG << wp.transform.scale << " ";
-	//wp.transform.scale = 10000.0f / wp.transform.scale;
-	wp.transform.scale = 1.0f / wp.transform.scale;
-	LOG << wp.transform.scale << LOG.nl;
-	//Uniforms::send_matrix3(selection_shader, "uVP", wp.inverse_matrix());
-	//Uniforms::send_matrix3(selection_shader, "uVP", wp.matrix());
-	Uniforms::send_matrix3(selection_shader, "uVP", MEasel->vp);
-	sync_cursor_with_widget();
+	Uniforms::send_matrix3(selection_shader, "uVP", MEasel->vp * self.matrix());
 }
 
 void Canvas::sync_gfx_with_image()

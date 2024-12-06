@@ -27,8 +27,9 @@ struct UnitRenderable
 	const UnitRenderable& send_single_vertex(unsigned short vertex) const;
 	UnitRenderable& send_single_vertex(unsigned short vertex);
 	void send_buffer_resized() const;
-	void draw(unsigned short num_vertices_to_draw = -1) const;
-	void draw_as_points(unsigned short num_vertices_to_draw = -1) const;
+	void draw() const;
+	void draw(unsigned short num_vertices_to_draw) const;
+	void draw_as_lines() const;
 	size_t num_vertices() const { return shader ? varr.size() / shader->stride : 0; }
 	void set_num_vertices(size_t num_vertices);
 };
@@ -56,7 +57,8 @@ struct UnitMultiRenderable
 	void send_single_unit(unsigned short unit) const;
 	void send_single_vertex(unsigned short unit, unsigned short vertex) const;
 	void send_buffer_resized() const;
-	void draw(unsigned short num_units_to_draw = -1) const;
+	void draw() const;
+	void draw(unsigned short num_units_to_draw) const;
 	void resize();
 };
 
@@ -92,5 +94,6 @@ struct IndexedRenderable
 	IndexedRenderable& send_single_vertex(size_t vertex);
 	void send_both_buffers() const;
 	void send_both_buffers_resized() const;
-	void draw(size_t num_indexes_to_draw = -1, size_t offset = 0) const;
+	void draw() const;
+	void draw(GLuint num_indexes_to_draw, size_t offset) const;
 };

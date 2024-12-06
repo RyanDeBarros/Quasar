@@ -90,7 +90,6 @@ struct Canvas : public Widget
 	friend struct Easel;
 	Shader sprite_shader; // LATER have one shader for internal sprites like checkerboard/cursors/previews, and a second for the actual sprites (used for multiple layers/frames).
 	Shader selection_shader;
-	UnitRenderable selection_ur;
 	RGBA checker1, checker2;
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
@@ -197,6 +196,7 @@ public:
 		BRUSH_PREVIEW,
 		ERASER_PREVIEW,
 		SELECT_PREVIEW,
+		SELECTION,
 		SPRITE, // LATER SPRITE_START
 		_W_COUNT
 	};
