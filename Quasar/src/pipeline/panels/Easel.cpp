@@ -276,7 +276,6 @@ void Canvas::send_vp(const glm::mat3& vp)
 {
 	// TODO rename GLSL variables
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
-	Uniforms::send_matrix3(selection_shader, "uVP", vp);
 	sync_cursor_with_widget();
 }
 
@@ -384,6 +383,16 @@ void Canvas::sync_transform()
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
 	fs_wget(*this, BRUSH_PREVIEW).update_transform().ur->send_buffer();
 	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
+	//Uniforms::send_matrix3(selection_shader, "uVP", glm::inverse(fs_wget(*this, SPRITE).global_matrix_inverse()));
+	auto wp = wp_at(SPRITE).relative_to(self.transform);
+	//wp.transform.position *= -1;
+	LOG << wp.transform.scale << " ";
+	//wp.transform.scale = 10000.0f / wp.transform.scale;
+	wp.transform.scale = 1.0f / wp.transform.scale;
+	LOG << wp.transform.scale << LOG.nl;
+	//Uniforms::send_matrix3(selection_shader, "uVP", wp.inverse_matrix());
+	//Uniforms::send_matrix3(selection_shader, "uVP", wp.matrix());
+	Uniforms::send_matrix3(selection_shader, "uVP", MEasel->vp);
 	sync_cursor_with_widget();
 }
 
@@ -604,11 +613,15 @@ void Canvas::unhover()
 
 void Canvas::hover_pixel_at(Position pos)
 {
-	wp_at(CURSOR_PENCIL).transform.position = pos;
-	wp_at(CURSOR_PEN).transform.position = pos;
-	wp_at(CURSOR_ERASER).transform.position = pos;
-	wp_at(CURSOR_SELECT).transform.position = pos;
-	sync_cursor_with_widget();
+	Position& existing = wp_at(CURSOR_PENCIL).transform.position;
+	if (existing != pos)
+	{
+		existing = pos;
+		wp_at(CURSOR_PEN).transform.position = pos;
+		wp_at(CURSOR_ERASER).transform.position = pos;
+		wp_at(CURSOR_SELECT).transform.position = pos;
+		sync_cursor_with_widget();
+	}
 }
 
 Position Canvas::pixel_position(IPosition pos)

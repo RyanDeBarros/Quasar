@@ -1,7 +1,6 @@
 #version 440 core
 
 layout(points) in;
-//layout(triangles) in;
 layout(line_strip, max_vertices = 8) out;
 
 uniform float uOutlineWidth = 2.0;
@@ -26,11 +25,15 @@ void main() {
 //	}
 //	EndPrimitive();
 
-	gl_Position = gl_in[0].gl_Position + vec4(0.1, 0.1, 0.0, 0.0);
+	vec2 delta = (uVP * vec3(10000 / uScreenSize.x, 10000 / uScreenSize.y, 1.0)).xy;
+	//vec2 delta = (uVP * vec3(10 / uScreenSize.x, 10 / uScreenSize.y, 1.0)).xy;
+	//vec2 delta = vec2(100 / uScreenSize.x, 100 / uScreenSize.y);
+	
+	gl_Position.xy = gl_in[0].gl_Position.xy + delta;
 	EmitVertex();
-	gl_Position = gl_in[0].gl_Position + vec4(-0.1, -0.1, 0.0, 0.0);
+	gl_Position.xy = gl_in[0].gl_Position.xy + vec2(-delta.x, -delta.y);
 	EmitVertex();
-	gl_Position = gl_in[0].gl_Position + vec4(0.1, -0.1, 0.0, 0.0);
+	gl_Position.xy = gl_in[0].gl_Position.xy + vec2(delta.x, -delta.y);
 	EmitVertex();
 	EndPrimitive();
 }
