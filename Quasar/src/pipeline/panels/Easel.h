@@ -89,12 +89,12 @@ struct Canvas : public Widget
 {
 	friend struct Easel;
 	Shader sprite_shader; // LATER have one shader for internal sprites like checkerboard/cursors/previews, and a second for the actual sprites (used for multiple layers/frames).
-	Shader selection_shader;
 	RGBA checker1, checker2;
 	Gridlines minor_gridlines;
 	Gridlines major_gridlines;
 
 	std::shared_ptr<Image> image;
+	class SelectionMants* smants = nullptr;
 
 	bool visible = false;
 	bool cursor_in_canvas = false;
@@ -138,6 +138,7 @@ public:
 	void sync_sprite_with_image();
 	void sync_checkerboard_with_image();
 	void sync_brush_preview_with_image();
+	void sync_smants_with_image();
 	void sync_gridlines_with_image();
 	void sync_transform();
 	void sync_gfx_with_image();

@@ -41,7 +41,7 @@ void UnitRenderable::set_shader(Shader* shader_)
 	unbind_vao_buffers();
 }
 
-const UnitRenderable& UnitRenderable::get_attribute(unsigned short vertex, size_t attrib, float* v) const
+const UnitRenderable& UnitRenderable::get_attribute(unsigned int vertex, size_t attrib, float* v) const
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(v, varr.data() + shader->attribute_offsets[attrib] + vertex * shader->stride, attrib_len * sizeof(GLfloat));
@@ -61,14 +61,14 @@ UnitRenderable& UnitRenderable::set_attribute(size_t attrib, const float* v)
 	return *this;
 }
 
-UnitRenderable& UnitRenderable::set_attribute_single_vertex(unsigned short vertex, size_t attrib, const float* v)
+UnitRenderable& UnitRenderable::set_attribute_single_vertex(unsigned int vertex, size_t attrib, const float* v)
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(varr.data() + shader->attribute_offsets[attrib] + vertex * shader->stride, v, attrib_len * sizeof(GLfloat));
 	return *this;
 }
 
-UnitRenderable& UnitRenderable::get_attribute(unsigned short vertex, size_t attrib, float* v)
+UnitRenderable& UnitRenderable::get_attribute(unsigned int vertex, size_t attrib, float* v)
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(v, varr.data() + shader->attribute_offsets[attrib] + vertex * shader->stride, attrib_len * sizeof(GLfloat));
@@ -82,7 +82,7 @@ void UnitRenderable::send_buffer() const
 	unbind_vao_buffers();
 }
 
-const UnitRenderable& UnitRenderable::send_single_vertex(unsigned short vertex) const
+const UnitRenderable& UnitRenderable::send_single_vertex(unsigned int vertex) const
 {
 	bind_vao_buffers(vao, vb);
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr.data() + vertex * shader->stride));
@@ -90,7 +90,7 @@ const UnitRenderable& UnitRenderable::send_single_vertex(unsigned short vertex) 
 	return *this;
 }
 
-UnitRenderable& UnitRenderable::send_single_vertex(unsigned short vertex)
+UnitRenderable& UnitRenderable::send_single_vertex(unsigned int vertex)
 {
 	bind_vao_buffers(vao, vb);
 	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, vertex * shader->stride * sizeof(GLfloat), shader->stride * sizeof(GLfloat), varr.data() + vertex * shader->stride));
@@ -111,7 +111,7 @@ void UnitRenderable::draw() const
 	unbind_vao_buffers();
 }
 
-void UnitRenderable::draw(unsigned short num_vertices_to_draw) const
+void UnitRenderable::draw(unsigned int num_vertices_to_draw) const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb);
@@ -133,7 +133,7 @@ void UnitRenderable::set_num_vertices(size_t num_vertices_)
 	send_buffer_resized();
 }
 
-UnitMultiRenderable::UnitMultiRenderable(Shader* _shader, unsigned short num_units, unsigned short unit_num_vertices)
+UnitMultiRenderable::UnitMultiRenderable(Shader* _shader, unsigned int num_units, unsigned int unit_num_vertices)
 	: shader(_shader), num_units(num_units), unit_num_vertices(unit_num_vertices)
 {
 	gen_dynamic_vao(vao, vb);
@@ -165,7 +165,7 @@ void UnitMultiRenderable::set_shader(Shader* shader_)
 	unbind_vao_buffers();
 }
 
-void UnitMultiRenderable::set_attribute(unsigned short unit, size_t attrib, const float* v)
+void UnitMultiRenderable::set_attribute(unsigned int unit, size_t attrib, const float* v)
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	GLfloat* buf = varr.data() + unit * unit_num_vertices * shader->stride + shader->attribute_offsets[attrib];
@@ -176,13 +176,13 @@ void UnitMultiRenderable::set_attribute(unsigned short unit, size_t attrib, cons
 	}
 }
 
-void UnitMultiRenderable::set_attribute_single_vertex(unsigned short unit, unsigned short vertex, size_t attrib, const float* v)
+void UnitMultiRenderable::set_attribute_single_vertex(unsigned int unit, unsigned int vertex, size_t attrib, const float* v)
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(varr.data() + (unit * unit_num_vertices + vertex) * shader->stride + shader->attribute_offsets[attrib], v, attrib_len * sizeof(GLfloat));
 }
 
-void UnitMultiRenderable::get_attribute(unsigned short unit, unsigned short vertex, size_t attrib, float* v) const
+void UnitMultiRenderable::get_attribute(unsigned int unit, unsigned int vertex, size_t attrib, float* v) const
 {
 	unsigned short attrib_len = shader->attributes[attrib];
 	memcpy(v, varr.data() + (unit * unit_num_vertices + vertex) * shader->stride + shader->attribute_offsets[attrib], attrib_len * sizeof(GLfloat));
@@ -195,7 +195,7 @@ void UnitMultiRenderable::send_buffer() const
 	unbind_vao_buffers();
 }
 
-void UnitMultiRenderable::send_single_unit(unsigned short unit) const
+void UnitMultiRenderable::send_single_unit(unsigned int unit) const
 {
 	bind_vao_buffers(vao, vb);
 	size_t unit_stride = unit_num_vertices * shader->stride;
@@ -203,7 +203,7 @@ void UnitMultiRenderable::send_single_unit(unsigned short unit) const
 	unbind_vao_buffers();
 }
 
-void UnitMultiRenderable::send_single_vertex(unsigned short unit, unsigned short vertex) const
+void UnitMultiRenderable::send_single_vertex(unsigned int unit, unsigned int vertex) const
 {
 	bind_vao_buffers(vao, vb);
 	size_t unit_offset = (unit * unit_num_vertices + vertex) * shader->stride;
@@ -224,7 +224,7 @@ void UnitMultiRenderable::draw() const
 	unbind_vao_buffers();
 }
 
-void UnitMultiRenderable::draw(unsigned short num_units_to_draw) const
+void UnitMultiRenderable::draw(unsigned int num_units_to_draw) const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb);

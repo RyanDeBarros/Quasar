@@ -162,6 +162,9 @@
     <ClCompile Include="src\pipeline\panels\CanvasBrushImpl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\pipeline\render\SelectionMants.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\variety\IO.h">
@@ -1197,6 +1200,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\pipeline\panels\CanvasBrushImpl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\render\SelectionMants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

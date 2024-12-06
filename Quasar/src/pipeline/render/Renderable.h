@@ -19,16 +19,16 @@ struct UnitRenderable
 	~UnitRenderable();
 
 	void set_shader(Shader* shader);
-	const UnitRenderable& get_attribute(unsigned short vertex, size_t attrib, float* v) const;
+	const UnitRenderable& get_attribute(unsigned int vertex, size_t attrib, float* v) const;
 	UnitRenderable& set_attribute(size_t attrib, const float* v);
-	UnitRenderable& set_attribute_single_vertex(unsigned short vertex, size_t attrib, const float* v);
-	UnitRenderable& get_attribute(unsigned short vertex, size_t attrib, float* v);
+	UnitRenderable& set_attribute_single_vertex(unsigned int vertex, size_t attrib, const float* v);
+	UnitRenderable& get_attribute(unsigned int vertex, size_t attrib, float* v);
 	void send_buffer() const;
-	const UnitRenderable& send_single_vertex(unsigned short vertex) const;
-	UnitRenderable& send_single_vertex(unsigned short vertex);
+	const UnitRenderable& send_single_vertex(unsigned int vertex) const;
+	UnitRenderable& send_single_vertex(unsigned int vertex);
 	void send_buffer_resized() const;
 	void draw() const;
-	void draw(unsigned short num_vertices_to_draw) const;
+	void draw(unsigned int num_vertices_to_draw) const;
 	void draw_as_lines() const;
 	size_t num_vertices() const { return shader ? varr.size() / shader->stride : 0; }
 	void set_num_vertices(size_t num_vertices);
@@ -41,24 +41,24 @@ struct UnitMultiRenderable
 	Shader* shader;
 	std::vector<GLint> first;
 	std::vector<GLsizei> count;
-	unsigned short num_units;
-	unsigned short unit_num_vertices;
+	unsigned int num_units;
+	unsigned int unit_num_vertices;
 
-	UnitMultiRenderable(Shader* shader, unsigned short num_units, unsigned short unit_num_vertices = 4);
+	UnitMultiRenderable(Shader* shader, unsigned int num_units, unsigned int unit_num_vertices = 4);
 	UnitMultiRenderable(const UnitMultiRenderable&) = delete;
 	UnitMultiRenderable(UnitMultiRenderable&&) noexcept = delete;
 	~UnitMultiRenderable();
 
 	void set_shader(Shader* shader);
-	void set_attribute(unsigned short unit, size_t attrib, const float* v);
-	void set_attribute_single_vertex(unsigned short unit, unsigned short vertex, size_t attrib, const float* v);
-	void get_attribute(unsigned short unit, unsigned short vertex, size_t attrib, float* v) const;
+	void set_attribute(unsigned int unit, size_t attrib, const float* v);
+	void set_attribute_single_vertex(unsigned int unit, unsigned int vertex, size_t attrib, const float* v);
+	void get_attribute(unsigned int unit, unsigned int vertex, size_t attrib, float* v) const;
 	void send_buffer() const;
-	void send_single_unit(unsigned short unit) const;
-	void send_single_vertex(unsigned short unit, unsigned short vertex) const;
+	void send_single_unit(unsigned int unit) const;
+	void send_single_vertex(unsigned int unit, unsigned int vertex) const;
 	void send_buffer_resized() const;
 	void draw() const;
-	void draw(unsigned short num_units_to_draw) const;
+	void draw(unsigned int num_units_to_draw) const;
 	void resize();
 };
 
