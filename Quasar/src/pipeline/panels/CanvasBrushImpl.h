@@ -133,7 +133,5 @@ namespace CBImpl
 		extern void brush_pen(Canvas& canvas, int x, int y);
 		extern void brush_eraser(Canvas& canvas, int x, int y);
 		extern void brush_select(Canvas& canvas, int x, int y);
-
-		extern void start_select(Canvas& canvas);
 	}
 }

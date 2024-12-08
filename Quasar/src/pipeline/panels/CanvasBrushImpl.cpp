@@ -147,12 +147,9 @@ static void standard_start(Canvas& canvas, DiscreteInterpolator& interp)
 	interp.sync_with_endpoints();
 }
 
-static void standard_start_select(Canvas& canvas, DiscreteInterpolator& interp)
+static void standard_start_select_check_replace(Canvas& canvas)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.show_selection_preview = true;
-	interp.start = interp.finish = binfo.starting_pos;
-	interp.sync_with_endpoints();
 	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY && !MainWindow->is_ctrl_pressed() && !binfo.smants->get_points().empty())
 	{
 		IntBounds bbox = binfo.clear_selection();
@@ -163,6 +160,14 @@ static void standard_start_select(Canvas& canvas, DiscreteInterpolator& interp)
 			binfo.smants->send_buffer(bbox);
 		}
 	}
+}
+
+static void standard_start_select(Canvas& canvas, DiscreteInterpolator& interp)
+{
+	canvas.binfo.show_selection_preview = true;
+	interp.start = interp.finish = canvas.binfo.starting_pos;
+	interp.sync_with_endpoints();
+	standard_start_select_check_replace(canvas);
 }
 
 static void standard_submit_pencil(Canvas& canvas)
@@ -382,17 +387,7 @@ void CBImpl::Paint::brush_select(Canvas& canvas, int x, int y)
 
 void CBImpl::Paint::start_select(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY && !MainWindow->is_ctrl_pressed() && !binfo.smants->get_points().empty())
-	{
-		IntBounds bbox = binfo.clear_selection();
-		if (bbox != IntBounds::NADIR)
-		{
-			update_bbox(binfo.brushing_bbox, bbox.x1, bbox.y1);
-			update_bbox(binfo.brushing_bbox, bbox.x2, bbox.y2);
-			binfo.smants->send_buffer(bbox);
-		}
-	}
+	standard_start_select_check_replace(canvas);
 }
 
 void CBImpl::Paint::submit_pencil(Canvas& canvas)
@@ -951,7 +946,7 @@ void CBImpl::EllipseFill::reset_eraser(BrushInfo& binfo)
 
 // <<<==================================<<< BUCKET FILL >>>==================================>>>
 
-static void bucket_fill_find_noncontiguous(Canvas& canvas, int x, int y, void(*color_pixel)(Canvas& canvas, int x, int y))
+static void bucket_fill_find_noncontiguous(Canvas& canvas, int x, int y, bool(*color_pixel)(Canvas& canvas, int x, int y))
 {
 	const PixelRGBA base_color = canvas.pixel_color_at(x, y);
 	IntBounds& bbox = canvas.binfo.brushing_bbox;
@@ -962,22 +957,22 @@ static void bucket_fill_find_noncontiguous(Canvas& canvas, int x, int y, void(*c
 		{
 			if (canvas.battr.tolerance.tol(base_color.to_rgba(), canvas.pixel_color_at(u, v).to_rgba()))
 			{
-				color_pixel(canvas, u, v);
-				update_bbox(bbox, u, v);
+				if (color_pixel(canvas, u, v))
+					update_bbox(bbox, u, v);
 			}
 		}
 	}
 }
 
-static void bucket_fill_find_contiguous(Canvas& canvas, int x, int y, void(*color_pixel)(Canvas& canvas, int x, int y), bool(*already_stored)(Canvas& canvas, int x, int y))
+static void bucket_fill_find_contiguous(Canvas& canvas, int x, int y, bool(*color_pixel)(Canvas& canvas, int x, int y), bool(*already_stored)(Canvas& canvas, int x, int y))
 {
 	static auto can_color = [](Canvas& canvas, int x, int y, RGBA base_color, bool(*already_stored)(Canvas& canvas, int x, int y)) {
 		return !already_stored(canvas, x, y) && canvas.battr.tolerance.tol(base_color, canvas.pixel_color_at(x, y).to_rgba());
 		};
 
-	static auto process = [](Canvas& canvas, int x, int y, int came_from, void(*color_pixel)(Canvas& canvas, int x, int y), IntBounds& bbox, std::stack<std::tuple<int, int, Cardinal>>& stack) {
-		color_pixel(canvas, x, y);
-		update_bbox(bbox, x, y);
+	static auto process = [](Canvas& canvas, int x, int y, int came_from, bool(*color_pixel)(Canvas& canvas, int x, int y), IntBounds& bbox, std::stack<std::tuple<int, int, Cardinal>>& stack) {
+		if (color_pixel(canvas, x, y))
+			update_bbox(bbox, x, y);
 		if (came_from != Cardinal::LEFT && x > 0)
 			stack.push({ x - 1, y, Cardinal::RIGHT });
 		if (came_from != Cardinal::RIGHT && x < canvas.image->buf.width - 1)
@@ -994,32 +989,24 @@ static void bucket_fill_find_contiguous(Canvas& canvas, int x, int y, void(*colo
 	process(canvas, x, y, -1, color_pixel, bbox, stack);
 	while (!stack.empty())
 	{
-		auto [u, v, came_from] = stack.top();
+		const auto& [u, v, came_from] = stack.top();
 		stack.pop();
 		if (can_color(canvas, u, v, base_color, already_stored))
 			process(canvas, u, v, came_from, color_pixel, bbox, stack);
 	}
 }
 
-static void bucket_fill_reset_bbox(Canvas& canvas)
-{
-	IntBounds& bbox = canvas.binfo.brushing_bbox;
-	bbox.x1 = INT_MAX;
-	bbox.x2 = INT_MIN;
-	bbox.y1 = INT_MAX;
-	bbox.y2 = INT_MIN;
-}
-
 void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
 {
 	canvas.binfo.storage_2c.clear();
-	bucket_fill_reset_bbox(canvas);
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	static auto color_pixel = [](Canvas& canvas, int x, int y) {
 		PixelRGBA old_color = canvas.pixel_color_at(x, y);
 		PixelRGBA new_color = canvas.applied_pencil_rgba();
 		new_color.blend_over(old_color);
 		canvas.binfo.storage_2c[{ x, y }] = { new_color, old_color };
 		buffer_set_pixel_color(canvas.image->buf, x, y, new_color);
+		return true;
 		};
 	static auto already_stored = [](Canvas& canvas, int x, int y) {
 		return canvas.binfo.storage_2c.find({ x, y }) != canvas.binfo.storage_2c.end();
@@ -1034,17 +1021,18 @@ void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
 		standard_push_pencil(canvas, canvas.binfo.brushing_bbox);
 	}
 	canvas.binfo.storage_2c.clear();
-	bucket_fill_reset_bbox(canvas);
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	canvas.cursor_enter();
 }
 
 void CBImpl::BucketFill::brush_pen(Canvas& canvas, int x, int y)
 {
 	canvas.binfo.storage_1c.clear();
-	bucket_fill_reset_bbox(canvas);
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	static auto color_pixel = [](Canvas& canvas, int x, int y) {
 		canvas.binfo.storage_1c[{ x, y }] = canvas.pixel_color_at(x, y);
 		buffer_set_pixel_color(canvas.image->buf, x, y, canvas.applied_pen_rgba());
+		return true;
 		};
 	static auto already_stored = [](Canvas& canvas, int x, int y) {
 		return canvas.binfo.storage_1c.find({ x, y }) != canvas.binfo.storage_1c.end();
@@ -1059,16 +1047,18 @@ void CBImpl::BucketFill::brush_pen(Canvas& canvas, int x, int y)
 		standard_push_pen(canvas, canvas.binfo.brushing_bbox);
 	}
 	canvas.binfo.storage_1c.clear();
-	bucket_fill_reset_bbox(canvas);
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	canvas.cursor_enter();
 }
 
 void CBImpl::BucketFill::brush_eraser(Canvas& canvas, int x, int y)
 {
 	canvas.binfo.storage_1c.clear();
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	static auto color_pixel = [](Canvas& canvas, int x, int y) {
 		canvas.binfo.storage_1c[{ x, y }] = canvas.pixel_color_at(x, y);
 		buffer_set_pixel_alpha(canvas.image->buf, x, y, 0);
+		return true;
 		};
 	static auto already_stored = [](Canvas& canvas, int x, int y) {
 		return canvas.binfo.storage_1c.find({ x, y }) != canvas.binfo.storage_1c.end();
@@ -1083,16 +1073,32 @@ void CBImpl::BucketFill::brush_eraser(Canvas& canvas, int x, int y)
 		standard_push_eraser(canvas, canvas.binfo.brushing_bbox);
 	}
 	canvas.binfo.storage_1c.clear();
-	bucket_fill_reset_bbox(canvas);
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	canvas.cursor_enter();
 }
 
 void CBImpl::BucketFill::brush_select(Canvas& canvas, int x, int y)
 {
-	// TODO
-}
-
-void CBImpl::BucketFill::start_select(Canvas& canvas)
-{
-	// TODO
+	standard_start_select_check_replace(canvas);
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
+	static auto select_pixel = [](Canvas& canvas, int x, int y) {
+		if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY)
+			return canvas.binfo.add_to_selection({ x, y });
+		else if (canvas.cursor_state == Canvas::CursorState::DOWN_ALTERNATE)
+			return canvas.binfo.remove_from_selection({ x, y });
+		};
+	static auto alerady_stored = [](Canvas& canvas, int x, int y) {
+		if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY)
+			return (bool)canvas.binfo.smants->get_points().count({ x, y });
+		else if (canvas.cursor_state == Canvas::CursorState::DOWN_ALTERNATE)
+			return !canvas.binfo.smants->get_points().count({ x, y });
+		};
+	if (MainWindow->is_shift_pressed())
+		bucket_fill_find_noncontiguous(canvas, x, y, select_pixel);
+	else
+		bucket_fill_find_contiguous(canvas, x, y, select_pixel, alerady_stored);
+	canvas.binfo.smants->send_buffer(canvas.binfo.brushing_bbox);
+	canvas.binfo.push_selection_to_history();
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
+	canvas.cursor_enter();
 }
