@@ -82,6 +82,13 @@ void UnitRenderable::send_buffer() const
 	unbind_vao_buffers();
 }
 
+void UnitRenderable::send_subbuffer(unsigned int offset, unsigned int num_vertices) const
+{
+	bind_vao_buffers(vao, vb);
+	QUASAR_GL(glBufferSubData(GL_ARRAY_BUFFER, offset * shader->stride * sizeof(GLfloat), num_vertices * shader->stride * sizeof(GLfloat), varr.data() + offset * shader->stride));
+	unbind_vao_buffers();
+}
+
 const UnitRenderable& UnitRenderable::send_single_vertex(unsigned int vertex) const
 {
 	bind_vao_buffers(vao, vb);

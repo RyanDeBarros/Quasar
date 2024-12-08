@@ -4,18 +4,7 @@
 
 #include "Easel.h"
 #include "user/Machine.h"
-
-static void update_bbox(IntBounds& bbox, int x, int y)
-{
-	if (x < bbox.x1)
-		bbox.x1 = x;
-	if (x > bbox.x2)
-		bbox.x2 = x;
-	if (y < bbox.y1)
-		bbox.y1 = y;
-	if (y > bbox.y2)
-		bbox.y2 = y;
-}
+#include "../render/SelectionMants.h"
 
 static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
 {
@@ -135,14 +124,14 @@ static void standard_submit_pencil(Canvas& canvas)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_2c.empty())
-		Machine.history.execute(std::make_shared<OneColorPencilAction>(canvas.image, binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_2c)));
+		Machine.history.execute(std::make_shared<TwoColorAction>(canvas.image, binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_2c)));
 }
 
 static void standard_push_pencil(Canvas& canvas, IntBounds bbox)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_2c.empty())
-		Machine.history.push(std::make_shared<OneColorPencilAction>(canvas.image, IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_2c)));
+		Machine.history.push(std::make_shared<TwoColorAction>(canvas.image, IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_2c)));
 }
 
 static void standard_submit_filled_pencil(Canvas& canvas, DiscreteInterpolator& interp)
@@ -171,7 +160,7 @@ static void standard_submit_pen(Canvas& canvas)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
+		Machine.history.execute(std::make_shared<OneColorAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
 			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
 }
 
@@ -179,7 +168,7 @@ static void standard_push_pen(Canvas& canvas, IntBounds bbox)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.push(std::make_shared<OneColorPenAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
+		Machine.history.push(std::make_shared<OneColorAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
 			IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_1c)));
 }
 
@@ -206,7 +195,7 @@ static void standard_submit_eraser(Canvas& canvas)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.execute(std::make_shared<OneColorPenAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 },
+		Machine.history.execute(std::make_shared<OneColorAction>(canvas.image, PixelRGBA{},
 			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
 }
 
@@ -214,7 +203,7 @@ static void standard_push_eraser(Canvas& canvas, IntBounds bbox)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.push(std::make_shared<OneColorPenAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 },
+		Machine.history.push(std::make_shared<OneColorAction>(canvas.image, PixelRGBA{},
 			IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_1c)));
 }
 
@@ -257,86 +246,99 @@ void CBImpl::Camera::brush(Canvas& canvas, int x, int y)
 }
 
 // <<<==================================<<< PAINT >>>==================================>>>
-// LATER Paint should use standard submission techniques specific to pencil, pen, and eraser, in the exact same way as Line, RectFill, RectOutline, etc.
-
-static Buffer paint_brush_prefix(Canvas& canvas, int x, int y)
-{
-	BrushInfo& binfo = canvas.binfo;
-	Buffer image_shifted_buf = canvas.image->buf;
-	image_shifted_buf.pixels += image_shifted_buf.byte_offset(x, y);
-	update_bbox(binfo.brushing_bbox, x, y);
-	return image_shifted_buf;
-}
 
 static void paint_brush_suffix(Canvas& canvas, int x, int y, PixelRGBA initial_c, PixelRGBA final_c)
 {
 	canvas.image->update_subtexture(x, y, 1, 1);
 	auto iter = canvas.binfo.storage_2c.find({ x, y });
 	if (iter == canvas.binfo.storage_2c.end())
-		canvas.binfo.storage_2c[{ x, y }] = { initial_c, final_c };
+		canvas.binfo.storage_2c[{ x, y }] = { final_c, initial_c };
 	else
-		iter->second.second = final_c;
+		iter->second.first = final_c;
 }
 
 void CBImpl::Paint::brush_pencil(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	Buffer image_shifted_buf = paint_brush_prefix(canvas, x, y);
-	PixelRGBA initial_c{ 0, 0, 0, 0 };
-	PixelRGBA final_c{ 0, 0, 0, 0 };
-	PixelRGBA color = canvas.applied_pencil_rgba();
-	float applied_alpha = canvas.applied_color().alpha;
-	for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
-	{
-		initial_c.at(i) = image_shifted_buf.pixels[i];
-		if (i < 3)
-			image_shifted_buf.pixels[i] = std::clamp(roundi(color[i] * applied_alpha + image_shifted_buf.pixels[i] * (1 - applied_alpha)), 0, 255);
-		else
-			image_shifted_buf.pixels[i] = std::clamp(roundi(applied_alpha * 255 + image_shifted_buf.pixels[i] * (1 - applied_alpha)), 0, 255);
-		final_c.at(i) = image_shifted_buf.pixels[i];
-	}
+	update_bbox(binfo.brushing_bbox, x, y);
+	PixelRGBA initial_c = canvas.pixel_color_at(x, y);
+	PixelRGBA final_c = canvas.applied_pencil_rgba();
+	final_c.blend_over(initial_c);
+	buffer_set_pixel_color(canvas.image->buf, x, y, final_c);
 	paint_brush_suffix(canvas, x, y, initial_c, final_c);
 }
 
 void CBImpl::Paint::brush_pen(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	Buffer image_shifted_buf = paint_brush_prefix(canvas, x, y);
-	PixelRGBA initial_c{ 0, 0, 0, 0 };
-	PixelRGBA color = canvas.applied_pen_rgba();
-	for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
-	{
-		initial_c.at(i) = image_shifted_buf.pixels[i];
-		image_shifted_buf.pixels[i] = color[i];
-	}
-	paint_brush_suffix(canvas, x, y, initial_c, color);
+	update_bbox(binfo.brushing_bbox, x, y);
+	PixelRGBA initial_c = canvas.pixel_color_at(x, y);
+	PixelRGBA final_c = canvas.applied_pen_rgba();
+	buffer_set_pixel_color(canvas.image->buf, x, y, final_c);
+	paint_brush_suffix(canvas, x, y, initial_c, final_c);
 }
 
 void CBImpl::Paint::brush_eraser(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	Buffer image_shifted_buf = paint_brush_prefix(canvas, x, y);
-	PixelRGBA initial_c{ 0, 0, 0, 0 };
-	PixelRGBA final_c{ 0, 0, 0, 0 };
-	// LATER define more utilities for these sorts of things, like swap/get/set.
-	for (CHPP i = 0; i < image_shifted_buf.chpp; ++i)
-	{
-		initial_c.at(i) = image_shifted_buf.pixels[i];
-		image_shifted_buf.pixels[i] = 0;
-	}
-	paint_brush_suffix(canvas, x, y, initial_c, final_c);
+	update_bbox(binfo.brushing_bbox, x, y);
+	PixelRGBA initial_c = canvas.pixel_color_at(x, y);
+	buffer_set_pixel_alpha(canvas.image->buf, x, y, 0);
+	canvas.image->update_subtexture(x, y, 1, 1);
+	if (canvas.binfo.storage_1c.find({ x, y }) == canvas.binfo.storage_1c.end())
+		canvas.binfo.storage_1c[{ x, y }] = initial_c;
 }
 
 void CBImpl::Paint::brush_select(Canvas& canvas, int x, int y)
 {
-	// LATER
+	BrushInfo& binfo = canvas.binfo;
+	update_bbox(binfo.brushing_bbox, x, y);
+	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY)
+	{
+		canvas.add_to_selection({ x, y });
+		canvas.smants->send_buffer(binfo.brushing_bbox);
+	}
+	else if (canvas.cursor_state == Canvas::CursorState::DOWN_ALTERNATE)
+	{
+		canvas.remove_from_selection({ x, y });
+		canvas.smants->send_buffer(binfo.brushing_bbox);
+	}
 }
 
-// LATER use storage_1c for pen and eraser, and separate submit function into one for each brush tip. use standard submit
-void CBImpl::Paint::brush_submit(Canvas& canvas)
+void CBImpl::Paint::start_select(Canvas& canvas)
+{
+	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY && !MainWindow->is_ctrl_pressed() && !canvas.smants->get_points().empty())
+	{
+		IntBounds bbox = canvas.clear_selection();
+		update_bbox(canvas.binfo.brushing_bbox, bbox.x1, bbox.y1);
+		update_bbox(canvas.binfo.brushing_bbox, bbox.x2, bbox.y2);
+		canvas.smants->send_buffer(bbox);
+	}
+}
+
+void CBImpl::Paint::submit_pencil(Canvas& canvas)
 {
 	if (canvas.image && !canvas.binfo.storage_2c.empty())
-		Machine.history.push(std::make_shared<PaintToolAction>(canvas.image, canvas.binfo.brushing_bbox, std::move(canvas.binfo.storage_2c)));
+		Machine.history.push(std::make_shared<TwoColorAction>(canvas.image, canvas.binfo.brushing_bbox, std::move(canvas.binfo.storage_2c)));
+}
+
+void CBImpl::Paint::submit_pen(Canvas& canvas)
+{
+	if (canvas.image && !canvas.binfo.storage_2c.empty())
+		Machine.history.push(std::make_shared<TwoColorAction>(canvas.image, canvas.binfo.brushing_bbox, std::move(canvas.binfo.storage_2c)));
+}
+
+void CBImpl::Paint::submit_eraser(Canvas& canvas)
+{
+	if (canvas.image && !canvas.binfo.storage_1c.empty())
+		Machine.history.push(std::make_shared<OneColorAction>(canvas.image, PixelRGBA{}, canvas.binfo.brushing_bbox, std::move(canvas.binfo.storage_1c)));
+}
+
+void CBImpl::Paint::submit_select(Canvas& canvas)
+{
+	if (canvas.image && (!canvas.binfo.storage_select_add.empty() || !canvas.binfo.storage_select_remove.empty()))
+		Machine.history.push(std::make_shared<SelectionAction>(canvas.smants, canvas.binfo.brushing_bbox,
+			std::move(canvas.binfo.storage_select_remove), std::move(canvas.binfo.storage_select_add)));
 }
 
 // <<<==================================<<< LINE >>>==================================>>>

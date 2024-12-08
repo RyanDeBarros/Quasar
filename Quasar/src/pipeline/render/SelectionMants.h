@@ -17,10 +17,14 @@ public:
 
 	void set_size(int width, int height);
 
-	void add(IPosition pos);
-	void remove(IPosition pos);
+	bool add(IPosition pos);
+	bool remove(IPosition pos);
+	IntBounds clear();
+	const std::unordered_set<IPosition>& get_points() const { return points; }
 
 	virtual void draw() override;
+
+	void send_buffer(IntBounds bbox);
 
 	void send_vp(const glm::mat3& vp) const;
 	void send_time(float time) const;

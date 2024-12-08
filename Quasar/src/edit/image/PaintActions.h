@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <unordered_set>
 
 #include "variety/History.h"
 #include "Image.h"
@@ -70,33 +71,36 @@ private:
 
 // LATER given that paint actions use weak ptrs, make sure that a list of shared_ptrs of past canvas images is kept after changing the canvas image, to keep these actions alive.
 // Or else, clear history upon loading new canvas image.
-struct PaintToolAction : public ActionBase
-{
-	std::weak_ptr<Image> image;
-	IntBounds bbox;
-	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> painted_colors;
-	PaintToolAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors);
-	virtual void forward() override;
-	virtual void backward() override;
-};
-
-struct OneColorPenAction : public ActionBase
+struct OneColorAction : public ActionBase
 {
 	std::weak_ptr<Image> image;
 	PixelRGBA color;
 	IntBounds bbox;
 	std::unordered_map<IPosition, PixelRGBA> painted_colors;
-	OneColorPenAction(const std::shared_ptr<Image>& image, PixelRGBA color, IPosition start, IPosition finish, std::unordered_map<IPosition, PixelRGBA>&& painted_colors);
+	OneColorAction(const std::shared_ptr<Image>& image, PixelRGBA color, IPosition start, IPosition finish, std::unordered_map<IPosition, PixelRGBA>&& painted_colors);
+	OneColorAction(const std::shared_ptr<Image>& image, PixelRGBA color, IntBounds bbox, std::unordered_map<IPosition, PixelRGBA>&& painted_colors);
 	virtual void forward() override;
 	virtual void backward() override;
 };
 
-struct OneColorPencilAction : public ActionBase
+struct TwoColorAction : public ActionBase
 {
 	std::weak_ptr<Image> image;
 	IntBounds bbox;
 	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> painted_colors;
-	OneColorPencilAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors);
+	TwoColorAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors);
+	TwoColorAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors);
+	virtual void forward() override;
+	virtual void backward() override;
+};
+
+struct SelectionAction : public ActionBase
+{
+	class SelectionMants* smants;
+	IntBounds bbox;
+	std::unordered_set<IPosition> remove_points;
+	std::unordered_set<IPosition> add_points;
+	SelectionAction(class SelectionMants* smants, IntBounds bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points);
 	virtual void forward() override;
 	virtual void backward() override;
 };

@@ -64,13 +64,16 @@ struct BrushInfo
 	IPosition starting_pos = { -1, -1 };
 	IPosition last_brush_pos = { -1, -1 };
 	IPosition image_pos = { -1, -1 };
-	IntBounds brushing_bbox = { -1, -1, -1, -1 };
+	IntBounds brushing_bbox = IntBounds::NADIR;
 	bool show_preview = false;
 	std::shared_ptr<Image> preview_image;
 	std::shared_ptr<Image> eraser_preview_image;
 	static const int eraser_preview_img_sx = 2, eraser_preview_img_sy = 2;
 	std::unordered_map<IPosition, PixelRGBA> storage_1c;
 	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
+
+	std::unordered_set<IPosition> storage_select_remove;
+	std::unordered_set<IPosition> storage_select_add;
 
 	struct
 	{
@@ -186,6 +189,10 @@ public:
 	void brush_submit();
 	void brush_cancel();
 	void brush_move_to(IPosition pos);
+
+	void add_to_selection(IPosition pos);
+	void remove_from_selection(IPosition pos);
+	IntBounds clear_selection();
 
 	enum : size_t
 	{

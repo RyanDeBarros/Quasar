@@ -24,6 +24,7 @@ struct UnitRenderable
 	UnitRenderable& set_attribute_single_vertex(unsigned int vertex, size_t attrib, const float* v);
 	UnitRenderable& get_attribute(unsigned int vertex, size_t attrib, float* v);
 	void send_buffer() const;
+	void send_subbuffer(unsigned int offset, unsigned int num_vertices) const;
 	const UnitRenderable& send_single_vertex(unsigned int vertex) const;
 	UnitRenderable& send_single_vertex(unsigned int vertex);
 	void send_buffer_resized() const;

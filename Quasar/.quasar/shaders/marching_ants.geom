@@ -3,7 +3,7 @@
 layout(lines) in;
 layout(triangle_strip, max_vertices = 4) out;
 
-uniform float uOutlineWidth = 15.0;
+uniform float uOutlineWidth = 8.0;
 uniform vec2 uScreenSize;
 
 in float tLineOrientation[];

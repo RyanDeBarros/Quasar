@@ -4,6 +4,8 @@
 
 #include "Uniforms.h"
 
+// TODO re-add parallel offset in geom shader, but provide additional data about which ends should use that offset.
+
 SelectionMants::SelectionMants()
 	: W_UnitRenderable(nullptr),
 	shader(FileSystem::shader_path("marching_ants.vert"), FileSystem::shader_path("marching_ants.geom"), FileSystem::shader_path("marching_ants.frag"))
@@ -43,10 +45,10 @@ void SelectionMants::set_size(int width, int height)
 	ur->send_buffer_resized();
 }
 
-void SelectionMants::add(IPosition pos)
+bool SelectionMants::add(IPosition pos)
 {
 	if (points.count(pos))
-		return;
+		return false;
 	points.insert(pos);
 	static const float on_pos = 1.0f;
 	static const float on_neg = -1.0f;
@@ -67,13 +69,14 @@ void SelectionMants::add(IPosition pos)
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &on_pos);
+	return true;
 }
 
-void SelectionMants::remove(IPosition pos)
+bool SelectionMants::remove(IPosition pos)
 {
 	auto iter = points.find(pos);
 	if (iter == points.end())
-		return;
+		return false;
 	points.erase(iter);
 	static const float on_pos = 1.0f;
 	static const float on_neg = -1.0f;
@@ -94,11 +97,35 @@ void SelectionMants::remove(IPosition pos)
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &on_neg);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &off);
+	return true;
+}
+
+IntBounds SelectionMants::clear()
+{
+	IntBounds bbox = IntBounds::NADIR;
+	IPosition pos{};
+	while (!points.empty())
+	{
+		pos = *points.begin();
+		remove(pos);
+		update_bbox(bbox, pos.x, pos.y);
+	}
+	return bbox;
 }
 
 void SelectionMants::draw()
 {
 	ur->draw_as_lines();
+}
+
+void SelectionMants::send_buffer(IntBounds bbox)
+{
+	int subrows = bbox.y2 - bbox.y1 + 2;
+	int subcols = bbox.x2 - bbox.x1 + 2;
+	for (int dy = 0; dy < subrows; ++dy)
+		ur->send_subbuffer(vertex_horizontal(bbox.x1, bbox.y1 + dy), subcols);
+	for (int dx = 0; dx < subcols; ++dx)
+		ur->send_subbuffer(vertex_vertical(bbox.x1 + dx, bbox.y1), subrows);
 }
 
 void SelectionMants::send_vp(const glm::mat3& vp) const

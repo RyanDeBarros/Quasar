@@ -275,7 +275,23 @@ struct IntBounds
 	int width_no_abs() const { return x2 - x1 + 1; }
 	int height_no_abs() const { return y2 - y1 + 1; }
 	bool valid() const { return x2 >= x1 && y2 >= y1; }
+
+	static const IntBounds NADIR;
 };
+
+inline const IntBounds IntBounds::NADIR = { INT_MAX, INT_MIN, INT_MAX, INT_MIN };
+
+inline void update_bbox(IntBounds& bbox, int x, int y)
+{
+	if (x < bbox.x1)
+		bbox.x1 = x;
+	if (x > bbox.x2)
+		bbox.x2 = x;
+	if (y < bbox.y1)
+		bbox.y1 = y;
+	if (y > bbox.y2)
+		bbox.y2 = y;
+}
 
 inline IntBounds abs_bounds(IPosition p1, IPosition p2)
 {

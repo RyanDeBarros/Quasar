@@ -265,6 +265,8 @@ void Canvas::send_vp(const glm::mat3& vp)
 {
 	// TODO rename GLSL variables
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
+	Uniforms::send_matrix3(minor_gridlines.shader, "u_VP", vp);
+	Uniforms::send_matrix3(major_gridlines.shader, "u_VP", vp);
 	smants->send_screen_size(MainWindow->size());
 	sync_cursor_with_widget();
 }
@@ -379,7 +381,8 @@ void Canvas::sync_transform()
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
 	fs_wget(*this, BRUSH_PREVIEW).update_transform().ur->send_buffer();
 	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
-	smants->send_vp(MEasel->vp * self.matrix()); // TODO self.global_matrix() and then in SelectionMants use self.global_matrix()
+	smants->send_vp(MEasel->vp * self.matrix());
+	sync_cursor_with_widget();
 }
 
 void Canvas::sync_gfx_with_image()
@@ -766,7 +769,9 @@ void Canvas::brush_start(int x, int y)
 	binfo.reset();
 	binfo.last_brush_pos = { x, y };
 	binfo.starting_pos = { x, y };
-	if (binfo.tool & BrushTool::LINE)
+	if (binfo.tool & BrushTool::PAINT && binfo.tip & BrushTip::SELECT)
+		CBImpl::Paint::start_select(*this);
+	else if (binfo.tool & BrushTool::LINE)
 		CBImpl::Line::start(*this);
 	else if (binfo.tool & BrushTool::RECT_OUTLINE)
 		CBImpl::RectOutline::start(*this);
@@ -780,59 +785,65 @@ void Canvas::brush_start(int x, int y)
 
 void Canvas::brush_submit()
 {
-	if (binfo.brushing)
+	if (!binfo.brushing)
+		return;
+	switch (binfo.tool)
 	{
-		switch (binfo.tool)
-		{
-		case BrushTool::PAINT:
-			CBImpl::Paint::brush_submit(*this);
-			break;
-		case BrushTool::LINE:
-			if (binfo.tip & BrushTip::PENCIL)
-				CBImpl::Line::submit_pencil(*this);
-			else if (binfo.tip & BrushTip::PEN)
-				CBImpl::Line::submit_pen(*this);
-			else if (binfo.tip & BrushTip::ERASER)
-				CBImpl::Line::submit_eraser(*this);
-			// LATER select
-			break;
-		case BrushTool::RECT_OUTLINE:
-			if (binfo.tip & BrushTip::PENCIL)
-				CBImpl::RectOutline::submit_pencil(*this);
-			else if (binfo.tip & BrushTip::PEN)
-				CBImpl::RectOutline::submit_pen(*this);
-			else if (binfo.tip & BrushTip::ERASER)
-				CBImpl::RectOutline::submit_eraser(*this);
-			// LATER select
-			break;
-		case BrushTool::RECT_FILL:
-			if (binfo.tip & BrushTip::PENCIL)
-				CBImpl::RectFill::submit_pencil(*this);
-			else if (binfo.tip & BrushTip::PEN)
-				CBImpl::RectFill::submit_pen(*this);
-			else if (binfo.tip & BrushTip::ERASER)
-				CBImpl::RectFill::submit_eraser(*this);
-			// LATER select
-			break;
-		case BrushTool::ELLIPSE_OUTLINE:
-			if (binfo.tip & BrushTip::PENCIL)
-				CBImpl::EllipseOutline::submit_pencil(*this);
-			else if (binfo.tip & BrushTip::PEN)
-				CBImpl::EllipseOutline::submit_pen(*this);
-			else if (binfo.tip & BrushTip::ERASER)
-				CBImpl::EllipseOutline::submit_eraser(*this);
-			// LATER select
-			break;
-		case BrushTool::ELLIPSE_FILL:
-			if (binfo.tip & BrushTip::PENCIL)
-				CBImpl::EllipseFill::submit_pencil(*this);
-			else if (binfo.tip & BrushTip::PEN)
-				CBImpl::EllipseFill::submit_pen(*this);
-			else if (binfo.tip & BrushTip::ERASER)
-				CBImpl::EllipseFill::submit_eraser(*this);
-			// LATER select
-			break;
-		}
+	case BrushTool::PAINT:
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::Paint::submit_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::Paint::submit_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::Paint::submit_eraser(*this);
+		else if (binfo.tip & BrushTip::SELECT)
+			CBImpl::Paint::submit_select(*this);
+		break;
+	case BrushTool::LINE:
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::Line::submit_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::Line::submit_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::Line::submit_eraser(*this);
+		// LATER select
+		break;
+	case BrushTool::RECT_OUTLINE:
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::RectOutline::submit_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::RectOutline::submit_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::RectOutline::submit_eraser(*this);
+		// LATER select
+		break;
+	case BrushTool::RECT_FILL:
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::RectFill::submit_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::RectFill::submit_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::RectFill::submit_eraser(*this);
+		// LATER select
+		break;
+	case BrushTool::ELLIPSE_OUTLINE:
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::EllipseOutline::submit_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::EllipseOutline::submit_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::EllipseOutline::submit_eraser(*this);
+		// LATER select
+		break;
+	case BrushTool::ELLIPSE_FILL:
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::EllipseFill::submit_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::EllipseFill::submit_pen(*this);
+		else if (binfo.tip & BrushTip::ERASER)
+			CBImpl::EllipseFill::submit_eraser(*this);
+		// LATER select
+		break;
 	}
 	binfo.brushing = false;
 	binfo.reset();
@@ -848,6 +859,41 @@ void Canvas::brush_move_to(IPosition pos)
 {
 	if (!(binfo.tool & BrushTool::CAMERA))
 		CBImpl::brush_move_to(*this, pos.x, pos.y);
+}
+
+void Canvas::add_to_selection(IPosition pos)
+{
+	if (smants->add(pos))
+	{
+		if (binfo.storage_select_remove.count(pos))
+			binfo.storage_select_remove.erase(pos);
+		else
+			binfo.storage_select_add.insert(pos);
+	}
+}
+
+void Canvas::remove_from_selection(IPosition pos)
+{
+	if (smants->remove(pos))
+	{
+		if (binfo.storage_select_add.count(pos))
+			binfo.storage_select_add.erase(pos);
+		else
+			binfo.storage_select_remove.insert(pos);
+	}
+}
+
+IntBounds Canvas::clear_selection()
+{
+	IntBounds bbox = IntBounds::NADIR;
+	IPosition pos{};
+	while (!smants->get_points().empty())
+	{
+		pos = *smants->get_points().begin();
+		remove_from_selection(pos);
+		update_bbox(bbox, pos.x, pos.y);
+	}
+	return bbox;
 }
 
 void BrushInfo::reset()
@@ -905,15 +951,14 @@ void BrushInfo::reset()
 			// LATER select
 		}
 	}
-	brushing_bbox.x1 = INT_MAX;
-	brushing_bbox.x2 = INT_MIN;
-	brushing_bbox.y1 = INT_MAX;
-	brushing_bbox.y2 = INT_MIN;
+	brushing_bbox = IntBounds::NADIR;
 	last_brush_pos = { -1, -1 };
 	starting_pos = { -1, -1 };
 	show_preview = false;
 	storage_1c.clear();
 	storage_2c.clear();
+	storage_select_add.clear();
+	storage_select_remove.clear();
 }
 
 Easel::Easel()
@@ -1021,8 +1066,6 @@ void Easel::_send_view()
 	vp = vp_matrix();
 	canvas().send_vp(vp);
 	Uniforms::send_matrix3(color_square_shader, "u_VP", vp);
-	Uniforms::send_matrix3(canvas().minor_gridlines.shader, "u_VP", vp);
-	Uniforms::send_matrix3(canvas().major_gridlines.shader, "u_VP", vp); // TODO should go in Canvas::send_vp()
 	unbind_shader();
 	sync_widget();
 }

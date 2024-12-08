@@ -298,24 +298,6 @@ void MachineImpl::init_renderer()
 
 	import_file(FileSystem::workspace_path("ex/einstein.png"));
 	easel()->image_edit_perf_mode = true;
-
-
-	MEasel->canvas().smants->add({ 0, 0 });
-	MEasel->canvas().smants->add({ 1, 0 });
-	MEasel->canvas().smants->add({ 1, 1 });
-	MEasel->canvas().smants->add({ 2, 1 });
-	MEasel->canvas().smants->add({ 3, 1 });
-	MEasel->canvas().smants->add({ 4, 1 });
-	MEasel->canvas().smants->add({ 4, 2 });
-	MEasel->canvas().smants->add({ 3, 2 });
-	MEasel->canvas().smants->add({ 5, 3 });
-	MEasel->canvas().smants->add({ 5, 4 });
-	MEasel->canvas().smants->add({ 2, 2 });
-	MEasel->canvas().smants->add({ 2, 3 });
-	MEasel->canvas().smants->add({ 3, 3 });
-	MEasel->canvas().smants->add({ 4, 3 });
-	MEasel->canvas().smants->remove({ 3, 2 });
-	MEasel->canvas().smants->ur->send_buffer();
 }
 
 void MachineImpl::destroy()

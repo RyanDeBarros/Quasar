@@ -289,7 +289,7 @@ inline const RGBA RGBA::BLACK = RGBA(0.0f, 0.0f, 0.0f, 1.0f);
 
 struct PixelRGBA
 {
-	unsigned char r, g, b, a;
+	unsigned char r = 0, g = 0, b = 0, a = 0;
 	constexpr RGBA to_rgba() const { return RGBA(r, g, b, a); }
 	constexpr unsigned char operator[](int i) const { return i == 0 ? r : i == 1 ? g : i == 2 ? b : a; }
 	const unsigned char& at(int i) const { return i == 0 ? r : i == 1 ? g : i == 2 ? b : a; }
