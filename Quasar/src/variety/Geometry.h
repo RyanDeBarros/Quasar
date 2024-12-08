@@ -269,6 +269,8 @@ struct IntBounds
 		return ClippingRect(x1, y1, std::max(x2 - x1, 0), std::max(y2 - y1, 0));
 	}
 
+	bool operator==(const IntBounds&) const = default;
+
 	IPosition delta() const { return { x2 - x1, y2 - y1 }; }
 	int width() const { return std::abs(x2 - x1) + 1; }
 	int height() const { return std::abs(y2 - y1) + 1; }

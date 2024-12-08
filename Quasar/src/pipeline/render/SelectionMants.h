@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 #include "../widgets/Widget.h"
+#include "edit/color/Color.h"
 
 class SelectionMants : public W_UnitRenderable
 {
@@ -11,6 +12,9 @@ class SelectionMants : public W_UnitRenderable
 	int rows = 0, cols = 0;
 
 public:
+	RGBA color1 = RGBA::WHITE, color2 = RGBA::BLACK;
+	float speed = 10.0f;
+
 	SelectionMants();
 	SelectionMants(const SelectionMants&) = delete;
 	SelectionMants(SelectionMants&&) noexcept = delete;
@@ -23,6 +27,7 @@ public:
 	const std::unordered_set<IPosition>& get_points() const { return points; }
 
 	virtual void draw() override;
+	void send_uniforms() const;
 
 	void send_buffer(IntBounds bbox);
 

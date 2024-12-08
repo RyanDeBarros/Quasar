@@ -114,11 +114,11 @@ void UnitRenderable::draw() const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glDrawArrays(GL_TRIANGLE_STRIP, 0, num_vertices()));
+	QUASAR_GL(glDrawArrays(GL_TRIANGLE_STRIP, 0, (GLsizei)num_vertices()));
 	unbind_vao_buffers();
 }
 
-void UnitRenderable::draw(unsigned int num_vertices_to_draw) const
+void UnitRenderable::draw(GLuint num_vertices_to_draw) const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb);
@@ -130,7 +130,7 @@ void UnitRenderable::draw_as_lines() const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb);
-	QUASAR_GL(glDrawArrays(GL_LINE_STRIP, 0, num_vertices()));
+	QUASAR_GL(glDrawArrays(GL_LINE_STRIP, 0, (GLsizei)num_vertices()));
 	unbind_vao_buffers();
 }
 
@@ -231,7 +231,7 @@ void UnitMultiRenderable::draw() const
 	unbind_vao_buffers();
 }
 
-void UnitMultiRenderable::draw(unsigned int num_units_to_draw) const
+void UnitMultiRenderable::draw(GLuint num_units_to_draw) const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb);
@@ -447,7 +447,7 @@ void IndexedRenderable::draw() const
 	unbind_vao_buffers();
 }
 
-void IndexedRenderable::draw(GLuint num_indexes_to_draw, size_t offset) const
+void IndexedRenderable::draw(GLuint num_indexes_to_draw, GLuint offset) const
 {
 	bind_shader(*shader);
 	bind_vao_buffers(vao, vb, ib);

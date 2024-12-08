@@ -178,7 +178,10 @@ void Canvas::initialize_widget(Shader* cursor_shader)
 	assign_widget(this, BRUSH_PREVIEW, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, BRUSH_PREVIEW).set_texture_slot(BRUSH_PREVIEW_TSLOT).image = binfo.preview_image;
 	assign_widget(this, SELECTION, std::make_shared<SelectionMants>());
-	smants = get<SelectionMants>(SELECTION);
+	binfo.smants = get<SelectionMants>(SELECTION);
+	assign_widget(this, SELECTION_PREVIEW, std::make_shared<SelectionMants>());
+	binfo.smants_preview = get<SelectionMants>(SELECTION_PREVIEW);
+	binfo.smants_preview->speed *= -1;
 	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 }
@@ -230,19 +233,25 @@ void Canvas::draw()
 {
 	fs_wget(*this, CHECKERBOARD).draw(CHECKERBOARD_TSLOT);
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
-	if (binfo.show_preview)
+	if (binfo.show_brush_preview)
 		fs_wget(*this, BRUSH_PREVIEW).draw(BRUSH_PREVIEW_TSLOT);
+	if (binfo.show_selection_preview)
+	{
+		binfo.smants_preview->send_uniforms();
+		binfo.smants_preview->draw();
+		binfo.smants->send_uniforms();
+	}
 	minor_gridlines.draw();
 	major_gridlines.draw();
 	if (cursor_in_canvas)
 		draw_cursor();
-	smants->draw();
+	binfo.smants->draw();
 }
 
 void Canvas::draw_cursor()
 {
 	if (binfo.tool & BrushTool::CAMERA
-		|| (binfo.show_preview && binfo.tool & (BrushTool::LINE | BrushTool::FILL | BrushTool::RECT_FILL | BrushTool::RECT_OUTLINE | BrushTool::ELLIPSE_OUTLINE | BrushTool::ELLIPSE_FILL)))
+		|| (binfo.show_brush_preview && binfo.tool & (BrushTool::LINE | BrushTool::FILL | BrushTool::RECT_FILL | BrushTool::RECT_OUTLINE | BrushTool::ELLIPSE_OUTLINE | BrushTool::ELLIPSE_FILL)))
 		return;
 	switch (binfo.tip)
 	{
@@ -267,7 +276,8 @@ void Canvas::send_vp(const glm::mat3& vp)
 	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
 	Uniforms::send_matrix3(minor_gridlines.shader, "u_VP", vp);
 	Uniforms::send_matrix3(major_gridlines.shader, "u_VP", vp);
-	smants->send_screen_size(MainWindow->size());
+	binfo.smants->send_screen_size(MainWindow->size());
+	binfo.smants_preview->send_screen_size(MainWindow->size());
 	sync_cursor_with_widget();
 }
 
@@ -363,7 +373,10 @@ void Canvas::sync_brush_preview_with_image()
 void Canvas::sync_smants_with_image()
 {
 	if (image)
-		smants->set_size(image->buf.width, image->buf.height);
+	{
+		binfo.smants->set_size(image->buf.width, image->buf.height);
+		binfo.smants_preview->set_size(image->buf.width, image->buf.height);
+	}
 }
 
 void Canvas::sync_gridlines_with_image()
@@ -381,7 +394,8 @@ void Canvas::sync_transform()
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
 	fs_wget(*this, BRUSH_PREVIEW).update_transform().ur->send_buffer();
 	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
-	smants->send_vp(MEasel->vp * self.matrix());
+	binfo.smants->send_vp(MEasel->vp * self.matrix());
+	binfo.smants_preview->send_vp(MEasel->vp * self.matrix());
 	sync_cursor_with_widget();
 }
 
@@ -772,15 +786,40 @@ void Canvas::brush_start(int x, int y)
 	if (binfo.tool & BrushTool::PAINT && binfo.tip & BrushTip::SELECT)
 		CBImpl::Paint::start_select(*this);
 	else if (binfo.tool & BrushTool::LINE)
-		CBImpl::Line::start(*this);
+	{
+		if (binfo.tip & BrushTip::SELECT)
+			CBImpl::Line::start_select(*this);
+		else
+			CBImpl::Line::start(*this);
+	}
 	else if (binfo.tool & BrushTool::RECT_OUTLINE)
-		CBImpl::RectOutline::start(*this);
+	{
+		if (binfo.tip & BrushTip::SELECT)
+			CBImpl::RectOutline::start_select(*this);
+		else
+			CBImpl::RectOutline::start(*this);
+	}
 	else if (binfo.tool & BrushTool::RECT_FILL)
-		CBImpl::RectFill::start(*this);
+	{
+		if (binfo.tip & BrushTip::SELECT)
+			CBImpl::RectFill::start_select(*this);
+		else
+			CBImpl::RectFill::start(*this);
+	}
 	else if (binfo.tool & BrushTool::ELLIPSE_OUTLINE)
-		CBImpl::EllipseOutline::start(*this);
+	{
+		if (binfo.tip & BrushTip::SELECT)
+			CBImpl::EllipseOutline::start_select(*this);
+		else
+			CBImpl::EllipseOutline::start(*this);
+	}
 	else if (binfo.tool & BrushTool::ELLIPSE_FILL)
-		CBImpl::EllipseFill::start(*this);
+	{
+		if (binfo.tip & BrushTip::SELECT)
+			CBImpl::EllipseFill::start_select(*this);
+		else
+			CBImpl::EllipseFill::start(*this);
+	}
 }
 
 void Canvas::brush_submit()
@@ -806,7 +845,8 @@ void Canvas::brush_submit()
 			CBImpl::Line::submit_pen(*this);
 		else if (binfo.tip & BrushTip::ERASER)
 			CBImpl::Line::submit_eraser(*this);
-		// LATER select
+		else if (binfo.tip & BrushTip::SELECT)
+			CBImpl::Line::submit_select(*this);
 		break;
 	case BrushTool::RECT_OUTLINE:
 		if (binfo.tip & BrushTip::PENCIL)
@@ -815,7 +855,8 @@ void Canvas::brush_submit()
 			CBImpl::RectOutline::submit_pen(*this);
 		else if (binfo.tip & BrushTip::ERASER)
 			CBImpl::RectOutline::submit_eraser(*this);
-		// LATER select
+		else if (binfo.tip & BrushTip::SELECT)
+			CBImpl::RectOutline::submit_select(*this);
 		break;
 	case BrushTool::RECT_FILL:
 		if (binfo.tip & BrushTip::PENCIL)
@@ -824,7 +865,8 @@ void Canvas::brush_submit()
 			CBImpl::RectFill::submit_pen(*this);
 		else if (binfo.tip & BrushTip::ERASER)
 			CBImpl::RectFill::submit_eraser(*this);
-		// LATER select
+		else if (binfo.tip & BrushTip::SELECT)
+			CBImpl::RectFill::submit_select(*this);
 		break;
 	case BrushTool::ELLIPSE_OUTLINE:
 		if (binfo.tip & BrushTip::PENCIL)
@@ -833,7 +875,8 @@ void Canvas::brush_submit()
 			CBImpl::EllipseOutline::submit_pen(*this);
 		else if (binfo.tip & BrushTip::ERASER)
 			CBImpl::EllipseOutline::submit_eraser(*this);
-		// LATER select
+		else if (binfo.tip & BrushTip::SELECT)
+			CBImpl::EllipseOutline::submit_select(*this);
 		break;
 	case BrushTool::ELLIPSE_FILL:
 		if (binfo.tip & BrushTip::PENCIL)
@@ -842,7 +885,8 @@ void Canvas::brush_submit()
 			CBImpl::EllipseFill::submit_pen(*this);
 		else if (binfo.tip & BrushTip::ERASER)
 			CBImpl::EllipseFill::submit_eraser(*this);
-		// LATER select
+		else if (binfo.tip & BrushTip::SELECT)
+			CBImpl::EllipseFill::submit_select(*this);
 		break;
 	}
 	binfo.brushing = false;
@@ -861,44 +905,35 @@ void Canvas::brush_move_to(IPosition pos)
 		CBImpl::brush_move_to(*this, pos.x, pos.y);
 }
 
-void Canvas::add_to_selection(IPosition pos)
+void Canvas::select_all()
 {
-	if (smants->add(pos))
+	cursor_cancel();
+	if (image)
 	{
-		if (binfo.storage_select_remove.count(pos))
-			binfo.storage_select_remove.erase(pos);
-		else
-			binfo.storage_select_add.insert(pos);
+		binfo.brushing_bbox = IntBounds::NADIR;
+		for (int x = 0; x < image->buf.width; ++x)
+			for (int y = 0; y < image->buf.height; ++y)
+				if (binfo.add_to_selection({ x, y }))
+					update_bbox(binfo.brushing_bbox, x, y);
+		binfo.smants->send_buffer(binfo.brushing_bbox);
+		binfo.push_selection_to_history();
 	}
 }
 
-void Canvas::remove_from_selection(IPosition pos)
+void Canvas::deselect_all()
 {
-	if (smants->remove(pos))
+	cursor_cancel();
+	if (image)
 	{
-		if (binfo.storage_select_add.count(pos))
-			binfo.storage_select_add.erase(pos);
-		else
-			binfo.storage_select_remove.insert(pos);
+		binfo.brushing_bbox = binfo.clear_selection();
+		binfo.smants->send_buffer(binfo.brushing_bbox);
+		binfo.push_selection_to_history();
 	}
-}
-
-IntBounds Canvas::clear_selection()
-{
-	IntBounds bbox = IntBounds::NADIR;
-	IPosition pos{};
-	while (!smants->get_points().empty())
-	{
-		pos = *smants->get_points().begin();
-		remove_from_selection(pos);
-		update_bbox(bbox, pos.x, pos.y);
-	}
-	return bbox;
 }
 
 void BrushInfo::reset()
 {
-	if (show_preview)
+	if (show_brush_preview)
 	{
 		if (tool & BrushTool::LINE)
 		{
@@ -908,7 +943,6 @@ void BrushInfo::reset()
 				CBImpl::Line::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
 				CBImpl::Line::reset_eraser(*this);
-			// LATER select
 		}
 		else if (tool & BrushTool::RECT_OUTLINE)
 		{
@@ -918,7 +952,6 @@ void BrushInfo::reset()
 				CBImpl::RectOutline::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
 				CBImpl::RectOutline::reset_eraser(*this);
-			// LATER select
 		}
 		else if (tool & BrushTool::RECT_FILL)
 		{
@@ -928,7 +961,6 @@ void BrushInfo::reset()
 				CBImpl::RectFill::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
 				CBImpl::RectFill::reset_eraser(*this);
-			// LATER select
 		}
 		else if (tool & BrushTool::ELLIPSE_OUTLINE)
 		{
@@ -938,7 +970,6 @@ void BrushInfo::reset()
 				CBImpl::EllipseOutline::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
 				CBImpl::EllipseOutline::reset_eraser(*this);
-			// LATER select
 		}
 		else if (tool & BrushTool::ELLIPSE_FILL)
 		{
@@ -948,17 +979,65 @@ void BrushInfo::reset()
 				CBImpl::EllipseFill::reset_pen(*this);
 			else if (tip & BrushTip::ERASER)
 				CBImpl::EllipseFill::reset_eraser(*this);
-			// LATER select
 		}
 	}
 	brushing_bbox = IntBounds::NADIR;
 	last_brush_pos = { -1, -1 };
 	starting_pos = { -1, -1 };
-	show_preview = false;
+	show_brush_preview = false;
 	storage_1c.clear();
 	storage_2c.clear();
+	show_selection_preview = false;
+	smants->send_uniforms();
+	smants_preview->send_buffer(smants_preview->clear());
 	storage_select_add.clear();
 	storage_select_remove.clear();
+}
+
+bool BrushInfo::add_to_selection(IPosition pos)
+{
+	if (smants->add(pos))
+	{
+		if (storage_select_remove.count(pos))
+			storage_select_remove.erase(pos);
+		else
+			storage_select_add.insert(pos);
+		return true;
+	}
+	return false;
+}
+
+bool BrushInfo::remove_from_selection(IPosition pos)
+{
+	if (smants->remove(pos))
+	{
+		if (storage_select_add.count(pos))
+			storage_select_add.erase(pos);
+		else
+			storage_select_remove.insert(pos);
+		return true;
+	}
+	return false;
+}
+
+IntBounds BrushInfo::clear_selection()
+{
+	IntBounds bbox = IntBounds::NADIR;
+	IPosition pos{};
+	while (!smants->get_points().empty())
+	{
+		pos = *smants->get_points().begin();
+		if (remove_from_selection(pos))
+			update_bbox(bbox, pos.x, pos.y);
+	}
+	return bbox;
+}
+
+void BrushInfo::push_selection_to_history()
+{
+	if (brushing_bbox != IntBounds::NADIR)
+		Machine.history.push(std::make_shared<SelectionAction>(smants, brushing_bbox, std::move(storage_select_remove), std::move(storage_select_add)));
+
 }
 
 Easel::Easel()
@@ -1038,9 +1117,20 @@ void Easel::connect_input_handlers()
 				if (canvas().cursor_cancel())
 					k.consumed = true;
 			}
-			else if (k.key == Key::Z && (k.mods & Mods::CONTROL))
+			else if (k.mods & Mods::CONTROL)
 			{
-				canvas().cursor_cancel(); // no consume
+				if (k.key == Key::Z)
+					canvas().cursor_cancel(); // no consume
+				else if (k.key == Key::A)
+				{
+					k.consumed = true;
+					canvas().select_all();
+				}
+				else if (k.key == Key::D)
+				{
+					k.consumed = true;
+					canvas().deselect_all();
+				}
 			}
 		}
 		};
@@ -1077,7 +1167,8 @@ void Easel::process()
 		canvas().hover_pixel_under_cursor();
 	else
 		canvas().unhover();
-	canvas().smants->send_time((float)glfwGetTime());
+	canvas().binfo.smants->send_time((float)glfwGetTime());
+	canvas().binfo.smants_preview->send_time((float)glfwGetTime());
 }
 
 void Easel::sync_widget()

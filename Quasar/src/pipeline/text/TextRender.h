@@ -103,8 +103,8 @@ public:
 private:
 	struct Batch
 	{
-		size_t index_count = 0;
-		size_t index_offset = 0;
+		GLuint index_count = 0;
+		GLuint index_offset = 0;
 		std::vector<GLuint> tids;
 	};
 	std::vector<Batch> batches;

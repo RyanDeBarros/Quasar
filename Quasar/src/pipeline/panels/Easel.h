@@ -65,13 +65,16 @@ struct BrushInfo
 	IPosition last_brush_pos = { -1, -1 };
 	IPosition image_pos = { -1, -1 };
 	IntBounds brushing_bbox = IntBounds::NADIR;
-	bool show_preview = false;
+	bool show_brush_preview = false;
 	std::shared_ptr<Image> preview_image;
 	std::shared_ptr<Image> eraser_preview_image;
 	static const int eraser_preview_img_sx = 2, eraser_preview_img_sy = 2;
 	std::unordered_map<IPosition, PixelRGBA> storage_1c;
 	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
 
+	bool show_selection_preview = false;
+	class SelectionMants* smants = nullptr;
+	class SelectionMants* smants_preview = nullptr;
 	std::unordered_set<IPosition> storage_select_remove;
 	std::unordered_set<IPosition> storage_select_add;
 
@@ -86,6 +89,10 @@ struct BrushInfo
 	} interps;
 
 	void reset();
+	bool add_to_selection(IPosition pos);
+	bool remove_from_selection(IPosition pos);
+	IntBounds clear_selection();
+	void push_selection_to_history();
 };
 
 struct Canvas : public Widget
@@ -97,7 +104,6 @@ struct Canvas : public Widget
 	Gridlines major_gridlines;
 
 	std::shared_ptr<Image> image;
-	class SelectionMants* smants = nullptr;
 
 	bool visible = false;
 	bool cursor_in_canvas = false;
@@ -190,9 +196,8 @@ public:
 	void brush_cancel();
 	void brush_move_to(IPosition pos);
 
-	void add_to_selection(IPosition pos);
-	void remove_from_selection(IPosition pos);
-	IntBounds clear_selection();
+	void select_all();
+	void deselect_all();
 
 	enum : size_t
 	{
@@ -205,6 +210,7 @@ public:
 		ERASER_PREVIEW,
 		SELECT_PREVIEW,
 		SELECTION,
+		SELECTION_PREVIEW,
 		SPRITE, // LATER SPRITE_START
 		_W_COUNT
 	};

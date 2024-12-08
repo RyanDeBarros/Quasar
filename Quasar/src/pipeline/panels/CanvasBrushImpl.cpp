@@ -35,7 +35,7 @@ static void standard_outline_brush_pencil(Canvas& canvas, int x, int y, Discrete
 	}
 	update_subtexture(binfo);
 
-	interp.finish = { x, y };
+	interp.finish = binfo.last_brush_pos;
 	interp.sync_with_endpoints();
 	auto looperand = update_storage ? &_standard_outline_brush_pencil_looperand_update_storage : &_standard_outline_brush_pencil_looperand_dont_update_storage;
 	for (unsigned int i = 0; i < interp.length; ++i)
@@ -72,7 +72,7 @@ static void standard_outline_brush_pen(Canvas& canvas, int x, int y, DiscreteInt
 	}
 	update_subtexture(binfo);
 
-	interp.finish = { x, y };
+	interp.finish = binfo.last_brush_pos;
 	interp.sync_with_endpoints();
 	auto looperand = update_storage ? &_standard_outline_brush_pen_looperand_update_storage : &_standard_outline_brush_pen_looperand_dont_update_storage;
 	for (unsigned int i = 0; i < interp.length; ++i)
@@ -109,7 +109,7 @@ static void standard_outline_brush_eraser(Canvas& canvas, int x, int y, Discrete
 	}
 	update_subtexture(binfo);
 
-	interp.finish = { x, y };
+	interp.finish = binfo.last_brush_pos;
 	interp.sync_with_endpoints();
 	auto looperand = update_storage ? &_standard_outline_brush_eraser_looperand_update_storage : &_standard_outline_brush_eraser_looperand_dont_update_storage;
 	for (unsigned int i = 0; i < interp.length; ++i)
@@ -118,6 +118,51 @@ static void standard_outline_brush_eraser(Canvas& canvas, int x, int y, Discrete
 		looperand(canvas, pos, update_subtexture);
 	}
 	update_subtexture(binfo);
+}
+
+static void standard_outline_brush_select(Canvas& canvas, int x, int y, DiscreteInterpolator& interp)
+{
+	BrushInfo& binfo = canvas.binfo;
+	binfo.last_brush_pos = { x, y };
+	binfo.smants_preview->send_buffer(binfo.smants_preview->clear());
+
+	interp.finish = binfo.last_brush_pos;
+	interp.sync_with_endpoints();
+	IntBounds bbox = IntBounds::NADIR;
+	IPosition pos{};
+	for (unsigned int i = 0; i < interp.length; ++i)
+	{
+		interp.at(i, pos.x, pos.y);
+		if (binfo.smants_preview->add(pos))
+			update_bbox(bbox, pos.x, pos.y);
+	}
+	binfo.smants_preview->send_buffer(bbox);
+}
+
+static void standard_start(Canvas& canvas, DiscreteInterpolator& interp)
+{
+	BrushInfo& binfo = canvas.binfo;
+	binfo.show_brush_preview = true;
+	interp.start = interp.finish = binfo.starting_pos;
+	interp.sync_with_endpoints();
+}
+
+static void standard_start_select(Canvas& canvas, DiscreteInterpolator& interp)
+{
+	BrushInfo& binfo = canvas.binfo;
+	binfo.show_selection_preview = true;
+	interp.start = interp.finish = binfo.starting_pos;
+	interp.sync_with_endpoints();
+	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY && !MainWindow->is_ctrl_pressed() && !binfo.smants->get_points().empty())
+	{
+		IntBounds bbox = binfo.clear_selection();
+		if (bbox != IntBounds::NADIR)
+		{
+			update_bbox(binfo.brushing_bbox, bbox.x1, bbox.y1);
+			update_bbox(binfo.brushing_bbox, bbox.x2, bbox.y2);
+			binfo.smants->send_buffer(bbox);
+		}
+	}
 }
 
 static void standard_submit_pencil(Canvas& canvas)
@@ -226,6 +271,29 @@ static void standard_submit_filled_eraser(Canvas& canvas, DiscreteInterpolator& 
 	}
 }
 
+static void _standard_submit_select_body(BrushInfo& binfo, DiscreteInterpolator& interp, bool(*add_remove_func)(BrushInfo&, IPosition))
+{
+	IPosition pos{};
+	for (unsigned int i = 0; i < interp.length; ++i)
+	{
+		interp.at(i, pos.x, pos.y);
+		if (add_remove_func(binfo, pos))
+			update_bbox(binfo.brushing_bbox, pos.x, pos.y);
+	}
+	binfo.smants->send_buffer(binfo.brushing_bbox);
+}
+
+static void standard_submit_select(Canvas& canvas, DiscreteInterpolator& interp)
+{
+	static auto add = [](BrushInfo& binfo, IPosition pos) { return binfo.add_to_selection(pos); };
+	static auto remove = [](BrushInfo& binfo, IPosition pos) { return binfo.remove_from_selection(pos); };
+	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY)
+		_standard_submit_select_body(canvas.binfo, interp, add);
+	else if (canvas.cursor_state == Canvas::CursorState::DOWN_ALTERNATE)
+		_standard_submit_select_body(canvas.binfo, interp, remove);
+	canvas.binfo.push_selection_to_history();
+}
+
 void CBImpl::brush_move_to(Canvas& canvas, int x, int y)
 {
 	DiscreteLineInterpolator interp;
@@ -239,6 +307,8 @@ void CBImpl::brush_move_to(Canvas& canvas, int x, int y)
 		canvas.brush(intermediate.x, intermediate.y);
 	}
 }
+
+// <<<==================================<<< CAMERA >>>==================================>>>
 
 void CBImpl::Camera::brush(Canvas& canvas, int x, int y)
 {
@@ -292,27 +362,36 @@ void CBImpl::Paint::brush_eraser(Canvas& canvas, int x, int y)
 void CBImpl::Paint::brush_select(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
-	update_bbox(binfo.brushing_bbox, x, y);
 	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY)
 	{
-		canvas.add_to_selection({ x, y });
-		canvas.smants->send_buffer(binfo.brushing_bbox);
+		if (binfo.add_to_selection({ x, y }))
+		{
+			update_bbox(binfo.brushing_bbox, x, y);
+			binfo.smants->send_buffer(binfo.brushing_bbox);
+		}
 	}
 	else if (canvas.cursor_state == Canvas::CursorState::DOWN_ALTERNATE)
 	{
-		canvas.remove_from_selection({ x, y });
-		canvas.smants->send_buffer(binfo.brushing_bbox);
+		if (binfo.remove_from_selection({ x, y }))
+		{
+			update_bbox(binfo.brushing_bbox, x, y);
+			binfo.smants->send_buffer(binfo.brushing_bbox);
+		}
 	}
 }
 
 void CBImpl::Paint::start_select(Canvas& canvas)
 {
-	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY && !MainWindow->is_ctrl_pressed() && !canvas.smants->get_points().empty())
+	BrushInfo& binfo = canvas.binfo;
+	if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY && !MainWindow->is_ctrl_pressed() && !binfo.smants->get_points().empty())
 	{
-		IntBounds bbox = canvas.clear_selection();
-		update_bbox(canvas.binfo.brushing_bbox, bbox.x1, bbox.y1);
-		update_bbox(canvas.binfo.brushing_bbox, bbox.x2, bbox.y2);
-		canvas.smants->send_buffer(bbox);
+		IntBounds bbox = binfo.clear_selection();
+		if (bbox != IntBounds::NADIR)
+		{
+			update_bbox(binfo.brushing_bbox, bbox.x1, bbox.y1);
+			update_bbox(binfo.brushing_bbox, bbox.x2, bbox.y2);
+			binfo.smants->send_buffer(bbox);
+		}
 	}
 }
 
@@ -336,9 +415,7 @@ void CBImpl::Paint::submit_eraser(Canvas& canvas)
 
 void CBImpl::Paint::submit_select(Canvas& canvas)
 {
-	if (canvas.image && (!canvas.binfo.storage_select_add.empty() || !canvas.binfo.storage_select_remove.empty()))
-		Machine.history.push(std::make_shared<SelectionAction>(canvas.smants, canvas.binfo.brushing_bbox,
-			std::move(canvas.binfo.storage_select_remove), std::move(canvas.binfo.storage_select_add)));
+	canvas.binfo.push_selection_to_history();
 }
 
 // <<<==================================<<< LINE >>>==================================>>>
@@ -391,16 +468,17 @@ void CBImpl::Line::brush_select(Canvas& canvas, int x, int y)
 {
 	if (MainWindow->is_shift_pressed())
 		line_alternate_apply(canvas.binfo.starting_pos, x, y);
-	// LATER
+	standard_outline_brush_select(canvas, x, y, canvas.binfo.interps.line);
 }
 
 void CBImpl::Line::start(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	binfo.show_preview = true;
-	auto& interp = binfo.interps.line;
-	interp.start = interp.finish = binfo.starting_pos;
-	interp.sync_with_endpoints();
+	standard_start(canvas, canvas.binfo.interps.line);
+}
+
+void CBImpl::Line::start_select(Canvas& canvas)
+{
+	standard_start_select(canvas, canvas.binfo.interps.line);
 }
 
 void CBImpl::Line::submit_pencil(Canvas& canvas)
@@ -416,6 +494,11 @@ void CBImpl::Line::submit_pen(Canvas& canvas)
 void CBImpl::Line::submit_eraser(Canvas& canvas)
 {
 	standard_submit_eraser(canvas);
+}
+
+void CBImpl::Line::submit_select(Canvas& canvas)
+{
+	standard_submit_select(canvas, canvas.binfo.interps.line);
 }
 
 static void line_reset(DiscreteInterpolator& interp, Buffer& buf, void(*buffer_remove)(Buffer& buf, IPosition pos))
@@ -507,16 +590,17 @@ void CBImpl::RectOutline::brush_select(Canvas& canvas, int x, int y)
 {
 	if (MainWindow->is_shift_pressed())
 		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
-	// LATER
+	standard_outline_brush_select(canvas, x, y, canvas.binfo.interps.rect_outline);
 }
 
 void CBImpl::RectOutline::start(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	binfo.show_preview = true;
-	auto& interp = binfo.interps.rect_outline;
-	interp.start = interp.finish = binfo.starting_pos;
-	interp.sync_with_endpoints();
+	standard_start(canvas, canvas.binfo.interps.rect_outline);
+}
+
+void CBImpl::RectOutline::start_select(Canvas& canvas)
+{
+	standard_start_select(canvas, canvas.binfo.interps.rect_outline);
 }
 
 void CBImpl::RectOutline::submit_pencil(Canvas& canvas)
@@ -532,6 +616,11 @@ void CBImpl::RectOutline::submit_pen(Canvas& canvas)
 void CBImpl::RectOutline::submit_eraser(Canvas& canvas)
 {
 	standard_submit_eraser(canvas);
+}
+
+void CBImpl::RectOutline::submit_select(Canvas& canvas)
+{
+	standard_submit_select(canvas, canvas.binfo.interps.rect_outline);
 }
 
 static void rect_outline_reset(DiscreteInterpolator& interp, Buffer& buf, void(*buffer_remove)(Buffer& buf, IPosition pos))
@@ -596,12 +685,17 @@ void CBImpl::RectFill::brush_select(Canvas& canvas, int x, int y)
 {
 	if (MainWindow->is_shift_pressed())
 		rect_alternate_apply(canvas.binfo.starting_pos, x, y);
-	// LATER
+	standard_outline_brush_select(canvas, x, y, canvas.binfo.interps.rect_outline);
 }
 
 void CBImpl::RectFill::start(Canvas& canvas)
 {
 	CBImpl::RectOutline::start(canvas);
+}
+
+void CBImpl::RectFill::start_select(Canvas& canvas)
+{
+	CBImpl::RectOutline::start_select(canvas);
 }
 
 void CBImpl::RectFill::submit_pencil(Canvas& canvas)
@@ -617,6 +711,15 @@ void CBImpl::RectFill::submit_pen(Canvas& canvas)
 void CBImpl::RectFill::submit_eraser(Canvas& canvas)
 {
 	standard_submit_filled_eraser(canvas, canvas.binfo.interps.rect_fill);
+}
+
+void CBImpl::RectFill::submit_select(Canvas& canvas)
+{
+	auto& interps = canvas.binfo.interps;
+	interps.rect_fill.start = interps.rect_outline.start;
+	interps.rect_fill.finish = interps.rect_outline.finish;
+	interps.rect_fill.sync_with_endpoints();
+	standard_submit_select(canvas, interps.rect_fill);
 }
 
 void CBImpl::RectFill::reset_pencil(BrushInfo& binfo)
@@ -685,16 +788,17 @@ void CBImpl::EllipseOutline::brush_select(Canvas& canvas, int x, int y)
 {
 	if (MainWindow->is_shift_pressed())
 		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
-	// LATER
+	standard_outline_brush_select(canvas, x, y, canvas.binfo.interps.ellipse_outline);
 }
 
 void CBImpl::EllipseOutline::start(Canvas& canvas)
 {
-	BrushInfo& binfo = canvas.binfo;
-	binfo.show_preview = true;
-	auto& interp = binfo.interps.ellipse_outline;
-	interp.start = interp.finish = binfo.starting_pos;
-	interp.sync_with_endpoints();
+	standard_start(canvas, canvas.binfo.interps.ellipse_outline);
+}
+
+void CBImpl::EllipseOutline::start_select(Canvas& canvas)
+{
+	standard_start_select(canvas, canvas.binfo.interps.ellipse_outline);
 }
 
 void CBImpl::EllipseOutline::submit_pencil(Canvas& canvas)
@@ -710,6 +814,11 @@ void CBImpl::EllipseOutline::submit_pen(Canvas& canvas)
 void CBImpl::EllipseOutline::submit_eraser(Canvas& canvas)
 {
 	standard_submit_eraser(canvas);
+}
+
+void CBImpl::EllipseOutline::submit_select(Canvas& canvas)
+{
+	standard_submit_select(canvas, canvas.binfo.interps.ellipse_outline);
 }
 
 static void ellipse_outline_reset(BrushInfo& binfo, Buffer& buf, void(*buffer_remove)(Buffer& buf, IPosition pos))
@@ -788,12 +897,17 @@ void CBImpl::EllipseFill::brush_select(Canvas& canvas, int x, int y)
 {
 	if (MainWindow->is_shift_pressed())
 		ellipse_alternate_apply(canvas.binfo.starting_pos, x, y);
-	// LATER
+	standard_outline_brush_select(canvas, x, y, canvas.binfo.interps.ellipse_outline);
 }
 
 void CBImpl::EllipseFill::start(Canvas& canvas)
 {
 	CBImpl::EllipseOutline::start(canvas);
+}
+
+void CBImpl::EllipseFill::start_select(Canvas& canvas)
+{
+	CBImpl::EllipseOutline::start_select(canvas);
 }
 
 void CBImpl::EllipseFill::submit_pencil(Canvas& canvas)
@@ -809,6 +923,15 @@ void CBImpl::EllipseFill::submit_pen(Canvas& canvas)
 void CBImpl::EllipseFill::submit_eraser(Canvas& canvas)
 {
 	standard_submit_filled_eraser(canvas, canvas.binfo.interps.ellipse_fill);
+}
+
+void CBImpl::EllipseFill::submit_select(Canvas& canvas)
+{
+	auto& interps = canvas.binfo.interps;
+	interps.ellipse_fill.start = interps.ellipse_outline.start;
+	interps.ellipse_fill.finish = interps.ellipse_outline.finish;
+	interps.ellipse_fill.sync_with_endpoints();
+	standard_submit_select(canvas, interps.ellipse_fill);
 }
 
 void CBImpl::EllipseFill::reset_pencil(BrushInfo& binfo)
@@ -966,5 +1089,10 @@ void CBImpl::BucketFill::brush_eraser(Canvas& canvas, int x, int y)
 
 void CBImpl::BucketFill::brush_select(Canvas& canvas, int x, int y)
 {
-	// LATER
+	// TODO
+}
+
+void CBImpl::BucketFill::start_select(Canvas& canvas)
+{
+	// TODO
 }
