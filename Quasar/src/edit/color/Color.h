@@ -312,6 +312,13 @@ constexpr void PixelRGBA::blend_over(PixelRGBA bkg)
 	a = std::clamp(roundi(new_alpha * 255), 0, 255);
 }
 
+constexpr PixelRGBA blend_over(PixelRGBA fore, PixelRGBA back)
+{
+	PixelRGBA blend = fore;
+	blend.blend_over(back);
+	return blend;
+}
+
 template<>
 struct std::hash<PixelRGBA>
 {

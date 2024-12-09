@@ -2,10 +2,14 @@
 
 struct Canvas;
 struct BrushInfo;
+struct PixelRGBA;
 
 namespace CBImpl
 {
 	extern void brush_move_to(Canvas& canvas, int x, int y);
+	extern void fill_selection_pencil(Canvas& canvas, PixelRGBA color);
+	extern void fill_selection_pen(Canvas& canvas, PixelRGBA color);
+	extern void fill_selection_eraser(Canvas& canvas);
 
 	namespace Camera
 	{

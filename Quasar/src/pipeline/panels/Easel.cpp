@@ -933,6 +933,38 @@ void Canvas::deselect_all()
 	}
 }
 
+void Canvas::fill_selection_primary()
+{
+	if (binfo.smants->get_points().empty() || binfo.brushing)
+		return;
+	if (binfo.tip & BrushTip::PENCIL)
+		CBImpl::fill_selection_pencil(*this, pric_pxs);
+	else if (binfo.tip & BrushTip::PEN)
+		CBImpl::fill_selection_pen(*this, pric_pxs);
+	else if (binfo.tip & BrushTip::ERASER)
+		CBImpl::fill_selection_eraser(*this);
+}
+
+void Canvas::fill_selection_alternate()
+{
+	if (binfo.smants->get_points().empty() || binfo.brushing)
+		return;
+	if (binfo.tip & BrushTip::PENCIL)
+		CBImpl::fill_selection_pencil(*this, altc_pxs);
+	else if (binfo.tip & BrushTip::PEN)
+		CBImpl::fill_selection_pen(*this, altc_pxs);
+	else if (binfo.tip & BrushTip::ERASER)
+		CBImpl::fill_selection_eraser(*this);
+}
+
+bool Canvas::delete_selection()
+{
+	if (binfo.smants->get_points().empty() || binfo.brushing)
+		return false;
+	CBImpl::fill_selection_eraser(*this);
+	return true;
+}
+
 void BrushInfo::reset()
 {
 	if (tool & BrushTool::PAINT)
@@ -1165,6 +1197,22 @@ void Easel::connect_input_handlers()
 				{
 					k.consumed = true;
 					canvas().deselect_all();
+				}
+			}
+			else if (k.key == Key::DELETE)
+			{
+				if (canvas().delete_selection())
+					k.consumed = true;
+			}
+			else if (MainWindow->is_key_pressed(Key::SPACE))
+			{
+				if (k.key == Key::F)
+				{
+					k.consumed = true;
+					if (k.mods & Mods::ALT)
+						canvas().fill_selection_alternate();
+					else
+						canvas().fill_selection_primary();
 				}
 			}
 		}

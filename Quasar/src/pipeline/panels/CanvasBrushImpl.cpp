@@ -6,7 +6,7 @@
 #include "user/Machine.h"
 #include "../render/SelectionMants.h"
 
-static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
+static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canvas, IPosition pos)
 {
 	PixelRGBA old_color = canvas.pixel_color_at(pos.x, pos.y);
 	PixelRGBA new_color = canvas.applied_color().get_pixel_rgba();
@@ -15,7 +15,7 @@ static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canv
 	canvas.binfo.storage_2c[pos] = { new_color, old_color };
 }
 
-static void _standard_outline_brush_pencil_looperand_dont_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
+static void _standard_outline_brush_pencil_looperand_dont_update_storage(Canvas& canvas, IPosition pos)
 {
 	buffer_set_pixel_color(canvas.binfo.preview_image->buf, pos.x, pos.y, canvas.applied_color().get_pixel_rgba());
 }
@@ -43,19 +43,19 @@ static void standard_outline_brush_pencil(Canvas& canvas, int x, int y, Discrete
 	{
 		interp.at(i, pos.x, pos.y);
 		if (binfo.point_valid_in_selection(pos.x, pos.y))
-			looperand(canvas, pos, update_subtexture);
+			looperand(canvas, pos);
 	}
 	update_subtexture(binfo);
 }
 
-static void _standard_outline_brush_pen_looperand_dont_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
+static void _standard_outline_brush_pen_looperand_dont_update_storage(Canvas& canvas, IPosition pos)
 {
 	buffer_set_pixel_color(canvas.binfo.preview_image->buf, pos.x, pos.y, canvas.applied_color().no_alpha_equivalent().get_pixel_rgba());
 }
 
-static void _standard_outline_brush_pen_looperand_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
+static void _standard_outline_brush_pen_looperand_update_storage(Canvas& canvas, IPosition pos)
 {
-	_standard_outline_brush_pen_looperand_dont_update_storage(canvas, pos, update_subtexture);
+	_standard_outline_brush_pen_looperand_dont_update_storage(canvas, pos);
 	canvas.binfo.storage_1c[pos] = canvas.pixel_color_at(pos.x, pos.y);
 }
 
@@ -82,19 +82,19 @@ static void standard_outline_brush_pen(Canvas& canvas, int x, int y, DiscreteInt
 	{
 		interp.at(i, pos.x, pos.y);
 		if (binfo.point_valid_in_selection(pos.x, pos.y))
-			looperand(canvas, pos, update_subtexture);
+			looperand(canvas, pos);
 	}
 	update_subtexture(binfo);
 }
 
-static void _standard_outline_brush_eraser_looperand_dont_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
+static void _standard_outline_brush_eraser_looperand_dont_update_storage(Canvas& canvas, IPosition pos)
 {
 	buffer_set_rect_alpha(canvas.binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 255, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
 }
 
-static void _standard_outline_brush_eraser_looperand_update_storage(Canvas& canvas, IPosition pos, void(*update_subtexture)(BrushInfo& binfo))
+static void _standard_outline_brush_eraser_looperand_update_storage(Canvas& canvas, IPosition pos)
 {
-	_standard_outline_brush_eraser_looperand_dont_update_storage(canvas, pos, update_subtexture);
+	_standard_outline_brush_eraser_looperand_dont_update_storage(canvas, pos);
 	canvas.binfo.storage_1c[pos] = canvas.pixel_color_at(pos.x, pos.y);
 }
 
@@ -121,7 +121,7 @@ static void standard_outline_brush_eraser(Canvas& canvas, int x, int y, Discrete
 	{
 		interp.at(i, pos.x, pos.y);
 		if (binfo.point_valid_in_selection(pos.x, pos.y))
-			looperand(canvas, pos, update_subtexture);
+			looperand(canvas, pos);
 	}
 	update_subtexture(binfo);
 }
@@ -183,11 +183,12 @@ static void standard_submit_pencil(Canvas& canvas)
 		Machine.history.execute(std::make_shared<TwoColorAction>(canvas.image, binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_2c)));
 }
 
-static void standard_push_pencil(Canvas& canvas, IntBounds bbox)
+static void standard_push_pencil(Canvas& canvas)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_2c.empty())
-		Machine.history.push(std::make_shared<TwoColorAction>(canvas.image, IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_2c)));
+		// TODO One/TwoColorAction should only have the IntBounds constructor
+		Machine.history.push(std::make_shared<TwoColorAction>(canvas.image, binfo.brushing_bbox, std::move(binfo.storage_2c)));
 }
 
 static void standard_submit_filled_pencil(Canvas& canvas, DiscreteInterpolator& interp)
@@ -206,8 +207,7 @@ static void standard_submit_filled_pencil(Canvas& canvas, DiscreteInterpolator& 
 			if (binfo.point_valid_in_selection(pos.x, pos.y))
 			{
 				PixelRGBA old_color = canvas.pixel_color_at(pos.x, pos.y);
-				PixelRGBA new_color = canvas.applied_color().get_pixel_rgba();
-				new_color.blend_over(old_color);
+				PixelRGBA new_color = blend_over(canvas.applied_color().get_pixel_rgba(), old_color);
 				canvas.binfo.storage_2c[pos] = { new_color, old_color };
 			}
 		}
@@ -223,12 +223,11 @@ static void standard_submit_pen(Canvas& canvas)
 			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
 }
 
-static void standard_push_pen(Canvas& canvas, IntBounds bbox)
+static void standard_push_pen(Canvas& canvas, PixelRGBA color)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.push(std::make_shared<OneColorAction>(canvas.image, canvas.applied_color().get_pixel_rgba(),
-			IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_1c)));
+		Machine.history.push(std::make_shared<OneColorAction>(canvas.image, color, binfo.brushing_bbox, std::move(binfo.storage_1c)));
 }
 
 static void standard_submit_filled_pen(Canvas& canvas, DiscreteInterpolator& interp)
@@ -259,12 +258,11 @@ static void standard_submit_eraser(Canvas& canvas)
 			binfo.starting_pos, binfo.last_brush_pos, std::move(binfo.storage_1c)));
 }
 
-static void standard_push_eraser(Canvas& canvas, IntBounds bbox)
+static void standard_push_eraser(Canvas& canvas)
 {
 	BrushInfo& binfo = canvas.binfo;
 	if (canvas.image && !binfo.storage_1c.empty())
-		Machine.history.push(std::make_shared<OneColorAction>(canvas.image, PixelRGBA{},
-			IPosition{ bbox.x1, bbox.y1 }, IPosition{ bbox.x2, bbox.y2 }, std::move(binfo.storage_1c)));
+		Machine.history.push(std::make_shared<OneColorAction>(canvas.image, PixelRGBA{}, binfo.brushing_bbox, std::move(binfo.storage_1c)));
 }
 
 static void standard_submit_filled_eraser(Canvas& canvas, DiscreteInterpolator& interp)
@@ -336,6 +334,48 @@ void CBImpl::brush_move_to(Canvas& canvas, int x, int y)
 	}
 }
 
+void CBImpl::fill_selection_pencil(Canvas& canvas, PixelRGBA color)
+{
+	BrushInfo& binfo = canvas.binfo;
+	binfo.brushing_bbox = IntBounds::NADIR;
+	for (IPosition pos : canvas.binfo.smants->get_points())
+	{
+		PixelRGBA old_color = canvas.pixel_color_at(pos.x, pos.y);
+		PixelRGBA new_color = blend_over(color, old_color);
+		binfo.storage_2c[pos] = { new_color, old_color };
+		buffer_set_pixel_color(canvas.image->buf, pos.x, pos.y, new_color);
+		update_bbox(binfo.brushing_bbox, pos.x, pos.y);
+	}
+	canvas.image->update_subtexture(bounds_to_rect(binfo.brushing_bbox));
+	standard_push_pencil(canvas);
+}
+
+void CBImpl::fill_selection_pen(Canvas& canvas, PixelRGBA color)
+{
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
+	for (IPosition pos : canvas.binfo.smants->get_points())
+	{
+		canvas.binfo.storage_1c[pos] = canvas.pixel_color_at(pos.x, pos.y);
+		buffer_set_pixel_color(canvas.image->buf, pos.x, pos.y, color);
+		update_bbox(canvas.binfo.brushing_bbox, pos.x, pos.y);
+	}
+	canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+	standard_push_pen(canvas, color);
+}
+
+void CBImpl::fill_selection_eraser(Canvas& canvas)
+{
+	canvas.binfo.brushing_bbox = IntBounds::NADIR;
+	for (IPosition pos : canvas.binfo.smants->get_points())
+	{
+		canvas.binfo.storage_1c[pos] = canvas.pixel_color_at(pos.x, pos.y);
+		buffer_set_pixel_alpha(canvas.image->buf, pos.x, pos.y, 0);
+		update_bbox(canvas.binfo.brushing_bbox, pos.x, pos.y);
+	}
+	canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+	standard_push_eraser(canvas);
+}
+
 // <<<==================================<<< CAMERA >>>==================================>>>
 
 void CBImpl::Camera::brush(Canvas& canvas, int x, int y)
@@ -362,8 +402,7 @@ void CBImpl::Paint::brush_pencil(Canvas& canvas, int x, int y)
 		return;
 	update_bbox(binfo.brushing_bbox, x, y);
 	PixelRGBA initial_c = canvas.pixel_color_at(x, y);
-	PixelRGBA final_c = canvas.applied_pencil_rgba();
-	final_c.blend_over(initial_c);
+	PixelRGBA final_c = blend_over(canvas.applied_pencil_rgba(), initial_c);
 	buffer_set_pixel_color(canvas.image->buf, x, y, final_c);
 	paint_brush_suffix(canvas, x, y, initial_c, final_c);
 }
@@ -1087,8 +1126,7 @@ void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
 		if (!canvas.binfo.point_valid_in_selection(x, y))
 			return false;
 		PixelRGBA old_color = canvas.pixel_color_at(x, y);
-		PixelRGBA new_color = canvas.applied_pencil_rgba();
-		new_color.blend_over(old_color);
+		PixelRGBA new_color = blend_over(canvas.applied_pencil_rgba(), old_color);
 		canvas.binfo.storage_2c[{ x, y }] = { new_color, old_color };
 		buffer_set_pixel_color(canvas.image->buf, x, y, new_color);
 		return true;
@@ -1103,7 +1141,7 @@ void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
 	if (canvas.binfo.brushing_bbox.valid())
 	{
 		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
-		standard_push_pencil(canvas, canvas.binfo.brushing_bbox);
+		standard_push_pencil(canvas);
 	}
 	canvas.binfo.storage_2c.clear();
 	canvas.binfo.brushing_bbox = IntBounds::NADIR;
@@ -1131,7 +1169,7 @@ void CBImpl::BucketFill::brush_pen(Canvas& canvas, int x, int y)
 	if (canvas.binfo.brushing_bbox.valid())
 	{
 		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
-		standard_push_pen(canvas, canvas.binfo.brushing_bbox);
+		standard_push_pen(canvas, canvas.applied_color().get_pixel_rgba());
 	}
 	canvas.binfo.storage_1c.clear();
 	canvas.binfo.brushing_bbox = IntBounds::NADIR;
@@ -1159,7 +1197,7 @@ void CBImpl::BucketFill::brush_eraser(Canvas& canvas, int x, int y)
 	if (canvas.binfo.brushing_bbox.valid())
 	{
 		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
-		standard_push_eraser(canvas, canvas.binfo.brushing_bbox);
+		standard_push_eraser(canvas);
 	}
 	canvas.binfo.storage_1c.clear();
 	canvas.binfo.brushing_bbox = IntBounds::NADIR;

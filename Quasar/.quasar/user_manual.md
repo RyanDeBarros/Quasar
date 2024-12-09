@@ -111,3 +111,8 @@ There are several brush tools to choose from, which determine how pixels are int
 Press LMB to paint the primary color selection and RMB to paint the alternate color selection, if using a painting mode. If holding ALT, this action will instead set the respective color selection in the color picker.
 
 You could select the entire canvas with CTRL+A, and deselect everything with CTRL+D or ESCAPE.
+
+When selecting pixels, you can perform the following actions:
+
+* SPACE+F: Fill selection using primary color, according to the current brush tip.
+* ALT+SPACE+F: Fill selection using alternate color, according to the current brush tip.

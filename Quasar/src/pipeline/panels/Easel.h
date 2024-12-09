@@ -203,6 +203,9 @@ public:
 
 	void select_all();
 	void deselect_all();
+	void fill_selection_primary();
+	void fill_selection_alternate();
+	bool delete_selection();
 
 	enum : size_t
 	{
