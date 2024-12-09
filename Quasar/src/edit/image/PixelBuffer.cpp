@@ -3,6 +3,12 @@
 #include <memory>
 
 #include "PixelBufferPaths.h"
+#include "variety/Geometry.h"
+
+IntBounds Buffer::bbox() const
+{
+	return { 0, width - 1, 0, height - 1 };
+}
 
 void Buffer::flip_horizontally() const
 {

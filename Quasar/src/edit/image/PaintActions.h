@@ -94,6 +94,16 @@ struct TwoColorAction : public ActionBase
 	virtual void backward() override;
 };
 
+struct TwoColorMoveAction : public ActionBase
+{
+	std::weak_ptr<Image> image;
+	IntBounds bbox_remove, bbox_add;
+	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> painted_colors;
+	TwoColorMoveAction(const std::shared_ptr<Image>& image, IntBounds bbox_remove, IntBounds bbox_add, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors);
+	virtual void forward() override;
+	virtual void backward() override;
+};
+
 struct SelectionAction : public ActionBase
 {
 	class SelectionMants* smants;

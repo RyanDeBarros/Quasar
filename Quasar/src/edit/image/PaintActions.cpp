@@ -525,6 +525,40 @@ void TwoColorAction::backward()
 	}
 }
 
+TwoColorMoveAction::TwoColorMoveAction(const std::shared_ptr<Image>& image, IntBounds bbox_remove, IntBounds bbox_add, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors)
+	: image(image), bbox_remove(bbox_remove), bbox_add(bbox_add), painted_colors(std::move(painted_colors))
+{
+	weight = sizeof(TwoColorAction) + this->painted_colors.size() * (sizeof(IPosition) + 2 * sizeof(PixelRGBA));
+}
+
+void TwoColorMoveAction::forward()
+{
+	if (painted_colors.empty())
+		return;
+	if (auto img = image.lock())
+	{
+		Buffer& buf = img->buf;
+		for (const auto& iter : painted_colors)
+			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second.first);
+		img->update_subtexture(bounds_to_rect(bbox_remove));
+		img->update_subtexture(bounds_to_rect(bbox_add));
+	}
+}
+
+void TwoColorMoveAction::backward()
+{
+	if (painted_colors.empty())
+		return;
+	if (auto img = image.lock())
+	{
+		Buffer& buf = img->buf;
+		for (const auto& iter : painted_colors)
+			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second.second);
+		img->update_subtexture(bounds_to_rect(bbox_remove));
+		img->update_subtexture(bounds_to_rect(bbox_add));
+	}
+}
+
 SelectionAction::SelectionAction(SelectionMants* smants, IntBounds bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points)
 	: smants(smants), bbox(bbox), remove_points(std::move(remove_points)), add_points(std::move(add_points))
 {

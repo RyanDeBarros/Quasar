@@ -29,6 +29,7 @@ struct Buffer
 
 	void pxnew() { pixels = new Byte[bytes()]; }
 	bool same_dimensions_as(const Buffer& buf) const { return width == buf.width && height == buf.height && chpp == buf.chpp; }
+	struct IntBounds bbox() const;
 
 	void flip_horizontally() const;
 	void flip_vertically() const;

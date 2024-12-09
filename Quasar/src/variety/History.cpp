@@ -1,5 +1,78 @@
 #include "History.h"
 
+DualAction::DualAction(const std::shared_ptr<ActionBase>& first, const std::shared_ptr<ActionBase>& second)
+	: first(first), second(second)
+{
+	weight = first->weight + second->weight;
+}
+
+DualAction::DualAction(std::shared_ptr<ActionBase>&& first, std::shared_ptr<ActionBase>&& second)
+	: first(std::move(first)), second(std::move(second))
+{
+	weight = this->first->weight + this->second->weight;
+}
+
+void DualAction::forward()
+{
+	first->forward();
+	second->forward();
+}
+
+void DualAction::backward()
+{
+	second->backward();
+	first->backward();
+}
+
+bool DualAction::equals(const ActionBase& other) const
+{
+	if (auto p = dynamic_cast<const DualAction*>(&other))
+		return first->equals(*p->first) && second->equals(*p->second);
+	else
+		return false;
+}
+
+CompositeAction::CompositeAction(const std::vector<std::shared_ptr<ActionBase>>& actions)
+	: actions(actions)
+{
+	for (const auto& action : actions)
+		weight += action->weight;
+}
+
+CompositeAction::CompositeAction(std::vector<std::shared_ptr<ActionBase>>&& actions)
+	: actions(std::move(actions))
+{
+	for (const auto& action : this->actions)
+		weight += action->weight;
+}
+
+void CompositeAction::forward()
+{
+	for (auto iter = actions.begin(); iter != actions.end(); ++iter)
+		(*iter)->forward();
+}
+
+void CompositeAction::backward()
+{
+	for (auto iter = actions.rbegin(); iter != actions.rend(); ++iter)
+		(*iter)->backward();
+}
+
+bool CompositeAction::equals(const ActionBase& other) const
+{
+	if (auto p = dynamic_cast<const CompositeAction*>(&other))
+	{
+		if (actions.size() != p->actions.size())
+			return false;
+		for (size_t i = 0; i < actions.size(); ++i)
+			if (!actions[i]->equals(*p->actions[i]))
+				return false;
+		return true;
+	}
+	else
+		return false;
+}
+
 void ActionHistory::execute(std::shared_ptr<ActionBase>&& action)
 {
 	action->forward();

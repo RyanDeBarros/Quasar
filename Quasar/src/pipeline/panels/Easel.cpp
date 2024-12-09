@@ -698,6 +698,7 @@ void Canvas::set_cursor_color(RGBA color)
 	// LATER this is fine for when hovering over image, as it will replace the underlying pixel. However, the checkerboard will still show underneath, so the pen cursor should still blend with that.
 	// Implement some kind of mechanism that will toggle between two modulations (maybe custom shader, using uniforms for performance): one that is blended with checker1, and the other with checker2.
 	// Upon changing the checkerboard colors, this will need to be called again.
+	// TODO In a similar vein, binfo.preview_image should be blended with checkerboard as well, when using PEN. This is simpler, as it just involves a checker_color(x, y) to blend in CBImpl functions editing preview_image.
 	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(color.rgb.r * color.alpha, color.rgb.g * color.alpha, color.rgb.b * color.alpha, 1.0f).as_vec())).send_buffer();
 }
 
@@ -789,7 +790,7 @@ void Canvas::full_brush_reset()
 
 void Canvas::brush(int x, int y)
 {
-	if (brush_pos_in_image_bounds(x, y))
+	if (!move_selection_info.moving && brush_pos_in_image_bounds(x, y))
 	{
 		if (!binfo.brushing)
 			brush_start(x, y);
@@ -992,7 +993,7 @@ bool Canvas::delete_selection()
 
 void Canvas::process_move_selection()
 {
-	move_selection_info.held_time += Machine.delta_time();
+	move_selection_info.held_time += move_selection_info.held_speed_factor * Machine.delta_time();
 	if (move_selection_info.on_starting_interval)
 	{
 		if (move_selection_info.held_time > move_selection_info.held_start_interval)
@@ -1028,28 +1029,23 @@ bool Canvas::move_selection(int dx, int dy)
 {
 	if (selection_interaction_disabled(binfo))
 		return false;
-	auto& points = binfo.smants->get_points();
-	std::unordered_set<IPosition> moved_points;
-	IntBounds remove_bbox = IntBounds::NADIR;
-	while (!points.empty())
+	if (binfo.tip & BrushTip::PENCIL)
 	{
-		IPosition from = *points.begin();
-		binfo.remove_from_selection(from);
-		update_bbox(remove_bbox, from.x, from.y);
-		moved_points.insert(from + IPosition{ dx, dy });
+		CBImpl::move_selection_with_pixels_pencil(*this, dx, dy);
+		return true;
 	}
-	binfo.smants->send_buffer(remove_bbox);
-	IntBounds add_bbox = IntBounds::NADIR;
-	while (!moved_points.empty())
+	else if (binfo.tip & BrushTip::PEN)
 	{
-		auto iter = moved_points.begin();
-		binfo.add_to_selection(*iter);
-		update_bbox(add_bbox, iter->x, iter->y);
-		moved_points.erase(iter); // LATER use std::swap? then handle storage_select_add/storage_select_remove directly
+		CBImpl::move_selection_with_pixels_pen(*this, dx, dy);
+		return true;
 	}
-	binfo.smants->send_buffer(add_bbox);
-	Machine.history.push(std::make_shared<SelectionMoveAction>(binfo.smants, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add)));
-	return true;
+	else if (binfo.tip & (BrushTip::ERASER | BrushTip::SELECT))
+	{
+		CBImpl::move_selection_without_pixels(*this, dx, dy);
+		return true;
+	}
+	else
+		return false;
 }
 
 void BrushInfo::reset()
@@ -1341,6 +1337,7 @@ void Easel::connect_input_handlers()
 					{
 						k.consumed = true;
 						canvas().move_selection_info.moving = false;
+						canvas().move_selection_info.move_x = 0;
 					}
 					else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
 						k.consumed = true;
@@ -1359,6 +1356,7 @@ void Easel::connect_input_handlers()
 					{
 						k.consumed = true;
 						canvas().move_selection_info.moving = false;
+						canvas().move_selection_info.move_x = 0;
 					}
 					else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
 						k.consumed = true;
@@ -1377,6 +1375,7 @@ void Easel::connect_input_handlers()
 					{
 						k.consumed = true;
 						canvas().move_selection_info.moving = false;
+						canvas().move_selection_info.move_y = 0;
 					}
 					else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
 						k.consumed = true;
@@ -1395,6 +1394,7 @@ void Easel::connect_input_handlers()
 					{
 						k.consumed = true;
 						canvas().move_selection_info.moving = false;
+						canvas().move_selection_info.move_y = 0;
 					}
 					else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
 						k.consumed = true;

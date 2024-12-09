@@ -8,6 +8,7 @@
 	bool operator==(const structname&) const = default;\
 	virtual bool equals(const ActionBase& other) const override { auto p = dynamic_cast<const structname*>(&other); return p && *this == *p; }
 
+// LATER why use shared_ptrs instead of unique_ptrs?
 struct ActionBase
 {
 	size_t weight = sizeof(ActionBase);
@@ -18,6 +19,30 @@ struct ActionBase
 	virtual void backward() = 0;
 	virtual bool equals(const ActionBase&) const { return false; }
 	inline bool operator==(const ActionBase&) const = default;
+};
+
+struct DualAction : public ActionBase
+{
+	std::shared_ptr<ActionBase> first, second;
+
+	DualAction(const std::shared_ptr<ActionBase>& first, const std::shared_ptr<ActionBase>& second);
+	DualAction(std::shared_ptr<ActionBase>&& first, std::shared_ptr<ActionBase>&& second);
+	virtual void forward() override;
+	virtual void backward() override;
+	virtual bool equals(const ActionBase&) const override;
+	inline bool operator==(const DualAction&) const = default;
+};
+
+struct CompositeAction : public ActionBase
+{
+	std::vector<std::shared_ptr<ActionBase>> actions;
+
+	CompositeAction(const std::vector<std::shared_ptr<ActionBase>>& actions);
+	CompositeAction(std::vector<std::shared_ptr<ActionBase>>&& actions);
+	virtual void forward() override;
+	virtual void backward() override;
+	virtual bool equals(const ActionBase&) const override;
+	inline bool operator==(const CompositeAction&) const = default;
 };
 
 class ActionHistory

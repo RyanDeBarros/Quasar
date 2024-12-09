@@ -215,6 +215,7 @@ public:
 		bool on_starting_interval = false;
 		float held_time = 0.0f;
 		int move_x = 0, move_y = 0;
+		float held_speed_factor = 1.0f; // SETTINGS
 		static inline const float held_interval = 0.1f;
 		static inline const float held_start_interval = 0.5f;
 	} move_selection_info;
@@ -223,6 +224,7 @@ public:
 	bool start_move_selection(int dx, int dy);
 	bool move_selection(int dx, int dy);
 
+public:
 	enum : size_t
 	{
 		CHECKERBOARD,

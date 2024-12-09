@@ -301,6 +301,11 @@ inline IntBounds abs_bounds(IPosition p1, IPosition p2)
 	return { std::min(p1.x, p2.x), std::max(p1.x, p2.x), std::min(p1.y, p2.y), std::max(p1.y, p2.y) };
 }
 
+inline bool intersection(IntBounds b1, IntBounds b2, IntBounds& b3)
+{
+	return intersection(b1.x1, b1.x2, b2.x1, b2.x2, b3.x1, b3.x2) && intersection(b1.y1, b1.y2, b2.y1, b2.y2, b3.y1, b3.y2);
+}
+
 struct IntRect
 {
 	int x = 0, y = 0, w = 0, h = 0;

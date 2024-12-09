@@ -7,9 +7,14 @@ struct PixelRGBA;
 namespace CBImpl
 {
 	extern void brush_move_to(Canvas& canvas, int x, int y);
+
 	extern void fill_selection_pencil(Canvas& canvas, PixelRGBA color);
 	extern void fill_selection_pen(Canvas& canvas, PixelRGBA color);
 	extern void fill_selection_eraser(Canvas& canvas);
+
+	extern void move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy);
+	extern void move_selection_with_pixels_pen(Canvas& canvas, int dx, int dy);
+	extern void move_selection_without_pixels(Canvas& canvas, int dx, int dy);
 
 	namespace Camera
 	{

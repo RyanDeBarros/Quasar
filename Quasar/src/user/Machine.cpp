@@ -34,8 +34,9 @@ namespace Data
 	namespace History
 	{
 		static bool held_undo = false, held_redo = false, on_starting_interval = true;
-		static double held_time = 0.0;
-		static const double held_interval = 0.1, held_start_interval = 0.5; // SETTINGS not const, but editable
+		static float held_time = 0.0f;
+		static float held_speed_factor = 1.0f; // SETTINGS
+		static const float held_interval = 0.1f, held_start_interval = 0.5f;
 	}
 
 	static ControlScheme control_scheme = ControlScheme::FILE;
@@ -338,7 +339,7 @@ static void process_undo()
 	{
 		if (!MainWindow->is_shift_pressed())
 		{
-			Data::History::held_time += Data::delta_time;
+			Data::History::held_time += Data::History::held_speed_factor * (float)Data::delta_time;
 			if (Data::History::on_starting_interval)
 			{
 				if (Data::History::held_time > Data::History::held_start_interval)
@@ -369,7 +370,7 @@ static void process_redo()
 	{
 		if (MainWindow->is_shift_pressed())
 		{
-			Data::History::held_time += Data::delta_time;
+			Data::History::held_time += Data::History::held_speed_factor * (float)Data::delta_time;
 			if (Data::History::on_starting_interval)
 			{
 				if (Data::History::held_time > Data::History::held_start_interval)
@@ -397,7 +398,6 @@ static void process_redo()
 void MachineImpl::process()
 {
 	Data::update_time();
-	//LOG << Data::delta_time << LOG.nl;
 	palette()->process();
 	brushes()->process();
 	easel()->process();
@@ -405,7 +405,7 @@ void MachineImpl::process()
 		process_undo();
 	else if (Data::History::held_redo)
 		process_redo();
-	LOG << LOG.flush; // flush all pending logs so that elsewhere, LOG.nl can be used without LOG.endl unless necessary.
+	LOG << LOG.flush; // flush all pending logs so that elsewhere, LOG.nl can be used without LOG.endl unless necessary for precise timing.
 }
 
 void MachineImpl::mark()

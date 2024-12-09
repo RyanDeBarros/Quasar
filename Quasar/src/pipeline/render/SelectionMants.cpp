@@ -4,7 +4,7 @@
 
 #include "Uniforms.h"
 
-// TODO re-add parallel offset in geom shader, but provide additional data about which ends should use that offset.
+// LATER re-add parallel offset in geom shader, but provide additional data about which ends should use that offset.
 SelectionMants::SelectionMants()
 	: W_UnitRenderable(nullptr),
 	shader(FileSystem::shader_path("marching_ants.vert"), FileSystem::shader_path("marching_ants.geom"), FileSystem::shader_path("marching_ants.frag"))
@@ -46,7 +46,7 @@ void SelectionMants::set_size(int width, int height)
 
 bool SelectionMants::add(IPosition pos)
 {
-	if (points.contains(pos))
+	if (points.contains(pos) || pos.x < 0 || pos.x >= cols - 1 || pos.y < 0 || pos.y >= rows - 1)
 		return false;
 	points.insert(pos);
 	shader_add(pos);
@@ -55,10 +55,9 @@ bool SelectionMants::add(IPosition pos)
 
 bool SelectionMants::remove(IPosition pos)
 {
-	auto iter = points.find(pos);
-	if (iter == points.end())
+	if (!points.contains(pos))
 		return false;
-	points.erase(iter);
+	points.erase(pos);
 	shader_remove(pos);
 	return true;
 }
