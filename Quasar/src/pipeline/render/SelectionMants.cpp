@@ -47,25 +47,25 @@ void SelectionMants::set_size(int width, int height)
 
 bool SelectionMants::add(IPosition pos)
 {
-	if (points.count(pos))
+	if (points.contains(pos))
 		return false;
 	points.insert(pos);
 	static const float on_pos = 1.0f;
 	static const float on_neg = -1.0f;
 	static const float off = 0.0f;
-	if (points.count({ pos.x - 1, pos.y }))
+	if (points.contains({ pos.x - 1, pos.y }))
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x, pos.y), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x, pos.y), 1, &on_pos);
-	if (points.count({ pos.x + 1, pos.y }))
+	if (points.contains({ pos.x + 1, pos.y }))
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x + 1, pos.y), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x + 1, pos.y), 1, &on_neg);
-	if (points.count({ pos.x, pos.y - 1 }))
+	if (points.contains({ pos.x, pos.y - 1 }))
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y), 1, &on_neg);
-	if (points.count({ pos.x, pos.y + 1 }))
+	if (points.contains({ pos.x, pos.y + 1 }))
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &on_pos);
@@ -81,19 +81,19 @@ bool SelectionMants::remove(IPosition pos)
 	static const float on_pos = 1.0f;
 	static const float on_neg = -1.0f;
 	static const float off = 0.0f;
-	if (points.count({ pos.x - 1, pos.y }))
+	if (points.contains({ pos.x - 1, pos.y }))
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x, pos.y), 1, &on_neg);
 	else
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x, pos.y), 1, &off);
-	if (points.count({ pos.x + 1, pos.y }))
+	if (points.contains({ pos.x + 1, pos.y }))
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x + 1, pos.y), 1, &on_pos);
 	else
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x + 1, pos.y), 1, &off);
-	if (points.count({ pos.x, pos.y - 1 }))
+	if (points.contains({ pos.x, pos.y - 1 }))
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y), 1, &on_pos);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y), 1, &off);
-	if (points.count({ pos.x, pos.y + 1 }))
+	if (points.contains({ pos.x, pos.y + 1 }))
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &on_neg);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &off);

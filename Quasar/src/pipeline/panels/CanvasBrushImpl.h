@@ -25,6 +25,11 @@ namespace CBImpl
 		extern void submit_pen(Canvas& canvas);
 		extern void submit_eraser(Canvas& canvas);
 		extern void submit_select(Canvas& canvas);
+
+		extern void reset_pencil(BrushInfo& binfo);
+		extern void reset_pen(BrushInfo& binfo);
+		extern void reset_eraser(BrushInfo& binfo);
+		extern void reset_select(BrushInfo& binfo);
 	}
 
 	namespace Line
@@ -45,6 +50,7 @@ namespace CBImpl
 		extern void reset_pencil(BrushInfo& binfo);
 		extern void reset_pen(BrushInfo& binfo);
 		extern void reset_eraser(BrushInfo& binfo);
+		extern void reset_select(BrushInfo& binfo);
 	}
 
 	namespace RectOutline
@@ -65,6 +71,7 @@ namespace CBImpl
 		extern void reset_pencil(BrushInfo& binfo);
 		extern void reset_pen(BrushInfo& binfo);
 		extern void reset_eraser(BrushInfo& binfo);
+		extern void reset_select(BrushInfo& binfo);
 	}
 
 	namespace RectFill
@@ -85,6 +92,7 @@ namespace CBImpl
 		extern void reset_pencil(BrushInfo& binfo);
 		extern void reset_pen(BrushInfo& binfo);
 		extern void reset_eraser(BrushInfo& binfo);
+		extern void reset_select(BrushInfo& binfo);
 	}
 
 	namespace EllipseOutline
@@ -105,6 +113,7 @@ namespace CBImpl
 		extern void reset_pencil(BrushInfo& binfo);
 		extern void reset_pen(BrushInfo& binfo);
 		extern void reset_eraser(BrushInfo& binfo);
+		extern void reset_select(BrushInfo& binfo);
 	}
 
 	namespace EllipseFill
@@ -125,6 +134,7 @@ namespace CBImpl
 		extern void reset_pencil(BrushInfo& binfo);
 		extern void reset_pen(BrushInfo& binfo);
 		extern void reset_eraser(BrushInfo& binfo);
+		extern void reset_select(BrushInfo& binfo);
 	}
 
 	namespace BucketFill
@@ -133,5 +143,6 @@ namespace CBImpl
 		extern void brush_pen(Canvas& canvas, int x, int y);
 		extern void brush_eraser(Canvas& canvas, int x, int y);
 		extern void brush_select(Canvas& canvas, int x, int y);
+		extern void reset_select(BrushInfo& binfo);
 	}
 }

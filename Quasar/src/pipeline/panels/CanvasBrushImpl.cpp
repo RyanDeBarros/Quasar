@@ -120,6 +120,7 @@ static void standard_outline_brush_eraser(Canvas& canvas, int x, int y, Discrete
 	update_subtexture(binfo);
 }
 
+// TODO this should only be used for FILLED. For outlines, use smants directly.
 static void standard_outline_brush_select(Canvas& canvas, int x, int y, DiscreteInterpolator& interp)
 {
 	BrushInfo& binfo = canvas.binfo;
@@ -299,6 +300,18 @@ static void standard_submit_select(Canvas& canvas, DiscreteInterpolator& interp)
 	canvas.binfo.push_selection_to_history();
 }
 
+static void standard_reset_outline_select(BrushInfo& binfo)
+{
+	if (binfo.cancelling)
+	{
+		IntBounds bbox = IntBounds::NADIR;
+		for (IPosition pos : binfo.cleared_selection)
+			if (binfo.add_to_selection(pos))
+				update_bbox(bbox, pos.x, pos.y);
+		binfo.smants->send_buffer(bbox);
+	}
+}
+
 void CBImpl::brush_move_to(Canvas& canvas, int x, int y)
 {
 	DiscreteLineInterpolator interp;
@@ -335,6 +348,8 @@ static void paint_brush_suffix(Canvas& canvas, int x, int y, PixelRGBA initial_c
 void CBImpl::Paint::brush_pencil(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
+	if (!binfo.point_valid_in_selection(x, y))
+		return;
 	update_bbox(binfo.brushing_bbox, x, y);
 	PixelRGBA initial_c = canvas.pixel_color_at(x, y);
 	PixelRGBA final_c = canvas.applied_pencil_rgba();
@@ -346,6 +361,8 @@ void CBImpl::Paint::brush_pencil(Canvas& canvas, int x, int y)
 void CBImpl::Paint::brush_pen(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
+	if (!binfo.point_valid_in_selection(x, y))
+		return;
 	update_bbox(binfo.brushing_bbox, x, y);
 	PixelRGBA initial_c = canvas.pixel_color_at(x, y);
 	PixelRGBA final_c = canvas.applied_pen_rgba();
@@ -356,6 +373,8 @@ void CBImpl::Paint::brush_pen(Canvas& canvas, int x, int y)
 void CBImpl::Paint::brush_eraser(Canvas& canvas, int x, int y)
 {
 	BrushInfo& binfo = canvas.binfo;
+	if (!binfo.point_valid_in_selection(x, y))
+		return;
 	update_bbox(binfo.brushing_bbox, x, y);
 	PixelRGBA initial_c = canvas.pixel_color_at(x, y);
 	buffer_set_pixel_alpha(canvas.image->buf, x, y, 0);
@@ -411,6 +430,30 @@ void CBImpl::Paint::submit_eraser(Canvas& canvas)
 void CBImpl::Paint::submit_select(Canvas& canvas)
 {
 	canvas.binfo.push_selection_to_history();
+}
+
+void CBImpl::Paint::reset_pencil(BrushInfo& binfo)
+{
+	TwoColorAction action(binfo.canvas->image, binfo.brushing_bbox, std::move(binfo.storage_2c));
+	action.backward();
+}
+
+void CBImpl::Paint::reset_pen(BrushInfo& binfo)
+{
+	TwoColorAction action(binfo.canvas->image, binfo.brushing_bbox, std::move(binfo.storage_2c));
+	action.backward();
+}
+
+void CBImpl::Paint::reset_eraser(BrushInfo& binfo)
+{
+	OneColorAction action(binfo.canvas->image, PixelRGBA{}, binfo.brushing_bbox, std::move(binfo.storage_1c));
+	action.backward();
+}
+
+void CBImpl::Paint::reset_select(BrushInfo& binfo)
+{
+	SelectionAction action(binfo.smants, binfo.brushing_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add));
+	action.backward();
 }
 
 // <<<==================================<<< LINE >>>==================================>>>
@@ -530,6 +573,11 @@ void CBImpl::Line::reset_eraser(BrushInfo& binfo)
 		});
 	binfo.eraser_preview_image->update_subtexture(abs_rect(binfo.interps.line.start, binfo.interps.line.finish,
 		BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
+}
+
+void CBImpl::Line::reset_select(BrushInfo& binfo)
+{
+	standard_reset_outline_select(binfo);
 }
 
 // <<<==================================<<< RECT OUTLINE >>>==================================>>>
@@ -653,6 +701,11 @@ void CBImpl::RectOutline::reset_eraser(BrushInfo& binfo)
 	rect_outline_eraser_update_subtexture(binfo);
 }
 
+void CBImpl::RectOutline::reset_select(BrushInfo& binfo)
+{
+	standard_reset_outline_select(binfo);
+}
+
 // <<<==================================<<< RECT FILL >>>==================================>>>
 
 void CBImpl::RectFill::brush_pencil(Canvas& canvas, int x, int y)
@@ -730,6 +783,11 @@ void CBImpl::RectFill::reset_pen(BrushInfo& binfo)
 void CBImpl::RectFill::reset_eraser(BrushInfo& binfo)
 {
 	CBImpl::RectOutline::reset_eraser(binfo);
+}
+
+void CBImpl::RectFill::reset_select(BrushInfo& binfo)
+{
+	standard_reset_outline_select(binfo);
 }
 
 // <<<==================================<<< ELLIPSE OUTLINE >>>==================================>>>
@@ -855,6 +913,11 @@ void CBImpl::EllipseOutline::reset_eraser(BrushInfo& binfo)
 	binfo.eraser_preview_image->update_subtexture(bounds_to_rect(binfo.brushing_bbox, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy));
 }
 
+void CBImpl::EllipseOutline::reset_select(BrushInfo& binfo)
+{
+	standard_reset_outline_select(binfo);
+}
+
 // <<<==================================<<< ELLIPSE FILL >>>==================================>>>
 
 void CBImpl::EllipseFill::brush_pencil(Canvas& canvas, int x, int y)
@@ -942,6 +1005,11 @@ void CBImpl::EllipseFill::reset_pen(BrushInfo& binfo)
 void CBImpl::EllipseFill::reset_eraser(BrushInfo& binfo)
 {
 	CBImpl::EllipseOutline::reset_eraser(binfo);
+}
+
+void CBImpl::EllipseFill::reset_select(BrushInfo& binfo)
+{
+	standard_reset_outline_select(binfo);
 }
 
 // <<<==================================<<< BUCKET FILL >>>==================================>>>
@@ -1086,12 +1154,16 @@ void CBImpl::BucketFill::brush_select(Canvas& canvas, int x, int y)
 			return canvas.binfo.add_to_selection({ x, y });
 		else if (canvas.cursor_state == Canvas::CursorState::DOWN_ALTERNATE)
 			return canvas.binfo.remove_from_selection({ x, y });
+		else
+			return false;
 		};
 	static auto alerady_stored = [](Canvas& canvas, int x, int y) {
 		if (canvas.cursor_state == Canvas::CursorState::DOWN_PRIMARY)
-			return (bool)canvas.binfo.smants->get_points().count({ x, y });
+			return canvas.binfo.smants->get_points().contains({ x, y });
 		else if (canvas.cursor_state == Canvas::CursorState::DOWN_ALTERNATE)
-			return !canvas.binfo.smants->get_points().count({ x, y });
+			return !canvas.binfo.smants->get_points().contains({ x, y });
+		else
+			return true;
 		};
 	if (MainWindow->is_shift_pressed())
 		bucket_fill_find_noncontiguous(canvas, x, y, select_pixel);
@@ -1101,4 +1173,9 @@ void CBImpl::BucketFill::brush_select(Canvas& canvas, int x, int y)
 	canvas.binfo.push_selection_to_history();
 	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	canvas.cursor_enter();
+}
+
+void CBImpl::BucketFill::reset_select(BrushInfo& binfo)
+{
+	standard_reset_outline_select(binfo);
 }

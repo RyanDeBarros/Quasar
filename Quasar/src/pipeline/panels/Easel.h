@@ -58,7 +58,10 @@ struct BrushAttributes
 
 struct BrushInfo
 {
+	struct Canvas* canvas = nullptr;
+
 	bool brushing = false;
+	bool cancelling = false;
 	BrushTip tip = BrushTip::PENCIL;
 	BrushTool tool = BrushTool::CAMERA;
 	IPosition starting_pos = { -1, -1 };
@@ -77,6 +80,7 @@ struct BrushInfo
 	class SelectionMants* smants_preview = nullptr;
 	std::unordered_set<IPosition> storage_select_remove;
 	std::unordered_set<IPosition> storage_select_add;
+	std::unordered_set<IPosition> cleared_selection;
 
 	struct
 	{
@@ -93,6 +97,7 @@ struct BrushInfo
 	bool remove_from_selection(IPosition pos);
 	IntBounds clear_selection();
 	void push_selection_to_history();
+	bool point_valid_in_selection(int x, int y) const;
 };
 
 struct Canvas : public Widget

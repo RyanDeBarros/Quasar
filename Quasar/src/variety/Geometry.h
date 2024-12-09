@@ -224,11 +224,6 @@ struct FlatTransform
 	float top() const { return position.y + 0.5f * scale.y; }
 };
 
-extern Logger& operator<<(Logger&, const Position&);
-extern Logger& operator<<(Logger&, const IPosition&);
-extern Logger& operator<<(Logger&, const Scale&);
-extern Logger& operator<<(Logger&, const FlatTransform&);
-
 struct ClippingRect
 {
 	GLint x = 0, y = 0;
@@ -376,3 +371,12 @@ constexpr float mean2d1d(float a, float b)
 {
 	return (a + b + std::max(a, b)) / 3.0f;
 }
+
+extern Logger& operator<<(Logger&, const Position&);
+extern Logger& operator<<(Logger&, const IPosition&);
+extern Logger& operator<<(Logger&, const Scale&);
+extern Logger& operator<<(Logger&, const FlatTransform&);
+extern Logger& operator<<(Logger&, const ClippingRect&);
+extern Logger& operator<<(Logger&, const Bounds&);
+extern Logger& operator<<(Logger&, const IntBounds&);
+extern Logger& operator<<(Logger&, const IntRect&);
