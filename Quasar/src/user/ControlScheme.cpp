@@ -53,7 +53,8 @@ static void global_key_handler_palette(const KeyEvent& k)
 			Machine.palette_overwrite_color();
 			break;
 		case Key::DELETE:
-			Machine.palette_delete_color();
+			if (k.mods & Mods::CONTROL)
+				Machine.palette_delete_color();
 			break;
 		case Key::N:
 			if (k.mods & Mods::CONTROL)

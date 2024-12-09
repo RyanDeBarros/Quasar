@@ -5,7 +5,6 @@
 #include "Uniforms.h"
 
 // TODO re-add parallel offset in geom shader, but provide additional data about which ends should use that offset.
-
 SelectionMants::SelectionMants()
 	: W_UnitRenderable(nullptr),
 	shader(FileSystem::shader_path("marching_ants.vert"), FileSystem::shader_path("marching_ants.geom"), FileSystem::shader_path("marching_ants.frag"))
@@ -50,6 +49,22 @@ bool SelectionMants::add(IPosition pos)
 	if (points.contains(pos))
 		return false;
 	points.insert(pos);
+	shader_add(pos);
+	return true;
+}
+
+bool SelectionMants::remove(IPosition pos)
+{
+	auto iter = points.find(pos);
+	if (iter == points.end())
+		return false;
+	points.erase(iter);
+	shader_remove(pos);
+	return true;
+}
+
+void SelectionMants::shader_add(IPosition pos)
+{
 	static const float on_pos = 1.0f;
 	static const float on_neg = -1.0f;
 	static const float off = 0.0f;
@@ -69,15 +84,10 @@ bool SelectionMants::add(IPosition pos)
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &on_pos);
-	return true;
 }
 
-bool SelectionMants::remove(IPosition pos)
+void SelectionMants::shader_remove(IPosition pos)
 {
-	auto iter = points.find(pos);
-	if (iter == points.end())
-		return false;
-	points.erase(iter);
 	static const float on_pos = 1.0f;
 	static const float on_neg = -1.0f;
 	static const float off = 0.0f;
@@ -97,7 +107,6 @@ bool SelectionMants::remove(IPosition pos)
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &on_neg);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &off);
-	return true;
 }
 
 IntBounds SelectionMants::clear()

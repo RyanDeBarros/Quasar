@@ -90,6 +90,9 @@ struct MachineImpl
 	bool raw_mouse_motion = true;
 	void update_raw_mouse_motion() const { main_window->set_raw_mouse_motion(raw_mouse_motion); }
 
+	float time() const;
+	float delta_time() const;
+
 	// Control Scheme
 	enum class ControlScheme get_control_scheme() const;
 	void set_control_scheme(enum class ControlScheme scheme) const;

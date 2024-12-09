@@ -295,6 +295,18 @@ void Canvas::sync_ur(size_t subw)
 	Utils::set_vertex_pos_attributes(ur_wget(*this, subw), wp_at(subw).relative_to(self.transform));
 }
 
+void Canvas::process()
+{
+	if (MEasel->cursor_in_clipping())
+		hover_pixel_under_cursor();
+	else
+		unhover();
+	binfo.smants->send_time(Machine.time());
+	binfo.smants_preview->send_time(Machine.time());
+	if (move_selection_info.moving)
+		process_move_selection();
+}
+
 void Canvas::set_image(const std::shared_ptr<Image>& img)
 {
 	fs_wget(*this, SPRITE).image = img;
@@ -408,6 +420,7 @@ void Canvas::sync_gfx_with_image()
 	sync_smants_with_image();
 	sync_gridlines_with_image();
 	sync_transform();
+	full_brush_reset();
 }
 
 void Canvas::create_checkerboard_image()
@@ -768,6 +781,12 @@ bool Canvas::cursor_cancel()
 	return false;
 }
 
+void Canvas::full_brush_reset()
+{
+	cursor_cancel();
+	deselect_all();
+}
+
 void Canvas::brush(int x, int y)
 {
 	if (brush_pos_in_image_bounds(x, y))
@@ -780,6 +799,7 @@ void Canvas::brush(int x, int y)
 
 void Canvas::brush_start(int x, int y)
 {
+	set_cursor_color(applied_color());
 	binfo.brushing = true;
 	binfo.reset();
 	binfo.last_brush_pos = { x, y };
@@ -933,9 +953,14 @@ void Canvas::deselect_all()
 	}
 }
 
+static bool selection_interaction_disabled(BrushInfo& binfo)
+{
+	return binfo.smants->get_points().empty() || binfo.brushing;
+}
+
 void Canvas::fill_selection_primary()
 {
-	if (binfo.smants->get_points().empty() || binfo.brushing)
+	if (selection_interaction_disabled(binfo))
 		return;
 	if (binfo.tip & BrushTip::PENCIL)
 		CBImpl::fill_selection_pencil(*this, pric_pxs);
@@ -947,7 +972,7 @@ void Canvas::fill_selection_primary()
 
 void Canvas::fill_selection_alternate()
 {
-	if (binfo.smants->get_points().empty() || binfo.brushing)
+	if (selection_interaction_disabled(binfo))
 		return;
 	if (binfo.tip & BrushTip::PENCIL)
 		CBImpl::fill_selection_pencil(*this, altc_pxs);
@@ -959,9 +984,71 @@ void Canvas::fill_selection_alternate()
 
 bool Canvas::delete_selection()
 {
-	if (binfo.smants->get_points().empty() || binfo.brushing)
+	if (selection_interaction_disabled(binfo))
 		return false;
 	CBImpl::fill_selection_eraser(*this);
+	return true;
+}
+
+void Canvas::process_move_selection()
+{
+	move_selection_info.held_time += Machine.delta_time();
+	if (move_selection_info.on_starting_interval)
+	{
+		if (move_selection_info.held_time > move_selection_info.held_start_interval)
+		{
+			move_selection_info.held_time -= move_selection_info.held_start_interval;
+			while (move_selection_info.held_time > move_selection_info.held_interval)
+				move_selection_info.held_time -= move_selection_info.held_interval;
+			move_selection(move_selection_info.move_x, move_selection_info.move_y);
+			move_selection_info.on_starting_interval = false;
+		}
+	}
+	else if (move_selection_info.held_time > move_selection_info.held_interval)
+	{
+
+		do { move_selection_info.held_time -= move_selection_info.held_interval; } while (move_selection_info.held_time > move_selection_info.held_interval);
+		move_selection(move_selection_info.move_x, move_selection_info.move_y);
+	}
+}
+
+bool Canvas::start_move_selection(int dx, int dy)
+{
+	if (!move_selection(dx, dy))
+		return false;
+	move_selection_info.moving = true;
+	move_selection_info.on_starting_interval = true;
+	move_selection_info.held_time = 0.0f;
+	move_selection_info.move_x = dx;
+	move_selection_info.move_y = dy;
+	return true;
+}
+
+bool Canvas::move_selection(int dx, int dy)
+{
+	if (selection_interaction_disabled(binfo))
+		return false;
+	auto& points = binfo.smants->get_points();
+	std::unordered_set<IPosition> moved_points;
+	IntBounds remove_bbox = IntBounds::NADIR;
+	while (!points.empty())
+	{
+		IPosition from = *points.begin();
+		binfo.remove_from_selection(from);
+		update_bbox(remove_bbox, from.x, from.y);
+		moved_points.insert(from + IPosition{ dx, dy });
+	}
+	binfo.smants->send_buffer(remove_bbox);
+	IntBounds add_bbox = IntBounds::NADIR;
+	while (!moved_points.empty())
+	{
+		auto iter = moved_points.begin();
+		binfo.add_to_selection(*iter);
+		update_bbox(add_bbox, iter->x, iter->y);
+		moved_points.erase(iter); // LATER use std::swap? then handle storage_select_add/storage_select_remove directly
+	}
+	binfo.smants->send_buffer(add_bbox);
+	Machine.history.push(std::make_shared<SelectionMoveAction>(binfo.smants, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add)));
 	return true;
 }
 
@@ -1215,6 +1302,104 @@ void Easel::connect_input_handlers()
 						canvas().fill_selection_primary();
 				}
 			}
+			else if (!(k.mods & Mods::ALT))
+			{
+				if (k.key == Key::LEFT)
+				{
+					if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
+						k.consumed = true;
+				}
+				else if (k.key == Key::RIGHT)
+				{
+					if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
+						k.consumed = true;
+				}
+				else if (k.key == Key::DOWN)
+				{
+					if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
+						k.consumed = true;
+				}
+				else if (k.key == Key::UP)
+				{
+					if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
+						k.consumed = true;
+				}
+			}
+		}
+		else if (k.action == IAction::RELEASE)
+		{
+			if (k.key == Key::LEFT)
+			{
+				if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == -1)
+				{
+					if (MainWindow->is_key_pressed(Key::RIGHT))
+					{
+						if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
+							k.consumed = true;
+					}
+					else if (canvas().move_selection_info.move_y == 0)
+					{
+						k.consumed = true;
+						canvas().move_selection_info.moving = false;
+					}
+					else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
+						k.consumed = true;
+				}
+			}
+			else if (k.key == Key::RIGHT)
+			{
+				if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == 1)
+				{
+					if (MainWindow->is_key_pressed(Key::LEFT))
+					{
+						if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
+							k.consumed = true;
+					}
+					else if (canvas().move_selection_info.move_y == 0)
+					{
+						k.consumed = true;
+						canvas().move_selection_info.moving = false;
+					}
+					else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
+						k.consumed = true;
+				}
+			}
+			else if (k.key == Key::DOWN)
+			{
+				if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == -1)
+				{
+					if (MainWindow->is_key_pressed(Key::UP))
+					{
+						if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
+							k.consumed = true;
+					}
+					else if (canvas().move_selection_info.move_x == 0)
+					{
+						k.consumed = true;
+						canvas().move_selection_info.moving = false;
+					}
+					else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
+						k.consumed = true;
+				}
+			}
+			else if (k.key == Key::UP)
+			{
+				if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == 1)
+				{
+					if (MainWindow->is_key_pressed(Key::DOWN))
+					{
+						if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
+							k.consumed = true;
+					}
+					else if (canvas().move_selection_info.move_x == 0)
+					{
+						k.consumed = true;
+						canvas().move_selection_info.moving = false;
+					}
+					else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
+						k.consumed = true;
+				}
+			}
 		}
 		};
 	scroll_handler.callback = [this](const ScrollEvent& s) {
@@ -1246,12 +1431,7 @@ void Easel::_send_view()
 void Easel::process()
 {
 	update_panning();
-	if (cursor_in_clipping())
-		canvas().hover_pixel_under_cursor();
-	else
-		canvas().unhover();
-	canvas().binfo.smants->send_time((float)glfwGetTime());
-	canvas().binfo.smants_preview->send_time((float)glfwGetTime());
+	canvas().process();
 }
 
 void Easel::sync_widget()

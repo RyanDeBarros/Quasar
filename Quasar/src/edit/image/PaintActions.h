@@ -104,3 +104,15 @@ struct SelectionAction : public ActionBase
 	virtual void forward() override;
 	virtual void backward() override;
 };
+
+// TODO use SelectionMoveAction more in CBImpl
+struct SelectionMoveAction : public ActionBase
+{
+	class SelectionMants* smants;
+	IntBounds remove_bbox, add_bbox;
+	std::unordered_set<IPosition> remove_points;
+	std::unordered_set<IPosition> add_points;
+	SelectionMoveAction(class SelectionMants* smants, IntBounds remove_bbox, IntBounds add_bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points);
+	virtual void forward() override;
+	virtual void backward() override;
+};

@@ -23,6 +23,12 @@ public:
 
 	bool add(IPosition pos);
 	bool remove(IPosition pos);
+
+private:
+	void shader_add(IPosition pos);
+	void shader_remove(IPosition pos);
+
+public:
 	IntBounds clear();
 	const std::unordered_set<IPosition>& get_points() const { return points; }
 

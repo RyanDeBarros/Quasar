@@ -548,3 +548,29 @@ void SelectionAction::backward()
 		smants->add(*iter);
 	smants->send_buffer(bbox);
 }
+
+SelectionMoveAction::SelectionMoveAction(SelectionMants* smants, IntBounds remove_bbox, IntBounds add_bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points)
+	: smants(smants), remove_bbox(remove_bbox), add_bbox(add_bbox), remove_points(std::move(remove_points)), add_points(std::move(add_points))
+{
+	weight = sizeof(SelectionAction) + (this->remove_points.size() + this->add_points.size()) * sizeof(IPosition);
+}
+
+void SelectionMoveAction::forward()
+{
+	for (auto iter = remove_points.begin(); iter != remove_points.end(); ++iter)
+		smants->remove(*iter);
+	smants->send_buffer(remove_bbox);
+	for (auto iter = add_points.begin(); iter != add_points.end(); ++iter)
+		smants->add(*iter);
+	smants->send_buffer(add_bbox);
+}
+
+void SelectionMoveAction::backward()
+{
+	for (auto iter = add_points.begin(); iter != add_points.end(); ++iter)
+		smants->remove(*iter);
+	smants->send_buffer(add_bbox);
+	for (auto iter = remove_points.begin(); iter != remove_points.end(); ++iter)
+		smants->add(*iter);
+	smants->send_buffer(remove_bbox);
+}

@@ -146,6 +146,7 @@ public:
 	void send_vp(const glm::mat3& vp);
 	void sync_cursor_with_widget();
 	void sync_ur(size_t subw);
+	void process();
 
 	void set_image(const std::shared_ptr<Image>& img);
 	void set_image(std::shared_ptr<Image>&& img);
@@ -187,6 +188,7 @@ public:
 	void cursor_enter();
 	void cursor_release(MouseButton button);
 	bool cursor_cancel();
+	void full_brush_reset();
 
 	RGBA primary_color, alternate_color;
 	PixelRGBA pric_pxs = {};
@@ -206,6 +208,20 @@ public:
 	void fill_selection_primary();
 	void fill_selection_alternate();
 	bool delete_selection();
+
+	struct
+	{
+		bool moving = false;
+		bool on_starting_interval = false;
+		float held_time = 0.0f;
+		int move_x = 0, move_y = 0;
+		static inline const float held_interval = 0.1f;
+		static inline const float held_start_interval = 0.5f;
+	} move_selection_info;
+
+	void process_move_selection();
+	bool start_move_selection(int dx, int dy);
+	bool move_selection(int dx, int dy);
 
 	enum : size_t
 	{

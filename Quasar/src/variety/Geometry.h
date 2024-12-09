@@ -290,6 +290,12 @@ inline void update_bbox(IntBounds& bbox, int x, int y)
 		bbox.y2 = y;
 }
 
+inline void update_bbox(IntBounds& bbox, IntBounds with)
+{
+	update_bbox(bbox, with.x1, with.y1);
+	update_bbox(bbox, with.x2, with.y2);
+}
+
 inline IntBounds abs_bounds(IPosition p1, IPosition p2)
 {
 	return { std::min(p1.x, p2.x), std::max(p1.x, p2.x), std::min(p1.y, p2.y), std::max(p1.y, p2.y) };

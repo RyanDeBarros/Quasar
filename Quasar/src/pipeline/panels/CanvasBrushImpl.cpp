@@ -161,8 +161,7 @@ static void standard_start_select_check_replace(Canvas& canvas)
 		IntBounds bbox = binfo.clear_selection();
 		if (bbox != IntBounds::NADIR)
 		{
-			update_bbox(binfo.brushing_bbox, bbox.x1, bbox.y1);
-			update_bbox(binfo.brushing_bbox, bbox.x2, bbox.y2);
+			update_bbox(binfo.brushing_bbox, bbox);
 			binfo.smants->send_buffer(bbox);
 		}
 	}

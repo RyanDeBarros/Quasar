@@ -549,6 +549,16 @@ Position MachineImpl::cursor_world_pos(const glm::mat3& inverse_vp) const
 	return to_world_coordinates(main_window->cursor_pos(), inverse_vp);
 }
 
+float MachineImpl::time() const
+{
+	return (float)Data::current_time;
+}
+
+float MachineImpl::delta_time() const
+{
+	return (float)Data::delta_time;
+}
+
 ControlScheme MachineImpl::get_control_scheme() const
 {
 	return Data::control_scheme;
