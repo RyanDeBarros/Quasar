@@ -1146,6 +1146,11 @@ void Easel::connect_input_handlers()
 			{
 				if (canvas().cursor_cancel())
 					k.consumed = true;
+				else
+				{
+					canvas().deselect_all();
+					k.consumed = true;
+				}
 			}
 			else if (k.mods & Mods::CONTROL)
 			{

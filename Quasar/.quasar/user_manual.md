@@ -93,19 +93,21 @@ There are four brush tips to choose from: PENCIL, PEN, ERASER, and SELECT. When 
 
 ### Brush tools
 
-There are several brush tools to choose from, which determine how pixels are interacted with in canvas, based on mouse input:
+There are several brush tools to choose from, which determine how pixels are interacted with in canvas, based on mouse input. Note that every brush tip can be used with each brush tool. So if select tool is selected with fill tool, the fill action will not actually paint on all the pixels - those pixels will all be selected instead.
 
 * Camera (key shortcut: Z) - Neutral mode that doesn't interact with the canvas aside from navigation.
 * Paint (key shortcut: P) - Freehand draw on canvas.
-* Line (key shortcut: L) - Click and drag to draw a controlled line.
-* Fill (key shortcut: F) - Fill all connected (same color) pixels.
-* Rect Outline (key shortcut: R) - Click and drag to draw a rectangle border.
-* Rect Fill (key shortcut: SHIFT+R) - Click and drag to draw a filled-in rectangle.
-* Ellipse Outline (key shortcut: E) - Click and drag to draw a ellipse border.
-* Ellipse Fill (key shortcut: SHIFT+E) - Click and drag to draw a filled-in ellipse.
+* Line (key shortcut: L) - Click and drag to draw a controlled line. Hold SHIFT to draw *regular* lines.
+* Fill (key shortcut: F) - Fill all connected (same color) pixels within the set tolerance level. Hold SHIFT to fill all pixels in the image within the set tolerance level.
+* Rect Outline (key shortcut: R) - Click and drag to draw a rectangle border. Hold SHIFT to force the rectangle into a square.
+* Rect Fill (key shortcut: SHIFT+R) - Click and drag to draw a filled-in rectangle. Hold SHIFT to force the rectangle into a square.
+* Ellipse Outline (key shortcut: E) - Click and drag to draw a ellipse border. Hold SHIFT to force the ellipse into a circle.
+* Ellipse Fill (key shortcut: SHIFT+E) - Click and drag to draw a filled-in ellipse. Hold SHIFT to force the ellipse into a circle.
 
 ## Easel
 
 ### Canvas specifics
 
 Press LMB to paint the primary color selection and RMB to paint the alternate color selection, if using a painting mode. If holding ALT, this action will instead set the respective color selection in the color picker.
+
+You could select the entire canvas with CTRL+A, and deselect everything with CTRL+D or ESCAPE.

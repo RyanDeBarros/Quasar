@@ -31,7 +31,8 @@ static void standard_outline_brush_pencil(Canvas& canvas, int x, int y, Discrete
 	for (unsigned int i = 0; i < interp.length; ++i)
 	{
 		interp.at(i, pos.x, pos.y);
-		buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
 	}
 	update_subtexture(binfo);
 
@@ -41,7 +42,8 @@ static void standard_outline_brush_pencil(Canvas& canvas, int x, int y, Discrete
 	for (unsigned int i = 0; i < interp.length; ++i)
 	{
 		interp.at(i, pos.x, pos.y);
-		looperand(canvas, pos, update_subtexture);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			looperand(canvas, pos, update_subtexture);
 	}
 	update_subtexture(binfo);
 }
@@ -68,7 +70,8 @@ static void standard_outline_brush_pen(Canvas& canvas, int x, int y, DiscreteInt
 	for (unsigned int i = 0; i < interp.length; ++i)
 	{
 		interp.at(i, pos.x, pos.y);
-		buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			buffer_set_pixel_alpha(binfo.preview_image->buf, pos.x, pos.y, 0);
 	}
 	update_subtexture(binfo);
 
@@ -78,7 +81,8 @@ static void standard_outline_brush_pen(Canvas& canvas, int x, int y, DiscreteInt
 	for (unsigned int i = 0; i < interp.length; ++i)
 	{
 		interp.at(i, pos.x, pos.y);
-		looperand(canvas, pos, update_subtexture);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			looperand(canvas, pos, update_subtexture);
 	}
 	update_subtexture(binfo);
 }
@@ -105,7 +109,8 @@ static void standard_outline_brush_eraser(Canvas& canvas, int x, int y, Discrete
 	for (unsigned int i = 0; i < interp.length; ++i)
 	{
 		interp.at(i, pos.x, pos.y);
-		buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 0, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			buffer_set_rect_alpha(binfo.eraser_preview_image->buf, pos.x, pos.y, 1, 1, 0, BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy);
 	}
 	update_subtexture(binfo);
 
@@ -115,12 +120,12 @@ static void standard_outline_brush_eraser(Canvas& canvas, int x, int y, Discrete
 	for (unsigned int i = 0; i < interp.length; ++i)
 	{
 		interp.at(i, pos.x, pos.y);
-		looperand(canvas, pos, update_subtexture);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			looperand(canvas, pos, update_subtexture);
 	}
 	update_subtexture(binfo);
 }
 
-// TODO this should only be used for FILLED. For outlines, use smants directly.
 static void standard_outline_brush_select(Canvas& canvas, int x, int y, DiscreteInterpolator& interp)
 {
 	BrushInfo& binfo = canvas.binfo;
@@ -198,10 +203,13 @@ static void standard_submit_filled_pencil(Canvas& canvas, DiscreteInterpolator& 
 		for (unsigned int i = 0; i < interp.length; ++i)
 		{
 			interp.at(i, pos.x, pos.y);
-			PixelRGBA old_color = canvas.pixel_color_at(pos.x, pos.y);
-			PixelRGBA new_color = canvas.applied_color().get_pixel_rgba();
-			new_color.blend_over(old_color);
-			canvas.binfo.storage_2c[pos] = { new_color, old_color };
+			if (binfo.point_valid_in_selection(pos.x, pos.y))
+			{
+				PixelRGBA old_color = canvas.pixel_color_at(pos.x, pos.y);
+				PixelRGBA new_color = canvas.applied_color().get_pixel_rgba();
+				new_color.blend_over(old_color);
+				canvas.binfo.storage_2c[pos] = { new_color, old_color };
+			}
 		}
 		standard_submit_pencil(canvas);
 	}
@@ -236,7 +244,8 @@ static void standard_submit_filled_pen(Canvas& canvas, DiscreteInterpolator& int
 		for (unsigned int i = 0; i < interp.length; ++i)
 		{
 			interp.at(i, pos.x, pos.y);
-			canvas.binfo.storage_1c[pos] = canvas.pixel_color_at(pos.x, pos.y);
+			if (binfo.point_valid_in_selection(pos.x, pos.y))
+				canvas.binfo.storage_1c[pos] = canvas.pixel_color_at(pos.x, pos.y);
 		}
 		standard_submit_pen(canvas);
 	}
@@ -271,7 +280,8 @@ static void standard_submit_filled_eraser(Canvas& canvas, DiscreteInterpolator& 
 		for (unsigned int i = 0; i < interp.length; ++i)
 		{
 			interp.at(i, pos.x, pos.y);
-			canvas.binfo.storage_1c[pos] = canvas.pixel_color_at(pos.x, pos.y);
+			if (binfo.point_valid_in_selection(pos.x, pos.y))
+				canvas.binfo.storage_1c[pos] = canvas.pixel_color_at(pos.x, pos.y);
 		}
 		standard_submit_eraser(canvas);
 	}
@@ -539,19 +549,21 @@ void CBImpl::Line::submit_select(Canvas& canvas)
 	standard_submit_select(canvas, canvas.binfo.interps.line);
 }
 
-static void line_reset(DiscreteInterpolator& interp, Buffer& buf, void(*buffer_remove)(Buffer& buf, IPosition pos))
+static void line_reset(BrushInfo& binfo, Buffer& buf, void(*buffer_remove)(Buffer& buf, IPosition pos))
 {
+	DiscreteLineInterpolator& interp = binfo.interps.line;
 	IPosition pos;
 	for (unsigned int i = 0; i < interp.length; ++i)
 	{
 		interp.at(i, pos.x, pos.y);
-		buffer_remove(buf, pos);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			buffer_remove(buf, pos);
 	}
 }
 
 void CBImpl::Line::reset_pencil(BrushInfo& binfo)
 {
-	line_reset(binfo.interps.line, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
+	line_reset(binfo, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
 		});
 	binfo.preview_image->update_subtexture(abs_rect(binfo.interps.line.start, binfo.interps.line.finish));
@@ -559,7 +571,7 @@ void CBImpl::Line::reset_pencil(BrushInfo& binfo)
 
 void CBImpl::Line::reset_pen(BrushInfo& binfo)
 {
-	line_reset(binfo.interps.line, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
+	line_reset(binfo, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
 		});
 	binfo.preview_image->update_subtexture(abs_rect(binfo.interps.line.start, binfo.interps.line.finish));
@@ -567,7 +579,7 @@ void CBImpl::Line::reset_pen(BrushInfo& binfo)
 
 void CBImpl::Line::reset_eraser(BrushInfo& binfo)
 {
-	line_reset(binfo.interps.line, binfo.eraser_preview_image->buf, [](Buffer& buf, IPosition pos) {
+	line_reset(binfo, binfo.eraser_preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_rect_alpha(buf, BrushInfo::eraser_preview_img_sx * pos.x, BrushInfo::eraser_preview_img_sy * pos.y,
 			BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy, 0);
 		});
@@ -666,19 +678,21 @@ void CBImpl::RectOutline::submit_select(Canvas& canvas)
 	standard_submit_select(canvas, canvas.binfo.interps.rect_outline);
 }
 
-static void rect_outline_reset(DiscreteInterpolator& interp, Buffer& buf, void(*buffer_remove)(Buffer& buf, IPosition pos))
+static void rect_outline_reset(BrushInfo& binfo, Buffer& buf, void(*buffer_remove)(Buffer& buf, IPosition pos))
 {
+	auto& interp = binfo.interps.rect_outline;
 	IPosition pos;
 	for (unsigned int i = 0; i < interp.length; ++i)
 	{
 		interp.at(i, pos.x, pos.y);
-		buffer_remove(buf, pos);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			buffer_remove(buf, pos);
 	}
 }
 
 void CBImpl::RectOutline::reset_pencil(BrushInfo& binfo)
 {
-	rect_outline_reset(binfo.interps.rect_outline, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
+	rect_outline_reset(binfo, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
 		});
 	rect_outline_pencil_and_pen_update_subtexture(binfo);
@@ -686,7 +700,7 @@ void CBImpl::RectOutline::reset_pencil(BrushInfo& binfo)
 
 void CBImpl::RectOutline::reset_pen(BrushInfo& binfo)
 {
-	rect_outline_reset(binfo.interps.rect_outline, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
+	rect_outline_reset(binfo, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
 		});
 	rect_outline_pencil_and_pen_update_subtexture(binfo);
@@ -694,7 +708,7 @@ void CBImpl::RectOutline::reset_pen(BrushInfo& binfo)
 
 void CBImpl::RectOutline::reset_eraser(BrushInfo& binfo)
 {
-	rect_outline_reset(binfo.interps.rect_outline, binfo.eraser_preview_image->buf, [](Buffer& buf, IPosition pos) {
+	rect_outline_reset(binfo, binfo.eraser_preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_rect_alpha(buf, BrushInfo::eraser_preview_img_sx * pos.x, BrushInfo::eraser_preview_img_sy * pos.y,
 			BrushInfo::eraser_preview_img_sx, BrushInfo::eraser_preview_img_sy, 0);
 		});
@@ -885,7 +899,8 @@ static void ellipse_outline_reset(BrushInfo& binfo, Buffer& buf, void(*buffer_re
 	for (unsigned int i = 0; i < deoi.length; ++i)
 	{
 		deoi.at(i, pos.x, pos.y);
-		buffer_remove(buf, pos);
+		if (binfo.point_valid_in_selection(pos.x, pos.y))
+			buffer_remove(buf, pos);
 	}
 }
 
@@ -1069,6 +1084,8 @@ void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
 	canvas.binfo.storage_2c.clear();
 	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	static auto color_pixel = [](Canvas& canvas, int x, int y) {
+		if (!canvas.binfo.point_valid_in_selection(x, y))
+			return false;
 		PixelRGBA old_color = canvas.pixel_color_at(x, y);
 		PixelRGBA new_color = canvas.applied_pencil_rgba();
 		new_color.blend_over(old_color);
@@ -1077,7 +1094,7 @@ void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
 		return true;
 		};
 	static auto already_stored = [](Canvas& canvas, int x, int y) {
-		return canvas.binfo.storage_2c.find({ x, y }) != canvas.binfo.storage_2c.end();
+		return !canvas.binfo.point_valid_in_selection(x, y) || canvas.binfo.storage_2c.find({ x, y }) != canvas.binfo.storage_2c.end();
 		};
 	if (MainWindow->is_shift_pressed())
 		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
@@ -1098,12 +1115,14 @@ void CBImpl::BucketFill::brush_pen(Canvas& canvas, int x, int y)
 	canvas.binfo.storage_1c.clear();
 	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	static auto color_pixel = [](Canvas& canvas, int x, int y) {
+		if (!canvas.binfo.point_valid_in_selection(x, y))
+			return false;
 		canvas.binfo.storage_1c[{ x, y }] = canvas.pixel_color_at(x, y);
 		buffer_set_pixel_color(canvas.image->buf, x, y, canvas.applied_pen_rgba());
 		return true;
 		};
 	static auto already_stored = [](Canvas& canvas, int x, int y) {
-		return canvas.binfo.storage_1c.find({ x, y }) != canvas.binfo.storage_1c.end();
+		return !canvas.binfo.point_valid_in_selection(x, y) || canvas.binfo.storage_1c.find({ x, y }) != canvas.binfo.storage_1c.end();
 		};
 	if (MainWindow->is_shift_pressed())
 		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
@@ -1124,12 +1143,14 @@ void CBImpl::BucketFill::brush_eraser(Canvas& canvas, int x, int y)
 	canvas.binfo.storage_1c.clear();
 	canvas.binfo.brushing_bbox = IntBounds::NADIR;
 	static auto color_pixel = [](Canvas& canvas, int x, int y) {
+		if (!canvas.binfo.point_valid_in_selection(x, y))
+			return false;
 		canvas.binfo.storage_1c[{ x, y }] = canvas.pixel_color_at(x, y);
 		buffer_set_pixel_alpha(canvas.image->buf, x, y, 0);
 		return true;
 		};
 	static auto already_stored = [](Canvas& canvas, int x, int y) {
-		return canvas.binfo.storage_1c.find({ x, y }) != canvas.binfo.storage_1c.end();
+		return !canvas.binfo.point_valid_in_selection(x, y) || canvas.binfo.storage_1c.find({ x, y }) != canvas.binfo.storage_1c.end();
 		};
 	if (MainWindow->is_shift_pressed())
 		bucket_fill_find_noncontiguous(canvas, x, y, color_pixel);
