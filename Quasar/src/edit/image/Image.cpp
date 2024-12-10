@@ -156,6 +156,11 @@ void Image::update_subtexture(IntRect rect) const
 	update_subtexture(rect.x, rect.y, rect.w, rect.h);
 }
 
+void Image::update_subtexture(IntBounds bbox) const
+{
+	update_subtexture(bounds_to_rect(bbox));
+}
+
 void Image::update_subtexture(int x, int y, int w, int h) const
 {
 	if (tid && on_interval(x, 0, buf.width - 1) && on_interval(y, 0, buf.height - 1) && w >= 0 && h >= 0)

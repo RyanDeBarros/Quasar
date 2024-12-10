@@ -297,6 +297,11 @@ struct PixelRGBA
 	bool operator==(const PixelRGBA&) const = default;
 
 	constexpr void blend_over(PixelRGBA bkg);
+	constexpr PixelRGBA no_alpha_equivalent() const { return {
+		(unsigned char)std::clamp(roundi(r * a * inv255), 0, 255),
+		(unsigned char)std::clamp(roundi(g * a * inv255), 0, 255),
+		(unsigned char)std::clamp(roundi(b * a * inv255), 0, 255),
+		255 }; }
 };
 
 constexpr void PixelRGBA::blend_over(PixelRGBA bkg)

@@ -140,7 +140,8 @@ constexpr GLuint CHECKERBOARD_TSLOT = 0;
 constexpr GLuint CURSOR_ERASER_TSLOT = 1;
 constexpr GLuint CURSOR_SELECT_TSLOT = 2;
 constexpr GLuint BRUSH_PREVIEW_TSLOT = 3;
-constexpr GLuint CANVAS_SPRITE_TSLOT = 4;
+constexpr GLuint SELECTION_SUBIMAGE_TSLOT = 4;
+constexpr GLuint CANVAS_SPRITE_TSLOT = 5;
 
 Canvas::Canvas(Shader* cursor_shader)
 	: sprite_shader(FileSystem::shader_path("flatsprite.vert"), FileSystem::shader_path("flatsprite.frag.tmpl"), { { "$NUM_TEXTURE_SLOTS", std::to_string(GLC.max_texture_image_units) } }),
@@ -149,6 +150,7 @@ Canvas::Canvas(Shader* cursor_shader)
 	binfo.canvas = this;
 	binfo.preview_image = std::make_shared<Image>();
 	binfo.eraser_preview_image = std::make_shared<Image>();
+	binfo.selection_subimage = std::make_shared<Image>();
 	initialize_widget(cursor_shader);
 	initialize_dot_cursor();
 
@@ -176,6 +178,7 @@ void Canvas::initialize_widget(Shader* cursor_shader)
 	initialize_eraser_cursor_img();
 	assign_widget(this, CURSOR_SELECT, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, CURSOR_SELECT).set_texture_slot(CURSOR_SELECT_TSLOT).image = std::make_shared<Image>(FileSystem::texture_path("select.png"));
+	
 	assign_widget(this, BRUSH_PREVIEW, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, BRUSH_PREVIEW).set_texture_slot(BRUSH_PREVIEW_TSLOT).image = binfo.preview_image;
 	assign_widget(this, SELECTION, std::make_shared<SelectionMants>());
@@ -183,6 +186,10 @@ void Canvas::initialize_widget(Shader* cursor_shader)
 	assign_widget(this, SELECTION_PREVIEW, std::make_shared<SelectionMants>());
 	binfo.smants_preview = get<SelectionMants>(SELECTION_PREVIEW);
 	binfo.smants_preview->speed *= -1;
+	assign_widget(this, SELECTION_SUBIMAGE, std::make_shared<FlatSprite>(&sprite_shader));
+	fs_wget(*this, SELECTION_SUBIMAGE).set_texture_slot(SELECTION_SUBIMAGE_TSLOT).image = binfo.selection_subimage;
+	binfo.sel_subimg_sprite = get<FlatSprite>(SELECTION_SUBIMAGE);
+	
 	assign_widget(this, SPRITE, std::make_shared<FlatSprite>(&sprite_shader));
 	fs_wget(*this, SPRITE).set_texture_slot(CANVAS_SPRITE_TSLOT);
 }
@@ -236,6 +243,8 @@ void Canvas::draw()
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
 	if (binfo.show_brush_preview)
 		fs_wget(*this, BRUSH_PREVIEW).draw(BRUSH_PREVIEW_TSLOT);
+	if (binfo.show_selection_subimage)
+		fs_wget(*this, SELECTION_SUBIMAGE).draw(SELECTION_SUBIMAGE_TSLOT);
 	if (binfo.show_selection_preview)
 	{
 		binfo.smants_preview->send_uniforms();
@@ -305,6 +314,8 @@ void Canvas::process()
 	binfo.smants_preview->send_time(Machine.time());
 	if (move_selection_info.moving)
 		process_move_selection();
+
+	LOG << move_selection_info.offset_x << " " << move_selection_info.offset_y << LOG.nl;
 }
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
@@ -379,7 +390,19 @@ void Canvas::sync_brush_preview_with_image()
 		binfo.eraser_preview_image->gen_texture();
 		binfo.eraser_preview_image->resend_texture();
 
+		Buffer& sbuf = binfo.selection_subimage->buf;
+		if (!sbuf.same_dimensions_as(image->buf))
+		{
+			delete[] sbuf.pixels;
+			sbuf = image->buf;
+			sbuf.pxnew();
+		}
+		memset(sbuf.pixels, 0, sbuf.bytes());
+		binfo.selection_subimage->gen_texture();
+		binfo.selection_subimage->resend_texture();
+
 		fs_wget(*this, BRUSH_PREVIEW).self.transform.scale = { image->buf.width, image->buf.height };
+		fs_wget(*this, SELECTION_SUBIMAGE).self.transform.scale = { image->buf.width, image->buf.height };
 	}
 }
 
@@ -406,6 +429,7 @@ void Canvas::sync_transform()
 {
 	fs_wget(*this, CHECKERBOARD).update_transform().ur->send_buffer();
 	fs_wget(*this, BRUSH_PREVIEW).update_transform().ur->send_buffer();
+	fs_wget(*this, SELECTION_SUBIMAGE).update_transform().ur->send_buffer();
 	fs_wget(*this, SPRITE).update_transform().ur->send_buffer();
 	binfo.smants->send_vp(MEasel->vp * self.matrix());
 	binfo.smants_preview->send_vp(MEasel->vp * self.matrix());
@@ -756,11 +780,21 @@ void Canvas::cursor_press(MouseButton button)
 	}
 }
 
-void Canvas::cursor_enter()
+bool Canvas::cursor_enter()
 {
-	brush_submit();
-	cursor_state = CursorState::UP;
-	set_cursor_color(primary_color);
+	if (binfo.brushing)
+	{
+		brush_submit();
+		cursor_state = CursorState::UP;
+		set_cursor_color(primary_color);
+		return true;
+	}
+	else if (binfo.show_selection_subimage)
+	{
+		apply_selection();
+		return true;
+	}
+	return false;
 }
 
 void Canvas::cursor_release(MouseButton button)
@@ -784,8 +818,7 @@ bool Canvas::cursor_cancel()
 
 void Canvas::full_brush_reset()
 {
-	cursor_cancel();
-	deselect_all();
+	deselect_all(); // this internally calls cursor_cancel()
 }
 
 void Canvas::brush(int x, int y)
@@ -846,8 +879,6 @@ void Canvas::brush_start(int x, int y)
 
 void Canvas::brush_submit()
 {
-	if (!binfo.brushing)
-		return;
 	switch (binfo.tool)
 	{
 	case BrushTool::PAINT:
@@ -948,9 +979,14 @@ void Canvas::deselect_all()
 	cursor_cancel();
 	if (image)
 	{
-		binfo.brushing_bbox = binfo.clear_selection();
-		binfo.smants->send_buffer(binfo.brushing_bbox);
-		binfo.push_selection_to_history();
+		if (binfo.show_selection_subimage)
+			apply_selection();
+		else
+		{
+			binfo.brushing_bbox = binfo.clear_selection();
+			binfo.smants->send_buffer(binfo.brushing_bbox);
+			binfo.push_selection_to_history();
+		}
 	}
 }
 
@@ -1027,7 +1063,7 @@ bool Canvas::start_move_selection(int dx, int dy)
 
 bool Canvas::move_selection(int dx, int dy)
 {
-	if (selection_interaction_disabled(binfo))
+	if (selection_interaction_disabled(binfo) || (dx == 0 && dy == 0))
 		return false;
 	if (binfo.tip & BrushTip::PENCIL)
 	{
@@ -1046,6 +1082,17 @@ bool Canvas::move_selection(int dx, int dy)
 	}
 	else
 		return false;
+}
+
+void Canvas::apply_selection()
+{
+	if (binfo.show_selection_subimage)
+	{
+		if (binfo.tip & BrushTip::PENCIL)
+			CBImpl::apply_selection_pencil(*this);
+		else if (binfo.tip & BrushTip::PEN)
+			CBImpl::apply_selection_pen(*this);
+	}
 }
 
 void BrushInfo::reset()
@@ -1281,6 +1328,11 @@ void Easel::connect_input_handlers()
 					k.consumed = true;
 					canvas().deselect_all();
 				}
+			}
+			else if (k.key == Key::ENTER)
+			{
+				if (canvas().cursor_enter())
+					k.consumed = true;
 			}
 			else if (k.key == Key::DELETE)
 			{

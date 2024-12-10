@@ -72,6 +72,35 @@ struct IPosition : glm::ivec2
 	IPosition(float x, int y) : glm::ivec2((int)x, y) {}
 	IPosition(glm::ivec2 v) : glm::ivec2(v) {}
 	IPosition(glm::vec2 v) : glm::ivec2((int)v.x, (int)v.y) {}
+
+	IPosition operator+(IPosition r) const { return { x + r.x, y + r.y }; }
+	IPosition& operator+=(IPosition r) { x += r.x; y += r.y; ; return *this; }
+	IPosition operator-(IPosition r) const { return { x - r.x, y - r.y }; }
+	IPosition& operator-=(IPosition r) { x -= r.x; y -= r.y; ; return *this; }
+
+	IPosition operator+(glm::ivec2 r) const { return { x + r.x, y + r.y }; }
+	IPosition& operator+=(glm::ivec2 r) { x += r.x; y += r.y; ; return *this; }
+	IPosition operator-(glm::ivec2 r) const { return { x - r.x, y - r.y }; }
+	IPosition& operator-=(glm::ivec2 r) { x -= r.x; y -= r.y; ; return *this; }
+
+	IPosition operator*(IPosition r) const { return { x * r.x, y * r.y }; }
+	IPosition& operator*=(IPosition r) { x *= r.x; y *= r.y; ; return *this; }
+	IPosition operator/(IPosition r) const { return { x / r.x, y / r.y }; }
+	IPosition& operator/=(IPosition r) { x /= r.x; y /= r.y; ; return *this; }
+
+	IPosition operator*(glm::ivec2 r) const { return { x * r.x, y * r.y }; }
+	IPosition& operator*=(glm::ivec2 r) { x *= r.x; y *= r.y; ; return *this; }
+	IPosition operator/(glm::ivec2 r) const { return { x / r.x, y / r.y }; }
+	IPosition& operator/=(glm::ivec2 r) { x /= r.x; y /= r.y; ; return *this; }
+
+	IPosition operator+(int r) const { return { x + r, y + r }; }
+	IPosition& operator+=(int r) { x += r; y += r; return *this; }
+	IPosition operator-(int r) const { return { x - r, y - r }; }
+	IPosition& operator-=(int r) { x -= r; y -= r; return *this; }
+	IPosition operator*(int r) const { return { x * r, y * r }; }
+	IPosition& operator*=(int r) { x *= r; y *= r; return *this; }
+	IPosition operator/(int r) const { return { x / r, y / r }; }
+	IPosition& operator/=(int r) { x /= r; y /= r; return *this; }
 };
 
 struct IScale : glm::ivec2

@@ -4,6 +4,7 @@
 #include "edit/color/Color.h"
 #include "edit/image/Image.h"
 #include "../widgets/Widget.h"
+#include "variety/History.h"
 
 struct FlatSprite : public W_UnitRenderable
 {
@@ -39,3 +40,13 @@ inline FlatSprite& fs_wget(Widget& w, size_t i)
 {
 	return *w.get<FlatSprite>(i);
 }
+
+struct SpriteMoveAction : public ActionBase
+{
+	FlatSprite* sprite;
+	Position delta;
+	SpriteMoveAction(FlatSprite* sprite, Position delta);
+	virtual void forward() override;
+	virtual void backward() override;
+	QUASAR_ACTION_EQUALS_OVERRIDE(SpriteMoveAction)
+};

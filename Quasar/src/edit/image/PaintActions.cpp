@@ -1,6 +1,8 @@
 #include "PaintActions.h"
 
 #include "pipeline/render/SelectionMants.h"
+#include "pipeline/panels/Easel.h"
+#include "user/Machine.h"
 
 void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c)
 {
@@ -469,7 +471,7 @@ void OneColorAction::forward()
 		Buffer& buf = img->buf;
 		for (const auto& iter : painted_colors)
 			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, color);
-		img->update_subtexture(bounds_to_rect(bbox));
+		img->update_subtexture(bbox);
 	}
 }
 
@@ -482,7 +484,7 @@ void OneColorAction::backward()
 		Buffer& buf = img->buf;
 		for (const auto& iter : painted_colors)
 			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second);
-		img->update_subtexture(bounds_to_rect(bbox));
+		img->update_subtexture(bbox);
 	}
 }
 
@@ -508,7 +510,7 @@ void TwoColorAction::forward()
 		Buffer& buf = img->buf;
 		for (const auto& iter : painted_colors)
 			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second.first);
-		img->update_subtexture(bounds_to_rect(bbox));
+		img->update_subtexture(bbox);
 	}
 }
 
@@ -521,7 +523,7 @@ void TwoColorAction::backward()
 		Buffer& buf = img->buf;
 		for (const auto& iter : painted_colors)
 			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second.second);
-		img->update_subtexture(bounds_to_rect(bbox));
+		img->update_subtexture(bbox);
 	}
 }
 
@@ -540,8 +542,8 @@ void TwoColorMoveAction::forward()
 		Buffer& buf = img->buf;
 		for (const auto& iter : painted_colors)
 			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second.first);
-		img->update_subtexture(bounds_to_rect(bbox_remove));
-		img->update_subtexture(bounds_to_rect(bbox_add));
+		img->update_subtexture(bbox_remove);
+		img->update_subtexture(bbox_add);
 	}
 }
 
@@ -554,8 +556,8 @@ void TwoColorMoveAction::backward()
 		Buffer& buf = img->buf;
 		for (const auto& iter : painted_colors)
 			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second.second);
-		img->update_subtexture(bounds_to_rect(bbox_remove));
-		img->update_subtexture(bounds_to_rect(bbox_add));
+		img->update_subtexture(bbox_remove);
+		img->update_subtexture(bbox_add);
 	}
 }
 
@@ -583,14 +585,18 @@ void SelectionAction::backward()
 	smants->send_buffer(bbox);
 }
 
-SelectionMoveAction::SelectionMoveAction(SelectionMants* smants, IntBounds remove_bbox, IntBounds add_bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points)
-	: smants(smants), remove_bbox(remove_bbox), add_bbox(add_bbox), remove_points(std::move(remove_points)), add_points(std::move(add_points))
+SelectionMoveAction::SelectionMoveAction(SelectionMants* smants, IPosition delta, IntBounds remove_bbox, IntBounds add_bbox,
+	std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points)
+	: smants(smants), delta(delta), remove_bbox(remove_bbox), add_bbox(add_bbox), remove_points(std::move(remove_points)), add_points(std::move(add_points))
 {
 	weight = sizeof(SelectionAction) + (this->remove_points.size() + this->add_points.size()) * sizeof(IPosition);
 }
 
 void SelectionMoveAction::forward()
 {
+	Canvas& canvas = MEasel->canvas();
+	canvas.move_selection_info.offset_x += delta.x;
+	canvas.move_selection_info.offset_y += delta.y;
 	for (auto iter = remove_points.begin(); iter != remove_points.end(); ++iter)
 		smants->remove(*iter);
 	smants->send_buffer(remove_bbox);
@@ -601,6 +607,9 @@ void SelectionMoveAction::forward()
 
 void SelectionMoveAction::backward()
 {
+	Canvas& canvas = MEasel->canvas();
+	canvas.move_selection_info.offset_x -= delta.x;
+	canvas.move_selection_info.offset_y -= delta.y;
 	for (auto iter = add_points.begin(); iter != add_points.end(); ++iter)
 		smants->remove(*iter);
 	smants->send_buffer(add_bbox);

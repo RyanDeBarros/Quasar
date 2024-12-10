@@ -71,6 +71,7 @@ private:
 
 // LATER given that paint actions use weak ptrs, make sure that a list of shared_ptrs of past canvas images is kept after changing the canvas image, to keep these actions alive.
 // Or else, clear history upon loading new canvas image.
+// LATER OneAlphaAction, that only affects alpha, not entire color. Might not be simple to refactor though, since setting alpha/color is a bit inconsistent in CBImpl.
 struct OneColorAction : public ActionBase
 {
 	std::weak_ptr<Image> image;
@@ -120,9 +121,10 @@ struct SelectionMoveAction : public ActionBase
 {
 	class SelectionMants* smants;
 	IntBounds remove_bbox, add_bbox;
+	IPosition delta;
 	std::unordered_set<IPosition> remove_points;
 	std::unordered_set<IPosition> add_points;
-	SelectionMoveAction(class SelectionMants* smants, IntBounds remove_bbox, IntBounds add_bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points);
+	SelectionMoveAction(class SelectionMants* smants, IPosition delta, IntBounds remove_bbox, IntBounds add_bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points);
 	virtual void forward() override;
 	virtual void backward() override;
 };

@@ -101,3 +101,21 @@ FlatSprite& FlatSprite::set_uvs(const Bounds& bounds)
 	Utils::set_uv_attributes(*ur, bounds, 0, SHADER_POS_UV, false);
 	return *this;
 }
+
+SpriteMoveAction::SpriteMoveAction(FlatSprite* sprite, Position delta)
+	: sprite(sprite), delta(delta)
+{
+	weight = sizeof(SpriteMoveAction);
+}
+
+void SpriteMoveAction::forward()
+{
+	sprite->self.transform.position += delta;
+	sprite->update_transform().ur->send_buffer();
+}
+
+void SpriteMoveAction::backward()
+{
+	sprite->self.transform.position -= delta;
+	sprite->update_transform().ur->send_buffer();
+}

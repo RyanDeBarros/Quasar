@@ -5,6 +5,7 @@
 #include "Easel.h"
 #include "user/Machine.h"
 #include "../render/SelectionMants.h"
+#include "../render/FlatSprite.h"
 
 static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canvas, IPosition pos)
 {
@@ -345,7 +346,7 @@ void CBImpl::fill_selection_pencil(Canvas& canvas, PixelRGBA color)
 		buffer_set_pixel_color(canvas.image->buf, pos.x, pos.y, new_color);
 		update_bbox(binfo.brushing_bbox, pos.x, pos.y);
 	}
-	canvas.image->update_subtexture(bounds_to_rect(binfo.brushing_bbox));
+	canvas.image->update_subtexture(binfo.brushing_bbox);
 	standard_push_pencil(canvas);
 }
 
@@ -358,7 +359,7 @@ void CBImpl::fill_selection_pen(Canvas& canvas, PixelRGBA color)
 		buffer_set_pixel_color(canvas.image->buf, pos.x, pos.y, color);
 		update_bbox(canvas.binfo.brushing_bbox, pos.x, pos.y);
 	}
-	canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+	canvas.image->update_subtexture(canvas.binfo.brushing_bbox);
 	standard_push_pen(canvas, color);
 }
 
@@ -371,102 +372,167 @@ void CBImpl::fill_selection_eraser(Canvas& canvas)
 		buffer_set_pixel_alpha(canvas.image->buf, pos.x, pos.y, 0);
 		update_bbox(canvas.binfo.brushing_bbox, pos.x, pos.y);
 	}
-	canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+	canvas.image->update_subtexture(canvas.binfo.brushing_bbox);
 	standard_push_eraser(canvas);
 }
 
-// TODO don't edit image directly. use temporary selection buffer instead that is an unordered_map<IPosition, PixelRGBA>. Remove from image, and copy to that buffer. Only submit when ENTER is pressed, selection/tip/tool is changed.
-// TODO allow offcanvas movement. Move uVP of smants instead of editing buffer, until submission. Keep track of total delta so this uVP offset can be reset after submission or cancellation.
-void CBImpl::move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy)
+static void move_selection_with_pixels_pencil_initial(Canvas& canvas, int dx, int dy)
 {
 	BrushInfo& binfo = canvas.binfo;
+	binfo.show_selection_subimage = true;
+	auto& selbuf = binfo.selection_subimage->buf;
 	auto& points = binfo.smants->get_points();
-	std::unordered_map<IPosition, PixelRGBA> moved_points;
-	std::unordered_set<IPosition> previous_points;
+	std::unordered_set<IPosition> moved_points;
 	IntBounds remove_bbox = IntBounds::NADIR;
 	while (!points.empty())
 	{
 		IPosition from = *points.begin();
 		binfo.remove_from_selection(from);
 		update_bbox(remove_bbox, from.x, from.y);
-		moved_points[from + IPosition{ dx, dy }] = canvas.pixel_color_at(from);
-		previous_points.insert(from);
+		PixelRGBA color = canvas.pixel_color_at(from);
+		binfo.raw_selection_pixels[from] = color;
+		binfo.storage_selection_1c[from] = color;
+		buffer_set_pixel_color(selbuf, from.x, from.y, color);
+		binfo.storage_1c[from] = color;
+		buffer_set_pixel_alpha(canvas.image->buf, from.x, from.y, 0);
+		moved_points.insert(from + IPosition{ dx, dy });
 	}
+	binfo.selection_subimage->update_subtexture(remove_bbox);
+	canvas.image->update_subtexture(remove_bbox);
 	IntBounds add_bbox = IntBounds::NADIR;
-	for (auto iter = moved_points.begin(); iter != moved_points.end(); ++iter)
+	while (!moved_points.empty())
 	{
-		IPosition to = iter->first;
-		binfo.add_to_selection(to);
-		update_bbox(add_bbox, to.x, to.y);
-		IPosition from = to - IPosition{ dx, dy };
-		if (!moved_points.contains(from))
-		{
-			PixelRGBA old_color = canvas.pixel_color_at(from);
-			binfo.storage_2c[from] = { PixelRGBA{}, old_color };
-			buffer_set_pixel_alpha(canvas.image->buf, from.x, from.y, 0);
-		}
-		if (!previous_points.contains(to))
-		{
-			PixelRGBA old_color = canvas.pixel_color_at(to);
-			PixelRGBA new_color = blend_over(iter->second, old_color);
-			binfo.storage_2c[to] = { new_color, old_color };
-			buffer_set_pixel_color(canvas.image->buf, to.x, to.y, new_color);
-		}
+		auto iter = moved_points.begin();
+		binfo.add_to_selection(*iter);
+		update_bbox(add_bbox, iter->x, iter->y);
+		moved_points.erase(iter); // LATER use std::swap? then handle storage_select_add/storage_select_remove directly
 	}
+	binfo.sel_subimg_sprite->self.transform.position += Position{ dx, dy };
+	binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
+	// LATER if remove_bbox and add_bbox overlap, don't send that overlapped section. send only their union
 	if (!intersection(remove_bbox, canvas.image->buf.bbox(), remove_bbox))
 		remove_bbox = IntBounds::NADIR;
 	if (!intersection(add_bbox, canvas.image->buf.bbox(), add_bbox))
 		add_bbox = IntBounds::NADIR;
 	binfo.smants->send_buffer(remove_bbox);
 	binfo.smants->send_buffer(add_bbox);
-	canvas.image->update_subtexture(bounds_to_rect(remove_bbox));
-	canvas.image->update_subtexture(bounds_to_rect(add_bbox));
-	auto pixels_action = std::make_shared<TwoColorMoveAction>(canvas.image, remove_bbox, add_bbox, std::move(binfo.storage_2c));
-	auto select_action = std::make_shared<SelectionMoveAction>(binfo.smants, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add));
-	Machine.history.push(std::make_shared<DualAction>(std::move(pixels_action), std::move(select_action)));
+	canvas.move_selection_info.offset_x += dx;
+	canvas.move_selection_info.offset_y += dy;
+	Machine.history.push(std::make_shared<CompositeAction>(std::vector<std::shared_ptr<ActionBase>>{
+		std::make_shared<SelectionMoveAction>(binfo.smants, IPosition{ dx, dy }, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add)),
+		std::make_shared<InverseAction>(std::make_shared<OneColorAction>(binfo.selection_subimage, PixelRGBA{ 0, 0, 0, 0 }, remove_bbox, std::move(binfo.storage_selection_1c))),
+		std::make_shared<OneColorAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 }, remove_bbox, std::move(binfo.storage_1c)),
+		std::make_shared<SpriteMoveAction>(binfo.sel_subimg_sprite, IPosition{ dx, dy }),
+	}));
+}
+
+static void move_selection_with_pixels_pen_initial(Canvas& canvas, int dx, int dy)
+{
+	BrushInfo& binfo = canvas.binfo;
+	canvas.binfo.show_selection_subimage = true;
+	auto& selbuf = binfo.selection_subimage->buf;
+	auto& points = binfo.smants->get_points();
+	std::unordered_set<IPosition> moved_points;
+	IntBounds remove_bbox = IntBounds::NADIR;
+	while (!points.empty())
+	{
+		IPosition from = *points.begin();
+		binfo.remove_from_selection(from);
+		update_bbox(remove_bbox, from.x, from.y);
+		PixelRGBA color = canvas.pixel_color_at(from);
+		binfo.raw_selection_pixels[from] = color;
+		PixelRGBA color_no_alpha = color.no_alpha_equivalent();
+		binfo.storage_selection_1c[from] = color_no_alpha;
+		buffer_set_pixel_color(selbuf, from.x, from.y, color_no_alpha);
+		binfo.storage_1c[from] = color;
+		buffer_set_pixel_alpha(canvas.image->buf, from.x, from.y, 0);
+		moved_points.insert(from + IPosition{ dx, dy });
+	}
+	binfo.selection_subimage->update_subtexture(remove_bbox);
+	canvas.image->update_subtexture(remove_bbox);
+	IntBounds add_bbox = IntBounds::NADIR;
+	while (!moved_points.empty())
+	{
+		auto iter = moved_points.begin();
+		binfo.add_to_selection(*iter);
+		update_bbox(add_bbox, iter->x, iter->y);
+		moved_points.erase(iter); // LATER use std::swap? then handle storage_select_add/storage_select_remove directly
+	}
+	binfo.sel_subimg_sprite->self.transform.position += Position{ dx, dy };
+	binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
+	// LATER if remove_bbox and add_bbox overlap, don't send that overlapped section. send only their union
+	if (!intersection(remove_bbox, canvas.image->buf.bbox(), remove_bbox))
+		remove_bbox = IntBounds::NADIR;
+	if (!intersection(add_bbox, canvas.image->buf.bbox(), add_bbox))
+		add_bbox = IntBounds::NADIR;
+	binfo.smants->send_buffer(remove_bbox);
+	binfo.smants->send_buffer(add_bbox);
+	canvas.move_selection_info.offset_x += dx;
+	canvas.move_selection_info.offset_y += dy;
+	Machine.history.push(std::make_shared<CompositeAction>(std::vector<std::shared_ptr<ActionBase>>{
+		std::make_shared<SelectionMoveAction>(binfo.smants, IPosition{ dx, dy }, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add)),
+			std::make_shared<InverseAction>(std::make_shared<OneColorAction>(binfo.selection_subimage, PixelRGBA{ 0, 0, 0, 0 }, remove_bbox, std::move(binfo.storage_selection_1c))),
+			std::make_shared<OneColorAction>(canvas.image, PixelRGBA{ 0, 0, 0, 0 }, remove_bbox, std::move(binfo.storage_1c)),
+			std::make_shared<SpriteMoveAction>(binfo.sel_subimg_sprite, IPosition{ dx, dy }),
+	}));
+}
+
+static void move_selection_with_pixels(Canvas& canvas, int dx, int dy)
+{
+	BrushInfo& binfo = canvas.binfo;
+	auto& points = binfo.smants->get_points();
+	std::unordered_set<IPosition> moved_points;
+	IntBounds remove_bbox = IntBounds::NADIR;
+	while (!points.empty())
+	{
+		IPosition from = *points.begin();
+		binfo.remove_from_selection(from);
+		update_bbox(remove_bbox, from.x, from.y);
+		moved_points.insert(from + IPosition{ dx, dy });
+	}
+	IntBounds add_bbox = IntBounds::NADIR;
+	while (!moved_points.empty())
+	{
+		auto iter = moved_points.begin();
+		binfo.add_to_selection(*iter);
+		update_bbox(add_bbox, iter->x, iter->y);
+		moved_points.erase(iter); // LATER use std::swap? then handle storage_select_add/storage_select_remove directly
+	}
+	binfo.sel_subimg_sprite->self.transform.position += Position{ dx, dy };
+	binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
+	// LATER if remove_bbox and add_bbox overlap, don't send that overlapped section. send only their union
+	if (!intersection(remove_bbox, canvas.image->buf.bbox(), remove_bbox))
+		remove_bbox = IntBounds::NADIR;
+	if (!intersection(add_bbox, canvas.image->buf.bbox(), add_bbox))
+		add_bbox = IntBounds::NADIR;
+	binfo.smants->send_buffer(remove_bbox);
+	binfo.smants->send_buffer(add_bbox);
+	canvas.move_selection_info.offset_x += dx;
+	canvas.move_selection_info.offset_y += dy;
+	Machine.history.push(std::make_shared<CompositeAction>(std::vector<std::shared_ptr<ActionBase>>{
+		std::make_shared<SelectionMoveAction>(binfo.smants, IPosition{ dx, dy }, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add)),
+		std::make_shared<SpriteMoveAction>(binfo.sel_subimg_sprite, IPosition{ dx, dy }),
+	}));
+}
+
+// TODO account for selection moving offscreen, and how that will affect setting buffer colors.
+
+// TODO don't edit image directly. use temporary selection buffer instead that is an unordered_map<IPosition, PixelRGBA>. Remove from image, and copy to that buffer. Only submit when ENTER is pressed, selection/tip/tool is changed.
+// LATER allow offcanvas movement. Move uVP of smants instead of editing buffer, until submission. Keep track of total delta so this uVP offset can be reset after submission or cancellation.
+void CBImpl::move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy)
+{
+	if (canvas.binfo.show_selection_subimage)
+		move_selection_with_pixels(canvas, dx, dy);
+	else
+		move_selection_with_pixels_pencil_initial(canvas, dx, dy);
 }
 
 void CBImpl::move_selection_with_pixels_pen(Canvas& canvas, int dx, int dy)
 {
-	BrushInfo& binfo = canvas.binfo;
-	auto& points = binfo.smants->get_points();
-	std::unordered_map<IPosition, PixelRGBA> moved_points;
-	IntBounds remove_bbox = IntBounds::NADIR;
-	while (!points.empty())
-	{
-		IPosition from = *points.begin();
-		binfo.remove_from_selection(from);
-		update_bbox(remove_bbox, from.x, from.y);
-		moved_points[from + IPosition{ dx, dy }] = canvas.pixel_color_at(from);
-	}
-	IntBounds add_bbox = IntBounds::NADIR;
-	for (auto iter = moved_points.begin(); iter != moved_points.end(); ++iter)
-	{
-		IPosition to = iter->first;
-		binfo.add_to_selection(to);
-		update_bbox(add_bbox, to.x, to.y);
-		IPosition from = to - IPosition{ dx, dy };
-		if (!moved_points.contains(from))
-		{
-			PixelRGBA old_color = canvas.pixel_color_at(from);
-			binfo.storage_2c[from] = { PixelRGBA{}, old_color };
-			buffer_set_pixel_alpha(canvas.image->buf, from.x, from.y, 0);
-		}
-		PixelRGBA old_color = canvas.pixel_color_at(to);
-		binfo.storage_2c[to] = { iter->second, old_color };
-		buffer_set_pixel_color(canvas.image->buf, to.x, to.y, iter->second);
-	}
-	if (!intersection(remove_bbox, canvas.image->buf.bbox(), remove_bbox))
-		remove_bbox = IntBounds::NADIR;
-	if (!intersection(add_bbox, canvas.image->buf.bbox(), add_bbox))
-		add_bbox = IntBounds::NADIR;
-	binfo.smants->send_buffer(remove_bbox);
-	binfo.smants->send_buffer(add_bbox);
-	canvas.image->update_subtexture(bounds_to_rect(remove_bbox));
-	canvas.image->update_subtexture(bounds_to_rect(add_bbox));
-	auto pixels_action = std::make_shared<TwoColorMoveAction>(canvas.image, remove_bbox, add_bbox, std::move(binfo.storage_2c));
-	auto select_action = std::make_shared<SelectionMoveAction>(binfo.smants, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add));
-	Machine.history.push(std::make_shared<DualAction>(std::move(pixels_action), std::move(select_action)));
+	if (canvas.binfo.show_selection_subimage)
+		move_selection_with_pixels(canvas, dx, dy);
+	else
+		move_selection_with_pixels_pen_initial(canvas, dx, dy);
 }
 
 void CBImpl::move_selection_without_pixels(Canvas& canvas, int dx, int dy)
@@ -497,7 +563,92 @@ void CBImpl::move_selection_without_pixels(Canvas& canvas, int dx, int dy)
 		add_bbox = IntBounds::NADIR;
 	binfo.smants->send_buffer(remove_bbox);
 	binfo.smants->send_buffer(add_bbox);
-	Machine.history.push(std::make_shared<SelectionMoveAction>(binfo.smants, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add)));
+	canvas.move_selection_info.offset_x += dx;
+	canvas.move_selection_info.offset_y += dy;
+	Machine.history.push(std::make_shared<SelectionMoveAction>(binfo.smants, IPosition{ dx, dy }, remove_bbox, add_bbox, std::move(binfo.storage_select_remove), std::move(binfo.storage_select_add)));
+}
+
+struct ApplySelectionAction : public ActionBase
+{
+	PixelRGBA(*pixel_result)(PixelRGBA fore, PixelRGBA back);
+	int move_offset_x = 0, move_offset_y = 0;
+	IntBounds applied_bbox = IntBounds::NADIR;
+	
+	struct PixelRecord
+	{
+		PixelRGBA applied_on, subimg, result;
+	};
+
+	std::unordered_map<IPosition, PixelRecord> applied_pixels;
+
+	ApplySelectionAction(PixelRGBA(*pixel_result)(PixelRGBA fore, PixelRGBA back))
+		: pixel_result(pixel_result)
+	{
+		weight = sizeof(ApplySelectionAction);
+		Canvas& canvas = MEasel->canvas();
+		BrushInfo& binfo = canvas.binfo;
+
+		move_offset_x = canvas.move_selection_info.offset_x;
+		move_offset_y = canvas.move_selection_info.offset_y;
+
+		while (!binfo.raw_selection_pixels.empty())
+		{
+			auto iter = binfo.raw_selection_pixels.begin();
+			IPosition pos = iter->first + IPosition{ move_offset_x, move_offset_y };
+			update_bbox(applied_bbox, pos.x, pos.y);
+			applied_pixels[pos] = { canvas.pixel_color_at(pos), iter->second, pixel_result(iter->second, canvas.pixel_color_at(pos)) };
+			binfo.raw_selection_pixels.erase(iter);
+		}
+	}
+	virtual void forward() override
+	{
+		Canvas& canvas = MEasel->canvas();
+		BrushInfo& binfo = canvas.binfo;
+
+		binfo.show_selection_subimage = false;
+		canvas.move_selection_info.offset_x = 0;
+		canvas.move_selection_info.offset_y = 0;
+		
+		Buffer& img_buf = canvas.image->buf;
+		for (auto iter = applied_pixels.begin(); iter != applied_pixels.end(); ++iter)
+			buffer_set_pixel_color(img_buf, iter->first.x, iter->first.y, iter->second.result);
+		canvas.image->update_subtexture(applied_bbox);
+		binfo.smants->send_buffer(binfo.clear_selection());
+		binfo.raw_selection_pixels.clear();
+	}
+	virtual void backward() override
+	{
+		Canvas& canvas = MEasel->canvas();
+		BrushInfo& binfo = canvas.binfo;
+
+		binfo.show_selection_subimage = true;
+		canvas.move_selection_info.offset_x = move_offset_x;
+		canvas.move_selection_info.offset_y = move_offset_y;
+
+		IntBounds sel_bbox = IntBounds::NADIR;
+		Buffer& img_buf = canvas.image->buf;
+		for (auto iter = applied_pixels.begin(); iter != applied_pixels.end(); ++iter)
+		{
+			buffer_set_pixel_color(img_buf, iter->first.x, iter->first.y, iter->second.applied_on);
+			if (binfo.add_to_selection(iter->first))
+				update_bbox(sel_bbox, iter->first.x, iter->first.y);
+			binfo.raw_selection_pixels[iter->first] = iter->second.subimg;
+		}
+		canvas.image->update_subtexture(applied_bbox);
+		binfo.smants->send_buffer(sel_bbox);
+	}
+};
+
+void CBImpl::apply_selection_pencil(Canvas& canvas)
+{
+	static auto pixel_result = [](PixelRGBA fore, PixelRGBA back) { return blend_over(fore, back); };
+	Machine.history.execute(std::make_shared<ApplySelectionAction>(pixel_result));
+}
+
+void CBImpl::apply_selection_pen(Canvas& canvas)
+{
+	static auto pixel_result = [](PixelRGBA fore, PixelRGBA back) { return fore; };
+	Machine.history.execute(std::make_shared<ApplySelectionAction>(pixel_result));
 }
 
 // <<<==================================<<< CAMERA >>>==================================>>>
@@ -1072,7 +1223,7 @@ void CBImpl::EllipseOutline::reset_pencil(BrushInfo& binfo)
 	ellipse_outline_reset(binfo, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
 		});
-	binfo.preview_image->update_subtexture(bounds_to_rect(binfo.brushing_bbox));
+	binfo.preview_image->update_subtexture(binfo.brushing_bbox);
 }
 
 void CBImpl::EllipseOutline::reset_pen(BrushInfo& binfo)
@@ -1080,7 +1231,7 @@ void CBImpl::EllipseOutline::reset_pen(BrushInfo& binfo)
 	ellipse_outline_reset(binfo, binfo.preview_image->buf, [](Buffer& buf, IPosition pos) {
 		buffer_set_pixel_alpha(buf, pos.x, pos.y, 0);
 		});
-	binfo.preview_image->update_subtexture(bounds_to_rect(binfo.brushing_bbox));
+	binfo.preview_image->update_subtexture(binfo.brushing_bbox);
 }
 
 void CBImpl::EllipseOutline::reset_eraser(BrushInfo& binfo)
@@ -1264,7 +1415,7 @@ void CBImpl::BucketFill::brush_pencil(Canvas& canvas, int x, int y)
 		bucket_fill_find_contiguous(canvas, x, y, color_pixel, already_stored);
 	if (canvas.binfo.brushing_bbox.valid())
 	{
-		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+		canvas.image->update_subtexture(canvas.binfo.brushing_bbox);
 		standard_push_pencil(canvas);
 	}
 	canvas.binfo.storage_2c.clear();
@@ -1292,7 +1443,7 @@ void CBImpl::BucketFill::brush_pen(Canvas& canvas, int x, int y)
 		bucket_fill_find_contiguous(canvas, x, y, color_pixel, already_stored);
 	if (canvas.binfo.brushing_bbox.valid())
 	{
-		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+		canvas.image->update_subtexture(canvas.binfo.brushing_bbox);
 		standard_push_pen(canvas, canvas.applied_color().get_pixel_rgba());
 	}
 	canvas.binfo.storage_1c.clear();
@@ -1320,7 +1471,7 @@ void CBImpl::BucketFill::brush_eraser(Canvas& canvas, int x, int y)
 		bucket_fill_find_contiguous(canvas, x, y, color_pixel, already_stored);
 	if (canvas.binfo.brushing_bbox.valid())
 	{
-		canvas.image->update_subtexture(bounds_to_rect(canvas.binfo.brushing_bbox));
+		canvas.image->update_subtexture(canvas.binfo.brushing_bbox);
 		standard_push_eraser(canvas);
 	}
 	canvas.binfo.storage_1c.clear();

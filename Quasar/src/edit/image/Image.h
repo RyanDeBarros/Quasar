@@ -126,6 +126,7 @@ struct Image
 	void update_texture_params(const TextureParams& texture_params = {}) const;
 	void update_texture() const;
 	void update_subtexture(struct IntRect rect) const;
+	void update_subtexture(struct IntBounds bbox) const;
 	void update_subtexture(int x, int y, int w, int h) const;
 	void resend_texture();
 

@@ -1,15 +1,45 @@
 #include "History.h"
 
+InverseAction::InverseAction(const std::shared_ptr<ActionBase>& normal)
+	: normal(normal)
+{
+	weight = sizeof(InverseAction) + normal->weight;
+}
+
+InverseAction::InverseAction(std::shared_ptr<ActionBase>&& normal)
+	: normal(std::move(normal))
+{
+	weight = sizeof(InverseAction) + this->normal->weight;
+}
+
+void InverseAction::forward()
+{
+	normal->backward();
+}
+
+void InverseAction::backward()
+{
+	normal->forward();
+}
+
+bool InverseAction::equals(const ActionBase& other) const
+{
+	if (auto p = dynamic_cast<const InverseAction*>(&other))
+		return normal->equals(*p->normal);
+	else
+		return false;
+}
+
 DualAction::DualAction(const std::shared_ptr<ActionBase>& first, const std::shared_ptr<ActionBase>& second)
 	: first(first), second(second)
 {
-	weight = first->weight + second->weight;
+	weight = sizeof(DualAction) + first->weight + second->weight;
 }
 
 DualAction::DualAction(std::shared_ptr<ActionBase>&& first, std::shared_ptr<ActionBase>&& second)
 	: first(std::move(first)), second(std::move(second))
 {
-	weight = this->first->weight + this->second->weight;
+	weight = sizeof(DualAction) + this->first->weight + this->second->weight;
 }
 
 void DualAction::forward()
@@ -35,6 +65,7 @@ bool DualAction::equals(const ActionBase& other) const
 CompositeAction::CompositeAction(const std::vector<std::shared_ptr<ActionBase>>& actions)
 	: actions(actions)
 {
+	weight = sizeof(CompositeAction);
 	for (const auto& action : actions)
 		weight += action->weight;
 }
@@ -42,6 +73,7 @@ CompositeAction::CompositeAction(const std::vector<std::shared_ptr<ActionBase>>&
 CompositeAction::CompositeAction(std::vector<std::shared_ptr<ActionBase>>&& actions)
 	: actions(std::move(actions))
 {
+	weight = sizeof(CompositeAction);
 	for (const auto& action : this->actions)
 		weight += action->weight;
 }
@@ -71,6 +103,22 @@ bool CompositeAction::equals(const ActionBase& other) const
 	}
 	else
 		return false;
+}
+
+VoidFuncAction::VoidFuncAction(void(*fore)(), void(*back)())
+	: fore(fore), back(back)
+{
+	weight = sizeof(VoidFuncAction);
+}
+
+void VoidFuncAction::forward()
+{
+	fore();
+}
+
+void VoidFuncAction::backward()
+{
+	back();
 }
 
 void ActionHistory::execute(std::shared_ptr<ActionBase>&& action)

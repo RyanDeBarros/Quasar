@@ -69,8 +69,7 @@ struct BrushInfo
 	IPosition image_pos = { -1, -1 };
 	IntBounds brushing_bbox = IntBounds::NADIR;
 	bool show_brush_preview = false;
-	std::shared_ptr<Image> preview_image;
-	std::shared_ptr<Image> eraser_preview_image;
+	std::shared_ptr<Image> preview_image, eraser_preview_image;
 	static const int eraser_preview_img_sx = 2, eraser_preview_img_sy = 2;
 	std::unordered_map<IPosition, PixelRGBA> storage_1c;
 	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
@@ -81,6 +80,13 @@ struct BrushInfo
 	std::unordered_set<IPosition> storage_select_remove;
 	std::unordered_set<IPosition> storage_select_add;
 	std::unordered_set<IPosition> cleared_selection;
+	std::unordered_map<IPosition, PixelRGBA> storage_selection_1c;
+	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_selection_2c;
+	std::unordered_map<IPosition, PixelRGBA> raw_selection_pixels;
+
+	bool show_selection_subimage = false;
+	struct FlatSprite* sel_subimg_sprite = nullptr;
+	std::shared_ptr<Image> selection_subimage;
 
 	struct
 	{
@@ -185,7 +191,7 @@ public:
 	void set_alternate_color(RGBA color);
 
 	void cursor_press(MouseButton button);
-	void cursor_enter();
+	bool cursor_enter();
 	void cursor_release(MouseButton button);
 	bool cursor_cancel();
 	void full_brush_reset();
@@ -215,6 +221,7 @@ public:
 		bool on_starting_interval = false;
 		float held_time = 0.0f;
 		int move_x = 0, move_y = 0;
+		int offset_x = 0, offset_y = 0;
 		float held_speed_factor = 1.0f; // SETTINGS
 		static inline const float held_interval = 0.1f;
 		static inline const float held_start_interval = 0.5f;
@@ -223,6 +230,7 @@ public:
 	void process_move_selection();
 	bool start_move_selection(int dx, int dy);
 	bool move_selection(int dx, int dy);
+	void apply_selection();
 
 public:
 	enum : size_t
@@ -234,9 +242,9 @@ public:
 		CURSOR_SELECT,
 		BRUSH_PREVIEW,
 		ERASER_PREVIEW,
-		SELECT_PREVIEW,
 		SELECTION,
 		SELECTION_PREVIEW,
+		SELECTION_SUBIMAGE,
 		SPRITE, // LATER SPRITE_START
 		_W_COUNT
 	};

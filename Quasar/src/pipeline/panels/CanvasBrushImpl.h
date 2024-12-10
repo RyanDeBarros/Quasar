@@ -16,6 +16,9 @@ namespace CBImpl
 	extern void move_selection_with_pixels_pen(Canvas& canvas, int dx, int dy);
 	extern void move_selection_without_pixels(Canvas& canvas, int dx, int dy);
 
+	extern void apply_selection_pencil(Canvas& canvas);
+	extern void apply_selection_pen(Canvas& canvas);
+
 	namespace Camera
 	{
 		extern void brush(Canvas& canvas, int x, int y);

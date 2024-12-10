@@ -21,6 +21,18 @@ struct ActionBase
 	inline bool operator==(const ActionBase&) const = default;
 };
 
+struct InverseAction : public ActionBase
+{
+	std::shared_ptr<ActionBase> normal;
+
+	InverseAction(const std::shared_ptr<ActionBase>& normal);
+	InverseAction(std::shared_ptr<ActionBase>&& normal);
+	virtual void forward() override;
+	virtual void backward() override;
+	virtual bool equals(const ActionBase&) const override;
+	inline bool operator==(const InverseAction&) const = default;
+};
+
 struct DualAction : public ActionBase
 {
 	std::shared_ptr<ActionBase> first, second;
@@ -43,6 +55,16 @@ struct CompositeAction : public ActionBase
 	virtual void backward() override;
 	virtual bool equals(const ActionBase&) const override;
 	inline bool operator==(const CompositeAction&) const = default;
+};
+
+struct VoidFuncAction : public ActionBase
+{
+	void(*fore)();
+	void(*back)();
+	VoidFuncAction(void(*fore)(), void(*back)());
+	virtual void forward() override;
+	virtual void backward() override;
+	QUASAR_ACTION_EQUALS_OVERRIDE(VoidFuncAction)
 };
 
 class ActionHistory
