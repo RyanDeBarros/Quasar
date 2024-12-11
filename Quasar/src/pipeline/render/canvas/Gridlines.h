@@ -2,7 +2,7 @@
 
 #include "variety/GLutility.h"
 #include "variety/Geometry.h"
-#include "Shader.h"
+#include "../Shader.h"
 #include "edit/color/Color.h"
 
 struct Gridlines

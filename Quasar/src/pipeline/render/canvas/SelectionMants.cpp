@@ -2,7 +2,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Uniforms.h"
+#include "../Uniforms.h"
 
 // LATER re-add parallel offset in geom shader, but provide additional data about which ends should use that offset.
 SelectionMants::SelectionMants()

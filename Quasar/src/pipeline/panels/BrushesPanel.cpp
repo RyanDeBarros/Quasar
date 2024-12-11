@@ -8,6 +8,7 @@
 #include "variety/GLutility.h"
 #include "user/Machine.h"
 #include "Easel.h"
+#include "../render/canvas/Canvas.h"
 
 // ---------- LAYOUT ----------
 

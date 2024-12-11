@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "../widgets/Widget.h"
+#include "../../widgets/Widget.h"
 #include "edit/color/Color.h"
 
 class SelectionMants : public W_UnitRenderable

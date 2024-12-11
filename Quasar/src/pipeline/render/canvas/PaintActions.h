@@ -4,8 +4,8 @@
 #include <unordered_set>
 
 #include "variety/History.h"
-#include "Image.h"
-#include "../color/Color.h"
+#include "edit/image/Image.h"
+#include "edit/color/Color.h"
 
 extern void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c);
 extern void buffer_set_pixel_alpha(const Buffer& buf, int x, int y, int alpha);

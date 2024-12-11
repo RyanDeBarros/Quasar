@@ -1,6 +1,6 @@
 #include "Uniforms.h"
 
-#include <glm/gtc/type_ptr.inl>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "variety/GLutility.h"
 

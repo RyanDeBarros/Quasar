@@ -147,22 +147,31 @@
     <ClCompile Include="src\pipeline\panels\ScenePanel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\render\Gridlines.cpp">
+    <ClCompile Include="src\pipeline\render\canvas\Gridlines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\ImplUtility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\edit\image\PaintActions.cpp">
+    <ClCompile Include="src\pipeline\render\canvas\PaintActions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\variety\History.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\panels\CanvasBrushImpl.cpp">
+    <ClCompile Include="src\pipeline\render\canvas\CanvasBrushImpl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\pipeline\render\SelectionMants.cpp">
+    <ClCompile Include="src\pipeline\render\canvas\SelectionMants.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\render\canvas\BrushInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\render\canvas\BrushAttributes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pipeline\render\canvas\Canvas.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1187,22 +1196,31 @@
     <ClInclude Include="src\pipeline\panels\ScenePanel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\render\Gridlines.h">
+    <ClInclude Include="src\pipeline\render\canvas\Gridlines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\ImplUtility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\edit\image\PaintActions.h">
+    <ClInclude Include="src\pipeline\render\canvas\PaintActions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\pipeline\panels\BrushHeader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\panels\CanvasBrushImpl.h">
+    <ClInclude Include="src\pipeline\render\canvas\CanvasBrushImpl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\pipeline\render\SelectionMants.h">
+    <ClInclude Include="src\pipeline\render\canvas\SelectionMants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\render\canvas\BrushInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\render\canvas\BrushAttributes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pipeline\render\canvas\Canvas.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

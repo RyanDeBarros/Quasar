@@ -1,6 +1,6 @@
 #include "ColorPicker.h"
 
-#include <glm/gtc/type_ptr.inl>
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui/imgui_internal.h>
 
 #include "ImplUtility.h"

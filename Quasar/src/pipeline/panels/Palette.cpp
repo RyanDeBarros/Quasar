@@ -1,11 +1,12 @@
 #include "Palette.h"
 
-#include <glm/gtc/type_ptr.inl>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "ImplUtility.h"
 #include "user/Machine.h"
 #include "variety/GLutility.h"
 #include "Easel.h"
+#include "../render/canvas/Canvas.h"
 #include "../render/Uniforms.h"
 #include "../widgets/ColorPicker.h"
 #include "../widgets/ColorPalette.h"

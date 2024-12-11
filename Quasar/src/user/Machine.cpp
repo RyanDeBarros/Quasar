@@ -9,10 +9,10 @@
 #include "pipeline/panels/BrushesPanel.h"
 #include "pipeline/panels/ScenePanel.h"
 #include "pipeline/panels/Menu.h"
+#include "pipeline/render/canvas/Canvas.h"
 #include "pipeline/text/TextRender.h"
 #include "pipeline/text/CommonFonts.h"
 #include "variety/GLutility.h"
-#include "pipeline/render/SelectionMants.h"
 
 #define QUASAR_INVALIDATE_PTR(ptr) delete ptr; ptr = nullptr;
 #define QUASAR_INVALIDATE_ARR(arr) delete[] arr; arr = nullptr;

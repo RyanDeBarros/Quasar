@@ -1,8 +1,9 @@
 #include "PaintActions.h"
 
-#include "pipeline/render/SelectionMants.h"
-#include "pipeline/panels/Easel.h"
+#include "SelectionMants.h"
+#include "../../panels/Easel.h"
 #include "user/Machine.h"
+#include "Canvas.h"
 
 void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c)
 {

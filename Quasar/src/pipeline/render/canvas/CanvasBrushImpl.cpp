@@ -2,10 +2,11 @@
 
 #include <stack>
 
-#include "Easel.h"
+#include "Canvas.h"
+#include "SelectionMants.h"
+#include "../../panels/Easel.h"
 #include "user/Machine.h"
-#include "../render/SelectionMants.h"
-#include "../render/FlatSprite.h"
+#include "../FlatSprite.h"
 
 static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canvas, IPosition pos)
 {

@@ -1,6 +1,6 @@
 #include "Gridlines.h"
 
-#include "Uniforms.h"
+#include "../Uniforms.h"
 
 // LATER use geometry shader for simplicity
 Gridlines::Gridlines()
