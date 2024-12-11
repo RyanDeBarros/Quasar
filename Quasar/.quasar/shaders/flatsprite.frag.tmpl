@@ -1,17 +1,17 @@
 #version 440 core
 
-layout(location=0) out vec4 o_Color;
+layout(location=0) out vec4 oColor;
 
-in vec4 t_Color;
-in float t_TexSlot;
-in vec2 t_TexCoord;
+in vec4 tColor;
+in float tTexSlot;
+in vec2 tTexCoord;
 
 layout(binding=0) uniform sampler2D TEXTURE_SLOTS[$NUM_TEXTURE_SLOTS];
 
 void main() {
-	if (t_TexSlot < 0) {
-		o_Color = t_Color;
+	if (tTexSlot < 0) {
+		oColor = tColor;
 	} else {
-		o_Color = t_Color * texture(TEXTURE_SLOTS[int(t_TexSlot)], t_TexCoord);
+		oColor = tColor * texture(TEXTURE_SLOTS[int(tTexSlot)], tTexCoord);
 	}
 }

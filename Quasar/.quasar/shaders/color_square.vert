@@ -1,14 +1,14 @@
 #version 440 core
 
-layout(location=0) in vec2 i_VertexPosition;
-layout(location=1) in vec4 i_Color;
+layout(location=0) in vec2 iVertexPosition;
+layout(location=1) in vec4 iColor;
 
-uniform mat3 u_VP = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
+uniform mat3 uVP = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
 
-out vec4 t_Color;
+out vec4 tColor;
 
 void main() {
-	t_Color = i_Color;
+	tColor = iColor;
 
-	gl_Position.xy = (u_VP * vec3(i_VertexPosition, 1.0)).xy;
+	gl_Position.xy = (uVP * vec3(iVertexPosition, 1.0)).xy;
 }

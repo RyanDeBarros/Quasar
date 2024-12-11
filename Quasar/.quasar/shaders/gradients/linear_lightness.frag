@@ -1,53 +1,53 @@
 #version 440 core
 
-layout(location=0) out vec4 o_Color;
+layout(location=0) out vec4 oColor;
 
-uniform float u_Hue = 0.0; // TODO edit
+uniform float uHue = 0.0;
 
-in float t_LightnessProgress;
+in float tLightnessProgress;
 
 void main() {
-	o_Color.a = 1.0;
+	oColor.a = 1.0;
 	// Chroma
-	float chroma = (1.0 - abs(2.0 * t_LightnessProgress - 1.0));
-	float x = chroma * (1.0 - abs(mod((6 * u_Hue), 2.0) - 1.0));
+	float chroma = (1.0 - abs(2.0 * tLightnessProgress - 1.0));
+	float x = chroma * (1.0 - abs(mod((6 * uHue), 2.0) - 1.0));
 	// RGB channels (unordered)
-	float c1 = t_LightnessProgress + chroma * 0.5;
-	float c2 = t_LightnessProgress - chroma * 0.5 + x;
-	float c3 = t_LightnessProgress - chroma * 0.5;
+	float c1 = tLightnessProgress + chroma * 0.5;
+	float c2 = tLightnessProgress - chroma * 0.5 + x;
+	float c3 = tLightnessProgress - chroma * 0.5;
 	// Order RGB channels
-	uint si = uint(floor(u_Hue * 6.0));
+	uint si = uint(floor(uHue * 6.0));
 	switch (si % 6)
 	{
 	case 0:
-		o_Color.r = c1;
-		o_Color.g = c2;
-		o_Color.b = c3;
+		oColor.r = c1;
+		oColor.g = c2;
+		oColor.b = c3;
 		break;
 	case 1:
-		o_Color.r = c2;
-		o_Color.g = c1;
-		o_Color.b = c3;
+		oColor.r = c2;
+		oColor.g = c1;
+		oColor.b = c3;
 		break;
 	case 2:
-		o_Color.r = c3;
-		o_Color.g = c1;
-		o_Color.b = c2;
+		oColor.r = c3;
+		oColor.g = c1;
+		oColor.b = c2;
 		break;
 	case 3:
-		o_Color.r = c3;
-		o_Color.g = c2;
-		o_Color.b = c1;
+		oColor.r = c3;
+		oColor.g = c2;
+		oColor.b = c1;
 		break;
 	case 4:
-		o_Color.r = c2;
-		o_Color.g = c3;
-		o_Color.b = c1;
+		oColor.r = c2;
+		oColor.g = c3;
+		oColor.b = c1;
 		break;
 	case 5:
-		o_Color.r = c1;
-		o_Color.g = c3;
-		o_Color.b = c2;
+		oColor.r = c1;
+		oColor.g = c3;
+		oColor.b = c2;
 		break;
 	}
 }

@@ -250,7 +250,7 @@ void Easel::_send_view()
 {
 	vp = vp_matrix();
 	canvas().send_vp(vp);
-	Uniforms::send_matrix3(color_square_shader, "u_VP", vp);
+	Uniforms::send_matrix3(color_square_shader, "uVP", vp);
 	unbind_shader();
 	sync_widget();
 }

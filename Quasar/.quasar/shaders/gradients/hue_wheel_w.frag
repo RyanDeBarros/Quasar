@@ -2,18 +2,18 @@
 
 const float TAU = 6.28318531;
 
-layout(location=0) out vec4 o_Color;
+layout(location=0) out vec4 oColor;
 
-uniform float u_Value = 1.0;
+uniform float uValue = 1.0;
 
-in vec2 t_UVs;
+in vec2 tUVs;
 
 void main() {
-	float mag_sq = dot(t_UVs, t_UVs);
+	float mag_sq = dot(tUVs, tUVs);
 	if (mag_sq > 1.0) discard;
 
-	o_Color.a = 1.0;
-	float hue = -atan(t_UVs.y, t_UVs.x) / TAU;
+	oColor.a = 1.0;
+	float hue = -atan(tUVs.y, tUVs.x) / TAU;
 	if (hue < 0.0)
 		hue += 1.0;
 	float sat = sqrt(mag_sq);
@@ -25,42 +25,42 @@ void main() {
 	float fr = 6 * hue - si;
 
 	// Compute non-primary color characteristics
-	float _min = u_Value * (1.0 - sat);
-	float pre = u_Value * (1.0 - sat * fr);
-	float post = u_Value * (1.0 - sat * (1.0 - fr));
+	float _min = uValue * (1.0 - sat);
+	float pre = uValue * (1.0 - sat * fr);
+	float post = uValue * (1.0 - sat * (1.0 - fr));
 	
 	// Switch on sextant
 	switch (si % 6)
 	{
 	case 0:
-		o_Color.r = u_Value;
-		o_Color.g = post;
-		o_Color.b = _min;
+		oColor.r = uValue;
+		oColor.g = post;
+		oColor.b = _min;
 		break;
 	case 1:
-		o_Color.r = pre;
-		o_Color.g = u_Value;
-		o_Color.b = _min;
+		oColor.r = pre;
+		oColor.g = uValue;
+		oColor.b = _min;
 		break;
 	case 2:
-		o_Color.r = _min;
-		o_Color.g = u_Value;
-		o_Color.b = post;
+		oColor.r = _min;
+		oColor.g = uValue;
+		oColor.b = post;
 		break;
 	case 3:
-		o_Color.r = _min;
-		o_Color.g = pre;
-		o_Color.b = u_Value;
+		oColor.r = _min;
+		oColor.g = pre;
+		oColor.b = uValue;
 		break;
 	case 4:
-		o_Color.r = post;
-		o_Color.g = _min;
-		o_Color.b = u_Value;
+		oColor.r = post;
+		oColor.g = _min;
+		oColor.b = uValue;
 		break;
 	case 5:
-		o_Color.r = u_Value;
-		o_Color.g = _min;
-		o_Color.b = pre;
+		oColor.r = uValue;
+		oColor.g = _min;
+		oColor.b = pre;
 		break;
 	}
 }

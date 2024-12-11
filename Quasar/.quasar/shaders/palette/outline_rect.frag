@@ -1,20 +1,20 @@
 #version 440 core
 
-layout(location=0) out vec4 o_Color;
+layout(location=0) out vec4 oColor;
 
-uniform float u_Padding = 0.05;
-uniform float u_Border = 0.105;
+uniform float uPadding = 0.05;
+uniform float uBorder = 0.105;
 
-in vec2 t_UVs;
-in vec4 t_Color;
+in vec2 tUVs;
+in vec4 tColor;
 
 void main() {
-	o_Color = t_Color;
+	oColor = tColor;
 
-	if (t_UVs.x < u_Padding || t_UVs.x > 1.0 - u_Padding)
+	if (tUVs.x < uPadding || tUVs.x > 1.0 - uPadding)
 		discard;
-	if (t_UVs.y < u_Padding || t_UVs.y > 1.0 - u_Padding)
+	if (tUVs.y < uPadding || tUVs.y > 1.0 - uPadding)
 		discard;
-	if (t_UVs.x > u_Padding + u_Border && t_UVs.x < 1.0 - u_Padding - u_Border && t_UVs.y > u_Padding + u_Border && t_UVs.y < 1.0 - u_Padding - u_Border)
+	if (tUVs.x > uPadding + uBorder && tUVs.x < 1.0 - uPadding - uBorder && tUVs.y > uPadding + uBorder && tUVs.y < 1.0 - uPadding - uBorder)
 		discard;
 }

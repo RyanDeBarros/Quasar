@@ -1,15 +1,15 @@
 #version 440 core
 
-layout(location=0) out vec4 o_Color;
+layout(location=0) out vec4 oColor;
 
-in float t_TexSlot;
-in vec2 t_UVs;
+in float tTexSlot;
+in vec2 tUVs;
 
 layout(binding=0) uniform sampler2D TEXTURE_SLOTS[$NUM_TEXTURE_SLOTS];
 
-uniform vec4 u_ForeColor = vec4(1.0, 1.0, 1.0, 1.0);
+uniform vec4 uForeColor = vec4(1.0, 1.0, 1.0, 1.0);
 
 void main() {
-	float grayscale = texture(TEXTURE_SLOTS[int(t_TexSlot)], t_UVs).r;
-	o_Color = vec4(1.0, 1.0, 1.0, grayscale) * u_ForeColor;
+	float grayscale = texture(TEXTURE_SLOTS[int(tTexSlot)], tUVs).r;
+	oColor = vec4(1.0, 1.0, 1.0, grayscale) * uForeColor;
 }

@@ -1,93 +1,93 @@
 #version 440 core
 
-layout(location=0) out vec4 o_Color;
+layout(location=0) out vec4 oColor;
 
-in vec2 t_RelVertexPosition;
-in vec4 t_BorderColor;
-in vec4 t_InteriorColor;
-in vec2 t_RelRectBottomLeft;
-in vec2 t_RelRectSize;
-in float t_Thickness;
+in vec2 tRelVertexPosition;
+in vec4 tBorderColor;
+in vec4 tInteriorColor;
+in vec2 tRelRectBottomLeft;
+in vec2 tRelRectSize;
+in float tThickness;
 
 void main() {
-	vec2 delta = t_RelVertexPosition - t_RelRectBottomLeft;
+	vec2 delta = tRelVertexPosition - tRelRectBottomLeft;
 
 	if (delta.x < 1.0) {
 		if (delta.y < 1.0) {
 			// BL
 			vec2 m = 1.0 - delta;
-			float mag_sq = dot(m, m);
-			if (mag_sq > 1.0) discard;
-			if (mag_sq > (1.0 - t_Thickness) * (1.0 - t_Thickness)) {
-				o_Color = t_BorderColor;
+			float magsq = dot(m, m);
+			if (magsq > 1.0) discard;
+			if (magsq > (1.0 - tThickness) * (1.0 - tThickness)) {
+				oColor = tBorderColor;
 			} else {
-				o_Color = t_InteriorColor;
+				oColor = tInteriorColor;
 			}
-		} else if (delta.y > t_RelRectSize.y - 1.0) {
+		} else if (delta.y > tRelRectSize.y - 1.0) {
 			// TL
-			vec2 m = vec2(1.0 - delta.x, 1.0 - t_RelRectSize.y + delta.y);
-			float mag_sq = dot(m, m);
-			if (mag_sq > 1.0) discard;
-			if (mag_sq > (1.0 - t_Thickness) * (1.0 - t_Thickness)) {
-				o_Color = t_BorderColor;
+			vec2 m = vec2(1.0 - delta.x, 1.0 - tRelRectSize.y + delta.y);
+			float magsq = dot(m, m);
+			if (magsq > 1.0) discard;
+			if (magsq > (1.0 - tThickness) * (1.0 - tThickness)) {
+				oColor = tBorderColor;
 			} else {
-				o_Color = t_InteriorColor;
+				oColor = tInteriorColor;
 			}
 		} else {
 			// Left edge
-			if (delta.x < t_Thickness) {
-				o_Color = t_BorderColor;
+			if (delta.x < tThickness) {
+				oColor = tBorderColor;
 			} else {
-				o_Color = t_InteriorColor;
+				oColor = tInteriorColor;
 			}
 		}
-	} else if (delta.x > t_RelRectSize.x - 1.0) {
+	} else if (delta.x > tRelRectSize.x - 1.0) {
 		if (delta.y < 1.0) {
 			// BR
-			vec2 m = vec2(1.0 - t_RelRectSize.x + delta.x, 1.0 - delta.y);
-			float mag_sq = dot(m, m);
-			if (mag_sq > 1.0) discard;
-			if (mag_sq > (1.0 - t_Thickness) * (1.0 - t_Thickness)) {
-				o_Color = t_BorderColor;
+			vec2 m = vec2(1.0 - tRelRectSize.x + delta.x, 1.0 - delta.y);
+			float magsq = dot(m, m);
+			if (magsq > 1.0) discard;
+			if (magsq > (1.0 - tThickness) * (1.0 - tThickness)) {
+				oColor = tBorderColor;
 			} else {
-				o_Color = t_InteriorColor;
+				oColor = tInteriorColor;
 			}
-		} else if (delta.y > t_RelRectSize.y - 1.0) {
+		} else if (delta.y > tRelRectSize.y - 1.0) {
 			// TR
-			vec2 m = vec2(1.0 - t_RelRectSize.x + delta.x, 1.0 - t_RelRectSize.y + delta.y);
-			float mag_sq = dot(m, m);
-			if (mag_sq > 1.0) discard;
-			if (mag_sq > (1.0 - t_Thickness) * (1.0 - t_Thickness)) {
-				o_Color = t_BorderColor;
+			vec2 m = vec2(1.0 - tRelRectSize.x + delta.x, 1.0 - tRelRectSize.y + delta.y);
+			float magsq = dot(m, m);
+			if (magsq > 1.0) discard;
+			if (magsq > (1.0 - tThickness) * (1.0 - tThickness)) {
+				oColor = tBorderColor;
 			} else {
-				o_Color = t_InteriorColor;
+				oColor = tInteriorColor;
 			}
 		} else {
 			// Right edge
-			if (delta.x > t_RelRectSize.x - t_Thickness) {
-				o_Color = t_BorderColor;
+			if (delta.x > tRelRectSize.x - tThickness) {
+				oColor = tBorderColor;
 			} else {
-				o_Color = t_InteriorColor;
+				oColor = tInteriorColor;
 			}
 		}
 	} else {
 		if (delta.y < 1.0) {
 			// Bottom edge
-			if (delta.y < t_Thickness) {
-				o_Color = t_BorderColor;
+			if (delta.y < tThickness) {
+				oColor = tBorderColor;
 			} else {
-				o_Color = t_InteriorColor;
+				oColor = tInteriorColor;
 			}
-		} else if (delta.y > t_RelRectSize.y - 1.0) {
+		} else if (delta.y > tRelRectSize.y - 1.0) {
 			// Top edge
-			if (delta.y > t_RelRectSize.y - t_Thickness) {
-				o_Color = t_BorderColor;
+			if (delta.y > tRelRectSize.y - tThickness) {
+				oColor = tBorderColor;
 			} else {
-				o_Color = t_InteriorColor;
+				oColor = tInteriorColor;
 			}
 		} else {
 			// Center
-			o_Color = t_InteriorColor;
+			oColor = tInteriorColor;
 		}
 	}
 }

@@ -158,10 +158,9 @@ void Canvas::draw_cursor()
 
 void Canvas::send_vp(const glm::mat3& vp)
 {
-	// TODO rename GLSL variables
-	Uniforms::send_matrix3(sprite_shader, "u_VP", vp);
-	Uniforms::send_matrix3(minor_gridlines.shader, "u_VP", vp);
-	Uniforms::send_matrix3(major_gridlines.shader, "u_VP", vp);
+	Uniforms::send_matrix3(sprite_shader, "uVP", vp);
+	Uniforms::send_matrix3(minor_gridlines.shader, "uVP", vp);
+	Uniforms::send_matrix3(major_gridlines.shader, "uVP", vp);
 	binfo.smants->send_screen_size(MainWindow->size());
 	binfo.smants_preview->send_screen_size(MainWindow->size());
 	sync_cursor_with_widget();

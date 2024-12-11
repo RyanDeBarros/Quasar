@@ -76,7 +76,7 @@ const float button_rgb_w = 45;
 
 void ColorPicker::send_gradient_color_uniform(const Shader& shader, GradientIndex index, ColorFrame color)
 {
-	Uniforms::send_4(shader, "u_GradientColors[0]", color.rgba().as_vec(), (GLint)index);
+	Uniforms::send_4(shader, "uGradientColors[0]", color.rgba().as_vec(), (GLint)index);
 }
 
 // LATER maybe input handler connections should be made by parent, not child, so that there's no need to pass them in constructor.
@@ -515,12 +515,12 @@ void ColorPicker::set_state(State _state)
 
 void ColorPicker::send_vp()
 {
-	Uniforms::send_matrix3(quad_shader, "u_VP", *vp);
-	Uniforms::send_matrix3(linear_hue_shader, "u_VP", *vp);
-	Uniforms::send_matrix3(hue_wheel_w_shader, "u_VP", *vp);
-	Uniforms::send_matrix3(linear_lightness_shader, "u_VP", *vp);
-	Uniforms::send_matrix3(circle_cursor_shader, "u_VP", *vp);
-	Uniforms::send_matrix3(round_rect_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(quad_shader, "uVP", *vp);
+	Uniforms::send_matrix3(linear_hue_shader, "uVP", *vp);
+	Uniforms::send_matrix3(hue_wheel_w_shader, "uVP", *vp);
+	Uniforms::send_matrix3(linear_lightness_shader, "uVP", *vp);
+	Uniforms::send_matrix3(circle_cursor_shader, "uVP", *vp);
+	Uniforms::send_matrix3(round_rect_shader, "uVP", *vp);
 	sync_widget_with_vp();
 }
 
@@ -1378,7 +1378,7 @@ glm::vec2 ColorPicker::get_graphic_quad_sat_and_value() const
 
 void ColorPicker::send_graphic_wheel_value_to_uniform(float value) const
 {
-	Uniforms::send_1(hue_wheel_w_shader, "u_Value", value);
+	Uniforms::send_1(hue_wheel_w_shader, "uValue", value);
 }
 
 void ColorPicker::send_graphic_value_slider_hue_and_sat_to_uniform(float hue, float sat) const
@@ -1406,7 +1406,7 @@ void ColorPicker::send_slider_hsl_hue_and_lightness_to_uniform(float hue, float 
 {
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ZERO, HSL(hue, 0.0f, lightness));
 	send_gradient_color_uniform(quad_shader, GradientIndex::HSL_S_SLIDER_ONE, HSL(hue, 1.0f, lightness));
-	Uniforms::send_1(linear_lightness_shader, "u_Hue", hue);
+	Uniforms::send_1(linear_lightness_shader, "uHue", hue);
 }
 
 float ColorPicker::slider_normal_x(size_t control, size_t cursor) const

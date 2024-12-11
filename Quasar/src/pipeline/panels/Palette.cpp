@@ -193,7 +193,7 @@ void PalettePanel::sync_widget()
 void PalettePanel::_send_view()
 {
 	vp = vp_matrix();
-	Uniforms::send_matrix3(bkg_shader, "u_VP", vp);
+	Uniforms::send_matrix3(bkg_shader, "uVP", vp);
 	unbind_shader();
 	sync_widget();
 }

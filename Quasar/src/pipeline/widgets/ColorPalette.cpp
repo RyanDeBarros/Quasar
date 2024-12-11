@@ -934,10 +934,10 @@ void ColorPalette::process()
 
 void ColorPalette::send_vp()
 {
-	Uniforms::send_matrix3(color_square_shader, "u_VP", *vp);
-	Uniforms::send_matrix3(grid_shader, "u_VP", grid_vp());
-	Uniforms::send_matrix3(outline_rect_shader, "u_VP", *vp);
-	Uniforms::send_matrix3(round_rect_shader, "u_VP", *vp);
+	Uniforms::send_matrix3(color_square_shader, "uVP", *vp);
+	Uniforms::send_matrix3(grid_shader, "uVP", grid_vp());
+	Uniforms::send_matrix3(outline_rect_shader, "uVP", *vp);
+	Uniforms::send_matrix3(round_rect_shader, "uVP", *vp);
 	sync_widget_with_vp();
 }
 
@@ -1432,8 +1432,8 @@ void ColorPalette::set_grid_metrics(int col, int row, bool sync)
 	_row_count = row;
 	grid_offset_y = -wp_at(BACKGROUND).transform.scale.y + grid_padding_y1 + grid_padding_y2 + (row - 1) * SQUARE_SEP + SQUARE_SIZE;
 
-	Uniforms::send_1(grid_shader, "u_ColProportion", 1.0f / col_count());
-	Uniforms::send_1(grid_shader, "u_RowProportion", 1.0f / row_count());
+	Uniforms::send_1(grid_shader, "uColProportion", 1.0f / col_count());
+	Uniforms::send_1(grid_shader, "uRowProportion", 1.0f / row_count());
 	for (int i = 0; i < num_subpalettes(); ++i)
 	{
 		get_subpalette(i).self.transform.position.y = subpalette_pos_y();
@@ -1442,7 +1442,7 @@ void ColorPalette::set_grid_metrics(int col, int row, bool sync)
 	if (sync)
 	{
 		sync_widget_with_vp();
-		Uniforms::send_matrix3(grid_shader, "u_VP", grid_vp());
+		Uniforms::send_matrix3(grid_shader, "uVP", grid_vp());
 	}
 }
 

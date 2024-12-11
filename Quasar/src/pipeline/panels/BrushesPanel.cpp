@@ -226,8 +226,8 @@ void BrushesPanel::draw()
 void BrushesPanel::_send_view()
 {
 	vp = vp_matrix();
-	Uniforms::send_matrix3(bkg_shader, "u_VP", vp);
-	Uniforms::send_matrix3(round_rect_shader, "u_VP", vp);
+	Uniforms::send_matrix3(bkg_shader, "uVP", vp);
+	Uniforms::send_matrix3(round_rect_shader, "uVP", vp);
 	unbind_shader();
 	sync_widget();
 }

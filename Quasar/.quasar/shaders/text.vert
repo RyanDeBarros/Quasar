@@ -1,17 +1,17 @@
 #version 440 core
 
-layout(location=0) in vec2 i_VertexPosition;
-layout(location=1) in float i_TexSlot;
-layout(location=2) in vec2 i_UVs;
+layout(location=0) in vec2 iVertexPosition;
+layout(location=1) in float iTexSlot;
+layout(location=2) in vec2 iUVs;
 
-uniform mat3 u_MVP = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
+uniform mat3 uMVP = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
 
-out float t_TexSlot;
-out vec2 t_UVs;
+out float tTexSlot;
+out vec2 tUVs;
 
 void main() {
-	t_TexSlot = i_TexSlot;
-	t_UVs = i_UVs;
+	tTexSlot = iTexSlot;
+	tUVs = iUVs;
 	
-	gl_Position.xy = (u_MVP * vec3(i_VertexPosition, 1.0)).xy;
+	gl_Position.xy = (uMVP * vec3(iVertexPosition, 1.0)).xy;
 }

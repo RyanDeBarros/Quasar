@@ -4,7 +4,7 @@
 
 // LATER use geometry shader for simplicity
 Gridlines::Gridlines()
-	: shader(FileSystem::shader_path("gridlines.vert"), FileSystem::shader_path("gridlines.frag"))
+	: shader(FileSystem::shader_path("canvas/gridlines.vert"), FileSystem::shader_path("canvas/gridlines.frag"))
 {
 	initialize_dynamic_vao(vao, vb, 0, shader.stride, varr, shader.attributes);
 }
@@ -153,7 +153,7 @@ unsigned short Gridlines::num_rows() const
 
 void Gridlines::set_color(ColorFrame color) const
 {
-	Uniforms::send_4(shader, "u_Color", color.rgba().as_vec(), 0, true);
+	Uniforms::send_4(shader, "uColor", color.rgba().as_vec(), 0, true);
 }
 
 void Gridlines::send_buffer() const
@@ -167,7 +167,7 @@ void Gridlines::send_flat_transform(FlatTransform canvas_transform) const
 {
 	if (_visible)
 	{
-		Uniforms::send_4(shader, "u_FlatTransform", canvas_transform.packed());
+		Uniforms::send_4(shader, "uFlatTransform", canvas_transform.packed());
 		update_scale(canvas_transform.scale);
 		send_buffer();
 		_send_flat_transform = false;

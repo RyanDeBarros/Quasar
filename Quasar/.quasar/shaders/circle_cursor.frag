@@ -1,13 +1,13 @@
 #version 440 core
 
-layout(location=0) out vec4 o_Color;
+layout(location=0) out vec4 oColor;
 
-in vec2 t_UVs;
-in float t_InnerRadius;
-in float t_Value;
+in vec2 tUVs;
+in float tInnerRadius;
+in float tValue;
 
 void main() {
-	float mag_sq = dot(t_UVs, t_UVs);
-	if (mag_sq > 1.0 || mag_sq < t_InnerRadius * t_InnerRadius) discard;
-	o_Color = vec4(t_Value, t_Value, t_Value, 1.0);
+	float magsq = dot(tUVs, tUVs);
+	if (magsq > 1.0 || magsq < tInnerRadius * tInnerRadius) discard;
+	oColor = vec4(tValue, tValue, tValue, 1.0);
 }

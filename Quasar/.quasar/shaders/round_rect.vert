@@ -1,29 +1,28 @@
 #version 440 core
 
-layout(location=0) in vec2 i_VertexPosition;
-layout(location=1) in vec4 i_BorderColor;
-layout(location=2) in vec4 i_InteriorColor;
-layout(location=3) in vec2 i_RectBottomLeft;
-layout(location=4) in vec2 i_RectSize;
-layout(location=5) in float i_CornerRadius;
-layout(location=6) in float i_Thickness;
+layout(location=0) in vec2 iVertexPosition;
+layout(location=1) in vec4 iBorderColor;
+layout(location=2) in vec4 iInteriorColor;
+layout(location=3) in vec2 iRectBottomLeft;
+layout(location=4) in vec2 iRectSize;
+layout(location=5) in float iCornerRadius;
+layout(location=6) in float iThickness;
 
-uniform mat3 u_VP = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
+uniform mat3 uVP = mat3(vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0));
 
-out vec2 t_RelVertexPosition;
-out vec4 t_BorderColor;
-out vec4 t_InteriorColor;
-out vec2 t_RelRectBottomLeft;
-out vec2 t_RelRectSize;
-out float t_Thickness;
+out vec2 tRelVertexPosition;
+out vec4 tBorderColor;
+out vec4 tInteriorColor;
+out vec2 tRelRectBottomLeft;
+out vec2 tRelRectSize;
+out float tThickness;
 
 void main() {
-	t_RelVertexPosition = i_VertexPosition / i_CornerRadius;
-	t_BorderColor = i_BorderColor;
-	t_InteriorColor = i_InteriorColor;
-	t_RelRectBottomLeft = i_RectBottomLeft / i_CornerRadius;
-	t_RelRectSize = i_RectSize / i_CornerRadius;
-	t_Thickness = i_Thickness;
-	
-	gl_Position.xy = (u_VP * vec3(i_VertexPosition, 1.0)).xy;
+	tRelVertexPosition = iVertexPosition / iCornerRadius;
+	tBorderColor = iBorderColor;
+	tInteriorColor = iInteriorColor;
+	tRelRectBottomLeft = iRectBottomLeft / iCornerRadius;
+	tRelRectSize = iRectSize / iCornerRadius;
+	tThickness = iThickness;
+	gl_Position.xy = (uVP * vec3(iVertexPosition, 1.0)).xy;
 }

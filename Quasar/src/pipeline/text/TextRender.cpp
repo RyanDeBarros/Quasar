@@ -67,14 +67,14 @@ void TextRender::draw()
 void TextRender::send_vp(const glm::mat3 vp) const
 {
 	bind_shader(shader);
-	Uniforms::send_matrix3(shader, "u_MVP", vp * global_matrix());
+	Uniforms::send_matrix3(shader, "uMVP", vp * global_matrix());
 	unbind_shader();
 }
 
 void TextRender::send_fore_color() const
 {
 	bind_shader(shader);
-	Uniforms::send_4(shader, "u_ForeColor", fore_color.as_vec());
+	Uniforms::send_4(shader, "uForeColor", fore_color.as_vec());
 }
 
 void TextRender::update_text()

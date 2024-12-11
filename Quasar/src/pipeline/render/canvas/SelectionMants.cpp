@@ -7,7 +7,7 @@
 // LATER re-add parallel offset in geom shader, but provide additional data about which ends should use that offset.
 SelectionMants::SelectionMants()
 	: W_UnitRenderable(nullptr),
-	shader(FileSystem::shader_path("marching_ants.vert"), FileSystem::shader_path("marching_ants.geom"), FileSystem::shader_path("marching_ants.frag"))
+	shader(FileSystem::shader_path("canvas/marching_ants.vert"), FileSystem::shader_path("canvas/marching_ants.geom"), FileSystem::shader_path("canvas/marching_ants.frag"))
 {
 	ur->set_shader(&shader);
 }

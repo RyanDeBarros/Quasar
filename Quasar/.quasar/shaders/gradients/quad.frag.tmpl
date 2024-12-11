@@ -1,14 +1,14 @@
 #version 440 core
 
-uniform vec4 u_GradientColors[$MAX_GRADIENT_COLORS];
+uniform vec4 uGradientColors[$MAX_GRADIENT_COLORS];
 
-layout(location=0) out vec4 o_Color;
+layout(location=0) out vec4 oColor;
 
-in vec2 t_UVs;
-in vec4 t_GradientColors;
+in vec2 tUVs;
+in vec4 tGradientColors;
 
 void main() {
-	vec4 low = mix(u_GradientColors[int(t_GradientColors[0])], u_GradientColors[int(t_GradientColors[1])], t_UVs.x);
-	vec4 high = mix(u_GradientColors[int(t_GradientColors[2])], u_GradientColors[int(t_GradientColors[3])], t_UVs.x);
-	o_Color = mix(low, high, t_UVs.y);
+	vec4 low = mix(uGradientColors[int(tGradientColors[0])], uGradientColors[int(tGradientColors[1])], tUVs.x);
+	vec4 high = mix(uGradientColors[int(tGradientColors[2])], uGradientColors[int(tGradientColors[3])], tUVs.x);
+	oColor = mix(low, high, tUVs.y);
 }
