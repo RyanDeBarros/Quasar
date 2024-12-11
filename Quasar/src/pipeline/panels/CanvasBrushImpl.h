@@ -3,6 +3,7 @@
 struct Canvas;
 struct BrushInfo;
 struct PixelRGBA;
+enum class BrushTip;
 
 namespace CBImpl
 {
@@ -15,6 +16,8 @@ namespace CBImpl
 	extern void move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy);
 	extern void move_selection_with_pixels_pen(Canvas& canvas, int dx, int dy);
 	extern void move_selection_without_pixels(Canvas& canvas, int dx, int dy);
+
+	extern void transition_selection_tip(Canvas& canvas, BrushTip from, BrushTip to);
 
 	extern void apply_selection_pencil(Canvas& canvas);
 	extern void apply_selection_pen(Canvas& canvas);

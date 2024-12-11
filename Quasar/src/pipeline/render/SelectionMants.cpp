@@ -46,10 +46,11 @@ void SelectionMants::set_size(int width, int height)
 
 bool SelectionMants::add(IPosition pos)
 {
-	if (points.contains(pos) || pos.x < 0 || pos.x >= cols - 1 || pos.y < 0 || pos.y >= rows - 1)
+	if (points.contains(pos))
 		return false;
 	points.insert(pos);
-	shader_add(pos);
+	if (pos.x >= 0 && pos.x < cols - 1 && pos.y >= 0 && pos.y < rows - 1)
+		shader_add(pos);
 	return true;
 }
 
@@ -58,7 +59,8 @@ bool SelectionMants::remove(IPosition pos)
 	if (!points.contains(pos))
 		return false;
 	points.erase(pos);
-	shader_remove(pos);
+	if (pos.x >= 0 && pos.x < cols - 1 && pos.y >= 0 && pos.y < rows - 1)
+		shader_remove(pos);
 	return true;
 }
 
@@ -67,19 +69,19 @@ void SelectionMants::shader_add(IPosition pos)
 	static const float on_pos = 1.0f;
 	static const float on_neg = -1.0f;
 	static const float off = 0.0f;
-	if (points.contains({ pos.x - 1, pos.y }))
+	if (pos.x > 0 && points.contains({ pos.x - 1, pos.y }))
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x, pos.y), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x, pos.y), 1, &on_pos);
-	if (points.contains({ pos.x + 1, pos.y }))
+	if (pos.x < cols - 2 && points.contains({ pos.x + 1, pos.y }))
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x + 1, pos.y), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x + 1, pos.y), 1, &on_neg);
-	if (points.contains({ pos.x, pos.y - 1 }))
+	if (pos.y > 0 && points.contains({ pos.x, pos.y - 1 }))
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y), 1, &on_neg);
-	if (points.contains({ pos.x, pos.y + 1 }))
+	if (pos.y < rows - 2 && points.contains({ pos.x, pos.y + 1 }))
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &off);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &on_pos);
@@ -90,19 +92,19 @@ void SelectionMants::shader_remove(IPosition pos)
 	static const float on_pos = 1.0f;
 	static const float on_neg = -1.0f;
 	static const float off = 0.0f;
-	if (points.contains({ pos.x - 1, pos.y }))
+	if (pos.x > 0 && points.contains({ pos.x - 1, pos.y }))
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x, pos.y), 1, &on_neg);
 	else
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x, pos.y), 1, &off);
-	if (points.contains({ pos.x + 1, pos.y }))
+	if (pos.x < cols - 2 && points.contains({ pos.x + 1, pos.y }))
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x + 1, pos.y), 1, &on_pos);
 	else
 		ur->set_attribute_single_vertex(vertex_vertical(pos.x + 1, pos.y), 1, &off);
-	if (points.contains({ pos.x, pos.y - 1 }))
+	if (pos.y > 0 && points.contains({ pos.x, pos.y - 1 }))
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y), 1, &on_pos);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y), 1, &off);
-	if (points.contains({ pos.x, pos.y + 1 }))
+	if (pos.y < rows - 2 && points.contains({ pos.x, pos.y + 1 }))
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &on_neg);
 	else
 		ur->set_attribute_single_vertex(vertex_horizontal(pos.x, pos.y + 1), 1, &off);
@@ -137,6 +139,8 @@ void SelectionMants::send_buffer(IntBounds bbox)
 {
 	if (bbox != IntBounds::NADIR)
 	{
+		if (!intersection(bbox, { 0, cols - 2, 0, rows - 2 }, bbox))
+			return;
 		int subrows = bbox.y2 - bbox.y1 + 2;
 		int subcols = bbox.x2 - bbox.x1 + 2;
 		for (int dy = 0; dy < subrows; ++dy)

@@ -81,12 +81,12 @@ struct BrushInfo
 	std::unordered_set<IPosition> storage_select_add;
 	std::unordered_set<IPosition> cleared_selection;
 	std::unordered_map<IPosition, PixelRGBA> storage_selection_1c;
-	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_selection_2c;
 	std::unordered_map<IPosition, PixelRGBA> raw_selection_pixels;
 
 	bool show_selection_subimage = false;
 	struct FlatSprite* sel_subimg_sprite = nullptr;
 	std::shared_ptr<Image> selection_subimage;
+	IPosition move_selpxs_offset = {};
 
 	struct
 	{
@@ -183,8 +183,6 @@ public:
 	PixelRGBA applied_pencil_rgba() const;
 	PixelRGBA applied_pen_rgba() const;
 	RGBA color_under_cursor() const;
-	PixelRGBA pixel_color_at(IPosition pos) const;
-	PixelRGBA pixel_color_at(int x, int y) const;
 	
 	void set_cursor_color(RGBA color);
 	void set_primary_color(RGBA color);
@@ -221,7 +219,6 @@ public:
 		bool on_starting_interval = false;
 		float held_time = 0.0f;
 		int move_x = 0, move_y = 0;
-		int offset_x = 0, offset_y = 0;
 		float held_speed_factor = 1.0f; // SETTINGS
 		static inline const float held_interval = 0.1f;
 		static inline const float held_start_interval = 0.5f;

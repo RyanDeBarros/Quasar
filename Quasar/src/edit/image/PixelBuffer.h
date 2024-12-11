@@ -8,6 +8,8 @@ typedef unsigned char Byte;
 typedef int Dim;
 typedef int CHPP;
 
+struct PixelRGBA;
+
 struct Buffer
 {
 	static_assert(sizeof(Byte) == 1);
@@ -36,6 +38,8 @@ struct Buffer
 	Buffer rotate_90_ret_new() const;
 	void rotate_180() const;
 	Buffer rotate_270_ret_new() const;
+	
+	PixelRGBA pixel_color_at(int x, int y) const;
 };
 
 struct CHPPMismatchError : public std::runtime_error

@@ -4,6 +4,7 @@
 
 #include "PixelBufferPaths.h"
 #include "variety/Geometry.h"
+#include "../color/Color.h"
 
 IntBounds Buffer::bbox() const
 {
@@ -155,6 +156,15 @@ Buffer Buffer::rotate_270_ret_new() const
 		new_valid = ring_new.to_inner();
 	}
 	return new_buffer;
+}
+
+PixelRGBA Buffer::pixel_color_at(int x, int y) const
+{
+	Byte* pixel = pos(x, y);
+	PixelRGBA px{ 255, 255, 255, 255 };
+	for (CHPP i = 0; i < chpp; ++i)
+		px.at(i) = pixel[i];
+	return px;
 }
 
 void Path::move_iter(PathIterator& pit, long long offset) const

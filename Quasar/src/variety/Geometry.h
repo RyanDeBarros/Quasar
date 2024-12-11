@@ -303,6 +303,9 @@ struct IntBounds
 	bool valid() const { return x2 >= x1 && y2 >= y1; }
 
 	static const IntBounds NADIR;
+
+	IntBounds operator+(IPosition pos) const { return { x1 + pos.x, x2 + pos.x, y1 + pos.y, y2 + pos.y }; }
+	IntBounds operator-(IPosition pos) const { return { x1 - pos.x, x2 - pos.x, y1 - pos.y, y2 - pos.y }; }
 };
 
 inline const IntBounds IntBounds::NADIR = { INT_MAX, INT_MIN, INT_MAX, INT_MIN };

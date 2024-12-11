@@ -78,7 +78,6 @@ struct OneColorAction : public ActionBase
 	PixelRGBA color;
 	IntBounds bbox;
 	std::unordered_map<IPosition, PixelRGBA> painted_colors;
-	OneColorAction(const std::shared_ptr<Image>& image, PixelRGBA color, IPosition start, IPosition finish, std::unordered_map<IPosition, PixelRGBA>&& painted_colors);
 	OneColorAction(const std::shared_ptr<Image>& image, PixelRGBA color, IntBounds bbox, std::unordered_map<IPosition, PixelRGBA>&& painted_colors);
 	virtual void forward() override;
 	virtual void backward() override;
@@ -89,7 +88,6 @@ struct TwoColorAction : public ActionBase
 	std::weak_ptr<Image> image;
 	IntBounds bbox;
 	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> painted_colors;
-	TwoColorAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors);
 	TwoColorAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors);
 	virtual void forward() override;
 	virtual void backward() override;
@@ -105,26 +103,22 @@ struct TwoColorMoveAction : public ActionBase
 	virtual void backward() override;
 };
 
-struct SelectionAction : public ActionBase
+struct SmantsModifyAction : public ActionBase
 {
 	class SelectionMants* smants;
 	IntBounds bbox;
 	std::unordered_set<IPosition> remove_points;
 	std::unordered_set<IPosition> add_points;
-	SelectionAction(class SelectionMants* smants, IntBounds bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points);
+	SmantsModifyAction(class SelectionMants* smants, IntBounds bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points);
 	virtual void forward() override;
 	virtual void backward() override;
 };
 
-// TODO use SelectionMoveAction more in CBImpl
-struct SelectionMoveAction : public ActionBase
+struct SmantsMoveAction : public ActionBase
 {
-	class SelectionMants* smants;
-	IntBounds remove_bbox, add_bbox;
 	IPosition delta;
-	std::unordered_set<IPosition> remove_points;
-	std::unordered_set<IPosition> add_points;
-	SelectionMoveAction(class SelectionMants* smants, IPosition delta, IntBounds remove_bbox, IntBounds add_bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points);
+	std::unordered_set<IPosition> premove_points;
+	SmantsMoveAction(IPosition delta, std::unordered_set<IPosition>&& premove_points);
 	virtual void forward() override;
 	virtual void backward() override;
 };

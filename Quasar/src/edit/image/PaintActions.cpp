@@ -449,13 +449,6 @@ void DiscreteEllipseFillInterpolator::at(int i, int& x, int& y) const
 	y = points[i].y;
 }
 
-OneColorAction::OneColorAction(const std::shared_ptr<Image>& image, PixelRGBA color, IPosition start, IPosition finish, std::unordered_map<IPosition, PixelRGBA>&& painted_colors)
-	: image(image), color(color), painted_colors(std::move(painted_colors))
-{
-	weight = sizeof(OneColorAction) + this->painted_colors.size() * (sizeof(IPosition) + sizeof(PixelRGBA));
-	bbox = abs_bounds(start, finish);
-}
-
 OneColorAction::OneColorAction(const std::shared_ptr<Image>& image, PixelRGBA color, IntBounds bbox, std::unordered_map<IPosition, PixelRGBA>&& painted_colors)
 	: image(image), color(color), bbox(bbox), painted_colors(std::move(painted_colors))
 {
@@ -486,13 +479,6 @@ void OneColorAction::backward()
 			buffer_set_pixel_color(buf, iter.first.x, iter.first.y, iter.second);
 		img->update_subtexture(bbox);
 	}
-}
-
-TwoColorAction::TwoColorAction(const std::shared_ptr<Image>& image, IPosition start, IPosition finish, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors)
-	: image(image), painted_colors(std::move(painted_colors))
-{
-	weight = sizeof(TwoColorAction) + this->painted_colors.size() * (sizeof(IPosition) + 2 * sizeof(PixelRGBA));
-	bbox = abs_bounds(start, finish);
 }
 
 TwoColorAction::TwoColorAction(const std::shared_ptr<Image>& image, IntBounds bbox, std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>>&& painted_colors)
@@ -561,13 +547,13 @@ void TwoColorMoveAction::backward()
 	}
 }
 
-SelectionAction::SelectionAction(SelectionMants* smants, IntBounds bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points)
+SmantsModifyAction::SmantsModifyAction(SelectionMants* smants, IntBounds bbox, std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points)
 	: smants(smants), bbox(bbox), remove_points(std::move(remove_points)), add_points(std::move(add_points))
 {
-	weight = sizeof(SelectionAction) + (this->remove_points.size() + this->add_points.size()) * sizeof(IPosition);
+	weight = sizeof(SmantsModifyAction) + (this->remove_points.size() + this->add_points.size()) * sizeof(IPosition);
 }
 
-void SelectionAction::forward()
+void SmantsModifyAction::forward()
 {
 	for (auto iter = remove_points.begin(); iter != remove_points.end(); ++iter)
 		smants->remove(*iter);
@@ -576,7 +562,7 @@ void SelectionAction::forward()
 	smants->send_buffer(bbox);
 }
 
-void SelectionAction::backward()
+void SmantsModifyAction::backward()
 {
 	for (auto iter = add_points.begin(); iter != add_points.end(); ++iter)
 		smants->remove(*iter);
@@ -585,35 +571,37 @@ void SelectionAction::backward()
 	smants->send_buffer(bbox);
 }
 
-SelectionMoveAction::SelectionMoveAction(SelectionMants* smants, IPosition delta, IntBounds remove_bbox, IntBounds add_bbox,
-	std::unordered_set<IPosition>&& remove_points, std::unordered_set<IPosition>&& add_points)
-	: smants(smants), delta(delta), remove_bbox(remove_bbox), add_bbox(add_bbox), remove_points(std::move(remove_points)), add_points(std::move(add_points))
+SmantsMoveAction::SmantsMoveAction(IPosition delta, std::unordered_set<IPosition>&& premove_points)
+	: delta(delta), premove_points(std::move(premove_points))
 {
-	weight = sizeof(SelectionAction) + (this->remove_points.size() + this->add_points.size()) * sizeof(IPosition);
+	weight = sizeof(SmantsMoveAction) + this->premove_points.size() * sizeof(IPosition);
 }
 
-void SelectionMoveAction::forward()
+void SmantsMoveAction::forward()
 {
-	Canvas& canvas = MEasel->canvas();
-	canvas.move_selection_info.offset_x += delta.x;
-	canvas.move_selection_info.offset_y += delta.y;
-	for (auto iter = remove_points.begin(); iter != remove_points.end(); ++iter)
-		smants->remove(*iter);
-	smants->send_buffer(remove_bbox);
-	for (auto iter = add_points.begin(); iter != add_points.end(); ++iter)
-		smants->add(*iter);
-	smants->send_buffer(add_bbox);
+	BrushInfo& binfo = MEasel->canvas().binfo;
+	binfo.smants->send_buffer(binfo.clear_selection());
+	IntBounds bbox = IntBounds::NADIR;
+	for (IPosition pos : premove_points)
+	{
+		pos += delta;
+		if (binfo.add_to_selection(pos))
+			update_bbox(bbox, pos.x, pos.y);
+	}
+	binfo.move_selpxs_offset += delta;
+	binfo.smants->send_buffer(bbox);
 }
 
-void SelectionMoveAction::backward()
+void SmantsMoveAction::backward()
 {
-	Canvas& canvas = MEasel->canvas();
-	canvas.move_selection_info.offset_x -= delta.x;
-	canvas.move_selection_info.offset_y -= delta.y;
-	for (auto iter = add_points.begin(); iter != add_points.end(); ++iter)
-		smants->remove(*iter);
-	smants->send_buffer(add_bbox);
-	for (auto iter = remove_points.begin(); iter != remove_points.end(); ++iter)
-		smants->add(*iter);
-	smants->send_buffer(remove_bbox);
+	BrushInfo& binfo = MEasel->canvas().binfo;
+	binfo.smants->send_buffer(binfo.clear_selection());
+	IntBounds bbox = IntBounds::NADIR;
+	for (IPosition pos : premove_points)
+	{
+		if (binfo.add_to_selection(pos))
+			update_bbox(bbox, pos.x, pos.y);
+	}
+	binfo.move_selpxs_offset -= delta;
+	binfo.smants->send_buffer(bbox);
 }

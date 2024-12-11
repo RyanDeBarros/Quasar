@@ -314,8 +314,6 @@ void Canvas::process()
 	binfo.smants_preview->send_time(Machine.time());
 	if (move_selection_info.moving)
 		process_move_selection();
-
-	LOG << move_selection_info.offset_x << " " << move_selection_info.offset_y << LOG.nl;
 }
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
@@ -512,7 +510,10 @@ void Canvas::update_brush_tool_and_tip()
 {
 	auto new_tool = MBrushes->get_brush_tool();
 	auto new_tip = MBrushes->get_brush_tip();
-	if (binfo.tool != new_tool && binfo.tip != new_tip)
+	// TODO instead of different bool vars show_selection_subimage, brushing, etc., use one enum status.
+	if (binfo.show_selection_subimage)
+		CBImpl::transition_selection_tip(*this, binfo.tip, new_tip);
+	else if (binfo.tool != new_tool || binfo.tip != new_tip) // LATER add support for switching tool/tip mid brush?
 		cursor_cancel();
 	binfo.tool = new_tool;
 	binfo.tip = new_tip;
@@ -701,28 +702,12 @@ RGBA Canvas::color_under_cursor() const
 	return px.to_rgba();
 }
 
-PixelRGBA Canvas::pixel_color_at(IPosition pos) const
-{
-	return pixel_color_at(pos.x, pos.y);
-}
-
-// TODO make pixel_color_at a method on Buffer instead
-PixelRGBA Canvas::pixel_color_at(int x, int y) const
-{
-	Byte* pixel = image->buf.pos(x, y);
-	PixelRGBA px{ 255, 255, 255, 255 };
-	for (CHPP i = 0; i < image->buf.chpp; ++i)
-		px.at(i) = pixel[i];
-	return px;
-}
-
 void Canvas::set_cursor_color(RGBA color)
 {
 	ur_wget(*this, CURSOR_PENCIL).set_attribute(1, glm::value_ptr(color.as_vec())).send_buffer();
 	// LATER this is fine for when hovering over image, as it will replace the underlying pixel. However, the checkerboard will still show underneath, so the pen cursor should still blend with that.
 	// Implement some kind of mechanism that will toggle between two modulations (maybe custom shader, using uniforms for performance): one that is blended with checker1, and the other with checker2.
 	// Upon changing the checkerboard colors, this will need to be called again.
-	// TODO In a similar vein, binfo.preview_image should be blended with checkerboard as well, when using PEN. This is simpler, as it just involves a checker_color(x, y) to blend in CBImpl functions editing preview_image.
 	ur_wget(*this, CURSOR_PEN).set_attribute(1, glm::value_ptr(RGBA(color.rgb.r * color.alpha, color.rgb.g * color.alpha, color.rgb.b * color.alpha, 1.0f).as_vec())).send_buffer();
 }
 
@@ -812,7 +797,8 @@ bool Canvas::cursor_cancel()
 		set_cursor_color(primary_color);
 		return true;
 	}
-	// LATER else if selecting, unselect and consume
+	else if (binfo.show_selection_subimage)
+		apply_selection();
 	return false;
 }
 
@@ -826,7 +812,10 @@ void Canvas::brush(int x, int y)
 	if (!move_selection_info.moving && brush_pos_in_image_bounds(x, y))
 	{
 		if (!binfo.brushing)
+		{
+			apply_selection();
 			brush_start(x, y);
+		}
 		(*brush_under_tool_and_tip)(*this, x, y);
 	}
 }
@@ -1223,7 +1212,7 @@ IntBounds BrushInfo::clear_selection()
 void BrushInfo::push_selection_to_history()
 {
 	if (brushing_bbox != IntBounds::NADIR)
-		Machine.history.push(std::make_shared<SelectionAction>(smants, brushing_bbox, std::move(storage_select_remove), std::move(storage_select_add)));
+		Machine.history.push(std::make_shared<SmantsModifyAction>(smants, brushing_bbox, std::move(storage_select_remove), std::move(storage_select_add)));
 
 }
 
@@ -1316,7 +1305,7 @@ void Easel::connect_input_handlers()
 			}
 			else if (k.mods & Mods::CONTROL)
 			{
-				if (k.key == Key::Z)
+				if (k.key == Key::Z && !canvas().binfo.show_selection_subimage)
 					canvas().cursor_cancel(); // no consume
 				else if (k.key == Key::A)
 				{
