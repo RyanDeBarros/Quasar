@@ -24,10 +24,7 @@ namespace CBImpl
 	extern void batch_move_selection_submit_without_pixels(Canvas& canvas);
 	extern void batch_move_selection_cancel_without_pixels(Canvas& canvas);
 
-	extern void transition_selection_tip(Canvas& canvas, BrushTip from, BrushTip to);
-
-	extern void apply_selection_pencil(Canvas& canvas);
-	extern void apply_selection_pen(Canvas& canvas);
+	extern void apply_selection(Canvas& canvas);
 
 	namespace Camera
 	{

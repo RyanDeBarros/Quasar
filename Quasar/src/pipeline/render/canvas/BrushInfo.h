@@ -58,7 +58,7 @@ struct BrushInfo
 	bool add_to_selection(IPosition pos);
 	bool remove_from_selection(IPosition pos);
 	IntBounds clear_selection();
-	void push_selection_to_history();
+	bool push_selection_to_history();
 	bool point_valid_in_selection(int x, int y) const;
 };
 

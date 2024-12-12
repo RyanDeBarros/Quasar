@@ -387,9 +387,7 @@ void Canvas::update_brush_tool_and_tip()
 {
 	auto new_tool = MBrushes->get_brush_tool();
 	auto new_tip = MBrushes->get_brush_tip();
-	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
-		CBImpl::transition_selection_tip(*this, binfo.tip, new_tip);
-	else if (binfo.tool != new_tool || binfo.tip != new_tip) // LATER add support for switching tool/tip mid brush?
+	if (binfo.tool != new_tool || binfo.tip != new_tip) // LATER add support for switching tool/tip mid brush?
 		cursor_cancel();
 	binfo.tool = new_tool;
 	binfo.tip = new_tip;
@@ -637,7 +635,7 @@ void Canvas::cursor_press(MouseButton button)
 		if (begin && cursor_in_canvas)
 		{
 			if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
-				apply_selection();
+				CBImpl::apply_selection(*this);
 			else
 			{
 				IPosition pos = brush_pos_under_cursor();
@@ -658,10 +656,10 @@ bool Canvas::cursor_enter()
 	}
 	else if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 	{
-		apply_selection();
+		CBImpl::apply_selection(*this);
 		return true;
 	}
-	else if (binfo.state & BrushInfo::State::NEUTRAL)
+	else if (binfo.state & BrushInfo::State::NEUTRAL) // TODO NEUTRAL or new SELECTING state
 	{
 		deselect_all();
 		return true;
@@ -684,14 +682,13 @@ bool Canvas::cursor_cancel()
 		set_cursor_color(primary_color);
 		return true;
 	}
-	else if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
-		apply_selection();
 	return false;
 }
 
 void Canvas::full_brush_reset()
 {
-	deselect_all(); // this internally calls cursor_cancel()
+	cursor_cancel();
+	deselect_all();
 }
 
 void Canvas::brush(int x, int y)
@@ -821,9 +818,9 @@ void Canvas::brush_submit()
 
 void Canvas::brush_cancel()
 {
+	binfo.cancelling = true;
 	binfo.reset();
 	binfo.state = BrushInfo::State::NEUTRAL;
-	binfo.cancelling = true;
 }
 
 void Canvas::brush_move_to(IPosition pos)
@@ -834,7 +831,6 @@ void Canvas::brush_move_to(IPosition pos)
 
 void Canvas::select_all()
 {
-	cursor_cancel();
 	if (image)
 	{
 		binfo.brushing_bbox = IntBounds::NADIR;
@@ -847,20 +843,15 @@ void Canvas::select_all()
 	}
 }
 
-void Canvas::deselect_all()
+bool Canvas::deselect_all()
 {
-	cursor_cancel();
-	if (image)
+	if (image && !binfo.smants->get_points().empty())
 	{
-		if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
-			apply_selection();
-		else
-		{
-			binfo.brushing_bbox = binfo.clear_selection();
-			binfo.smants->send_buffer(binfo.brushing_bbox);
-			binfo.push_selection_to_history();
-		}
+		binfo.brushing_bbox = binfo.clear_selection();
+		binfo.smants->send_buffer(binfo.brushing_bbox);
+		return binfo.push_selection_to_history();
 	}
+	return false;
 }
 
 static bool selection_interaction_disabled(BrushInfo& binfo)
@@ -934,17 +925,6 @@ bool Canvas::delete_selection()
 //	move_selection_info.move_y = dy;
 //	return true;
 //}
-
-void Canvas::apply_selection()
-{
-	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
-	{
-		if (binfo.tip & BrushTip::PENCIL)
-			CBImpl::apply_selection_pencil(*this);
-		else if (binfo.tip & BrushTip::PEN)
-			CBImpl::apply_selection_pen(*this);
-	}
-}
 
 void Canvas::batch_move_selection_to(float fdx, float fdy)
 {

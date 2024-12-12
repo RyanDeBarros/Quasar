@@ -105,7 +105,7 @@ private:
 
 	bool begin_mouse_move_selection();
 	void end_mouse_move_selection();
-	void cancel_mouse_move_selection();
+	bool cancel_mouse_move_selection();
 	void update_mouse_move_selection();
 
 public:

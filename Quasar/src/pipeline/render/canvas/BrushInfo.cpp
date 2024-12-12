@@ -129,11 +129,12 @@ IntBounds BrushInfo::clear_selection()
 	return bbox;
 }
 
-void BrushInfo::push_selection_to_history()
+bool BrushInfo::push_selection_to_history()
 {
-	if (brushing_bbox != IntBounds::NADIR)
-		Machine.history.push(std::make_shared<SmantsModifyAction>(smants, brushing_bbox, std::move(storage_select_remove), std::move(storage_select_add)));
-
+	if (brushing_bbox == IntBounds::NADIR)
+		return false;
+	Machine.history.push(std::make_shared<SmantsModifyAction>(smants, brushing_bbox, std::move(storage_select_remove), std::move(storage_select_add)));
+	return true;
 }
 
 bool BrushInfo::point_valid_in_selection(int x, int y) const

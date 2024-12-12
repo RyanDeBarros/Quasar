@@ -97,23 +97,20 @@ void Easel::connect_input_handlers()
 		{
 			if (k.key == Key::ESCAPE)
 			{
-				if (mouse_move_sel_info.moving)
-				{
-					cancel_mouse_move_selection();
+				if (cancel_mouse_move_selection())
 					k.consumed = true;
-				}
 				else if (canvas().cursor_cancel())
 					k.consumed = true;
-				else
-				{
+				else if (canvas().deselect_all())
 					k.consumed = true;
-					canvas().deselect_all();
-				}
 			}
 			else if (k.mods & Mods::CONTROL)
 			{
 				if (k.key == Key::Z && canvas().binfo.state != BrushInfo::State::MOVING_SUBIMG)
-					canvas().cursor_cancel(); // no consume
+				{
+					// no consume
+					canvas().cursor_cancel();
+				}
 				else if (k.key == Key::A)
 				{
 					k.consumed = true;
@@ -696,14 +693,16 @@ void Easel::end_mouse_move_selection()
 	}
 }
 
-void Easel::cancel_mouse_move_selection()
+bool Easel::cancel_mouse_move_selection()
 {
 	if (mouse_move_sel_info.moving)
 	{
 		mouse_move_sel_info.moving = false;
 		canvas().batch_move_selection_cancel();
 		MainWindow->release_mouse_mode(&mouse_move_sel_info.wh);
+		return true;
 	}
+	return false;
 }
 
 // TODO if mouse re-enters clipping, display mouse again.

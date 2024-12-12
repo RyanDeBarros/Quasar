@@ -106,7 +106,7 @@ public:
 	void brush_move_to(IPosition pos);
 
 	void select_all();
-	void deselect_all();
+	bool deselect_all();
 	void fill_selection_primary();
 	void fill_selection_alternate();
 	bool delete_selection();
@@ -121,8 +121,6 @@ public:
 		static inline const float held_interval = 0.1f;
 		static inline const float held_start_interval = 0.5f;
 	} move_selection_info;
-
-	void apply_selection();
 
 	void batch_move_selection_to(float dx, float dy);
 	bool batch_move_selection_start();
