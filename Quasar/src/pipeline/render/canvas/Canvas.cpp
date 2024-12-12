@@ -386,7 +386,7 @@ void Canvas::update_brush_tool_and_tip()
 {
 	auto new_tool = MBrushes->get_brush_tool();
 	auto new_tip = MBrushes->get_brush_tip();
-	if (binfo.state == BrushInfo::State::MOVING_SUBIMG)
+	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 		CBImpl::transition_selection_tip(*this, binfo.tip, new_tip);
 	else if (binfo.tool != new_tool || binfo.tip != new_tip) // LATER add support for switching tool/tip mid brush?
 		cursor_cancel();
@@ -660,6 +660,11 @@ bool Canvas::cursor_enter()
 		apply_selection();
 		return true;
 	}
+	else if (binfo.state & BrushInfo::State::NEUTRAL)
+	{
+		deselect_all();
+		return true;
+	}
 	return false;
 }
 
@@ -862,7 +867,6 @@ static bool selection_interaction_disabled(BrushInfo& binfo)
 	return binfo.smants->get_points().empty() || binfo.state & BrushInfo::State::BRUSHING;
 }
 
-// TODO fill subimage if MOVING_SUBIMG
 void Canvas::fill_selection_primary()
 {
 	if (selection_interaction_disabled(binfo))

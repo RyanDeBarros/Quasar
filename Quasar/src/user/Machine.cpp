@@ -738,6 +738,7 @@ void MachineImpl::save_file(const FilePath& filepath)
 
 void MachineImpl::start_held_undo()
 {
+	// LATER fast undo/redo option, if let's say holding ALT or SPACE.
 	Data::History::held_undo = true;
 	Data::History::held_redo = false;
 	Data::History::held_time = 0.0;
