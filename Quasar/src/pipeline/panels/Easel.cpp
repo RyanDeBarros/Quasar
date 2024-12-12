@@ -91,7 +91,7 @@ void Easel::connect_input_handlers()
 			}
 			else if (k.mods & Mods::CONTROL)
 			{
-				if (k.key == Key::Z && !canvas().binfo.show_selection_subimage)
+				if (k.key == Key::Z && canvas().binfo.state != BrushInfo::State::MOVING_SUBIMG)
 					canvas().cursor_cancel(); // no consume
 				else if (k.key == Key::A)
 				{

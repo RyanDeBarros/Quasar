@@ -119,7 +119,7 @@ void Canvas::draw()
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
 	if (binfo.show_brush_preview)
 		fs_wget(*this, BRUSH_PREVIEW).draw(BRUSH_PREVIEW_TSLOT);
-	if (binfo.show_selection_subimage)
+	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 		fs_wget(*this, SELECTION_SUBIMAGE).draw(SELECTION_SUBIMAGE_TSLOT);
 	if (binfo.show_selection_preview)
 	{
@@ -136,7 +136,7 @@ void Canvas::draw()
 
 void Canvas::draw_cursor()
 {
-	if (binfo.tool & BrushTool::CAMERA
+	if (binfo.tool & BrushTool::CAMERA || binfo.state & BrushInfo::State::PIPETTE
 		|| (binfo.show_brush_preview && binfo.tool & (BrushTool::LINE | BrushTool::FILL | BrushTool::RECT_FILL | BrushTool::RECT_OUTLINE | BrushTool::ELLIPSE_OUTLINE | BrushTool::ELLIPSE_FILL)))
 		return;
 	switch (binfo.tip)
@@ -156,6 +156,7 @@ void Canvas::draw_cursor()
 	}
 }
 
+// TODO marching_ants shader does not adapt to window size change
 void Canvas::send_vp(const glm::mat3& vp)
 {
 	Uniforms::send_matrix3(sprite_shader, "uVP", vp);
@@ -385,8 +386,7 @@ void Canvas::update_brush_tool_and_tip()
 {
 	auto new_tool = MBrushes->get_brush_tool();
 	auto new_tip = MBrushes->get_brush_tip();
-	// TODO instead of different bool vars show_selection_subimage, brushing, etc., use one enum status.
-	if (binfo.show_selection_subimage)
+	if (binfo.state == BrushInfo::State::MOVING_SUBIMG)
 		CBImpl::transition_selection_tip(*this, binfo.tip, new_tip);
 	else if (binfo.tool != new_tool || binfo.tip != new_tip) // LATER add support for switching tool/tip mid brush?
 		cursor_cancel();
@@ -499,23 +499,24 @@ void Canvas::hover_pixel_under_cursor()
 			binfo.image_pos = pos;
 			hover_pixel_at(pixel_position(binfo.image_pos));
 		}
-		if (MainWindow->is_alt_pressed())
-		{
-			MainWindow->release_cursor(&dot_cursor_wh);
-			MainWindow->request_cursor(&pipette_cursor_wh, Machine.cursors.CROSSHAIR);
-			using_pipette = true;
-		}
-		else
+		if (!MainWindow->is_alt_pressed())
 		{
 			MainWindow->release_cursor(&pipette_cursor_wh);
 			MainWindow->request_cursor(&dot_cursor_wh, dot_cursor);
-			using_pipette = false;
+			if (binfo.state & BrushInfo::State::PIPETTE)
+				binfo.state = BrushInfo::State::NEUTRAL;
+		}
+		else if (binfo.state & BrushInfo::State::NEUTRAL)
+		{
+			MainWindow->release_cursor(&dot_cursor_wh);
+			MainWindow->request_cursor(&pipette_cursor_wh, Machine.cursors.CROSSHAIR);
+			binfo.state = BrushInfo::State::PIPETTE;
 		}
 	}
 	else
 	{
 		cursor_in_canvas = false;
-		if (binfo.brushing && pos != binfo.image_pos)
+		if (binfo.state & BrushInfo::State::BRUSHING && pos != binfo.image_pos)
 			brush_move_to(pos);
 		binfo.image_pos = pos;
 		unhover();
@@ -609,7 +610,7 @@ void Canvas::set_alternate_color(RGBA color)
 
 void Canvas::cursor_press(MouseButton button)
 {
-	if (using_pipette)
+	if (binfo.state & BrushInfo::State::PIPETTE)
 	{
 		if (cursor_in_canvas)
 		{
@@ -619,7 +620,7 @@ void Canvas::cursor_press(MouseButton button)
 				MPalette->set_alt_color(color_under_cursor());
 		}
 	}
-	else
+	else if (!MainWindow->is_alt_pressed())
 	{
 		bool begin = false;
 		if (button == MouseButton::LEFT && cursor_state != CursorState::DOWN_ALTERNATE)
@@ -634,22 +635,27 @@ void Canvas::cursor_press(MouseButton button)
 		}
 		if (begin && cursor_in_canvas)
 		{
-			IPosition pos = brush_pos_under_cursor();
-			brush(pos.x, pos.y);
+			if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
+				apply_selection();
+			else
+			{
+				IPosition pos = brush_pos_under_cursor();
+				brush(pos.x, pos.y);
+			}
 		}
 	}
 }
 
 bool Canvas::cursor_enter()
 {
-	if (binfo.brushing)
+	if (binfo.state & BrushInfo::State::BRUSHING)
 	{
 		brush_submit();
 		cursor_state = CursorState::UP;
 		set_cursor_color(primary_color);
 		return true;
 	}
-	else if (binfo.show_selection_subimage)
+	else if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 	{
 		apply_selection();
 		return true;
@@ -672,7 +678,7 @@ bool Canvas::cursor_cancel()
 		set_cursor_color(primary_color);
 		return true;
 	}
-	else if (binfo.show_selection_subimage)
+	else if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 		apply_selection();
 	return false;
 }
@@ -684,13 +690,10 @@ void Canvas::full_brush_reset()
 
 void Canvas::brush(int x, int y)
 {
-	if (!move_selection_info.moving && brush_pos_in_image_bounds(x, y))
+	if (binfo.state != BrushInfo::State::PIPETTE && brush_pos_in_image_bounds(x, y))
 	{
-		if (!binfo.brushing)
-		{
-			apply_selection();
+		if (binfo.state & BrushInfo::State::NEUTRAL)
 			brush_start(x, y);
-		}
 		(*brush_under_tool_and_tip)(*this, x, y);
 	}
 }
@@ -698,7 +701,7 @@ void Canvas::brush(int x, int y)
 void Canvas::brush_start(int x, int y)
 {
 	set_cursor_color(applied_color());
-	binfo.brushing = true;
+	binfo.state = BrushInfo::State::BRUSHING;
 	binfo.reset();
 	binfo.last_brush_pos = { x, y };
 	binfo.starting_pos = { x, y };
@@ -806,15 +809,15 @@ void Canvas::brush_submit()
 			CBImpl::EllipseFill::submit_select(*this);
 		break;
 	}
-	binfo.brushing = false;
 	binfo.reset();
+	binfo.state = BrushInfo::State::NEUTRAL;
 }
 
 void Canvas::brush_cancel()
 {
-	binfo.brushing = false;
-	binfo.cancelling = true;
 	binfo.reset();
+	binfo.state = BrushInfo::State::NEUTRAL;
+	binfo.cancelling = true;
 }
 
 void Canvas::brush_move_to(IPosition pos)
@@ -843,7 +846,7 @@ void Canvas::deselect_all()
 	cursor_cancel();
 	if (image)
 	{
-		if (binfo.show_selection_subimage)
+		if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 			apply_selection();
 		else
 		{
@@ -856,9 +859,10 @@ void Canvas::deselect_all()
 
 static bool selection_interaction_disabled(BrushInfo& binfo)
 {
-	return binfo.smants->get_points().empty() || binfo.brushing;
+	return binfo.smants->get_points().empty() || binfo.state & BrushInfo::State::BRUSHING;
 }
 
+// TODO fill subimage if MOVING_SUBIMG
 void Canvas::fill_selection_primary()
 {
 	if (selection_interaction_disabled(binfo))
@@ -950,7 +954,7 @@ bool Canvas::move_selection(int dx, int dy)
 
 void Canvas::apply_selection()
 {
-	if (binfo.show_selection_subimage)
+	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 	{
 		if (binfo.tip & BrushTip::PENCIL)
 			CBImpl::apply_selection_pencil(*this);

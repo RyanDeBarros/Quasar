@@ -28,8 +28,6 @@ struct Canvas : public Widget
 	Buffer dot_cursor_buf;
 	std::shared_ptr<Cursor> dot_cursor;
 	WindowHandle dot_cursor_wh, pipette_cursor_wh;
-	bool using_pipette = false;
-
 	std::shared_ptr<Image> eraser_cursor_img;
 
 private:

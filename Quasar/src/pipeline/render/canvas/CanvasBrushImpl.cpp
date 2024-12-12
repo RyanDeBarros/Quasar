@@ -396,7 +396,7 @@ struct UpdateSelectionMoveAction : public ActionBase
 static void move_selection_with_pixels_initial_common_pencil_pen(Canvas& canvas, int dx, int dy, bool pencil)
 {
 	BrushInfo& binfo = canvas.binfo;
-	binfo.show_selection_subimage = true;
+	binfo.state = BrushInfo::State::MOVING_SUBIMG;
 	auto& selbuf = binfo.selection_subimage->buf;
 	auto& points = binfo.smants->get_points();
 	std::unordered_set<IPosition> premove_points;
@@ -486,7 +486,7 @@ static void move_selection_with_pixels(Canvas& canvas, int dx, int dy)
 
 void CBImpl::move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy)
 {
-	if (canvas.binfo.show_selection_subimage)
+	if (canvas.binfo.state == BrushInfo::State::MOVING_SUBIMG)
 		move_selection_with_pixels(canvas, dx, dy);
 	else
 		move_selection_with_pixels_initial_common_pencil_pen(canvas, dx, dy, true);
@@ -494,7 +494,7 @@ void CBImpl::move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy)
 
 void CBImpl::move_selection_with_pixels_pen(Canvas& canvas, int dx, int dy)
 {
-	if (canvas.binfo.show_selection_subimage)
+	if (canvas.binfo.state == BrushInfo::State::MOVING_SUBIMG)
 		move_selection_with_pixels(canvas, dx, dy);
 	else
 		move_selection_with_pixels_initial_common_pencil_pen(canvas, dx, dy, false);
@@ -598,7 +598,7 @@ struct ApplySelectionAction : public ActionBase
 		Canvas& canvas = MEasel->canvas();
 		BrushInfo& binfo = canvas.binfo;
 
-		binfo.show_selection_subimage = false;
+		binfo.state = BrushInfo::State::NEUTRAL;
 		binfo.move_selpxs_offset = {};
 
 		Buffer& img_buf = canvas.image->buf;
@@ -631,7 +631,7 @@ struct ApplySelectionAction : public ActionBase
 		Canvas& canvas = MEasel->canvas();
 		BrushInfo& binfo = canvas.binfo;
 
-		binfo.show_selection_subimage = true;
+		binfo.state = BrushInfo::State::MOVING_SUBIMG;
 		binfo.move_selpxs_offset = move_offset;
 
 		IntBounds sel_bbox = IntBounds::NADIR;

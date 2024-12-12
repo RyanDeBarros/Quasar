@@ -7,7 +7,14 @@ struct BrushInfo
 {
 	struct Canvas* canvas = nullptr;
 
-	bool brushing = false;
+	enum class State
+	{
+		NEUTRAL = 0b1,
+		BRUSHING = 0b10,
+		PIPETTE = 0b100,
+		MOVING_SUBIMG = 0b1000
+	} state = State::NEUTRAL;
+
 	bool cancelling = false;
 	BrushTip tip = BrushTip::PENCIL;
 	BrushTool tool = BrushTool::CAMERA;
@@ -30,7 +37,6 @@ struct BrushInfo
 	std::unordered_map<IPosition, PixelRGBA> storage_selection_1c;
 	std::unordered_map<IPosition, PixelRGBA> raw_selection_pixels;
 
-	bool show_selection_subimage = false;
 	struct FlatSprite* sel_subimg_sprite = nullptr;
 	std::shared_ptr<Image> selection_subimage;
 	IPosition move_selpxs_offset = {};
@@ -52,3 +58,11 @@ struct BrushInfo
 	void push_selection_to_history();
 	bool point_valid_in_selection(int x, int y) const;
 };
+
+inline int operator|(BrushInfo::State a, BrushInfo::State b) { return int(a) | int(b); }
+inline int operator|(BrushInfo::State a, int b) { return int(a) | b; }
+inline int operator|(int a, BrushInfo::State b) { return a | int(b); }
+inline int operator&(BrushInfo::State a, BrushInfo::State b) { return int(a) & int(b); }
+inline int operator&(BrushInfo::State a, int b) { return int(a) & b; }
+inline int operator&(int a, BrushInfo::State b) { return a & int(b); }
+inline int operator~(BrushInfo::State a) { return ~int(a); }
