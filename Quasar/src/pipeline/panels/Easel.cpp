@@ -63,11 +63,11 @@ void Easel::connect_input_handlers()
 				{
 					if (!moving_by_arrows)
 					{
-						mb.consumed = true;
-						begin_mouse_move_selection();
+						if (begin_mouse_move_selection())
+							mb.consumed = true;
 					}
 				}
-				else
+				if (!mb.consumed)
 				{
 					mb.consumed = true;
 					canvas().cursor_press(mb.button);
@@ -99,10 +99,10 @@ void Easel::connect_input_handlers()
 			{
 				if (mouse_move_sel_info.moving)
 				{
-					k.consumed = true;
 					cancel_mouse_move_selection();
+					k.consumed = true;
 				}
-				if (canvas().cursor_cancel())
+				else if (canvas().cursor_cancel())
 					k.consumed = true;
 				else
 				{
@@ -169,120 +169,124 @@ void Easel::connect_input_handlers()
 
 void Easel::mouse_handle_arrow_key_press(const KeyEvent& k)
 {
-	bool consume = false;
-	if (k.key == Key::LEFT)
-	{
-		if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
-			consume = true;
-	}
-	else if (k.key == Key::RIGHT)
-	{
-		if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
-			consume = true;
-	}
-	else if (k.key == Key::DOWN)
-	{
-		if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
-			consume = true;
-	}
-	else if (k.key == Key::UP)
-	{
-		if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
-			consume = true;
-	}
-	if (consume)
-	{
-		k.consumed = true;
-		if (canvas().move_selection_info.moving)
-			moving_by_arrows = true;
-	}
+	return;
+	// TODO just add 1/-1 to move_selpxs_offset and send move_selpxs_offset to batch_move_selection_to
+
+	//bool consume = false;
+	//if (k.key == Key::LEFT)
+	//{
+	//	if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
+	//		consume = true;
+	//}
+	//else if (k.key == Key::RIGHT)
+	//{
+	//	if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
+	//		consume = true;
+	//}
+	//else if (k.key == Key::DOWN)
+	//{
+	//	if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
+	//		consume = true;
+	//}
+	//else if (k.key == Key::UP)
+	//{
+	//	if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
+	//		consume = true;
+	//}
+	//if (consume)
+	//{
+	//	k.consumed = true;
+	//	if (canvas().move_selection_info.moving)
+	//		moving_by_arrows = true;
+	//}
 }
 
 void Easel::mouse_handle_arrow_key_release(const KeyEvent& k)
 {
-	bool consume = false;
-	if (k.key == Key::LEFT)
-	{
-		if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == -1)
-		{
-			if (MainWindow->is_key_pressed(Key::RIGHT))
-			{
-				if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
-					consume = true;
-			}
-			else if (canvas().move_selection_info.move_y == 0)
-			{
-				consume = true;
-				canvas().move_selection_info.moving = false;
-				canvas().move_selection_info.move_x = 0;
-			}
-			else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
-				consume = true;
-		}
-	}
-	else if (k.key == Key::RIGHT)
-	{
-		if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == 1)
-		{
-			if (MainWindow->is_key_pressed(Key::LEFT))
-			{
-				if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
-					consume = true;
-			}
-			else if (canvas().move_selection_info.move_y == 0)
-			{
-				consume = true;
-				canvas().move_selection_info.moving = false;
-				canvas().move_selection_info.move_x = 0;
-			}
-			else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
-				consume = true;
-		}
-	}
-	else if (k.key == Key::DOWN)
-	{
-		if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == -1)
-		{
-			if (MainWindow->is_key_pressed(Key::UP))
-			{
-				if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
-					consume = true;
-			}
-			else if (canvas().move_selection_info.move_x == 0)
-			{
-				consume = true;
-				canvas().move_selection_info.moving = false;
-				canvas().move_selection_info.move_y = 0;
-			}
-			else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
-				consume = true;
-		}
-	}
-	else if (k.key == Key::UP)
-	{
-		if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == 1)
-		{
-			if (MainWindow->is_key_pressed(Key::DOWN))
-			{
-				if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
-					consume = true;
-			}
-			else if (canvas().move_selection_info.move_x == 0)
-			{
-				consume = true;
-				canvas().move_selection_info.moving = false;
-				canvas().move_selection_info.move_y = 0;
-			}
-			else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
-				consume = true;
-		}
-	}
-	if (consume)
-	{
-		k.consumed = true;
-		if (!canvas().move_selection_info.moving)
-			moving_by_arrows = false;
-	}
+	return;
+	//bool consume = false;
+	//if (k.key == Key::LEFT)
+	//{
+	//	if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == -1)
+	//	{
+	//		if (MainWindow->is_key_pressed(Key::RIGHT))
+	//		{
+	//			if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
+	//				consume = true;
+	//		}
+	//		else if (canvas().move_selection_info.move_y == 0)
+	//		{
+	//			consume = true;
+	//			canvas().move_selection_info.moving = false;
+	//			canvas().move_selection_info.move_x = 0;
+	//		}
+	//		else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
+	//			consume = true;
+	//	}
+	//}
+	//else if (k.key == Key::RIGHT)
+	//{
+	//	if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == 1)
+	//	{
+	//		if (MainWindow->is_key_pressed(Key::LEFT))
+	//		{
+	//			if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
+	//				consume = true;
+	//		}
+	//		else if (canvas().move_selection_info.move_y == 0)
+	//		{
+	//			consume = true;
+	//			canvas().move_selection_info.moving = false;
+	//			canvas().move_selection_info.move_x = 0;
+	//		}
+	//		else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
+	//			consume = true;
+	//	}
+	//}
+	//else if (k.key == Key::DOWN)
+	//{
+	//	if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == -1)
+	//	{
+	//		if (MainWindow->is_key_pressed(Key::UP))
+	//		{
+	//			if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
+	//				consume = true;
+	//		}
+	//		else if (canvas().move_selection_info.move_x == 0)
+	//		{
+	//			consume = true;
+	//			canvas().move_selection_info.moving = false;
+	//			canvas().move_selection_info.move_y = 0;
+	//		}
+	//		else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
+	//			consume = true;
+	//	}
+	//}
+	//else if (k.key == Key::UP)
+	//{
+	//	if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == 1)
+	//	{
+	//		if (MainWindow->is_key_pressed(Key::DOWN))
+	//		{
+	//			if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
+	//				consume = true;
+	//		}
+	//		else if (canvas().move_selection_info.move_x == 0)
+	//		{
+	//			consume = true;
+	//			canvas().move_selection_info.moving = false;
+	//			canvas().move_selection_info.move_y = 0;
+	//		}
+	//		else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
+	//			consume = true;
+	//	}
+	//}
+	//if (consume)
+	//{
+	//	k.consumed = true;
+	//	if (!canvas().move_selection_info.moving)
+	//		moving_by_arrows = false;
+	//}
 }
 
 void Easel::draw()
@@ -665,15 +669,21 @@ void Easel::rotate_image_270()
 		Machine.history.execute(std::make_shared<Rotate270Action>(this));
 }
 
-void Easel::begin_mouse_move_selection()
+bool Easel::begin_mouse_move_selection()
 {
 	if (!mouse_move_sel_info.moving)
 	{
-		mouse_move_sel_info.moving = true;
-		mouse_move_sel_info.initial_cursor_pos = get_app_cursor_pos();
-		mouse_move_sel_info.initial_canvas_pos = canvas().self.transform.position;
-		canvas().batch_move_selection_start();
+		mouse_move_sel_info.with_pixels = !MainWindow->is_key_pressed(Key::S);
+		if (canvas().batch_move_selection_start())
+		{
+			mouse_move_sel_info.moving = true;
+			mouse_move_sel_info.initial_cursor_pos = get_app_cursor_pos();
+			mouse_move_sel_info.initial_canvas_pos = canvas().self.transform.position;
+			return true;
+		}
+		return false;
 	}
+	return false;
 }
 
 void Easel::end_mouse_move_selection()
@@ -688,12 +698,9 @@ void Easel::end_mouse_move_selection()
 
 void Easel::cancel_mouse_move_selection()
 {
-
 	if (mouse_move_sel_info.moving)
 	{
 		mouse_move_sel_info.moving = false;
-		// TODO remove batch_move_selection() here ??
-		canvas().batch_move_selection_to(0, 0);
 		canvas().batch_move_selection_cancel();
 		MainWindow->release_mouse_mode(&mouse_move_sel_info.wh);
 	}

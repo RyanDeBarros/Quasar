@@ -122,13 +122,10 @@ public:
 		static inline const float held_start_interval = 0.5f;
 	} move_selection_info;
 
-	void process_move_selection();
-	bool start_move_selection(int dx, int dy);
-	bool move_selection(int dx, int dy);
 	void apply_selection();
 
 	void batch_move_selection_to(float dx, float dy);
-	void batch_move_selection_start();
+	bool batch_move_selection_start();
 	void batch_move_selection_submit();
 	void batch_move_selection_cancel();
 

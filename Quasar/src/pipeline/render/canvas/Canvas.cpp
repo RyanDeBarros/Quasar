@@ -189,8 +189,8 @@ void Canvas::process()
 		unhover();
 	binfo.smants->send_time(Machine.time());
 	binfo.smants_preview->send_time(Machine.time());
-	if (move_selection_info.moving)
-		process_move_selection();
+	//if (move_selection_info.moving)
+		//process_move_selection();
 }
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
@@ -900,62 +900,40 @@ bool Canvas::delete_selection()
 	return true;
 }
 
-void Canvas::process_move_selection()
-{
-	move_selection_info.held_time += move_selection_info.held_speed_factor * Machine.delta_time();
-	if (move_selection_info.on_starting_interval)
-	{
-		if (move_selection_info.held_time > move_selection_info.held_start_interval)
-		{
-			move_selection_info.held_time -= move_selection_info.held_start_interval;
-			while (move_selection_info.held_time > move_selection_info.held_interval)
-				move_selection_info.held_time -= move_selection_info.held_interval;
-			move_selection(move_selection_info.move_x, move_selection_info.move_y);
-			move_selection_info.on_starting_interval = false;
-		}
-	}
-	else if (move_selection_info.held_time > move_selection_info.held_interval)
-	{
-
-		do { move_selection_info.held_time -= move_selection_info.held_interval; } while (move_selection_info.held_time > move_selection_info.held_interval);
-		move_selection(move_selection_info.move_x, move_selection_info.move_y);
-	}
-}
-
-bool Canvas::start_move_selection(int dx, int dy)
-{
-	if (!move_selection(dx, dy))
-		return false;
-	move_selection_info.moving = true;
-	move_selection_info.on_starting_interval = true;
-	move_selection_info.held_time = 0.0f;
-	move_selection_info.move_x = dx;
-	move_selection_info.move_y = dy;
-	return true;
-}
-
-bool Canvas::move_selection(int dx, int dy)
-{
-	if (selection_interaction_disabled(binfo) || (dx == 0 && dy == 0))
-		return false;
-	if (binfo.tip & BrushTip::PENCIL)
-	{
-		CBImpl::move_selection_with_pixels_pencil(*this, dx, dy);
-		return true;
-	}
-	else if (binfo.tip & BrushTip::PEN)
-	{
-		CBImpl::move_selection_with_pixels_pen(*this, dx, dy);
-		return true;
-	}
-	else if (binfo.tip & (BrushTip::ERASER | BrushTip::SELECT))
-	{
-		CBImpl::move_selection_without_pixels(*this, dx, dy);
-		return true;
-	}
-	else
-		return false;
-}
+//void Canvas::process_move_selection()
+//{
+//	move_selection_info.held_time += move_selection_info.held_speed_factor * Machine.delta_time();
+//	if (move_selection_info.on_starting_interval)
+//	{
+//		if (move_selection_info.held_time > move_selection_info.held_start_interval)
+//		{
+//			move_selection_info.held_time -= move_selection_info.held_start_interval;
+//			while (move_selection_info.held_time > move_selection_info.held_interval)
+//				move_selection_info.held_time -= move_selection_info.held_interval;
+//			move_selection(move_selection_info.move_x, move_selection_info.move_y);
+//			move_selection_info.on_starting_interval = false;
+//		}
+//	}
+//	else if (move_selection_info.held_time > move_selection_info.held_interval)
+//	{
+//
+//		do { move_selection_info.held_time -= move_selection_info.held_interval; } while (move_selection_info.held_time > move_selection_info.held_interval);
+//		move_selection(move_selection_info.move_x, move_selection_info.move_y);
+//	}
+//}
+//
+//// TODO move move_selection_info to Easel and rename it to arrow_sel_move_info
+//bool Canvas::start_move_selection(int dx, int dy)
+//{
+//	if (!move_selection(dx, dy))
+//		return false;
+//	move_selection_info.moving = true;
+//	move_selection_info.on_starting_interval = true;
+//	move_selection_info.held_time = 0.0f;
+//	move_selection_info.move_x = dx;
+//	move_selection_info.move_y = dy;
+//	return true;
+//}
 
 void Canvas::apply_selection()
 {
@@ -973,27 +951,37 @@ void Canvas::batch_move_selection_to(float fdx, float fdy)
 	Position fd = local_of({ fdx, fdy }) - local_of({});
 	int dx = roundi(fd.x);
 	int dy = roundi(fd.y);
-	if (selection_interaction_disabled(binfo) || (dx == 0 && dy == 0))
+	if (selection_interaction_disabled(binfo) || (dx == binfo.move_selpxs_offset.x && dy == binfo.move_selpxs_offset.y))
 		return;
-	if (binfo.tip & BrushTip::PENCIL)
-		CBImpl::batch_move_selection_with_pixels_pencil(*this, dx, dy);
-	else if (binfo.tip & BrushTip::PEN)
-		CBImpl::batch_move_selection_with_pixels_pen(*this, dx, dy);
-	else if (binfo.tip & (BrushTip::ERASER | BrushTip::SELECT))
+	if (MEasel->mouse_move_sel_info.with_pixels)
+		CBImpl::batch_move_selection_with_pixels(*this, dx, dy);
+	else
 		CBImpl::batch_move_selection_without_pixels(*this, dx, dy);
 }
 
-void Canvas::batch_move_selection_start()
+bool Canvas::batch_move_selection_start()
 {
-	// TODO
+	if (selection_interaction_disabled(binfo))
+		return false;
+	if (MEasel->mouse_move_sel_info.with_pixels)
+		CBImpl::batch_move_selection_start_with_pixels(*this);
+	else
+		CBImpl::batch_move_selection_start_without_pixels(*this);
+	return true;
 }
 
 void Canvas::batch_move_selection_submit()
 {
-	// TODO
+	if (MEasel->mouse_move_sel_info.with_pixels)
+		CBImpl::batch_move_selection_submit_with_pixels(*this);
+	else
+		CBImpl::batch_move_selection_submit_without_pixels(*this);
 }
 
 void Canvas::batch_move_selection_cancel()
 {
-	// TODO
+	if (MEasel->mouse_move_sel_info.with_pixels)
+		CBImpl::batch_move_selection_cancel_with_pixels(*this);
+	else
+		CBImpl::batch_move_selection_cancel_without_pixels(*this);
 }

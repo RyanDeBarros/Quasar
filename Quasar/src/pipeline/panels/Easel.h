@@ -91,16 +91,19 @@ public:
 	void rotate_image_270();
 
 private:
+	friend struct Canvas;
+
 	struct
 	{
 		Position initial_cursor_pos{};
 		Position initial_canvas_pos{};
 		bool moving = false;
+		bool with_pixels = false;
 		WindowHandle wh;
 	} mouse_move_sel_info;
 	bool moving_by_arrows = false;
 
-	void begin_mouse_move_selection();
+	bool begin_mouse_move_selection();
 	void end_mouse_move_selection();
 	void cancel_mouse_move_selection();
 	void update_mouse_move_selection();

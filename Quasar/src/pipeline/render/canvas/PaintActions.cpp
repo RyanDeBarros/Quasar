@@ -575,6 +575,11 @@ void SmantsModifyAction::backward()
 SmantsMoveAction::SmantsMoveAction(IPosition delta, std::unordered_set<IPosition>&& premove_points)
 	: delta(delta), premove_points(std::move(premove_points))
 {
+	update_weight();
+}
+
+void SmantsMoveAction::update_weight()
+{
 	weight = sizeof(SmantsMoveAction) + this->premove_points.size() * sizeof(IPosition);
 }
 

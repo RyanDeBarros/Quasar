@@ -119,6 +119,7 @@ struct SmantsMoveAction : public ActionBase
 	IPosition delta;
 	std::unordered_set<IPosition> premove_points;
 	SmantsMoveAction(IPosition delta, std::unordered_set<IPosition>&& premove_points);
+	void update_weight();
 	virtual void forward() override;
 	virtual void backward() override;
 };

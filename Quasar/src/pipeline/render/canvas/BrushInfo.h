@@ -37,10 +37,12 @@ struct BrushInfo
 	std::unordered_set<IPosition> cleared_selection;
 	std::unordered_map<IPosition, PixelRGBA> storage_selection_1c;
 	std::unordered_map<IPosition, PixelRGBA> raw_selection_pixels;
+	std::unordered_set<IPosition> raw_selection_positions;
 
 	struct FlatSprite* sel_subimg_sprite = nullptr;
 	std::shared_ptr<Image> selection_subimage;
 	IPosition move_selpxs_offset = {};
+	bool apply_selection_with_pencil = true;
 
 	struct
 	{

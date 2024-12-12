@@ -13,13 +13,16 @@ namespace CBImpl
 	extern void fill_selection_pen(Canvas& canvas, PixelRGBA color);
 	extern void fill_selection_eraser(Canvas& canvas);
 
-	extern void move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy);
-	extern void move_selection_with_pixels_pen(Canvas& canvas, int dx, int dy);
-	extern void move_selection_without_pixels(Canvas& canvas, int dx, int dy);
+	extern void batch_move_selection_with_pixels(Canvas& canvas, int dx, int dy);
+	extern void batch_move_selection_start_with_pixels(Canvas& canvas);
+	extern void batch_move_selection_submit_with_pixels(Canvas& canvas);
+	extern void batch_move_selection_cancel_with_pixels(Canvas& canvas);
+	// TODO transition for batch_move_selectin_with_pixels
 
-	extern void batch_move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy);
-	extern void batch_move_selection_with_pixels_pen(Canvas& canvas, int dx, int dy);
 	extern void batch_move_selection_without_pixels(Canvas& canvas, int dx, int dy);
+	extern void batch_move_selection_start_without_pixels(Canvas& canvas);
+	extern void batch_move_selection_submit_without_pixels(Canvas& canvas);
+	extern void batch_move_selection_cancel_without_pixels(Canvas& canvas);
 
 	extern void transition_selection_tip(Canvas& canvas, BrushTip from, BrushTip to);
 
