@@ -5,10 +5,9 @@
 #include "Canvas.h"
 #include "SelectionMants.h"
 #include "../../panels/Easel.h"
+#include "../../panels/BrushesPanel.h"
 #include "user/Machine.h"
 #include "../FlatSprite.h"
-
-// TODO resolve issue of applying selection, switching to eraser/some other tip, and undoing. It should snap back to select/pencil/pen, whatever it was before.
 
 static void _standard_outline_brush_pencil_looperand_update_storage(Canvas& canvas, IPosition pos)
 {
@@ -606,6 +605,21 @@ void CBImpl::move_selection_without_pixels(Canvas& canvas, int dx, int dy)
 	Machine.history.push(std::make_shared<SmantsMoveAction>(IPosition{ dx, dy }, std::move(premove_points)));
 }
 
+void CBImpl::batch_move_selection_with_pixels_pencil(Canvas& canvas, int dx, int dy)
+{
+	// TODO
+}
+
+void CBImpl::batch_move_selection_with_pixels_pen(Canvas& canvas, int dx, int dy)
+{
+	// TODO
+}
+
+void CBImpl::batch_move_selection_without_pixels(Canvas& canvas, int dx, int dy)
+{
+	// TODO
+}
+
 void CBImpl::transition_selection_tip(Canvas& canvas, BrushTip from, BrushTip to)
 {
 	if (from & (BrushTip::PENCIL | BrushTip::PEN))
@@ -642,6 +656,7 @@ struct ApplySelectionAction : public ActionBase
 	bool initially_pen;
 	IPosition sprite_pos = {};
 	IPosition move_offset = {};
+
 	struct PixelRecord
 	{
 		PixelRGBA applied_on, subimg, result;
@@ -674,6 +689,10 @@ struct ApplySelectionAction : public ActionBase
 	{
 		Canvas& canvas = MEasel->canvas();
 		BrushInfo& binfo = canvas.binfo;
+		if (initially_pen)
+			MBrushes->select_brush_tip(BrushTip::PEN);
+		else
+			MBrushes->select_brush_tip(BrushTip::PENCIL);
 
 		binfo.state = BrushInfo::State::NEUTRAL;
 		binfo.move_selpxs_offset = {};
@@ -707,6 +726,10 @@ struct ApplySelectionAction : public ActionBase
 	{
 		Canvas& canvas = MEasel->canvas();
 		BrushInfo& binfo = canvas.binfo;
+		if (initially_pen)
+			MBrushes->select_brush_tip(BrushTip::PEN);
+		else
+			MBrushes->select_brush_tip(BrushTip::PENCIL);
 
 		binfo.state = BrushInfo::State::MOVING_SUBIMG;
 		binfo.move_selpxs_offset = move_offset;

@@ -29,6 +29,9 @@ private:
 	void initialize_widget();
 	void connect_input_handlers();
 
+	void mouse_handle_arrow_key_press(const KeyEvent& k);
+	void mouse_handle_arrow_key_release(const KeyEvent& k);
+
 public:
 	virtual void draw() override;
 	virtual void _send_view() override;
@@ -50,13 +53,12 @@ public:
 	bool major_gridlines_are_visible() const;
 	void set_major_gridlines_visibility(bool visible);
 
+private:
 	struct
 	{
 		Position initial_cursor_pos{};
 		Position initial_canvas_pos{};
 		bool panning = false;
-	private:
-		friend Easel;
 		WindowHandle wh;
 	} panning_info;
 	
@@ -71,6 +73,8 @@ public:
 		float zoom = initial;
 	} zoom_info;
 
+public:
+	bool is_panning() const { return panning_info.panning; }
 	void begin_panning();
 	void end_panning();
 	void cancel_panning();
@@ -86,6 +90,22 @@ public:
 	void rotate_image_180();
 	void rotate_image_270();
 
+private:
+	struct
+	{
+		Position initial_cursor_pos{};
+		Position initial_canvas_pos{};
+		bool moving = false;
+		WindowHandle wh;
+	} mouse_move_sel_info;
+	bool moving_by_arrows = false;
+
+	void begin_mouse_move_selection();
+	void end_mouse_move_selection();
+	void cancel_mouse_move_selection();
+	void update_mouse_move_selection();
+
+public:
 	Canvas& canvas();
 	const Canvas& canvas() const;
 

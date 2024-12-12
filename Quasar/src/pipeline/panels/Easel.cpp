@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "user/Machine.h"
+#include "BrushesPanel.h"
 #include "ImplUtility.h"
 #include "../render/canvas/Canvas.h"
 #include "../render/Uniforms.h"
@@ -35,6 +36,7 @@ void Easel::initialize_widget()
 
 void Easel::connect_input_handlers()
 {
+	// TODO mouse to move subimg
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (ImGui::GetIO().WantCaptureMouse)
 			return;
@@ -52,15 +54,29 @@ void Easel::connect_input_handlers()
 		{
 			if (mb.action == IAction::PRESS && cursor_in_clipping())
 			{
-				mb.consumed = true;
 				if (MainWindow->is_key_pressed(Key::SPACE))
+				{
+					mb.consumed = true;
 					begin_panning();
+				}
+				else if (MBrushes->get_brush_tool() & BrushTool::CAMERA)
+				{
+					if (!moving_by_arrows)
+					{
+						mb.consumed = true;
+						begin_mouse_move_selection();
+					}
+				}
 				else
+				{
+					mb.consumed = true;
 					canvas().cursor_press(mb.button);
+				}
 			}
 			else if (mb.action == IAction::RELEASE)
 			{
 				end_panning();
+				end_mouse_move_selection();
 				canvas().cursor_release(mb.button);
 			}
 		}
@@ -81,12 +97,17 @@ void Easel::connect_input_handlers()
 		{
 			if (k.key == Key::ESCAPE)
 			{
+				if (mouse_move_sel_info.moving)
+				{
+					k.consumed = true;
+					cancel_mouse_move_selection();
+				}
 				if (canvas().cursor_cancel())
 					k.consumed = true;
 				else
 				{
-					canvas().deselect_all();
 					k.consumed = true;
+					canvas().deselect_all();
 				}
 			}
 			else if (k.mods & Mods::CONTROL)
@@ -127,106 +148,14 @@ void Easel::connect_input_handlers()
 			}
 			else if (!(k.mods & Mods::ALT))
 			{
-				if (k.key == Key::LEFT)
-				{
-					if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
-						k.consumed = true;
-				}
-				else if (k.key == Key::RIGHT)
-				{
-					if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
-						k.consumed = true;
-				}
-				else if (k.key == Key::DOWN)
-				{
-					if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
-						k.consumed = true;
-				}
-				else if (k.key == Key::UP)
-				{
-					if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
-						k.consumed = true;
-				}
+				if (!mouse_move_sel_info.moving)
+					mouse_handle_arrow_key_press(k);
 			}
 		}
 		else if (k.action == IAction::RELEASE)
 		{
-			if (k.key == Key::LEFT)
-			{
-				if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == -1)
-				{
-					if (MainWindow->is_key_pressed(Key::RIGHT))
-					{
-						if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
-							k.consumed = true;
-					}
-					else if (canvas().move_selection_info.move_y == 0)
-					{
-						k.consumed = true;
-						canvas().move_selection_info.moving = false;
-						canvas().move_selection_info.move_x = 0;
-					}
-					else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
-						k.consumed = true;
-				}
-			}
-			else if (k.key == Key::RIGHT)
-			{
-				if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == 1)
-				{
-					if (MainWindow->is_key_pressed(Key::LEFT))
-					{
-						if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
-							k.consumed = true;
-					}
-					else if (canvas().move_selection_info.move_y == 0)
-					{
-						k.consumed = true;
-						canvas().move_selection_info.moving = false;
-						canvas().move_selection_info.move_x = 0;
-					}
-					else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
-						k.consumed = true;
-				}
-			}
-			else if (k.key == Key::DOWN)
-			{
-				if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == -1)
-				{
-					if (MainWindow->is_key_pressed(Key::UP))
-					{
-						if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
-							k.consumed = true;
-					}
-					else if (canvas().move_selection_info.move_x == 0)
-					{
-						k.consumed = true;
-						canvas().move_selection_info.moving = false;
-						canvas().move_selection_info.move_y = 0;
-					}
-					else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
-						k.consumed = true;
-				}
-			}
-			else if (k.key == Key::UP)
-			{
-				if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == 1)
-				{
-					if (MainWindow->is_key_pressed(Key::DOWN))
-					{
-						if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
-							k.consumed = true;
-					}
-					else if (canvas().move_selection_info.move_x == 0)
-					{
-						k.consumed = true;
-						canvas().move_selection_info.moving = false;
-						canvas().move_selection_info.move_y = 0;
-					}
-					else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
-						k.consumed = true;
-				}
-			}
+			if (!mouse_move_sel_info.moving)
+				mouse_handle_arrow_key_release(k);
 		}
 		};
 	scroll_handler.callback = [this](const ScrollEvent& s) {
@@ -236,6 +165,124 @@ void Easel::connect_input_handlers()
 			zoom_by(s.yoff);
 		}
 		};
+}
+
+void Easel::mouse_handle_arrow_key_press(const KeyEvent& k)
+{
+	bool consume = false;
+	if (k.key == Key::LEFT)
+	{
+		if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
+			consume = true;
+	}
+	else if (k.key == Key::RIGHT)
+	{
+		if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
+			consume = true;
+	}
+	else if (k.key == Key::DOWN)
+	{
+		if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
+			consume = true;
+	}
+	else if (k.key == Key::UP)
+	{
+		if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
+			consume = true;
+	}
+	if (consume)
+	{
+		k.consumed = true;
+		if (canvas().move_selection_info.moving)
+			moving_by_arrows = true;
+	}
+}
+
+void Easel::mouse_handle_arrow_key_release(const KeyEvent& k)
+{
+	bool consume = false;
+	if (k.key == Key::LEFT)
+	{
+		if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == -1)
+		{
+			if (MainWindow->is_key_pressed(Key::RIGHT))
+			{
+				if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
+					consume = true;
+			}
+			else if (canvas().move_selection_info.move_y == 0)
+			{
+				consume = true;
+				canvas().move_selection_info.moving = false;
+				canvas().move_selection_info.move_x = 0;
+			}
+			else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
+				consume = true;
+		}
+	}
+	else if (k.key == Key::RIGHT)
+	{
+		if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == 1)
+		{
+			if (MainWindow->is_key_pressed(Key::LEFT))
+			{
+				if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
+					consume = true;
+			}
+			else if (canvas().move_selection_info.move_y == 0)
+			{
+				consume = true;
+				canvas().move_selection_info.moving = false;
+				canvas().move_selection_info.move_x = 0;
+			}
+			else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
+				consume = true;
+		}
+	}
+	else if (k.key == Key::DOWN)
+	{
+		if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == -1)
+		{
+			if (MainWindow->is_key_pressed(Key::UP))
+			{
+				if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
+					consume = true;
+			}
+			else if (canvas().move_selection_info.move_x == 0)
+			{
+				consume = true;
+				canvas().move_selection_info.moving = false;
+				canvas().move_selection_info.move_y = 0;
+			}
+			else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
+				consume = true;
+		}
+	}
+	else if (k.key == Key::UP)
+	{
+		if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == 1)
+		{
+			if (MainWindow->is_key_pressed(Key::DOWN))
+			{
+				if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
+					consume = true;
+			}
+			else if (canvas().move_selection_info.move_x == 0)
+			{
+				consume = true;
+				canvas().move_selection_info.moving = false;
+				canvas().move_selection_info.move_y = 0;
+			}
+			else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
+				consume = true;
+		}
+	}
+	if (consume)
+	{
+		k.consumed = true;
+		if (!canvas().move_selection_info.moving)
+			moving_by_arrows = false;
+	}
 }
 
 void Easel::draw()
@@ -258,6 +305,7 @@ void Easel::_send_view()
 void Easel::process()
 {
 	update_panning();
+	update_mouse_move_selection();
 	canvas().process();
 }
 
@@ -615,6 +663,63 @@ void Easel::rotate_image_270()
 		Machine.history.execute(std::make_shared<Rotate270Action_Perf>(this));
 	else
 		Machine.history.execute(std::make_shared<Rotate270Action>(this));
+}
+
+void Easel::begin_mouse_move_selection()
+{
+	if (!mouse_move_sel_info.moving)
+	{
+		mouse_move_sel_info.moving = true;
+		mouse_move_sel_info.initial_cursor_pos = get_app_cursor_pos();
+		mouse_move_sel_info.initial_canvas_pos = canvas().self.transform.position;
+		canvas().batch_move_selection_start();
+	}
+}
+
+void Easel::end_mouse_move_selection()
+{
+	if (mouse_move_sel_info.moving)
+	{
+		mouse_move_sel_info.moving = false;
+		canvas().batch_move_selection_submit();
+		MainWindow->release_mouse_mode(&mouse_move_sel_info.wh);
+	}
+}
+
+void Easel::cancel_mouse_move_selection()
+{
+
+	if (mouse_move_sel_info.moving)
+	{
+		mouse_move_sel_info.moving = false;
+		// TODO remove batch_move_selection() here ??
+		canvas().batch_move_selection_to(0, 0);
+		canvas().batch_move_selection_cancel();
+		MainWindow->release_mouse_mode(&mouse_move_sel_info.wh);
+	}
+}
+
+// TODO if mouse re-enters clipping, display mouse again.
+
+void Easel::update_mouse_move_selection()
+{
+	if (mouse_move_sel_info.moving)
+	{
+		Position pan_delta = get_app_cursor_pos() - mouse_move_sel_info.initial_cursor_pos;
+		Position pos = pan_delta + mouse_move_sel_info.initial_canvas_pos;
+		if (MainWindow->is_shift_pressed())
+		{
+			if (std::abs(pan_delta.x) < std::abs(pan_delta.y))
+				pos.x = mouse_move_sel_info.initial_canvas_pos.x;
+			else
+				pos.y = mouse_move_sel_info.initial_canvas_pos.y;
+		}
+
+		canvas().batch_move_selection_to(pos.x - mouse_move_sel_info.initial_canvas_pos.x, pos.y - mouse_move_sel_info.initial_canvas_pos.y);
+
+		if (!MainWindow->owns_mouse_mode(&mouse_move_sel_info.wh) && !cursor_in_clipping())
+			MainWindow->request_mouse_mode(&mouse_move_sel_info.wh, MouseMode::CAPTURED);
+	}
 }
 
 Canvas& Easel::canvas()

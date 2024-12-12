@@ -192,7 +192,7 @@ void BrushesPanel::connect_input_handlers()
 					k.consumed = true;
 					select_brush_tool(BrushTool::RECT_OUTLINE);
 					break;
-				case Key::Z:
+				case Key::M:
 					k.consumed = true;
 					select_brush_tool(BrushTool::CAMERA);
 					break;

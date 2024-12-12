@@ -127,6 +127,11 @@ public:
 	bool move_selection(int dx, int dy);
 	void apply_selection();
 
+	void batch_move_selection_to(float dx, float dy);
+	void batch_move_selection_start();
+	void batch_move_selection_submit();
+	void batch_move_selection_cancel();
+
 public:
 	enum : size_t
 	{

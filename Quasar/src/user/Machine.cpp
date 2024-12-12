@@ -427,7 +427,7 @@ bool MachineImpl::canvas_image_ready() const
 
 bool MachineImpl::canvas_is_panning() const
 {
-	return easel()->panning_info.panning;
+	return easel()->is_panning();
 }
 
 void MachineImpl::canvas_cancel_panning() const

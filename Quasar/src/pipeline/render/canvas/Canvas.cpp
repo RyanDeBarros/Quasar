@@ -156,13 +156,14 @@ void Canvas::draw_cursor()
 	}
 }
 
-// TODO marching_ants shader does not adapt to window size change
 void Canvas::send_vp(const glm::mat3& vp)
 {
 	Uniforms::send_matrix3(sprite_shader, "uVP", vp);
 	Uniforms::send_matrix3(minor_gridlines.shader, "uVP", vp);
 	Uniforms::send_matrix3(major_gridlines.shader, "uVP", vp);
+	binfo.smants->send_vp(MEasel->vp * self.matrix());
 	binfo.smants->send_screen_size(MainWindow->size());
+	binfo.smants_preview->send_vp(MEasel->vp * self.matrix());
 	binfo.smants_preview->send_screen_size(MainWindow->size());
 	sync_cursor_with_widget();
 }
@@ -620,7 +621,7 @@ void Canvas::cursor_press(MouseButton button)
 				MPalette->set_alt_color(color_under_cursor());
 		}
 	}
-	else if (!MainWindow->is_alt_pressed())
+	else if (!(binfo.tool & BrushTool::CAMERA) && !MainWindow->is_alt_pressed())
 	{
 		bool begin = false;
 		if (button == MouseButton::LEFT && cursor_state != CursorState::DOWN_ALTERNATE)
@@ -965,4 +966,34 @@ void Canvas::apply_selection()
 		else if (binfo.tip & BrushTip::PEN)
 			CBImpl::apply_selection_pen(*this);
 	}
+}
+
+void Canvas::batch_move_selection_to(float fdx, float fdy)
+{
+	Position fd = local_of({ fdx, fdy }) - local_of({});
+	int dx = roundi(fd.x);
+	int dy = roundi(fd.y);
+	if (selection_interaction_disabled(binfo) || (dx == 0 && dy == 0))
+		return;
+	if (binfo.tip & BrushTip::PENCIL)
+		CBImpl::batch_move_selection_with_pixels_pencil(*this, dx, dy);
+	else if (binfo.tip & BrushTip::PEN)
+		CBImpl::batch_move_selection_with_pixels_pen(*this, dx, dy);
+	else if (binfo.tip & (BrushTip::ERASER | BrushTip::SELECT))
+		CBImpl::batch_move_selection_without_pixels(*this, dx, dy);
+}
+
+void Canvas::batch_move_selection_start()
+{
+	// TODO
+}
+
+void Canvas::batch_move_selection_submit()
+{
+	// TODO
+}
+
+void Canvas::batch_move_selection_cancel()
+{
+	// TODO
 }

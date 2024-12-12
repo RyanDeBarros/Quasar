@@ -9,8 +9,7 @@
 struct FlatSprite : public W_UnitRenderable
 {
 	std::shared_ptr<Image> image;
-	Scale size;
-
+	
 	FlatSprite(Shader* shader);
 	FlatSprite(const FlatSprite&) = delete;
 	FlatSprite(FlatSprite&&) noexcept = delete;
