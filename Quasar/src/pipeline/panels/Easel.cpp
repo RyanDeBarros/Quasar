@@ -36,7 +36,6 @@ void Easel::initialize_widget()
 
 void Easel::connect_input_handlers()
 {
-	// TODO mouse to move subimg
 	mb_handler.callback = [this](const MouseButtonEvent& mb) {
 		if (ImGui::GetIO().WantCaptureMouse)
 			return;
@@ -61,7 +60,7 @@ void Easel::connect_input_handlers()
 				}
 				else if (MBrushes->get_brush_tool() & BrushTool::MOVE)
 				{
-					if (!moving_by_arrows)
+					if (moving_mode == MovingMode::NONE)
 					{
 						if (begin_mouse_move_selection())
 							mb.consumed = true;
@@ -107,6 +106,8 @@ void Easel::connect_input_handlers()
 			{
 				if (cancel_mouse_move_selection())
 					k.consumed = true;
+				else if (cancel_arrows_move_selection())
+					k.consumed = true;
 				else if (canvas().cursor_cancel())
 					k.consumed = true;
 				else if (canvas().deselect_all())
@@ -151,16 +152,13 @@ void Easel::connect_input_handlers()
 						canvas().fill_selection_primary();
 				}
 			}
-			else if (!(k.mods & Mods::ALT))
-			{
-				if (!mouse_move_sel_info.moving)
-					mouse_handle_arrow_key_press(k);
-			}
+			else if (moving_mode != MovingMode::MOUSE)
+				handle_arrow_key_pressed(k);
 		}
 		else if (k.action == IAction::RELEASE)
 		{
-			if (!mouse_move_sel_info.moving)
-				mouse_handle_arrow_key_release(k);
+			if (moving_mode == MovingMode::ARROWS)
+				handle_arrow_key_released(k);
 		}
 		};
 	scroll_handler.callback = [this](const ScrollEvent& s) {
@@ -172,126 +170,52 @@ void Easel::connect_input_handlers()
 		};
 }
 
-void Easel::mouse_handle_arrow_key_press(const KeyEvent& k)
+void Easel::handle_arrow_key_pressed(const KeyEvent& k)
 {
-	return;
-	// TODO just add 1/-1 to move_selpxs_offset and send move_selpxs_offset to batch_move_selection_to
-
-	//bool consume = false;
-	//if (k.key == Key::LEFT)
-	//{
-	//	if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
-	//		consume = true;
-	//}
-	//else if (k.key == Key::RIGHT)
-	//{
-	//	if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
-	//		consume = true;
-	//}
-	//else if (k.key == Key::DOWN)
-	//{
-	//	if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
-	//		consume = true;
-	//}
-	//else if (k.key == Key::UP)
-	//{
-	//	if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
-	//		consume = true;
-	//}
-	//if (consume)
-	//{
-	//	k.consumed = true;
-	//	if (canvas().move_selection_info.moving)
-	//		moving_by_arrows = true;
-	//}
+	if (k.key != Key::LEFT && k.key != Key::RIGHT && k.key != Key::DOWN && k.key != Key::UP)
+		return;
+	if (moving_mode == MovingMode::NONE)
+	{
+		canvas().binfo.select_with_pixels = !MainWindow->is_key_pressed(Key::S);
+		if (!canvas().batch_move_selection_start())
+			return;
+		moving_mode = MovingMode::ARROWS;
+		arrows_move_sel_info.on_starting_interval = true;
+		arrows_move_sel_info.held_time = 0.0f;
+		arrows_move_sel_info.move_x = 0;
+		arrows_move_sel_info.move_y = 0;
+	}
+	k.consumed = true;
+	if (k.key == Key::LEFT)
+		arrows_move_sel_info.left = true;
+	else if (k.key == Key::RIGHT)
+		arrows_move_sel_info.right = true;
+	else if (k.key == Key::DOWN)
+		arrows_move_sel_info.down = true;
+	else if (k.key == Key::UP)
+		arrows_move_sel_info.up = true;
+	update_arrows_move_amounts();
+	canvas().batch_move_selection_to(arrows_move_sel_info.move_x, arrows_move_sel_info.move_y);
 }
 
-void Easel::mouse_handle_arrow_key_release(const KeyEvent& k)
+void Easel::handle_arrow_key_released(const KeyEvent& k)
 {
-	return;
-	//bool consume = false;
-	//if (k.key == Key::LEFT)
-	//{
-	//	if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == -1)
-	//	{
-	//		if (MainWindow->is_key_pressed(Key::RIGHT))
-	//		{
-	//			if (canvas().start_move_selection(1, canvas().move_selection_info.move_y))
-	//				consume = true;
-	//		}
-	//		else if (canvas().move_selection_info.move_y == 0)
-	//		{
-	//			consume = true;
-	//			canvas().move_selection_info.moving = false;
-	//			canvas().move_selection_info.move_x = 0;
-	//		}
-	//		else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
-	//			consume = true;
-	//	}
-	//}
-	//else if (k.key == Key::RIGHT)
-	//{
-	//	if (canvas().move_selection_info.moving && canvas().move_selection_info.move_x == 1)
-	//	{
-	//		if (MainWindow->is_key_pressed(Key::LEFT))
-	//		{
-	//			if (canvas().start_move_selection(-1, canvas().move_selection_info.move_y))
-	//				consume = true;
-	//		}
-	//		else if (canvas().move_selection_info.move_y == 0)
-	//		{
-	//			consume = true;
-	//			canvas().move_selection_info.moving = false;
-	//			canvas().move_selection_info.move_x = 0;
-	//		}
-	//		else if (canvas().start_move_selection(0, canvas().move_selection_info.move_y))
-	//			consume = true;
-	//	}
-	//}
-	//else if (k.key == Key::DOWN)
-	//{
-	//	if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == -1)
-	//	{
-	//		if (MainWindow->is_key_pressed(Key::UP))
-	//		{
-	//			if (canvas().start_move_selection(canvas().move_selection_info.move_x, 1))
-	//				consume = true;
-	//		}
-	//		else if (canvas().move_selection_info.move_x == 0)
-	//		{
-	//			consume = true;
-	//			canvas().move_selection_info.moving = false;
-	//			canvas().move_selection_info.move_y = 0;
-	//		}
-	//		else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
-	//			consume = true;
-	//	}
-	//}
-	//else if (k.key == Key::UP)
-	//{
-	//	if (canvas().move_selection_info.moving && canvas().move_selection_info.move_y == 1)
-	//	{
-	//		if (MainWindow->is_key_pressed(Key::DOWN))
-	//		{
-	//			if (canvas().start_move_selection(canvas().move_selection_info.move_x, -1))
-	//				consume = true;
-	//		}
-	//		else if (canvas().move_selection_info.move_x == 0)
-	//		{
-	//			consume = true;
-	//			canvas().move_selection_info.moving = false;
-	//			canvas().move_selection_info.move_y = 0;
-	//		}
-	//		else if (canvas().start_move_selection(canvas().move_selection_info.move_x, 0))
-	//			consume = true;
-	//	}
-	//}
-	//if (consume)
-	//{
-	//	k.consumed = true;
-	//	if (!canvas().move_selection_info.moving)
-	//		moving_by_arrows = false;
-	//}
+	if (k.key != Key::LEFT && k.key != Key::RIGHT && k.key != Key::DOWN && k.key != Key::UP)
+		return;
+	k.consumed = true;
+	if (k.key == Key::LEFT)
+		arrows_move_sel_info.left = false;
+	else if (k.key == Key::RIGHT)
+		arrows_move_sel_info.right = false;
+	else if (k.key == Key::DOWN)
+		arrows_move_sel_info.down = false;
+	else if (k.key == Key::UP)
+		arrows_move_sel_info.up = false;
+	if (!arrows_move_sel_info.left && !arrows_move_sel_info.right && !arrows_move_sel_info.down && !arrows_move_sel_info.up)
+	{
+		canvas().batch_move_selection_submit();
+		moving_mode = MovingMode::NONE;
+	}
 }
 
 void Easel::draw()
@@ -315,6 +239,7 @@ void Easel::process()
 {
 	update_panning();
 	update_mouse_move_selection();
+	update_arrows_move_selection();
 	canvas().process();
 }
 
@@ -676,26 +601,22 @@ void Easel::rotate_image_270()
 
 bool Easel::begin_mouse_move_selection()
 {
-	if (!mouse_move_sel_info.moving)
+	canvas().binfo.select_with_pixels = !MainWindow->is_key_pressed(Key::S);
+	if (canvas().batch_move_selection_start())
 	{
-		mouse_move_sel_info.with_pixels = !MainWindow->is_key_pressed(Key::S);
-		if (canvas().batch_move_selection_start())
-		{
-			mouse_move_sel_info.moving = true;
-			mouse_move_sel_info.initial_cursor_pos = get_app_cursor_pos();
-			mouse_move_sel_info.initial_canvas_pos = canvas().self.transform.position;
-			return true;
-		}
-		return false;
+		moving_mode = MovingMode::MOUSE;
+		mouse_move_sel_info.initial_cursor_pos = get_app_cursor_pos();
+		mouse_move_sel_info.initial_canvas_pos = canvas().self.transform.position;
+		return true;
 	}
 	return false;
 }
 
 void Easel::end_mouse_move_selection()
 {
-	if (mouse_move_sel_info.moving)
+	if (moving_mode == MovingMode::MOUSE)
 	{
-		mouse_move_sel_info.moving = false;
+		moving_mode = MovingMode::NONE;
 		canvas().batch_move_selection_submit();
 		MainWindow->release_mouse_mode(&mouse_move_sel_info.wh);
 	}
@@ -703,9 +624,9 @@ void Easel::end_mouse_move_selection()
 
 bool Easel::cancel_mouse_move_selection()
 {
-	if (mouse_move_sel_info.moving)
+	if (moving_mode == MovingMode::MOUSE)
 	{
-		mouse_move_sel_info.moving = false;
+		moving_mode = MovingMode::NONE;
 		canvas().batch_move_selection_cancel();
 		MainWindow->release_mouse_mode(&mouse_move_sel_info.wh);
 		return true;
@@ -713,11 +634,11 @@ bool Easel::cancel_mouse_move_selection()
 	return false;
 }
 
-// TODO if mouse re-enters clipping, display mouse again.
+// TODO if mouse re-enters clipping, display mouse again. For moving selection AND panning
 
 void Easel::update_mouse_move_selection()
 {
-	if (mouse_move_sel_info.moving)
+	if (moving_mode == MovingMode::MOUSE)
 	{
 		Position pan_delta = get_app_cursor_pos() - mouse_move_sel_info.initial_cursor_pos;
 		Position pos = pan_delta + mouse_move_sel_info.initial_canvas_pos;
@@ -734,6 +655,62 @@ void Easel::update_mouse_move_selection()
 		if (!MainWindow->owns_mouse_mode(&mouse_move_sel_info.wh) && !cursor_in_clipping())
 			MainWindow->request_mouse_mode(&mouse_move_sel_info.wh, MouseMode::CAPTURED);
 	}
+}
+
+void Easel::update_arrows_move_selection()
+{
+	if (moving_mode == MovingMode::ARROWS)
+	{
+		arrows_move_sel_info.held_time += arrows_move_sel_info.held_speed_factor * Machine.delta_time();
+		if (arrows_move_sel_info.on_starting_interval)
+		{
+			if (arrows_move_sel_info.held_time > arrows_move_sel_info.held_start_interval)
+			{
+				arrows_move_sel_info.held_time -= arrows_move_sel_info.held_start_interval;
+				update_arrows_move_amounts();
+				while (arrows_move_sel_info.held_time > arrows_move_sel_info.held_interval)
+				{
+					arrows_move_sel_info.held_time -= arrows_move_sel_info.held_interval;
+					update_arrows_move_amounts();
+				}
+				canvas().batch_move_selection_to(arrows_move_sel_info.move_x, arrows_move_sel_info.move_y);
+				arrows_move_sel_info.on_starting_interval = false;
+			}
+		}
+		else if (arrows_move_sel_info.held_time > arrows_move_sel_info.held_interval)
+		{
+			do
+			{
+				arrows_move_sel_info.held_time -= arrows_move_sel_info.held_interval;
+				update_arrows_move_amounts();
+			}
+			while (arrows_move_sel_info.held_time > arrows_move_sel_info.held_interval);
+			canvas().batch_move_selection_to(arrows_move_sel_info.move_x, arrows_move_sel_info.move_y);
+		}
+	}
+}
+
+void Easel::update_arrows_move_amounts()
+{
+	if (arrows_move_sel_info.left)
+		--arrows_move_sel_info.move_x;
+	if (arrows_move_sel_info.right)
+		++arrows_move_sel_info.move_x;
+	if (arrows_move_sel_info.down)
+		--arrows_move_sel_info.move_y;
+	if (arrows_move_sel_info.up)
+		++arrows_move_sel_info.move_y;
+}
+
+bool Easel::cancel_arrows_move_selection()
+{
+	if (moving_mode == MovingMode::ARROWS)
+	{
+		moving_mode = MovingMode::NONE;
+		canvas().batch_move_selection_cancel();
+		return true;
+	}
+	return false;
 }
 
 Canvas& Easel::canvas()

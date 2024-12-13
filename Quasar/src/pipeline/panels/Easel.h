@@ -29,8 +29,8 @@ private:
 	void initialize_widget();
 	void connect_input_handlers();
 
-	void mouse_handle_arrow_key_press(const KeyEvent& k);
-	void mouse_handle_arrow_key_release(const KeyEvent& k);
+	void handle_arrow_key_pressed(const KeyEvent& k);
+	void handle_arrow_key_released(const KeyEvent& k);
 
 public:
 	virtual void draw() override;
@@ -97,16 +97,35 @@ private:
 	{
 		Position initial_cursor_pos{};
 		Position initial_canvas_pos{};
-		bool moving = false;
-		bool with_pixels = false;
 		WindowHandle wh;
 	} mouse_move_sel_info;
-	bool moving_by_arrows = false;
+
+	struct
+	{
+		bool on_starting_interval = false;
+		float held_time = 0.0f;
+		int move_x = 0, move_y = 0;
+		bool left = false, right = false, up = false, down = false;
+		static inline const float held_speed_factor = 1.0f; // SETTINGS
+		static inline const float held_interval = 0.1f;
+		static inline const float held_start_interval = 0.5f;
+	} arrows_move_sel_info;
+
+	enum class MovingMode
+	{
+		NONE,
+		MOUSE,
+		ARROWS
+	} moving_mode = MovingMode::NONE;
 
 	bool begin_mouse_move_selection();
 	void end_mouse_move_selection();
 	bool cancel_mouse_move_selection();
 	void update_mouse_move_selection();
+	
+	void update_arrows_move_selection();
+	void update_arrows_move_amounts();
+	bool cancel_arrows_move_selection();
 
 public:
 	Canvas& canvas();

@@ -189,8 +189,6 @@ void Canvas::process()
 		unhover();
 	binfo.smants->send_time(Machine.time());
 	binfo.smants_preview->send_time(Machine.time());
-	//if (move_selection_info.moving)
-		//process_move_selection();
 }
 
 void Canvas::set_image(const std::shared_ptr<Image>& img)
@@ -895,46 +893,14 @@ bool Canvas::delete_selection()
 	return true;
 }
 
-//void Canvas::process_move_selection()
-//{
-//	move_selection_info.held_time += move_selection_info.held_speed_factor * Machine.delta_time();
-//	if (move_selection_info.on_starting_interval)
-//	{
-//		if (move_selection_info.held_time > move_selection_info.held_start_interval)
-//		{
-//			move_selection_info.held_time -= move_selection_info.held_start_interval;
-//			while (move_selection_info.held_time > move_selection_info.held_interval)
-//				move_selection_info.held_time -= move_selection_info.held_interval;
-//			move_selection(move_selection_info.move_x, move_selection_info.move_y);
-//			move_selection_info.on_starting_interval = false;
-//		}
-//	}
-//	else if (move_selection_info.held_time > move_selection_info.held_interval)
-//	{
-//
-//		do { move_selection_info.held_time -= move_selection_info.held_interval; } while (move_selection_info.held_time > move_selection_info.held_interval);
-//		move_selection(move_selection_info.move_x, move_selection_info.move_y);
-//	}
-//}
-//
-//// TODO move move_selection_info to Easel and rename it to arrow_sel_move_info
-//bool Canvas::start_move_selection(int dx, int dy)
-//{
-//	if (!move_selection(dx, dy))
-//		return false;
-//	move_selection_info.moving = true;
-//	move_selection_info.on_starting_interval = true;
-//	move_selection_info.held_time = 0.0f;
-//	move_selection_info.move_x = dx;
-//	move_selection_info.move_y = dy;
-//	return true;
-//}
-
 void Canvas::batch_move_selection_to(float fdx, float fdy)
 {
 	Position fd = local_of({ fdx, fdy }) - local_of({});
-	int dx = roundi(fd.x);
-	int dy = roundi(fd.y);
+	batch_move_selection_to(roundi(fd.x), roundi(fd.y));
+}
+
+void Canvas::batch_move_selection_to(int dx, int dy)
+{
 	if (selection_interaction_disabled(binfo) || (dx == binfo.move_selpxs_offset.x && dy == binfo.move_selpxs_offset.y))
 		return;
 	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
@@ -947,7 +913,7 @@ bool Canvas::batch_move_selection_start()
 {
 	if (selection_interaction_disabled(binfo))
 		return false;
-	if (MEasel->mouse_move_sel_info.with_pixels)
+	if (binfo.select_with_pixels)
 		CBImpl::batch_move_selection_start_with_pixels(*this);
 	else
 		CBImpl::batch_move_selection_start_without_pixels(*this);

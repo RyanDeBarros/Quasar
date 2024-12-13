@@ -671,12 +671,21 @@ void CBImpl::batch_move_selection_start_with_pixels(Canvas& canvas)
 	auto& points = binfo.smants->get_points();
 	Buffer& imgbuf = canvas.image->buf;
 	Buffer& sel_imgbuf = binfo.selection_subimage->buf;
+	
+	static const auto set_sel_imgbuf_pencil = [](Buffer& sel_imgbuf, int x, int y, PixelRGBA color) {
+		buffer_set_pixel_color(sel_imgbuf, x, y, color);
+		};
+	static const auto set_sel_imgbuf_pen = [](Buffer& sel_imgbuf, int x, int y, PixelRGBA color) {
+		buffer_set_pixel_color(sel_imgbuf, x, y, color.no_alpha_equivalent());
+		};
+	auto set_sel_imgbuf = binfo.apply_selection_with_pencil ? set_sel_imgbuf_pencil : set_sel_imgbuf_pen;
+
 	for (auto iter = points.begin(); iter != points.end(); ++iter)
 	{
 		PixelRGBA color = imgbuf.pixel_color_at(iter->x, iter->y);
 		binfo.raw_selection_pixels[*iter] = color;
 		buffer_set_pixel_alpha(imgbuf, iter->x, iter->y, 0);
-		buffer_set_pixel_color(sel_imgbuf, iter->x, iter->y, color);
+		set_sel_imgbuf(sel_imgbuf, iter->x, iter->y, color);
 		update_bbox(img_bbox, iter->x, iter->y);
 	}
 	canvas.image->update_subtexture(img_bbox);
@@ -695,6 +704,7 @@ void CBImpl::batch_move_selection_submit_with_pixels(Canvas& canvas)
 	}
 	binfo.selection_subimage->update_subtexture(bbox);
 	Machine.history.push(std::make_shared<ApplySelectionAction>(binfo.apply_selection_with_pencil));
+	binfo.move_selpxs_offset = {};
 }
 
 void CBImpl::batch_move_selection_cancel_with_pixels(Canvas& canvas)
@@ -714,6 +724,7 @@ void CBImpl::batch_move_selection_cancel_with_pixels(Canvas& canvas)
 	binfo.selection_subimage->update_subtexture(bbox);
 	canvas.image->update_subtexture(bbox);
 	canvas.binfo.raw_selection_pixels.clear();
+	binfo.move_selpxs_offset = {};
 }
 
 void CBImpl::batch_move_selection_transition(Canvas& canvas, bool to_pencil)
@@ -777,6 +788,7 @@ void CBImpl::batch_move_selection_submit_without_pixels(Canvas& canvas)
 	canvas.binfo.state = BrushInfo::State::NEUTRAL;
 	if (canvas.binfo.move_selpxs_offset != IPosition{})
 		Machine.history.push(std::make_shared<SmantsMoveAction>(canvas.binfo.move_selpxs_offset, std::move(canvas.binfo.raw_selection_positions)));
+	canvas.binfo.move_selpxs_offset = {};
 }
 
 void CBImpl::batch_move_selection_cancel_without_pixels(Canvas& canvas)
@@ -784,6 +796,7 @@ void CBImpl::batch_move_selection_cancel_without_pixels(Canvas& canvas)
 	canvas.binfo.state = BrushInfo::State::NEUTRAL;
 	CBImpl::batch_move_selection_without_pixels(canvas, 0, 0);
 	canvas.binfo.raw_selection_positions.clear();
+	canvas.binfo.move_selpxs_offset = {};
 }
 
 // <<<==================================<<< MOVE >>>==================================>>>

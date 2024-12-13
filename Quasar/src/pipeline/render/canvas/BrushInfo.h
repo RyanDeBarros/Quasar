@@ -43,6 +43,7 @@ struct BrushInfo
 	struct FlatSprite* sel_subimg_sprite = nullptr;
 	std::shared_ptr<Image> selection_subimage;
 	IPosition move_selpxs_offset = {};
+	bool select_with_pixels = true;
 	bool apply_selection_with_pencil = true;
 
 	struct
