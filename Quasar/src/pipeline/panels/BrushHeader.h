@@ -18,7 +18,7 @@ inline int operator~(BrushTip a) { return ~int(a); }
 
 enum class BrushTool
 {
-	CAMERA = 0b1,
+	MOVE = 0b1,
 	PAINT = 0b10,
 	LINE = 0b100,
 	FILL = 0b1000,

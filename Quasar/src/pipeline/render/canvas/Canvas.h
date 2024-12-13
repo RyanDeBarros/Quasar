@@ -126,6 +126,8 @@ public:
 	bool batch_move_selection_start();
 	void batch_move_selection_submit();
 	void batch_move_selection_cancel();
+	void transition_moving_selection_to_overwrite();
+	void transition_moving_selection_to_blend();
 
 public:
 	enum : size_t

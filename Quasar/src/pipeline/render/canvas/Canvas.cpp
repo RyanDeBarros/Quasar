@@ -136,7 +136,7 @@ void Canvas::draw()
 
 void Canvas::draw_cursor()
 {
-	if (binfo.tool & BrushTool::CAMERA || binfo.state & BrushInfo::State::PIPETTE
+	if (binfo.tool & BrushTool::MOVE || binfo.state & BrushInfo::State::PIPETTE
 		|| (binfo.show_brush_preview && binfo.tool & (BrushTool::LINE | BrushTool::FILL | BrushTool::RECT_FILL | BrushTool::RECT_OUTLINE | BrushTool::ELLIPSE_OUTLINE | BrushTool::ELLIPSE_FILL)))
 		return;
 	switch (binfo.tip)
@@ -393,7 +393,7 @@ void Canvas::update_brush_tool_and_tip()
 	binfo.tip = new_tip;
 	switch (binfo.tool)
 	{
-	case BrushTool::CAMERA:
+	case BrushTool::MOVE:
 		brush_under_tool_and_tip = &CBImpl::Camera::brush;
 		break;
 	case BrushTool::PAINT:
@@ -619,7 +619,7 @@ void Canvas::cursor_press(MouseButton button)
 				MPalette->set_alt_color(color_under_cursor());
 		}
 	}
-	else if (!(binfo.tool & BrushTool::CAMERA) && !MainWindow->is_alt_pressed())
+	else if (!(binfo.tool & BrushTool::MOVE) && !MainWindow->is_alt_pressed())
 	{
 		bool begin = false;
 		if (button == MouseButton::LEFT && cursor_state != CursorState::DOWN_ALTERNATE)
@@ -635,12 +635,11 @@ void Canvas::cursor_press(MouseButton button)
 		if (begin && cursor_in_canvas)
 		{
 			if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
-				CBImpl::apply_selection(*this);
-			else
-			{
-				IPosition pos = brush_pos_under_cursor();
-				brush(pos.x, pos.y);
-			}
+				CBImpl::batch_move_selection_submit_with_pixels(*this);
+			else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
+				CBImpl::batch_move_selection_submit_without_pixels(*this);
+			IPosition pos = brush_pos_under_cursor();
+			brush(pos.x, pos.y);
 		}
 	}
 }
@@ -656,13 +655,18 @@ bool Canvas::cursor_enter()
 	}
 	else if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 	{
-		CBImpl::apply_selection(*this);
+		CBImpl::batch_move_selection_submit_with_pixels(*this);
 		return true;
 	}
-	else if (binfo.state & BrushInfo::State::NEUTRAL) // TODO NEUTRAL or new SELECTING state
+	else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
 	{
-		deselect_all();
+		CBImpl::batch_move_selection_submit_without_pixels(*this);
 		return true;
+	}
+	else if (binfo.state & BrushInfo::State::NEUTRAL)
+	{
+		if (deselect_all())
+			return true;
 	}
 	return false;
 }
@@ -825,7 +829,7 @@ void Canvas::brush_cancel()
 
 void Canvas::brush_move_to(IPosition pos)
 {
-	if (!(binfo.tool & BrushTool::CAMERA))
+	if (!(binfo.tool & BrushTool::MOVE))
 		CBImpl::brush_move_to(*this, pos.x, pos.y);
 }
 
@@ -845,7 +849,7 @@ void Canvas::select_all()
 
 bool Canvas::deselect_all()
 {
-	if (image && !binfo.smants->get_points().empty())
+	if (image && binfo.state & BrushInfo::State::NEUTRAL && !binfo.smants->get_points().empty())
 	{
 		binfo.brushing_bbox = binfo.clear_selection();
 		binfo.smants->send_buffer(binfo.brushing_bbox);
@@ -933,9 +937,9 @@ void Canvas::batch_move_selection_to(float fdx, float fdy)
 	int dy = roundi(fd.y);
 	if (selection_interaction_disabled(binfo) || (dx == binfo.move_selpxs_offset.x && dy == binfo.move_selpxs_offset.y))
 		return;
-	if (MEasel->mouse_move_sel_info.with_pixels)
+	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 		CBImpl::batch_move_selection_with_pixels(*this, dx, dy);
-	else
+	else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
 		CBImpl::batch_move_selection_without_pixels(*this, dx, dy);
 }
 
@@ -952,16 +956,36 @@ bool Canvas::batch_move_selection_start()
 
 void Canvas::batch_move_selection_submit()
 {
-	if (MEasel->mouse_move_sel_info.with_pixels)
+	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 		CBImpl::batch_move_selection_submit_with_pixels(*this);
-	else
+	else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
 		CBImpl::batch_move_selection_submit_without_pixels(*this);
 }
 
 void Canvas::batch_move_selection_cancel()
 {
-	if (MEasel->mouse_move_sel_info.with_pixels)
+	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 		CBImpl::batch_move_selection_cancel_with_pixels(*this);
-	else
+	else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
 		CBImpl::batch_move_selection_cancel_without_pixels(*this);
+}
+
+void Canvas::transition_moving_selection_to_overwrite()
+{
+	if (binfo.apply_selection_with_pencil)
+	{
+		binfo.apply_selection_with_pencil = false;
+		if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
+			CBImpl::batch_move_selection_transition(*this, false);
+	}
+}
+
+void Canvas::transition_moving_selection_to_blend()
+{
+	if (!binfo.apply_selection_with_pencil)
+	{
+		binfo.apply_selection_with_pencil = true;
+		if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
+			CBImpl::batch_move_selection_transition(*this, true);
+	}
 }

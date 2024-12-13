@@ -665,7 +665,6 @@ void CBImpl::batch_move_selection_with_pixels(Canvas& canvas, int dx, int dy)
 
 void CBImpl::batch_move_selection_start_with_pixels(Canvas& canvas)
 {
-	// TODO set subimg buffer pixel colors, using pen/pencil
 	BrushInfo& binfo = canvas.binfo;
 	binfo.state = BrushInfo::State::MOVING_SUBIMG;
 	IntBounds img_bbox = IntBounds::NADIR;
@@ -695,25 +694,49 @@ void CBImpl::batch_move_selection_submit_with_pixels(Canvas& canvas)
 		update_bbox(bbox, iter->first.x, iter->first.y);
 	}
 	binfo.selection_subimage->update_subtexture(bbox);
-
-	// TODO revert back
-	//Machine.history.push(std::make_shared<ApplySelectionAction>(binfo.apply_selection_with_pencil));
-	Machine.history.push(std::make_shared<ApplySelectionAction>(!binfo.apply_selection_with_pencil));
+	Machine.history.push(std::make_shared<ApplySelectionAction>(binfo.apply_selection_with_pencil));
 }
 
 void CBImpl::batch_move_selection_cancel_with_pixels(Canvas& canvas)
 {
 	CBImpl::batch_move_selection_with_pixels(canvas, 0, 0);
 	BrushInfo& binfo = canvas.binfo;
+	binfo.state = BrushInfo::State::NEUTRAL;
 	IntBounds bbox = IntBounds::NADIR;
 	Buffer& imgbuf = canvas.image->buf;
+	Buffer& sel_imgbuf = binfo.selection_subimage->buf;
 	for (auto iter = binfo.raw_selection_pixels.begin(); iter != binfo.raw_selection_pixels.end(); ++iter)
 	{
+		buffer_set_pixel_alpha(sel_imgbuf, iter->first.x, iter->first.y, 0);
 		buffer_set_pixel_alpha(imgbuf, iter->first.x, iter->first.y, iter->second.a);
 		update_bbox(bbox, iter->first.x, iter->first.y);
 	}
+	binfo.selection_subimage->update_subtexture(bbox);
 	canvas.image->update_subtexture(bbox);
 	canvas.binfo.raw_selection_pixels.clear();
+}
+
+void CBImpl::batch_move_selection_transition(Canvas& canvas, bool to_pencil)
+{
+	IntBounds bbox = IntBounds::NADIR;
+	Buffer& sel_imgbuf = canvas.binfo.selection_subimage->buf;
+	if (to_pencil)
+	{
+		for (auto iter = canvas.binfo.raw_selection_pixels.begin(); iter != canvas.binfo.raw_selection_pixels.end(); ++iter)
+		{
+			buffer_set_pixel_color(sel_imgbuf, iter->first.x, iter->first.y, iter->second);
+			update_bbox(bbox, iter->first.x, iter->first.y);
+		}
+	}
+	else
+	{
+		for (auto iter = canvas.binfo.raw_selection_pixels.begin(); iter != canvas.binfo.raw_selection_pixels.end(); ++iter)
+		{
+			buffer_set_pixel_color(sel_imgbuf, iter->first.x, iter->first.y, iter->second.no_alpha_equivalent());
+			update_bbox(bbox, iter->first.x, iter->first.y);
+		}
+	}
+	canvas.binfo.selection_subimage->update_subtexture(bbox);
 }
 
 void CBImpl::batch_move_selection_without_pixels(Canvas& canvas, int dx, int dy)
@@ -745,28 +768,25 @@ void CBImpl::batch_move_selection_without_pixels(Canvas& canvas, int dx, int dy)
 
 void CBImpl::batch_move_selection_start_without_pixels(Canvas& canvas)
 {
-	canvas.binfo.state = BrushInfo::State::NEUTRAL; // TODO separate state for MOVING_SELOUTLINE
+	canvas.binfo.state = BrushInfo::State::MOVING_SELOUTLINE;
 	canvas.binfo.raw_selection_positions = canvas.binfo.smants->get_points();
 }
 
 void CBImpl::batch_move_selection_submit_without_pixels(Canvas& canvas)
 {
+	canvas.binfo.state = BrushInfo::State::NEUTRAL;
 	if (canvas.binfo.move_selpxs_offset != IPosition{})
 		Machine.history.push(std::make_shared<SmantsMoveAction>(canvas.binfo.move_selpxs_offset, std::move(canvas.binfo.raw_selection_positions)));
 }
 
 void CBImpl::batch_move_selection_cancel_without_pixels(Canvas& canvas)
 {
+	canvas.binfo.state = BrushInfo::State::NEUTRAL;
 	CBImpl::batch_move_selection_without_pixels(canvas, 0, 0);
 	canvas.binfo.raw_selection_positions.clear();
 }
 
-void CBImpl::apply_selection(Canvas& canvas)
-{
-	Machine.history.push(std::make_shared<ApplySelectionAction>(canvas.binfo.apply_selection_with_pencil));
-}
-
-// <<<==================================<<< CAMERA >>>==================================>>>
+// <<<==================================<<< MOVE >>>==================================>>>
 
 void CBImpl::Camera::brush(Canvas& canvas, int x, int y)
 {

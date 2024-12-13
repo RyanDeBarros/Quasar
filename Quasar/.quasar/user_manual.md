@@ -95,7 +95,7 @@ There are four brush tips to choose from: PENCIL, PEN, ERASER, and SELECT. When 
 
 There are several brush tools to choose from, which determine how pixels are interacted with in canvas, based on mouse input. Note that every brush tip can be used with each brush tool. So if select tool is selected with fill tool, the fill action will not actually paint on all the pixels - those pixels will all be selected instead.
 
-* Camera (key shortcut: M) - Neutral mode that doesn't interact with the canvas aside from navigation. However, you can move canvas selections with the mouse when in Camera Mode.
+* Move (key shortcut: M) - Neutral mode that doesn't interact with the canvas aside from navigation. However, you can move canvas selections with the mouse when in Move Mode.
 * Paint (key shortcut: P) - Freehand draw on canvas.
 * Line (key shortcut: L) - Click and drag to draw a controlled line. Hold SHIFT to draw *regular* lines.
 * Fill (key shortcut: F) - Fill all connected (same color) pixels within the set tolerance level. Hold SHIFT to fill all pixels in the image within the set tolerance level.
@@ -116,3 +116,14 @@ When selecting pixels, you can perform the following actions:
 
 * SPACE+F: Fill selection using primary color, according to the current brush tip.
 * ALT+SPACE+F: Fill selection using alternate color, according to the current brush tip.
+
+### Canvas selection
+
+If a group of pixels is selected, you could move the selection with the Move Tool:
+
+* Use LMB or the arrow keys to move the selection.
+* If you hold the S key, this will only move the selection outline, and not the underlying pixels.
+* By default, applying the selection (by releasing LMB/arrow keys or pressing ENTER) will blend those moved pixels onto the underlying image. However, holding ALT will use OVERWRITE mode and simply replace the image pixels underneath.
+* To move a selection to another layer or frame, simply CUT (CTRL+X) or COPY (CTRL+C) then PASTE (CTRL+V).
+* To remove the selection outline, press ESCAPE or ENTER. Note that drawing will be restricted to the current selection, so you can use selection as a way of masking certain pixels.
+* Press Y to invert the selected pixels.

@@ -59,7 +59,7 @@ void Easel::connect_input_handlers()
 					mb.consumed = true;
 					begin_panning();
 				}
-				else if (MBrushes->get_brush_tool() & BrushTool::CAMERA)
+				else if (MBrushes->get_brush_tool() & BrushTool::MOVE)
 				{
 					if (!moving_by_arrows)
 					{
@@ -93,6 +93,14 @@ void Easel::connect_input_handlers()
 		};
 	// LATER add handler for when mouse is already pressed, and then space is pressed to pan.
 	key_handler.callback = [this](const KeyEvent& k) {
+		if (k.key == Key::LEFT_ALT || k.key == Key::RIGHT_ALT)
+		{
+			// no consume
+			if (k.action == IAction::PRESS)
+				canvas().transition_moving_selection_to_overwrite();
+			else if (k.action == IAction::RELEASE)
+				canvas().transition_moving_selection_to_blend();
+		}
 		if (k.action == IAction::PRESS)
 		{
 			if (k.key == Key::ESCAPE)
@@ -106,7 +114,7 @@ void Easel::connect_input_handlers()
 			}
 			else if (k.mods & Mods::CONTROL)
 			{
-				if (k.key == Key::Z && canvas().binfo.state != BrushInfo::State::MOVING_SUBIMG)
+				if (k.key == Key::Z)
 				{
 					// no consume
 					canvas().cursor_cancel();

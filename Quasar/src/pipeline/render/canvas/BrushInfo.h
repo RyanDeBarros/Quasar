@@ -12,12 +12,13 @@ struct BrushInfo
 		NEUTRAL = 0b1,
 		BRUSHING = 0b10,
 		PIPETTE = 0b100,
-		MOVING_SUBIMG = 0b1000
+		MOVING_SUBIMG = 0b1000,
+		MOVING_SELOUTLINE = 0b10000
 	} state = State::NEUTRAL;
 
 	bool cancelling = false;
 	BrushTip tip = BrushTip::PENCIL;
-	BrushTool tool = BrushTool::CAMERA;
+	BrushTool tool = BrushTool::MOVE;
 	IPosition starting_pos = { -1, -1 };
 	IPosition last_brush_pos = { -1, -1 };
 	IPosition image_pos = { -1, -1 };

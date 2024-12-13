@@ -10,7 +10,7 @@ struct BrushesPanel : public Panel
 {
 private:
 	BrushTip brush_tip = BrushTip::PENCIL;
-	BrushTool brush_tool = BrushTool::CAMERA;
+	BrushTool brush_tool = BrushTool::MOVE;
 
 public:
 	BrushTip get_brush_tip() const { return brush_tip; }

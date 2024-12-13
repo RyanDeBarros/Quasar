@@ -17,14 +17,13 @@ namespace CBImpl
 	extern void batch_move_selection_start_with_pixels(Canvas& canvas);
 	extern void batch_move_selection_submit_with_pixels(Canvas& canvas);
 	extern void batch_move_selection_cancel_with_pixels(Canvas& canvas);
-	// TODO transition for batch_move_selectin_with_pixels
+
+	extern void batch_move_selection_transition(Canvas& canvas, bool to_pencil);
 
 	extern void batch_move_selection_without_pixels(Canvas& canvas, int dx, int dy);
 	extern void batch_move_selection_start_without_pixels(Canvas& canvas);
 	extern void batch_move_selection_submit_without_pixels(Canvas& canvas);
 	extern void batch_move_selection_cancel_without_pixels(Canvas& canvas);
-
-	extern void apply_selection(Canvas& canvas);
 
 	namespace Camera
 	{

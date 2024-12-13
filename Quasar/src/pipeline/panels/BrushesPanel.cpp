@@ -91,9 +91,9 @@ void BrushesPanel::initialize_widget()
 	tba.transform.scale = { tool_btn_side, tool_btn_side };
 	tba.transform.position.y = 1.5f * (tool_btn_side + tool_btn_spacing);
 	
-	tba.text = "CAMERA";
+	tba.text = "MOVE";
 	tba.transform.position.x = -0.5f * (tool_btn_side + tool_btn_spacing);
-	tba.on_select = fconv_on_action([this]() { select_brush_tool(BrushTool::CAMERA); });
+	tba.on_select = fconv_on_action([this]() { select_brush_tool(BrushTool::MOVE); });
 	assign_widget(tool_parent, BUTTON_TOOL_CAMERA, std::make_shared<ToggleTButton>(tba));
 	
 	tba.text = "PAINT";
@@ -194,7 +194,7 @@ void BrushesPanel::connect_input_handlers()
 					break;
 				case Key::M:
 					k.consumed = true;
-					select_brush_tool(BrushTool::CAMERA);
+					select_brush_tool(BrushTool::MOVE);
 					break;
 				}
 			}
@@ -278,7 +278,7 @@ void BrushesPanel::select_brush_tip(BrushTip tip)
 void BrushesPanel::select_brush_tool(BrushTool tool)
 {
 	brush_tool = tool;
-	toggle_group_tools.select(tool == BrushTool::CAMERA ? BUTTON_TOOL_CAMERA
+	toggle_group_tools.select(tool == BrushTool::MOVE ? BUTTON_TOOL_CAMERA
 		: tool == BrushTool::PAINT ? BUTTON_TOOL_PAINT
 		: tool == BrushTool::LINE ? BUTTON_TOOL_LINE
 		: tool == BrushTool::RECT_OUTLINE ? BUTTON_TOOL_RECT_OUTLINE
