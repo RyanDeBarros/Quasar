@@ -107,6 +107,7 @@ public:
 
 	void select_all();
 	bool deselect_all();
+	void invert_selection();
 	void fill_selection_primary();
 	void fill_selection_alternate();
 	bool delete_selection();

@@ -152,26 +152,29 @@ void BrushesPanel::connect_input_handlers()
 	key_handler.callback = [this](const KeyEvent& k) {
 		if (k.action == IAction::PRESS && !(k.mods & (Mods::CONTROL | Mods::ALT | Mods::SUPER)))
 		{
+			switch (k.key)
+			{
+			case Key::ROW1:
+				k.consumed = true;
+				select_brush_tip(BrushTip::PENCIL);
+				break;
+			case Key::ROW2:
+				k.consumed = true;
+				select_brush_tip(BrushTip::PEN);
+				break;
+			case Key::ROW3:
+				k.consumed = true;
+				select_brush_tip(BrushTip::ERASER);
+				break;
+			case Key::ROW4:
+				k.consumed = true;
+				select_brush_tip(BrushTip::SELECT);
+				break;
+			}
 			if (!(k.mods & Mods::SHIFT))
 			{
 				switch (k.key)
 				{
-				case Key::ROW1:
-					k.consumed = true;
-					select_brush_tip(BrushTip::PENCIL);
-					break;
-				case Key::ROW2:
-					k.consumed = true;
-					select_brush_tip(BrushTip::PEN);
-					break;
-				case Key::ROW3:
-					k.consumed = true;
-					select_brush_tip(BrushTip::ERASER);
-					break;
-				case Key::ROW4:
-					k.consumed = true;
-					select_brush_tip(BrushTip::SELECT);
-					break;
 				case Key::E:
 					k.consumed = true;
 					select_brush_tool(BrushTool::ELLIPSE_OUTLINE);
@@ -267,9 +270,9 @@ void BrushesPanel::sync_ur(size_t subw)
 void BrushesPanel::select_brush_tip(BrushTip tip)
 {
 	brush_tip = tip;
-	toggle_group_tips.select(tip == BrushTip::PENCIL ? BUTTON_TIP_PENCIL
-		: tip == BrushTip::PEN ? BUTTON_TIP_PEN
-		: tip == BrushTip::ERASER ? BUTTON_TIP_ERASER
+	toggle_group_tips.select(tip & BrushTip::PENCIL ? BUTTON_TIP_PENCIL
+		: tip & BrushTip::PEN ? BUTTON_TIP_PEN
+		: tip & BrushTip::ERASER ? BUTTON_TIP_ERASER
 		: BUTTON_TIP_SELECT
 	);
 	MEasel->canvas().update_brush_tool_and_tip();
@@ -278,13 +281,13 @@ void BrushesPanel::select_brush_tip(BrushTip tip)
 void BrushesPanel::select_brush_tool(BrushTool tool)
 {
 	brush_tool = tool;
-	toggle_group_tools.select(tool == BrushTool::MOVE ? BUTTON_TOOL_CAMERA
-		: tool == BrushTool::PAINT ? BUTTON_TOOL_PAINT
-		: tool == BrushTool::LINE ? BUTTON_TOOL_LINE
-		: tool == BrushTool::RECT_OUTLINE ? BUTTON_TOOL_RECT_OUTLINE
-		: tool == BrushTool::RECT_FILL ? BUTTON_TOOL_RECT_FILL
-		: tool == BrushTool::ELLIPSE_OUTLINE ? BUTTON_TOOL_ELLIPSE_OUTLINE
-		: tool == BrushTool::ELLIPSE_FILL ? BUTTON_TOOL_ELLIPSE_FILL
+	toggle_group_tools.select(tool & BrushTool::MOVE ? BUTTON_TOOL_CAMERA
+		: tool & BrushTool::PAINT ? BUTTON_TOOL_PAINT
+		: tool & BrushTool::LINE ? BUTTON_TOOL_LINE
+		: tool & BrushTool::RECT_OUTLINE ? BUTTON_TOOL_RECT_OUTLINE
+		: tool & BrushTool::RECT_FILL ? BUTTON_TOOL_RECT_FILL
+		: tool & BrushTool::ELLIPSE_OUTLINE ? BUTTON_TOOL_ELLIPSE_OUTLINE
+		: tool & BrushTool::ELLIPSE_FILL ? BUTTON_TOOL_ELLIPSE_FILL
 		: BUTTON_TOOL_FILL
 	);
 	MEasel->canvas().update_brush_tool_and_tip();

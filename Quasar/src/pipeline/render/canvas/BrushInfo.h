@@ -23,13 +23,14 @@ struct BrushInfo
 	IPosition last_brush_pos = { -1, -1 };
 	IPosition image_pos = { -1, -1 };
 	IntBounds brushing_bbox = IntBounds::NADIR;
-	PixelRGBA brushing_color = {};
 	bool show_brush_preview = false;
 	std::shared_ptr<Image> preview_image, eraser_preview_image;
 	static const int eraser_preview_img_sx = 2, eraser_preview_img_sy = 2;
 	std::unordered_map<IPosition, PixelRGBA> storage_1c;
 	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
 
+	PixelRGBA fill_color = {};
+	
 	bool show_selection_preview = false;
 	class SelectionMants* smants = nullptr;
 	class SelectionMants* smants_preview = nullptr;

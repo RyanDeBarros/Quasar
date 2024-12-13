@@ -856,6 +856,29 @@ bool Canvas::deselect_all()
 	return false;
 }
 
+void Canvas::invert_selection()
+{
+	if (!(binfo.state & (BrushInfo::State::MOVING_SUBIMG | BrushInfo::State::MOVING_SELOUTLINE | BrushInfo::State::BRUSHING)))
+	{
+		auto& points = binfo.smants->get_points();
+		Dim w = image->buf.width;
+		Dim h = image->buf.height;
+		for (Dim x = 0; x < w; ++x)
+		{
+			for (Dim y = 0; y < h; ++y)
+			{
+				if (points.contains({ x, y }))
+					binfo.remove_from_selection({ x, y });
+				else
+					binfo.add_to_selection({ x, y });
+			}
+		}
+		binfo.brushing_bbox = { 0, w - 1, 0, h - 1 };
+		binfo.smants->send_buffer(binfo.brushing_bbox);
+		binfo.push_selection_to_history();
+	}
+}
+
 static bool selection_interaction_disabled(BrushInfo& binfo)
 {
 	return binfo.smants->get_points().empty() || binfo.state & BrushInfo::State::BRUSHING;

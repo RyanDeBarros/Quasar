@@ -186,6 +186,13 @@ void ActionHistory::clear_history()
 	current_size = 0;
 }
 
+void ActionHistory::remove_from_top(const std::shared_ptr<ActionBase>& action)
+{
+	auto iter = std::find(undo_deque.rbegin(), undo_deque.rend(), action);
+	if (iter != undo_deque.rend())
+		undo_deque.erase(--iter.base());
+}
+
 void ActionHistory::undo()
 {
 	if (!undo_deque.empty())

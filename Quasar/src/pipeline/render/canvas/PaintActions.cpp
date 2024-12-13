@@ -586,12 +586,12 @@ void SmantsMoveAction::update_weight()
 void SmantsMoveAction::forward()
 {
 	BrushInfo& binfo = MEasel->canvas().binfo;
-	binfo.smants->send_buffer(binfo.clear_selection());
+	binfo.smants->send_buffer(binfo.smants->clear());
 	IntBounds bbox = IntBounds::NADIR;
 	for (IPosition pos : premove_points)
 	{
 		pos += delta;
-		if (binfo.add_to_selection(pos))
+		if (binfo.smants->add(pos))
 			update_bbox(bbox, pos.x, pos.y);
 	}
 	binfo.move_selpxs_offset += delta;
@@ -601,11 +601,11 @@ void SmantsMoveAction::forward()
 void SmantsMoveAction::backward()
 {
 	BrushInfo& binfo = MEasel->canvas().binfo;
-	binfo.smants->send_buffer(binfo.clear_selection());
+	binfo.smants->send_buffer(binfo.smants->clear());
 	IntBounds bbox = IntBounds::NADIR;
 	for (IPosition pos : premove_points)
 	{
-		if (binfo.add_to_selection(pos))
+		if (binfo.smants->add(pos))
 			update_bbox(bbox, pos.x, pos.y);
 	}
 	binfo.move_selpxs_offset -= delta;

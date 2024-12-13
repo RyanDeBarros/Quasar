@@ -348,107 +348,39 @@ static void fill_brushing_selection(Canvas& canvas, void(*set_pixel)(Canvas& can
 	canvas.image->update_subtexture(binfo.brushing_bbox);
 }
 
-struct SelectionSubimageModifyAction : public ActionBase
-{
-	Canvas& canvas;
-	PixelRGBA color;
-	std::unordered_map<IPosition, PixelRGBA> pre_modified_pixels;
-	void(*set_pixel)(Canvas& canvas, Buffer& selbuf, IPosition pos, PixelRGBA back);
-	void(*revert_pixel)(Canvas& canvas, Buffer& selbuf, IPosition pos, PixelRGBA original);
-	SelectionSubimageModifyAction(Canvas& canvas, decltype(set_pixel) set_pixel, decltype(revert_pixel) revert_pixel)
-		: canvas(canvas), set_pixel(set_pixel), revert_pixel(revert_pixel)
-	{
-		weight = sizeof(SelectionSubimageModifyAction) + pre_modified_pixels.size() * (sizeof(IPosition) + sizeof(PixelRGBA));
-		BrushInfo& binfo = canvas.binfo;
-		color = binfo.brushing_color;
-		pre_modified_pixels = binfo.raw_selection_pixels;
-	}
-	virtual void forward() override
-	{
-		BrushInfo& binfo = canvas.binfo;
-		binfo.brushing_color = color;
-		IntBounds bbox = IntBounds::NADIR;
-		auto& selbuf = binfo.selection_subimage->buf;
-		for (auto iter = pre_modified_pixels.begin(); iter != pre_modified_pixels.end(); ++iter)
-		{
-			set_pixel(canvas, selbuf, iter->first, iter->second);
-			update_bbox(bbox, iter->first.x, iter->first.y);
-		}
-		binfo.selection_subimage->update_subtexture(bbox);
-	}
-	virtual void backward() override
-	{
-		BrushInfo& binfo = canvas.binfo;
-		binfo.brushing_color = color;
-		IntBounds bbox = IntBounds::NADIR;
-		auto& selbuf = binfo.selection_subimage->buf;
-		for (auto iter = pre_modified_pixels.begin(); iter != pre_modified_pixels.end(); ++iter)
-		{
-			revert_pixel(canvas, selbuf, iter->first, iter->second);
-			update_bbox(bbox, iter->first.x, iter->first.y);
-		}
-		binfo.selection_subimage->update_subtexture(bbox);
-	}
-};
-
 void CBImpl::fill_selection_pencil(Canvas& canvas, PixelRGBA color)
 {
-	canvas.binfo.brushing_color = color;
-	if (canvas.binfo.state & BrushInfo::State::NEUTRAL)
+	if (canvas.binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
 	{
+		canvas.binfo.fill_color = color;
 		static const auto set_pixel = [](Canvas& canvas, IPosition pos) {
 			PixelRGBA old_color = canvas.image->buf.pixel_color_at(pos.x, pos.y);
-			PixelRGBA new_color = blend_over(canvas.binfo.brushing_color, old_color);
-			canvas.binfo.storage_2c[pos] = { canvas.binfo.brushing_color, old_color };
+			PixelRGBA new_color = blend_over(canvas.binfo.fill_color, old_color);
+			canvas.binfo.storage_2c[pos] = { new_color, old_color };
 			buffer_set_pixel_color(canvas.image->buf, pos.x, pos.y, new_color);
 			};
 		fill_brushing_selection(canvas, set_pixel);
 		standard_push_pencil(canvas);
 	}
-	else if (canvas.binfo.state & BrushInfo::State::MOVING_SUBIMG)
-	{
-		static const auto set_pixel = [](Canvas& canvas, Buffer& selbuf, IPosition pos, PixelRGBA back) {
-			PixelRGBA new_color = blend_over(canvas.binfo.brushing_color, back);
-			canvas.binfo.raw_selection_pixels[pos] = new_color;
-			buffer_set_pixel_color(selbuf, pos.x, pos.y, new_color);
-			};
-		static const auto revert_pixel = [](Canvas& canvas, Buffer& selbuf, IPosition pos, PixelRGBA original) {
-			canvas.binfo.raw_selection_pixels[pos] = original;
-			buffer_set_pixel_color(selbuf, pos.x, pos.y, original);
-			};
-		Machine.history.execute(std::make_shared<SelectionSubimageModifyAction>(canvas, set_pixel, revert_pixel));
-	}
 }
 
 void CBImpl::fill_selection_pen(Canvas& canvas, PixelRGBA color)
 {
-	canvas.binfo.brushing_color = color;
-	if (canvas.binfo.state & BrushInfo::State::NEUTRAL)
+	if (canvas.binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
 	{
+		canvas.binfo.fill_color = color;
 		static const auto set_pixel = [](Canvas& canvas, IPosition pos) {
 			canvas.binfo.storage_1c[pos] = canvas.image->buf.pixel_color_at(pos.x, pos.y);
-			buffer_set_pixel_color(canvas.image->buf, pos.x, pos.y, canvas.binfo.brushing_color);
+			buffer_set_pixel_color(canvas.image->buf, pos.x, pos.y, canvas.binfo.fill_color);
 			};
 		fill_brushing_selection(canvas, set_pixel);
 		standard_push_pen(canvas, color);
-	}
-	else if (canvas.binfo.state & BrushInfo::State::MOVING_SUBIMG)
-	{
-		static const auto set_pixel = [](Canvas& canvas, Buffer& selbuf, IPosition pos, PixelRGBA back) {
-			canvas.binfo.raw_selection_pixels[pos] = canvas.binfo.brushing_color;
-			buffer_set_pixel_color(selbuf, pos.x, pos.y, canvas.binfo.brushing_color.no_alpha_equivalent());
-			};
-		static const auto revert_pixel = [](Canvas& canvas, Buffer& selbuf, IPosition pos, PixelRGBA original) {
-			canvas.binfo.raw_selection_pixels[pos] = original;
-			buffer_set_pixel_color(selbuf, pos.x, pos.y, original.no_alpha_equivalent());
-			};
-		Machine.history.execute(std::make_shared<SelectionSubimageModifyAction>(canvas, set_pixel, revert_pixel));
 	}
 }
 
 void CBImpl::fill_selection_eraser(Canvas& canvas)
 {
-	if (canvas.binfo.state & BrushInfo::State::NEUTRAL)
+	if (canvas.binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
 	{
 		static const auto set_pixel = [](Canvas& canvas, IPosition pos) {
 			canvas.binfo.storage_1c[pos] = canvas.image->buf.pixel_color_at(pos.x, pos.y);
@@ -456,18 +388,6 @@ void CBImpl::fill_selection_eraser(Canvas& canvas)
 			};
 		fill_brushing_selection(canvas, set_pixel);
 		standard_push_eraser(canvas);
-	}
-	else if (canvas.binfo.state & BrushInfo::State::MOVING_SUBIMG) // this should technically not be reachable
-	{
-		static const auto set_pixel = [](Canvas& canvas, Buffer& selbuf, IPosition pos, PixelRGBA back) {
-			canvas.binfo.raw_selection_pixels[pos].a = 0;
-			buffer_set_pixel_alpha(selbuf, pos.x, pos.y, 0);
-			};
-		static const auto revert_pixel = [](Canvas& canvas, Buffer& selbuf, IPosition pos, PixelRGBA original) {
-			canvas.binfo.raw_selection_pixels[pos].a = original.a;
-			buffer_set_pixel_alpha(selbuf, pos.x, pos.y, original.a);
-			};
-		Machine.history.execute(std::make_shared<SelectionSubimageModifyAction>(canvas, set_pixel, revert_pixel));
 	}
 }
 
@@ -486,7 +406,6 @@ struct ApplySelectionAction : public ActionBase
 	ApplySelectionAction(bool pencil)
 		: initially_pencil(pencil)
 	{
-		weight = sizeof(ApplySelectionAction);
 		Canvas& canvas = MEasel->canvas();
 		BrushInfo& binfo = canvas.binfo;
 		move_offset = binfo.move_selpxs_offset;
@@ -504,7 +423,7 @@ struct ApplySelectionAction : public ActionBase
 			binfo.raw_selection_pixels.erase(iter);
 		}
 
-		binfo.smants->send_buffer(binfo.clear_selection());
+		binfo.smants->send_buffer(binfo.smants->clear());
 
 		IntBounds sel_bbox = IntBounds::NADIR;
 		Buffer& img_buf = canvas.image->buf;
@@ -524,7 +443,7 @@ struct ApplySelectionAction : public ActionBase
 				buffer_set_pixel_alpha(subimg_buf, subimg_pos.x, subimg_pos.y, 0);
 				update_bbox(subimg_bbox, subimg_pos.x, subimg_pos.y);
 			}
-			if (binfo.add_to_selection(iter->first))
+			if (binfo.smants->add(iter->first))
 				update_bbox(sel_bbox, iter->first.x, iter->first.y);
 		}
 		canvas.image->update_subtexture(img_bbox);
@@ -532,22 +451,22 @@ struct ApplySelectionAction : public ActionBase
 		binfo.sel_subimg_sprite->self.transform.position = {};
 		binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
 		binfo.smants->send_buffer(sel_bbox);
-		binfo.raw_selection_pixels.clear();
+
+		weight += sizeof(ApplySelectionAction) + applied_pixels.size() * sizeof(PixelRecord);
 	}
+
 	virtual void forward() override
 	{
 		Canvas& canvas = MEasel->canvas();
 		BrushInfo& binfo = canvas.binfo;
 		
 		binfo.state = BrushInfo::State::NEUTRAL;
-		binfo.smants->send_buffer(binfo.clear_selection());
+		binfo.smants->send_buffer(binfo.smants->clear());
 
 		IntBounds sel_bbox = IntBounds::NADIR;
 		Buffer& img_buf = canvas.image->buf;
 		IntBounds img_to_bbox = IntBounds::NADIR;
 		IntBounds img_from_bbox = IntBounds::NADIR;
-		Buffer& subimg_buf = binfo.selection_subimage->buf;
-		IntBounds subimg_bbox = IntBounds::NADIR;
 		for (auto iter = applied_pixels.begin(); iter != applied_pixels.end(); ++iter)
 		{
 			IPosition subimg_pos = iter->first - move_offset;
@@ -556,12 +475,7 @@ struct ApplySelectionAction : public ActionBase
 				buffer_set_pixel_alpha(img_buf, subimg_pos.x, subimg_pos.y, 0);
 				update_bbox(img_from_bbox, subimg_pos.x, subimg_pos.y);
 			}
-			if (in_diagonal_rect(subimg_pos, {}, { subimg_buf.width, subimg_buf.height }))
-			{
-				buffer_set_pixel_alpha(subimg_buf, subimg_pos.x, subimg_pos.y, 0);
-				update_bbox(subimg_bbox, subimg_pos.x, subimg_pos.y);
-			}
-			if (binfo.add_to_selection(iter->first))
+			if (binfo.smants->add(iter->first))
 				update_bbox(sel_bbox, iter->first.x, iter->first.y);
 		}
 		for (auto iter = applied_pixels.begin(); iter != applied_pixels.end(); ++iter)
@@ -574,26 +488,21 @@ struct ApplySelectionAction : public ActionBase
 		}
 		canvas.image->update_subtexture(img_to_bbox);
 		canvas.image->update_subtexture(img_from_bbox);
-		binfo.selection_subimage->update_subtexture(subimg_bbox);
-		binfo.sel_subimg_sprite->self.transform.position = {};
-		binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
 		binfo.smants->send_buffer(sel_bbox);
-		binfo.raw_selection_pixels.clear();
 	}
+
 	virtual void backward() override
 	{
 		Canvas& canvas = MEasel->canvas();
 		BrushInfo& binfo = canvas.binfo;
 		
 		binfo.state = BrushInfo::State::NEUTRAL;
-		binfo.smants->send_buffer(binfo.clear_selection());
+		binfo.smants->send_buffer(binfo.smants->clear());
 
 		IntBounds sel_bbox = IntBounds::NADIR;
 		Buffer& img_buf = canvas.image->buf;
 		IntBounds img_to_bbox = IntBounds::NADIR;
 		IntBounds img_from_bbox = IntBounds::NADIR;
-		Buffer& subimg_buf = binfo.selection_subimage->buf;
-		IntBounds subimg_bbox = IntBounds::NADIR;
 
 		static const auto raw_sel_pixel_pencil = [](PixelRecord pxr) { return pxr.subimg; };
 		static const auto raw_sel_pixel_pen = [](PixelRecord pxr) { return pxr.result; };
@@ -606,19 +515,12 @@ struct ApplySelectionAction : public ActionBase
 				buffer_set_pixel_color(img_buf, iter->first.x, iter->first.y, iter->second.applied_on);
 				update_bbox(img_to_bbox, iter->first.x, iter->first.y);
 			}
-			IPosition subimg_pos = iter->first - move_offset;
-			if (in_diagonal_rect(subimg_pos, {}, { subimg_buf.width, subimg_buf.height }))
-			{
-				buffer_set_pixel_alpha(subimg_buf, subimg_pos.x, subimg_pos.y, iter->second.subimg.a);
-				update_bbox(subimg_bbox, subimg_pos.x, subimg_pos.y);
-			}
-			if (binfo.add_to_selection(subimg_pos))
-				update_bbox(sel_bbox, subimg_pos.x, subimg_pos.y);
-			binfo.raw_selection_pixels[subimg_pos] = raw_sel_pixel(iter->second);
 		}
 		for (auto iter = applied_pixels.begin(); iter != applied_pixels.end(); ++iter)
 		{
 			IPosition subimg_pos = iter->first - move_offset;
+			if (binfo.smants->add(subimg_pos))
+				update_bbox(sel_bbox, subimg_pos.x, subimg_pos.y);
 			if (in_diagonal_rect(subimg_pos, {}, { img_buf.width, img_buf.height }))
 			{
 				buffer_set_pixel_color(img_buf, subimg_pos.x, subimg_pos.y, iter->second.original);
@@ -627,9 +529,6 @@ struct ApplySelectionAction : public ActionBase
 		}
 		canvas.image->update_subtexture(img_to_bbox);
 		canvas.image->update_subtexture(img_from_bbox);
-		binfo.selection_subimage->update_subtexture(subimg_bbox);
-		binfo.sel_subimg_sprite->self.transform.position = move_offset;
-		binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
 		binfo.smants->send_buffer(sel_bbox);
 	}
 };
@@ -690,6 +589,8 @@ void CBImpl::batch_move_selection_start_with_pixels(Canvas& canvas)
 	}
 	canvas.image->update_subtexture(img_bbox);
 	binfo.selection_subimage->update_subtexture(img_bbox);
+	binfo.sel_subimg_sprite->self.transform.position = {};
+	binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
 }
 
 void CBImpl::batch_move_selection_submit_with_pixels(Canvas& canvas)

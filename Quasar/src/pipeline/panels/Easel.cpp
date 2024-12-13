@@ -131,6 +131,11 @@ void Easel::connect_input_handlers()
 					canvas().deselect_all();
 				}
 			}
+			else if (k.key == Key::Y)
+			{
+				k.consumed = true;
+				canvas().invert_selection();
+			}
 			else if (k.key == Key::ENTER)
 			{
 				if (canvas().cursor_enter())
@@ -634,7 +639,7 @@ bool Easel::cancel_mouse_move_selection()
 	return false;
 }
 
-// TODO if mouse re-enters clipping, display mouse again. For moving selection AND panning
+// LATER if mouse re-enters clipping, display mouse again. For moving selection AND panning
 
 void Easel::update_mouse_move_selection()
 {

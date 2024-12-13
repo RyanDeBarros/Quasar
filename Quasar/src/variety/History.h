@@ -8,7 +8,6 @@
 	bool operator==(const structname&) const = default;\
 	virtual bool equals(const ActionBase& other) const override { auto p = dynamic_cast<const structname*>(&other); return p && *this == *p; }
 
-// LATER why use shared_ptrs instead of unique_ptrs?
 struct ActionBase
 {
 	size_t weight = sizeof(ActionBase);
@@ -90,6 +89,7 @@ public:
 	void push(std::shared_ptr<ActionBase>&& action);
 	void execute_no_undo(const std::shared_ptr<ActionBase>& action);
 	void clear_history();
+	void remove_from_top(const std::shared_ptr<ActionBase>& action);
 	void undo();
 	size_t undo_size() const;
 	void redo();
