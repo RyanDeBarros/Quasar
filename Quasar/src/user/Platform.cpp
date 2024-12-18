@@ -144,30 +144,6 @@ Window::Window(const char* title, int width, int height, bool enable_gui, ImFont
 	root_window_maximize.callback = [this](const WindowMaximizeEvent& wm) {
 		maximized = wm.maximized;
 		};
-
-	// LATER why must shift not be held in these callbacks?
-
-	// first callback in root to force
-	window_maximizer.callback = [this](const KeyEvent& k) {
-		if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
-		{
-			k.consumed = true;
-			if (is_maximized())
-				maximized = false;
-			toggle_fullscreen();
-			Machine.on_render();
-		}
-		else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mods::ALT)
-		{
-			k.consumed = true;
-			if (!is_fullscreen())
-			{
-				toggle_maximized();
-				Machine.on_render();
-			}
-		}
-		};
-	root_key.add_child(&window_maximizer);
 }
 
 Window::~Window()
@@ -360,6 +336,29 @@ void Window::eject_mouse_mode()
 		mouse_mode_owner = nullptr;
 		current_mouse_mode = prev_mouse_mode;
 		glfwSetInputMode(window, GLFW_CURSOR, int(current_mouse_mode));
+	}
+}
+
+void Window::window_maximizer(const KeyEvent& k)
+{
+	// LATER why must shift not be held in these callbacks?
+
+	if (k.key == Key::F11 && k.action == IAction::PRESS && !(k.mods & Mods::SHIFT))
+	{
+		k.consumed = true;
+		if (is_maximized())
+			maximized = false;
+		toggle_fullscreen();
+		Machine.on_render();
+	}
+	else if (k.key == Key::ENTER && k.action == IAction::PRESS && k.mods & Mods::ALT)
+	{
+		k.consumed = true;
+		if (!is_fullscreen())
+		{
+			toggle_maximized();
+			Machine.on_render();
+		}
 	}
 }
 

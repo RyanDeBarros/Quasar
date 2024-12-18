@@ -73,7 +73,7 @@ void BrushInfo::reset()
 			CBImpl::EllipseFill::reset_select(*this);
 	}
 	cancelling = false;
-	brushing_bbox = IntBounds::NADIR;
+	brushing_bbox = IntBounds::INVALID;
 	last_brush_pos = { -1, -1 };
 	starting_pos = { -1, -1 };
 	show_brush_preview = false;
@@ -115,7 +115,7 @@ bool BrushInfo::remove_from_selection(IPosition pos)
 
 IntBounds BrushInfo::clear_selection()
 {
-	IntBounds bbox = IntBounds::NADIR;
+	IntBounds bbox = IntBounds::INVALID;
 	IPosition pos{};
 	while (!smants->get_points().empty())
 	{
@@ -131,7 +131,7 @@ IntBounds BrushInfo::clear_selection()
 
 bool BrushInfo::push_selection_to_history()
 {
-	if (brushing_bbox == IntBounds::NADIR)
+	if (brushing_bbox == IntBounds::INVALID)
 		return false;
 	Machine.history.push(std::make_shared<SmantsModifyAction>(smants, brushing_bbox, std::move(storage_select_remove), std::move(storage_select_add)));
 	return true;

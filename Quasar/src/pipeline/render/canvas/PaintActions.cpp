@@ -4,16 +4,23 @@
 #include "../../panels/Easel.h"
 #include "user/Machine.h"
 #include "Canvas.h"
+#include "../FlatSprite.h"
+
+// LATER since there's bounds checking here, not really necessary to do it elsewhere.
 
 void buffer_set_pixel_color(const Buffer& buf, int x, int y, PixelRGBA c)
 {
-	for (CHPP i = 0; i < buf.chpp; ++i)
-		buf.pos(x, y)[i] = c[i];
+	if (buf.bbox().contains({ x, y }))
+	{
+		for (CHPP i = 0; i < buf.chpp; ++i)
+			buf.pos(x, y)[i] = c[i];
+	}
 }
 
 void buffer_set_pixel_alpha(const Buffer& buf, int x, int y, int alpha)
 {
-	buf.pos(x, y)[std::max(buf.chpp - 1, 0)] = alpha;
+	if (buf.bbox().contains({ x, y }))
+		buf.pos(x, y)[std::max(buf.chpp - 1, 0)] = alpha;
 }
 
 void buffer_set_rect_alpha(const Buffer& buf, int x, int y, int w, int h, int alpha, int sx, int sy)
@@ -575,11 +582,6 @@ void SmantsModifyAction::backward()
 SmantsMoveAction::SmantsMoveAction(IPosition delta, std::unordered_set<IPosition>&& premove_points)
 	: delta(delta), premove_points(std::move(premove_points))
 {
-	update_weight();
-}
-
-void SmantsMoveAction::update_weight()
-{
 	weight = sizeof(SmantsMoveAction) + this->premove_points.size() * sizeof(IPosition);
 }
 
@@ -587,7 +589,7 @@ void SmantsMoveAction::forward()
 {
 	BrushInfo& binfo = MEasel->canvas().binfo;
 	binfo.smants->send_buffer(binfo.smants->clear());
-	IntBounds bbox = IntBounds::NADIR;
+	IntBounds bbox = IntBounds::INVALID;
 	for (IPosition pos : premove_points)
 	{
 		pos += delta;
@@ -602,7 +604,7 @@ void SmantsMoveAction::backward()
 {
 	BrushInfo& binfo = MEasel->canvas().binfo;
 	binfo.smants->send_buffer(binfo.smants->clear());
-	IntBounds bbox = IntBounds::NADIR;
+	IntBounds bbox = IntBounds::INVALID;
 	for (IPosition pos : premove_points)
 	{
 		if (binfo.smants->add(pos))
@@ -610,4 +612,130 @@ void SmantsMoveAction::backward()
 	}
 	binfo.move_selpxs_offset -= delta;
 	binfo.smants->send_buffer(bbox);
+}
+
+MoveSubimgAction::MoveSubimgAction(bool from_image)
+	: from_image(from_image)
+{
+	weight = sizeof(MoveSubimgAction);
+	BrushInfo& binfo = MEasel->canvas().binfo;
+	binfo.state = BrushInfo::State::SUBIMG_READY;
+	final = binfo.move_selpxs_offset;
+	initial = binfo.starting_move_selpxs_offset;
+	auto& points = binfo.smants->get_points();
+	auto delta = final - initial;
+	for (auto iter = points.begin(); iter != points.end(); ++iter)
+	{
+		IPosition prepos = *iter - delta;
+		auto pxit = binfo.raw_selection_pixels.find(prepos);
+		if (pxit != binfo.raw_selection_pixels.end())
+			premove_pixels[prepos] = pxit->second;
+		else
+			premove_pixels[prepos] = {};
+	}
+	weight += premove_pixels.size() * (sizeof(IPosition) + sizeof(PixelRGBA));
+	if (from_image)
+		binfo.smants->flip_direction();
+}
+
+void MoveSubimgAction::update()
+{
+	BrushInfo& binfo = MEasel->canvas().binfo;
+	final = binfo.move_selpxs_offset;
+	bool prev_from_image = from_image;
+	from_image = false;
+	forward();
+	from_image = prev_from_image;
+}
+
+void MoveSubimgAction::forward()
+{
+	Canvas& canvas = MEasel->canvas();
+	BrushInfo& binfo = canvas.binfo;
+	binfo.state = BrushInfo::State::SUBIMG_READY;
+
+	binfo.smants->send_buffer(binfo.smants->clear());
+	IntBounds bbox = IntBounds::INVALID;
+	binfo.raw_selection_pixels.clear();
+	Buffer& imgbuf = canvas.image->buf;
+	Buffer& selbuf = binfo.selection_subimage->buf;
+	IntBounds img_bounds = selbuf.bbox();
+	IntBounds img_bbox = IntBounds::INVALID;
+	auto delta = final - initial;
+	for (auto iter = premove_pixels.begin(); iter != premove_pixels.end(); ++iter)
+	{
+		IPosition pos = iter->first + delta;
+		if (binfo.smants->add(pos))
+			update_bbox(bbox, pos.x, pos.y);
+		binfo.raw_selection_pixels[iter->first] = iter->second;
+		if (from_image && img_bounds.contains(iter->first))
+		{
+			buffer_set_pixel_color(selbuf, iter->first.x, iter->first.y, binfo.apply_selection_with_pencil ? iter->second : iter->second.no_alpha_equivalent());
+			buffer_set_pixel_alpha(imgbuf, iter->first.x, iter->first.y, 0);
+			update_bbox(img_bbox, iter->first.x, iter->first.y);
+		}
+	}
+	binfo.smants->send_buffer(bbox);
+	if (from_image)
+	{
+		canvas.image->update_subtexture(img_bbox);
+		binfo.selection_subimage->update_subtexture(img_bbox);
+	}
+
+	binfo.sel_subimg_sprite->self.transform.position = final;
+	binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
+	binfo.move_selpxs_offset = final;
+	if (from_image)
+		binfo.smants->flip_direction();
+}
+
+void MoveSubimgAction::backward()
+{
+	Canvas& canvas = MEasel->canvas();
+	BrushInfo& binfo = canvas.binfo;
+	if (from_image)
+		binfo.state = BrushInfo::State::NEUTRAL;
+	else
+		binfo.state = BrushInfo::State::SUBIMG_READY;
+
+	binfo.smants->send_buffer(binfo.smants->clear());
+	IntBounds bbox = IntBounds::INVALID;
+	binfo.raw_selection_pixels.clear();
+	Buffer& imgbuf = canvas.image->buf;
+	Buffer& selbuf = binfo.selection_subimage->buf;
+	IntBounds img_bounds = selbuf.bbox();
+	IntBounds img_bbox = IntBounds::INVALID;
+	if (!from_image)
+	{
+		for (auto iter = premove_pixels.begin(); iter != premove_pixels.end(); ++iter)
+		{
+			if (binfo.smants->add(iter->first))
+				update_bbox(bbox, iter->first.x, iter->first.y);
+			binfo.raw_selection_pixels[iter->first] = iter->second;
+		}
+	}
+	else
+	{
+		for (auto iter = premove_pixels.begin(); iter != premove_pixels.end(); ++iter)
+		{
+			if (img_bounds.contains(iter->first))
+			{
+				buffer_set_pixel_color(imgbuf, iter->first.x, iter->first.y, iter->second);
+				buffer_set_pixel_alpha(selbuf, iter->first.x, iter->first.y, 0);
+				update_bbox(img_bbox, iter->first.x, iter->first.y);
+			}
+		}
+	}
+	binfo.smants->send_buffer(bbox);
+	if (from_image)
+	{
+		canvas.image->update_subtexture(img_bbox);
+		binfo.selection_subimage->update_subtexture(img_bbox);
+	}
+
+	binfo.sel_subimg_sprite->self.transform.position = initial;
+	binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
+	binfo.move_selpxs_offset = initial;
+	if (from_image)
+		binfo.smants->flip_direction();
 }

@@ -251,3 +251,17 @@ void ActionHistory::set_pool_size(size_t pool_size)
 	}
 	tracking_size = pool_size;
 }
+
+std::shared_ptr<ActionBase> ActionHistory::top_undo() const
+{
+	if (undo_deque.empty())
+		return nullptr;
+	return undo_deque.back();
+}
+
+std::shared_ptr<ActionBase> ActionHistory::top_redo() const
+{
+	if (redo_deque.empty())
+		return nullptr;
+	return redo_deque.back();
+}

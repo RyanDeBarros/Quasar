@@ -45,6 +45,7 @@ namespace Data
 	{
 		static WindowSizeHandler* resize_handler = nullptr;
 		static DisplayScaleHandler* rescale_handler = nullptr;
+		static KeyHandler* window_maximizer = nullptr;
 		static KeyHandler* global_key_handler = nullptr;
 		static PathDropHandler* path_drop_handler = nullptr;
 	}
@@ -201,6 +202,7 @@ static void init_handlers()
 	Data::Input::resize_handler = new WindowSizeHandler();
 	Data::Input::rescale_handler = new DisplayScaleHandler();
 	Data::Input::global_key_handler = new KeyHandler();
+	Data::Input::window_maximizer = new KeyHandler();
 	Data::Input::path_drop_handler = new PathDropHandler();
 
 	Window& window = *MainWindow;
@@ -213,9 +215,10 @@ static void init_handlers()
 	window.root_key.add_child(&easel()->key_handler);
 	window.root_key.add_child(&brushes()->key_handler);
 	window.root_key.add_child(&palette()->key_handler);
+	window.root_key.add_child(Data::Input::global_key_handler);
+	window.root_key.add_child(Data::Input::window_maximizer);
 	window.root_scroll.add_child(&palette()->scroll_handler);
 	window.root_scroll.add_child(&easel()->scroll_handler);
-	window.root_key.add_child(Data::Input::global_key_handler);
 	window.root_path_drop.add_child(Data::Input::path_drop_handler);
 
 	Data::Input::resize_handler->callback = [](const WindowSizeEvent& ws) {
@@ -254,6 +257,9 @@ static void init_handlers()
 		}
 		};
 	Data::Input::global_key_handler->callback = &handle_global_key_event;
+	Data::Input::window_maximizer->callback = [](const KeyEvent& k) {
+		MainWindow->window_maximizer(k);
+		};
 }
 
 static void invalidate_handlers()
@@ -262,6 +268,7 @@ static void invalidate_handlers()
 	QUASAR_INVALIDATE_PTR(Data::Input::rescale_handler);
 	QUASAR_INVALIDATE_PTR(Data::Input::path_drop_handler);
 	QUASAR_INVALIDATE_PTR(Data::Input::global_key_handler);
+	QUASAR_INVALIDATE_PTR(Data::Input::window_maximizer);
 }
 
 void MachineImpl::init_renderer()
@@ -526,7 +533,7 @@ Scale MachineImpl::to_world_size(Scale screen_size, const glm::mat3& vp) const
 Scale MachineImpl::to_screen_size(Scale world_size, const glm::mat3& vp) const
 {
 	glm::mat2 vpsz = { { vp[0][0], vp[0][1] }, { vp[1][0], vp[1][1] } };
-	return 0.5f * Scale(main_window->size()) * (vpsz * world_size);
+	return 0.5f * (main_window->size() * vpsz) * glm::vec2(world_size);
 }
 
 Position MachineImpl::cursor_screen_pos() const

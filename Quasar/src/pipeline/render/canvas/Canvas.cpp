@@ -119,7 +119,7 @@ void Canvas::draw()
 	fs_wget(*this, SPRITE).draw(CANVAS_SPRITE_TSLOT);
 	if (binfo.show_brush_preview)
 		fs_wget(*this, BRUSH_PREVIEW).draw(BRUSH_PREVIEW_TSLOT);
-	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
+	if (binfo.state & (BrushInfo::State::SUBIMG_READY | BrushInfo::State::MOVING_SUBIMG))
 		fs_wget(*this, SELECTION_SUBIMAGE).draw(SELECTION_SUBIMAGE_TSLOT);
 	if (binfo.show_selection_preview)
 	{
@@ -136,9 +136,14 @@ void Canvas::draw()
 
 void Canvas::draw_cursor()
 {
-	if (binfo.tool & BrushTool::MOVE || binfo.state & BrushInfo::State::PIPETTE
-		|| (binfo.show_brush_preview && binfo.tool & (BrushTool::LINE | BrushTool::FILL | BrushTool::RECT_FILL | BrushTool::RECT_OUTLINE | BrushTool::ELLIPSE_OUTLINE | BrushTool::ELLIPSE_FILL)))
+	if (binfo.tool & BrushTool::MOVE || binfo.state & BrushInfo::State::PIPETTE)
 		return;
+	else if (binfo.state & BrushInfo::State::BRUSHING)
+	{
+		if (binfo.show_brush_preview && !(binfo.tool & BrushTool::PAINT))
+			return;
+	}
+
 	switch (binfo.tip)
 	{
 	case BrushTip::PENCIL:
@@ -274,6 +279,15 @@ void Canvas::sync_brush_preview_with_image()
 		binfo.selection_subimage->gen_texture();
 		binfo.selection_subimage->resend_texture();
 
+		Buffer& cbuf = binfo.clipboard;
+		if (!cbuf.same_dimensions_as(image->buf))
+		{
+			delete[] cbuf.pixels;
+			cbuf = image->buf;
+			cbuf.pxnew();
+		}
+		memset(cbuf.pixels, 0, cbuf.bytes());
+
 		fs_wget(*this, BRUSH_PREVIEW).self.transform.scale = { image->buf.width, image->buf.height };
 		fs_wget(*this, SELECTION_SUBIMAGE).self.transform.scale = { image->buf.width, image->buf.height };
 	}
@@ -385,7 +399,7 @@ void Canvas::update_brush_tool_and_tip()
 {
 	auto new_tool = MBrushes->get_brush_tool();
 	auto new_tip = MBrushes->get_brush_tip();
-	if (binfo.tool != new_tool || binfo.tip != new_tip) // LATER add support for switching tool/tip mid brush?
+	if (binfo.state & BrushInfo::State::BRUSHING && (binfo.tool != new_tool || binfo.tip != new_tip)) // LATER add support for switching tool/tip mid brush?
 		cursor_cancel();
 	binfo.tool = new_tool;
 	binfo.tip = new_tip;
@@ -636,6 +650,8 @@ void Canvas::cursor_press(MouseButton button)
 				CBImpl::batch_move_selection_submit_with_pixels(*this);
 			else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
 				CBImpl::batch_move_selection_submit_without_pixels(*this);
+			else if (binfo.state & BrushInfo::State::SUBIMG_READY && !(binfo.tool & BrushTool::MOVE))
+				CBImpl::batch_move_selection_submit_with_pixels(*this);
 			IPosition pos = brush_pos_under_cursor();
 			brush(pos.x, pos.y);
 		}
@@ -651,6 +667,11 @@ bool Canvas::cursor_enter()
 		set_cursor_color(primary_color);
 		return true;
 	}
+	else if (binfo.state & BrushInfo::State::SUBIMG_READY)
+	{
+		CBImpl::batch_move_selection_submit_with_pixels(*this);
+		return true;
+	}
 	else if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 	{
 		CBImpl::batch_move_selection_submit_with_pixels(*this);
@@ -661,7 +682,7 @@ bool Canvas::cursor_enter()
 		CBImpl::batch_move_selection_submit_without_pixels(*this);
 		return true;
 	}
-	else if (binfo.state & BrushInfo::State::NEUTRAL)
+	else if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
 	{
 		if (deselect_all())
 			return true;
@@ -684,7 +705,22 @@ bool Canvas::cursor_cancel()
 		set_cursor_color(primary_color);
 		return true;
 	}
+	else if (binfo.state & BrushInfo::State::SUBIMG_READY)
+	{
+		CBImpl::batch_move_selection_cancel_with_pixels(*this);
+		return true;
+	}
 	return false;
+}
+
+void Canvas::cursor_cancel_from_undo()
+{
+	if (cursor_state != CursorState::UP)
+	{
+		brush_cancel();
+		cursor_state = CursorState::UP;
+		set_cursor_color(primary_color);
+	}
 }
 
 void Canvas::full_brush_reset()
@@ -695,7 +731,7 @@ void Canvas::full_brush_reset()
 
 void Canvas::brush(int x, int y)
 {
-	if (binfo.state != BrushInfo::State::PIPETTE && brush_pos_in_image_bounds(x, y))
+	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::BRUSHING) && brush_pos_in_image_bounds(x, y))
 	{
 		if (binfo.state & BrushInfo::State::NEUTRAL)
 			brush_start(x, y);
@@ -835,7 +871,7 @@ void Canvas::select_all()
 {
 	if (image)
 	{
-		binfo.brushing_bbox = IntBounds::NADIR;
+		binfo.brushing_bbox = IntBounds::INVALID;
 		for (int x = 0; x < image->buf.width; ++x)
 			for (int y = 0; y < image->buf.height; ++y)
 				if (binfo.add_to_selection({ x, y }))
@@ -847,17 +883,24 @@ void Canvas::select_all()
 
 bool Canvas::deselect_all()
 {
-	if (image && binfo.state & BrushInfo::State::NEUTRAL && !binfo.smants->get_points().empty())
+	if (!MainWindow->is_alt_pressed() && image && !binfo.smants->get_points().empty())
 	{
-		binfo.brushing_bbox = binfo.clear_selection();
-		binfo.smants->send_buffer(binfo.brushing_bbox);
-		return binfo.push_selection_to_history();
+		if (binfo.state & BrushInfo::State::SUBIMG_READY)
+			CBImpl::batch_move_selection_submit_with_pixels(*this);
+		if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
+		{
+			binfo.brushing_bbox = binfo.clear_selection();
+			binfo.smants->send_buffer(binfo.brushing_bbox);
+			return binfo.push_selection_to_history();
+		}
 	}
 	return false;
 }
 
 void Canvas::invert_selection()
 {
+	if (binfo.state & BrushInfo::State::SUBIMG_READY)
+		CBImpl::batch_move_selection_submit_with_pixels(*this);
 	if (!(binfo.state & (BrushInfo::State::MOVING_SUBIMG | BrushInfo::State::MOVING_SELOUTLINE | BrushInfo::State::BRUSHING)))
 	{
 		auto& points = binfo.smants->get_points();
@@ -924,6 +967,8 @@ void Canvas::batch_move_selection_to(float fdx, float fdy)
 
 void Canvas::batch_move_selection_to(int dx, int dy)
 {
+	dx += binfo.starting_move_selpxs_offset.x;
+	dy += binfo.starting_move_selpxs_offset.y;
 	if (selection_interaction_disabled(binfo) || (dx == binfo.move_selpxs_offset.x && dy == binfo.move_selpxs_offset.y))
 		return;
 	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
@@ -936,14 +981,56 @@ bool Canvas::batch_move_selection_start()
 {
 	if (selection_interaction_disabled(binfo))
 		return false;
-	if (binfo.select_with_pixels)
-		CBImpl::batch_move_selection_start_with_pixels(*this);
+	if (binfo.state & BrushInfo::State::SUBIMG_READY)
+	{
+		if (binfo.select_with_pixels)
+		{
+			binfo.state = BrushInfo::State::MOVING_SUBIMG;
+			binfo.starting_move_selpxs_offset = binfo.move_selpxs_offset;
+		}
+		else
+		{
+			CBImpl::batch_move_selection_submit_with_pixels(*this);
+			binfo.starting_move_selpxs_offset = {};
+			CBImpl::batch_move_selection_start_without_pixels(*this);
+		}
+	}
 	else
-		CBImpl::batch_move_selection_start_without_pixels(*this);
+	{
+		binfo.starting_move_selpxs_offset = {};
+		if (binfo.select_with_pixels)
+			CBImpl::batch_move_selection_start_with_pixels(*this);
+		else
+			CBImpl::batch_move_selection_start_without_pixels(*this);
+	}
 	return true;
 }
 
-void Canvas::batch_move_selection_submit()
+void Canvas::batch_move_selection_end()
+{
+	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
+	{
+		if (auto sp = Machine.history.top_undo())
+		{
+			if (auto p = dynamic_cast<MoveSubimgAction*>(sp.get()))
+				p->update();
+			else
+			{
+				binfo.ongoing_subimg_move = std::make_shared<MoveSubimgAction>(binfo.starting_move_selpxs_offset == IPosition{});
+				Machine.history.push(binfo.ongoing_subimg_move);
+			}
+		}
+		else
+		{
+			binfo.ongoing_subimg_move = std::make_shared<MoveSubimgAction>(binfo.starting_move_selpxs_offset == IPosition{});
+			Machine.history.push(binfo.ongoing_subimg_move);
+		}
+	}
+	else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
+		CBImpl::batch_move_selection_submit_without_pixels(*this);
+}
+
+void Canvas::batch_move_selection_apply()
 {
 	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 		CBImpl::batch_move_selection_submit_with_pixels(*this);
@@ -953,7 +1040,13 @@ void Canvas::batch_move_selection_submit()
 
 void Canvas::batch_move_selection_cancel()
 {
-	if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
+	if (binfo.state & BrushInfo::State::SUBIMG_READY)
+	{
+		CBImpl::batch_move_selection_cancel_with_pixels(*this);
+		if (binfo.starting_move_selpxs_offset + binfo.move_selpxs_offset == IPosition{})
+			deselect_all();
+	}
+	else if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
 		CBImpl::batch_move_selection_cancel_with_pixels(*this);
 	else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
 		CBImpl::batch_move_selection_cancel_without_pixels(*this);
@@ -964,7 +1057,7 @@ void Canvas::transition_moving_selection_to_overwrite()
 	if (binfo.apply_selection_with_pencil)
 	{
 		binfo.apply_selection_with_pencil = false;
-		if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
+		if (binfo.state & (BrushInfo::State::MOVING_SUBIMG | BrushInfo::State::SUBIMG_READY))
 			CBImpl::batch_move_selection_transition(*this, false);
 	}
 }
@@ -974,7 +1067,34 @@ void Canvas::transition_moving_selection_to_blend()
 	if (!binfo.apply_selection_with_pencil)
 	{
 		binfo.apply_selection_with_pencil = true;
-		if (binfo.state & BrushInfo::State::MOVING_SUBIMG)
+		if (binfo.state & (BrushInfo::State::MOVING_SUBIMG | BrushInfo::State::SUBIMG_READY))
 			CBImpl::batch_move_selection_transition(*this, true);
+	}
+}
+
+void Canvas::cut_selection()
+{
+	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
+	{
+		// TODO
+
+	}
+}
+
+void Canvas::copy_selection()
+{
+	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
+	{
+		// TODO
+
+	}
+}
+
+void Canvas::paste_selection()
+{
+	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE) && binfo.clipboard_region != IntBounds::INVALID)
+	{
+		// TODO
+
 	}
 }

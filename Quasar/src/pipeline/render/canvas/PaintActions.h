@@ -93,6 +93,8 @@ struct TwoColorAction : public ActionBase
 	virtual void backward() override;
 };
 
+// LATER don't use storage_2c and regular paint actions. Have a OverwritePaintAction and BlendPaintAction.
+// BlendPaintAction would only need a 1c storage, and the color that's blended. The blending is then computed at iteration in forward().
 struct TwoColorMoveAction : public ActionBase
 {
 	std::weak_ptr<Image> image;
@@ -119,7 +121,17 @@ struct SmantsMoveAction : public ActionBase
 	IPosition delta;
 	std::unordered_set<IPosition> premove_points;
 	SmantsMoveAction(IPosition delta, std::unordered_set<IPosition>&& premove_points);
-	void update_weight();
+	virtual void forward() override;
+	virtual void backward() override;
+};
+
+struct MoveSubimgAction : public ActionBase
+{
+	IPosition initial, final;
+	bool from_image;
+	std::unordered_map<IPosition, PixelRGBA> premove_pixels;
+	MoveSubimgAction(bool from_image);
+	void update();
 	virtual void forward() override;
 	virtual void backward() override;
 };

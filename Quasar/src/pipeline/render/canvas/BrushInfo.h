@@ -12,8 +12,9 @@ struct BrushInfo
 		NEUTRAL = 0b1,
 		BRUSHING = 0b10,
 		PIPETTE = 0b100,
-		MOVING_SUBIMG = 0b1000,
-		MOVING_SELOUTLINE = 0b10000
+		SUBIMG_READY = 0b1000,
+		MOVING_SUBIMG = 0b10000,
+		MOVING_SELOUTLINE = 0b100000
 	} state = State::NEUTRAL;
 
 	bool cancelling = false;
@@ -22,12 +23,22 @@ struct BrushInfo
 	IPosition starting_pos = { -1, -1 };
 	IPosition last_brush_pos = { -1, -1 };
 	IPosition image_pos = { -1, -1 };
-	IntBounds brushing_bbox = IntBounds::NADIR;
+	IntBounds brushing_bbox = IntBounds::INVALID;
 	bool show_brush_preview = false;
 	std::shared_ptr<Image> preview_image, eraser_preview_image;
 	static const int eraser_preview_img_sx = 2, eraser_preview_img_sy = 2;
 	std::unordered_map<IPosition, PixelRGBA> storage_1c;
 	std::unordered_map<IPosition, std::pair<PixelRGBA, PixelRGBA>> storage_2c;
+
+	struct
+	{
+		DiscreteLineInterpolator line = {};
+		DiscreteRectOutlineInterpolator rect_outline = {};
+		DiscreteRectFillInterpolator rect_fill = {};
+		DiscreteRectFillInterpolator temp_rect_fill = {};
+		DiscreteEllipseOutlineInterpolator ellipse_outline = {};
+		DiscreteEllipseFillInterpolator ellipse_fill = {};
+	} interps;
 
 	PixelRGBA fill_color = {};
 	
@@ -43,19 +54,14 @@ struct BrushInfo
 
 	struct FlatSprite* sel_subimg_sprite = nullptr;
 	std::shared_ptr<Image> selection_subimage;
+	IPosition starting_move_selpxs_offset = {};
 	IPosition move_selpxs_offset = {};
 	bool select_with_pixels = true;
 	bool apply_selection_with_pencil = true;
+	std::shared_ptr<MoveSubimgAction> ongoing_subimg_move;
 
-	struct
-	{
-		DiscreteLineInterpolator line = {};
-		DiscreteRectOutlineInterpolator rect_outline = {};
-		DiscreteRectFillInterpolator rect_fill = {};
-		DiscreteRectFillInterpolator temp_rect_fill = {};
-		DiscreteEllipseOutlineInterpolator ellipse_outline = {};
-		DiscreteEllipseFillInterpolator ellipse_fill = {};
-	} interps;
+	Buffer clipboard;
+	IntBounds clipboard_region = IntBounds::INVALID;
 
 	void reset();
 	bool add_to_selection(IPosition pos);

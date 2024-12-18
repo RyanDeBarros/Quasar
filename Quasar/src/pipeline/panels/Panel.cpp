@@ -18,7 +18,7 @@ bool Panel::cursor_in_clipping() const
 
 glm::vec2 Panel::get_app_size() const
 {
-	return glm::vec2{ bounds.clip().screen_w, bounds.clip().screen_h } * Machine.inv_app_scale();
+	return Scale{ bounds.clip().screen_w, bounds.clip().screen_h } * Machine.inv_app_scale();
 }
 
 float Panel::get_app_width() const

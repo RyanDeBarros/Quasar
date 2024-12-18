@@ -90,6 +90,7 @@ public:
 	bool cursor_enter();
 	void cursor_release(MouseButton button);
 	bool cursor_cancel();
+	void cursor_cancel_from_undo();
 	void full_brush_reset();
 
 	RGBA primary_color, alternate_color;
@@ -115,10 +116,15 @@ public:
 	void batch_move_selection_to(float dx, float dy);
 	void batch_move_selection_to(int dx, int dy);
 	bool batch_move_selection_start();
-	void batch_move_selection_submit();
+	void batch_move_selection_end();
+	void batch_move_selection_apply();
 	void batch_move_selection_cancel();
 	void transition_moving_selection_to_overwrite();
 	void transition_moving_selection_to_blend();
+
+	void cut_selection();
+	void copy_selection();
+	void paste_selection();
 
 public:
 	enum : size_t

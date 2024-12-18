@@ -301,14 +301,15 @@ struct IntBounds
 	int width_no_abs() const { return x2 - x1 + 1; }
 	int height_no_abs() const { return y2 - y1 + 1; }
 	bool valid() const { return x2 >= x1 && y2 >= y1; }
+	bool contains(IPosition pos) const { return on_interval(pos.x, x1, x2) && on_interval(pos.y, y1, y2); }
 
-	static const IntBounds NADIR;
+	static const IntBounds INVALID;
 
 	IntBounds operator+(IPosition pos) const { return { x1 + pos.x, x2 + pos.x, y1 + pos.y, y2 + pos.y }; }
 	IntBounds operator-(IPosition pos) const { return { x1 - pos.x, x2 - pos.x, y1 - pos.y, y2 - pos.y }; }
 };
 
-inline const IntBounds IntBounds::NADIR = { INT_MAX, INT_MIN, INT_MAX, INT_MIN };
+inline const IntBounds IntBounds::INVALID = { INT_MAX, INT_MIN, INT_MAX, INT_MIN };
 
 inline void update_bbox(IntBounds& bbox, int x, int y)
 {

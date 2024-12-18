@@ -1388,7 +1388,7 @@ void ColorPicker::send_graphic_value_slider_hue_and_sat_to_uniform(float hue, fl
 
 glm::vec2 ColorPicker::get_graphic_wheel_hue_and_sat() const
 {
-	glm::vec2 normal = 2.0f * wp_at(GRAPHIC_HUE_WHEEL).normalize(wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position) - glm::vec2(1.0f);
+	glm::vec2 normal = 2.0f * wp_at(GRAPHIC_HUE_WHEEL).normalize(wp_at(GRAPHIC_HUE_WHEEL_CURSOR).transform.position) - Position(1.0f);
 	float hue = -glm::atan(normal.y, normal.x) / glm::tau<float>();
 	if (hue < 0.0f)
 		hue += 1.0f;

@@ -100,7 +100,7 @@ void Easel::connect_input_handlers()
 			else if (k.action == IAction::RELEASE)
 				canvas().transition_moving_selection_to_blend();
 		}
-		if (k.action == IAction::PRESS)
+		else if (k.action == IAction::PRESS)
 		{
 			if (k.key == Key::ESCAPE)
 			{
@@ -118,7 +118,7 @@ void Easel::connect_input_handlers()
 				if (k.key == Key::Z)
 				{
 					// no consume
-					canvas().cursor_cancel();
+					canvas().cursor_cancel_from_undo();
 				}
 				else if (k.key == Key::A)
 				{
@@ -129,6 +129,21 @@ void Easel::connect_input_handlers()
 				{
 					k.consumed = true;
 					canvas().deselect_all();
+				}
+				else if (k.key == Key::X)
+				{
+					k.consumed = true;
+					canvas().cut_selection();
+				}
+				else if (k.key == Key::C)
+				{
+					k.consumed = true;
+					canvas().copy_selection();
+				}
+				else if (k.key == Key::V)
+				{
+					k.consumed = true;
+					canvas().paste_selection();
 				}
 			}
 			else if (k.key == Key::Y)
@@ -218,7 +233,7 @@ void Easel::handle_arrow_key_released(const KeyEvent& k)
 		arrows_move_sel_info.up = false;
 	if (!arrows_move_sel_info.left && !arrows_move_sel_info.right && !arrows_move_sel_info.down && !arrows_move_sel_info.up)
 	{
-		canvas().batch_move_selection_submit();
+		canvas().batch_move_selection_end();
 		moving_mode = MovingMode::NONE;
 	}
 }
@@ -622,7 +637,7 @@ void Easel::end_mouse_move_selection()
 	if (moving_mode == MovingMode::MOUSE)
 	{
 		moving_mode = MovingMode::NONE;
-		canvas().batch_move_selection_submit();
+		canvas().batch_move_selection_end();
 		MainWindow->release_mouse_mode(&mouse_move_sel_info.wh);
 	}
 }

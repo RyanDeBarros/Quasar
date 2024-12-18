@@ -123,7 +123,8 @@ If a group of pixels is selected, you could move the selection with the Move Too
 
 * Use LMB or the arrow keys to move the selection.
 * If you hold the S key, this will only move the selection outline, and not the underlying pixels.
-* By default, applying the selection (by releasing LMB/arrow keys or pressing ENTER) will blend those moved pixels onto the underlying image. However, holding ALT will use OVERWRITE mode and simply replace the image pixels underneath.
+* By default, applying the selection by pressing ENTER or deselecting will blend those moved pixels onto the underlying image. However, holding ALT will use OVERWRITE mode and simply replace the image pixels underneath.
 * To move a selection to another layer or frame, simply CUT (CTRL+X) or COPY (CTRL+C) then PASTE (CTRL+V).
 * To remove the selection outline, press ESCAPE or ENTER. Note that drawing will be restricted to the current selection, so you can use selection as a way of masking certain pixels.
 * Press Y to invert the selected pixels.
+* When moving a selection around, you can always press ESCAPE to reset it to where it was originally.

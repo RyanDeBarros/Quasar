@@ -373,6 +373,8 @@ struct Window
 	void release_mouse_mode(WindowHandle* owner);
 	void eject_mouse_mode();
 
+	void window_maximizer(const KeyEvent& k);
+
 private:
 	int pre_fullscreen_x = 0;
 	int pre_fullscreen_y = 0;
@@ -381,8 +383,6 @@ private:
 	bool fullscreen = false;
 	bool maximized = false;
 
-	KeyHandler window_maximizer;
-	
 	const WindowHandle* cursor_owner = nullptr;
 	std::shared_ptr<Cursor> current_cursor;
 	std::shared_ptr<Cursor> prev_cursor;

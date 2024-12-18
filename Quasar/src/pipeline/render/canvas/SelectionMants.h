@@ -40,6 +40,7 @@ public:
 	void send_vp(const glm::mat3& vp) const;
 	void send_time(float time) const;
 	void send_screen_size(glm::ivec2 size) const;
+	void flip_direction();
 
 	unsigned int vertex_horizontal(int x, int y) const;
 	unsigned int vertex_vertical(int x, int y) const;

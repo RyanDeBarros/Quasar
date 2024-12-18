@@ -50,7 +50,7 @@ struct WidgetPlacement
 	float interp_y(float t) const { return bottom() + t * transform.scale.y; }
 
 	glm::mat3 matrix() const { return FlatTransform{ center_point(), transform.scale }.matrix(); }
-	glm::mat3 inverse_matrix() const { return FlatTransform{ -center_point() / transform.scale, 1.0f / transform.scale }.matrix(); }
+	glm::mat3 inverse_matrix() const { return FlatTransform{ -center_point() / transform.scale, transform.scale.reciprocal() }.matrix(); }
 };
 
 inline float wp_left(const glm::mat3& global) { return global[2][0] - 0.5f * global[0][0]; }

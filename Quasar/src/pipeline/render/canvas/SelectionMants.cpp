@@ -112,7 +112,7 @@ void SelectionMants::shader_remove(IPosition pos)
 
 IntBounds SelectionMants::clear()
 {
-	IntBounds bbox = IntBounds::NADIR;
+	IntBounds bbox = IntBounds::INVALID;
 	IPosition pos{};
 	while (!points.empty())
 	{
@@ -137,7 +137,7 @@ void SelectionMants::send_uniforms() const
 
 void SelectionMants::send_buffer(IntBounds bbox)
 {
-	if (bbox != IntBounds::NADIR)
+	if (bbox != IntBounds::INVALID)
 	{
 		if (!intersection(bbox, { 0, cols - 2, 0, rows - 2 }, bbox))
 			return;
@@ -163,6 +163,12 @@ void SelectionMants::send_time(float time) const
 void SelectionMants::send_screen_size(glm::ivec2 size) const
 {
 	Uniforms::send_2(shader, "uScreenSize", size);
+}
+
+void SelectionMants::flip_direction()
+{
+	speed *= -1;
+	Uniforms::send_1(shader, "uSpeed", speed);
 }
 
 unsigned int SelectionMants::vertex_horizontal(int x, int y) const

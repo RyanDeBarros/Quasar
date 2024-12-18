@@ -98,4 +98,6 @@ public:
 	float get_fraction_of_memory_usage() const;
 	size_t get_pool_size() const;
 	void set_pool_size(size_t pool_size);
+	std::shared_ptr<ActionBase> top_undo() const;
+	std::shared_ptr<ActionBase> top_redo() const;
 };
