@@ -165,9 +165,15 @@ void SelectionMants::send_screen_size(glm::ivec2 size) const
 	Uniforms::send_2(shader, "uScreenSize", size);
 }
 
-void SelectionMants::flip_direction()
+void SelectionMants::set_direction_pos()
 {
-	speed *= -1;
+	speed = std::abs(speed);
+	Uniforms::send_1(shader, "uSpeed", speed);
+}
+
+void SelectionMants::set_direction_neg()
+{
+	speed = -std::abs(speed);
 	Uniforms::send_1(shader, "uSpeed", speed);
 }
 

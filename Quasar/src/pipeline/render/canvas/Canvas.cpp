@@ -279,14 +279,9 @@ void Canvas::sync_brush_preview_with_image()
 		binfo.selection_subimage->gen_texture();
 		binfo.selection_subimage->resend_texture();
 
-		Buffer& cbuf = binfo.clipboard;
-		if (!cbuf.same_dimensions_as(image->buf))
-		{
-			delete[] cbuf.pixels;
-			cbuf = image->buf;
-			cbuf.pxnew();
-		}
-		memset(cbuf.pixels, 0, cbuf.bytes());
+		binfo.raw_selection_pixels.clear();
+		binfo.raw_selection_positions.clear();
+		binfo.clipboard.clear();
 
 		fs_wget(*this, BRUSH_PREVIEW).self.transform.scale = { image->buf.width, image->buf.height };
 		fs_wget(*this, SELECTION_SUBIMAGE).self.transform.scale = { image->buf.width, image->buf.height };
@@ -1015,16 +1010,10 @@ void Canvas::batch_move_selection_end()
 			if (auto p = dynamic_cast<MoveSubimgAction*>(sp.get()))
 				p->update();
 			else
-			{
-				binfo.ongoing_subimg_move = std::make_shared<MoveSubimgAction>(binfo.starting_move_selpxs_offset == IPosition{});
-				Machine.history.push(binfo.ongoing_subimg_move);
-			}
+				Machine.history.push(std::make_shared<MoveSubimgAction>(binfo.starting_move_selpxs_offset == IPosition{}));
 		}
 		else
-		{
-			binfo.ongoing_subimg_move = std::make_shared<MoveSubimgAction>(binfo.starting_move_selpxs_offset == IPosition{});
-			Machine.history.push(binfo.ongoing_subimg_move);
-		}
+			Machine.history.push(std::make_shared<MoveSubimgAction>(binfo.starting_move_selpxs_offset == IPosition{}));
 	}
 	else if (binfo.state & BrushInfo::State::MOVING_SELOUTLINE)
 		CBImpl::batch_move_selection_submit_without_pixels(*this);
@@ -1074,10 +1063,10 @@ void Canvas::transition_moving_selection_to_blend()
 
 void Canvas::cut_selection()
 {
-	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
+	if (!(binfo.state & BrushInfo::State::BRUSHING))
 	{
-		// TODO
-
+		copy_selection();
+		delete_selection();
 	}
 }
 
@@ -1085,16 +1074,71 @@ void Canvas::copy_selection()
 {
 	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE))
 	{
-		// TODO
-
+		binfo.clipboard.clear();
+		auto& points = binfo.smants->get_points();
+		auto& imgbuf = image->buf;
+		for (auto iter = points.begin(); iter != points.end(); ++iter)
+			binfo.clipboard.push_back({ *iter, imgbuf.pixel_color_at(iter->x, iter->y) });
+	}
+	else if (binfo.state & (BrushInfo::State::SUBIMG_READY | BrushInfo::State::MOVING_SUBIMG | BrushInfo::State::MOVING_SELOUTLINE))
+	{
+		binfo.clipboard.clear();
+		for (auto iter = binfo.raw_selection_pixels.begin(); iter != binfo.raw_selection_pixels.end(); ++iter)
+			binfo.clipboard.push_back({ iter->first, iter->second });
 	}
 }
 
 void Canvas::paste_selection()
 {
-	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE) && binfo.clipboard_region != IntBounds::INVALID)
+	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE | BrushInfo::State::SUBIMG_READY) && !binfo.clipboard.empty())
 	{
-		// TODO
+		// TODO action
 
+		binfo.smants->send_buffer(binfo.smants->clear());
+		Buffer& selbuf = binfo.selection_subimage->buf;
+		IntBounds bounds = selbuf.bbox();
+		IntBounds bbox = IntBounds::INVALID;
+		while (!binfo.raw_selection_pixels.empty())
+		{
+			auto iter = binfo.raw_selection_pixels.begin();
+			if (bounds.contains(iter->first))
+			{
+				buffer_set_pixel_alpha(selbuf, iter->first.x, iter->first.y, 0);
+				update_bbox(bbox, iter->first.x, iter->first.y);
+			}
+			binfo.raw_selection_pixels.erase(iter);
+		}
+		binfo.selection_subimage->update_subtexture(bbox);
+
+		IntBounds smants_bbox = IntBounds::INVALID;
+		bbox = IntBounds::INVALID;
+		for (auto iter = binfo.clipboard.begin(); iter != binfo.clipboard.end(); ++iter)
+		{
+			IPosition sm_pos = iter->first + binfo.move_selpxs_offset;
+			if (binfo.smants->add(sm_pos))
+				update_bbox(smants_bbox, sm_pos.x, sm_pos.y);
+			binfo.raw_selection_pixels[iter->first] = iter->second;
+			if (bounds.contains(iter->first))
+			{
+				buffer_set_pixel_color(selbuf, iter->first.x, iter->first.y, iter->second);
+				update_bbox(bbox, iter->first.x, iter->first.y);
+			}
+		}
+		binfo.smants->send_buffer(smants_bbox);
+		binfo.selection_subimage->update_subtexture(bbox);
+
+		if (auto sp = Machine.history.top_undo())
+		{
+			if (auto p = dynamic_cast<MoveSubimgAction*>(sp.get()))
+			{
+				Machine.history.remove_from_top(sp);
+				Machine.history.push(std::make_shared<MoveSubimgAction>(p->from_image));
+			}
+		}
+
+		binfo.state = BrushInfo::State::SUBIMG_READY;
+		binfo.smants->set_direction_neg();
+		binfo.sel_subimg_sprite->self.transform.position = binfo.move_selpxs_offset;
+		binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
 	}
 }

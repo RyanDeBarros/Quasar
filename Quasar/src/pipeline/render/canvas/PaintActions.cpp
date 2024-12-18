@@ -635,7 +635,7 @@ MoveSubimgAction::MoveSubimgAction(bool from_image)
 	}
 	weight += premove_pixels.size() * (sizeof(IPosition) + sizeof(PixelRGBA));
 	if (from_image)
-		binfo.smants->flip_direction();
+		binfo.smants->set_direction_neg();
 }
 
 void MoveSubimgAction::update()
@@ -686,7 +686,7 @@ void MoveSubimgAction::forward()
 	binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
 	binfo.move_selpxs_offset = final;
 	if (from_image)
-		binfo.smants->flip_direction();
+		binfo.smants->set_direction_neg();
 }
 
 void MoveSubimgAction::backward()
@@ -705,14 +705,16 @@ void MoveSubimgAction::backward()
 	Buffer& selbuf = binfo.selection_subimage->buf;
 	IntBounds img_bounds = selbuf.bbox();
 	IntBounds img_bbox = IntBounds::INVALID;
+
+	for (auto iter = premove_pixels.begin(); iter != premove_pixels.end(); ++iter)
+	{
+		if (binfo.smants->add(iter->first))
+			update_bbox(bbox, iter->first.x, iter->first.y);
+	}
 	if (!from_image)
 	{
 		for (auto iter = premove_pixels.begin(); iter != premove_pixels.end(); ++iter)
-		{
-			if (binfo.smants->add(iter->first))
-				update_bbox(bbox, iter->first.x, iter->first.y);
 			binfo.raw_selection_pixels[iter->first] = iter->second;
-		}
 	}
 	else
 	{
@@ -737,5 +739,5 @@ void MoveSubimgAction::backward()
 	binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
 	binfo.move_selpxs_offset = initial;
 	if (from_image)
-		binfo.smants->flip_direction();
+		binfo.smants->set_direction_pos();
 }

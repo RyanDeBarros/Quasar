@@ -584,7 +584,7 @@ struct ApplySelectionAction : public ActionBase
 		}
 		canvas.image->update_subtexture(img_bbox);
 		binfo.selection_subimage->update_subtexture(subimg_bbox);
-		binfo.smants->flip_direction();
+		binfo.smants->set_direction_pos();
 
 		weight += sizeof(ApplySelectionAction) + applied_pixels.size() * sizeof(PixelRecord);
 	}
@@ -619,7 +619,7 @@ struct ApplySelectionAction : public ActionBase
 		}
 		canvas.image->update_subtexture(img_to_bbox);
 		binfo.selection_subimage->update_subtexture(subimg_bbox);
-		binfo.smants->flip_direction();
+		binfo.smants->set_direction_pos();
 	}
 
 	virtual void backward() override
@@ -656,7 +656,7 @@ struct ApplySelectionAction : public ActionBase
 		}
 		canvas.image->update_subtexture(img_to_bbox);
 		binfo.selection_subimage->update_subtexture(subimg_bbox);
-		binfo.smants->flip_direction();
+		binfo.smants->set_direction_neg();
 	}
 };
 

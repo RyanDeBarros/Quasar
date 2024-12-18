@@ -58,10 +58,8 @@ struct BrushInfo
 	IPosition move_selpxs_offset = {};
 	bool select_with_pixels = true;
 	bool apply_selection_with_pencil = true;
-	std::shared_ptr<MoveSubimgAction> ongoing_subimg_move;
 
-	Buffer clipboard;
-	IntBounds clipboard_region = IntBounds::INVALID;
+	std::vector<std::pair<IPosition, PixelRGBA>> clipboard;
 
 	void reset();
 	bool add_to_selection(IPosition pos);
