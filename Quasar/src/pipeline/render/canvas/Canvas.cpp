@@ -1088,11 +1088,33 @@ void Canvas::copy_selection()
 	}
 }
 
-void Canvas::paste_selection()
+// LATER use common_ptr<std::vector<std::pair<IPosition, PixelRGBA>>>. Similar to shared_ptr, but can clone to create new version when editing, leaving other pointers pointing to the old memory.
+
+struct PasteAction : public ActionBase
 {
-	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE | BrushInfo::State::SUBIMG_READY) && !binfo.clipboard.empty())
+	std::vector<std::pair<IPosition, PixelRGBA>> clipboard;
+	std::vector<std::pair<IPosition, PixelRGBA>> old_selection;
+	BrushInfo::State prev_state;
+	bool prev_dir_pos = true;
+	IPosition prev_move_offset = {}, prev_starting_move_offset = {};
+	PasteAction()
 	{
-		// TODO action
+		Canvas& canvas = MEasel->canvas();
+		BrushInfo& binfo = canvas.binfo;
+		prev_state = binfo.state;
+		prev_dir_pos = binfo.smants->speed >= 0;
+		prev_move_offset = binfo.move_selpxs_offset;
+		prev_starting_move_offset = binfo.starting_move_selpxs_offset;
+		clipboard = binfo.clipboard;
+		old_selection.reserve(binfo.raw_selection_pixels.size());
+		for (const auto& [pos, c] : binfo.raw_selection_pixels)
+			old_selection.push_back({ pos, c });
+		weight = sizeof(PasteAction) + (clipboard.size() + old_selection.size()) * (sizeof(IPosition) + sizeof(PixelRGBA));
+	}
+	virtual void forward() override
+	{
+		Canvas& canvas = MEasel->canvas();
+		BrushInfo& binfo = canvas.binfo;
 
 		binfo.smants->send_buffer(binfo.smants->clear());
 		Buffer& selbuf = binfo.selection_subimage->buf;
@@ -1112,7 +1134,7 @@ void Canvas::paste_selection()
 
 		IntBounds smants_bbox = IntBounds::INVALID;
 		bbox = IntBounds::INVALID;
-		for (auto iter = binfo.clipboard.begin(); iter != binfo.clipboard.end(); ++iter)
+		for (auto iter = clipboard.begin(); iter != clipboard.end(); ++iter)
 		{
 			IPosition sm_pos = iter->first + binfo.move_selpxs_offset;
 			if (binfo.smants->add(sm_pos))
@@ -1126,6 +1148,9 @@ void Canvas::paste_selection()
 		}
 		binfo.smants->send_buffer(smants_bbox);
 		binfo.selection_subimage->update_subtexture(bbox);
+
+		binfo.move_selpxs_offset = prev_move_offset;
+		binfo.starting_move_selpxs_offset = prev_starting_move_offset;
 
 		if (auto sp = Machine.history.top_undo())
 		{
@@ -1141,4 +1166,67 @@ void Canvas::paste_selection()
 		binfo.sel_subimg_sprite->self.transform.position = binfo.move_selpxs_offset;
 		binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
 	}
+	virtual void backward() override
+	{
+		Canvas& canvas = MEasel->canvas();
+		BrushInfo& binfo = canvas.binfo;
+
+		binfo.smants->send_buffer(binfo.smants->clear());
+		Buffer& selbuf = binfo.selection_subimage->buf;
+		IntBounds bounds = selbuf.bbox();
+		IntBounds smants_bbox = IntBounds::INVALID;
+		IntBounds bbox = IntBounds::INVALID;
+		for (auto iter = clipboard.begin(); iter != clipboard.end(); ++iter)
+		{
+			if (bounds.contains(iter->first))
+			{
+				buffer_set_pixel_alpha(selbuf, iter->first.x, iter->first.y, 0);
+				update_bbox(bbox, iter->first.x, iter->first.y);
+			}
+		}
+		binfo.selection_subimage->update_subtexture(bbox);
+
+		bbox = IntBounds::INVALID;
+		binfo.raw_selection_pixels.clear();
+		for (auto iter = old_selection.begin(); iter != old_selection.end(); ++iter)
+		{
+			IPosition sm_pos = iter->first + binfo.move_selpxs_offset;
+			if (binfo.smants->add(sm_pos))
+				update_bbox(smants_bbox, sm_pos.x, sm_pos.y);
+			binfo.raw_selection_pixels[iter->first] = iter->second;
+			if (bounds.contains(iter->first))
+			{
+				buffer_set_pixel_color(selbuf, iter->first.x, iter->first.y, iter->second);
+				update_bbox(bbox, iter->first.x, iter->first.y);
+			}
+		}
+		binfo.smants->send_buffer(smants_bbox);
+		binfo.selection_subimage->update_subtexture(bbox);
+
+		binfo.move_selpxs_offset = prev_move_offset;
+		binfo.starting_move_selpxs_offset = prev_starting_move_offset;
+
+		if (auto sp = Machine.history.top_undo())
+		{
+			if (auto p = dynamic_cast<MoveSubimgAction*>(sp.get()))
+			{
+				Machine.history.remove_from_top(sp);
+				Machine.history.push(std::make_shared<MoveSubimgAction>(p->from_image));
+			}
+		}
+
+		binfo.state = prev_state;
+		if (prev_dir_pos)
+			binfo.smants->set_direction_pos();
+		else
+			binfo.smants->set_direction_neg();
+		binfo.sel_subimg_sprite->self.transform.position = binfo.move_selpxs_offset;
+		binfo.sel_subimg_sprite->update_transform().ur->send_buffer();
+	}
+};
+
+void Canvas::paste_selection()
+{
+	if (binfo.state & (BrushInfo::State::NEUTRAL | BrushInfo::State::PIPETTE | BrushInfo::State::SUBIMG_READY) && !binfo.clipboard.empty())
+		Machine.history.execute(std::make_shared<PasteAction>());
 }
